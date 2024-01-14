@@ -1,0 +1,23 @@
+## ignore all
+/*
+
+## really all
+*.*
+
+# add .gitgnore
+!.gitignore
+
+# add dirs
+!/lib/
+!/examples/
+!/config/
+
+/lib/mcu/m0/rp2040/_debug
+
+# add some files
+!*.ini
+!*.mod
+!*.md
+!*.txt
+!*.res
+
