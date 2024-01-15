@@ -7,6 +7,9 @@ MODULE Watchdog;
   --
   Counting tick is set and initialised in module Clocks to 1 MHz.
   --
+  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+  --
   Reset behaviour, as read from code.
   Hardware reset:
   * WATCHDOG_CTRL = 07000000H
@@ -46,8 +49,6 @@ MODULE Watchdog;
 
   Out of hw-reset, the watchdog is disabled via the corresponding bit in
   WATCHDOG_CTRL, see above.
-  --
-  Copyright (c) 2023 Gray gray@grayraven.org
 **)
 
   IMPORT SYSTEM, MCU := MCU2, Resets;

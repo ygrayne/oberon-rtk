@@ -5,7 +5,8 @@ MODULE Terminal;
   Use module Texts to write/read to/from any open terminal
   See module Out for a use case
   --
-  Copyright (c) 2020-2023 Gray gray@grayraven.org
+  Copyright (c) 2020-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
 **)
 
   IMPORT TextIO, UARTd, UART, Error;

@@ -12,7 +12,8 @@ MODULE GPIO;
   Pin mumbers 0 .. 29, on "lo bank" (IO_BANK0)
   The "hi bank" for QPSI is not handled here.
   --
-  Copyright (c) 2023 Gray gray@grayraven.org
+  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
 **)
 
   IMPORT SYSTEM, MCU := MCU2, Resets;

@@ -9,7 +9,8 @@ MODULE SysTick;
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
-  Copyright (c) 2020-2023 Gray, gray@grayraven.org
+  Copyright (c) 2020-2024 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
 **)
 
   IMPORT SYSTEM, MCU := MCU2;

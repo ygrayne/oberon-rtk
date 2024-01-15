@@ -6,7 +6,8 @@ MODULE TextIO;
   * writer to use in output modules, eg. Texts
   * reader to use in input modules, eg. Texts (coming soon)
   --
-  Copyright (c) 2023 Gray gray@grayraven.org
+  Copyright (c) 2020-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
 **)
 
   IMPORT Error;

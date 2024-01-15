@@ -7,7 +7,8 @@ MODULE Texts;
   These procedure are re-entrant, if the TextIO.Writer's procedures are.
   The write string procedures are used as much as possible, to profit of buffering.
   --
-  Copyright (c) 2020 - 2023 Gray gray@grayraven.org
+  Copyright (c) 2020 - 2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
 **)
 
   IMPORT TextIO, Error;

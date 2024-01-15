@@ -12,6 +12,6 @@ There's a nascent, yet incomplete website: [oberon-rtk.org](https://oberon-rtk.o
 
 # Dependencies and Prerequitites
 
-The RTK modules depend on modules in the Astrobe library. Hence, you need to have a registered copy of Astrobe for Cortex-M0.
+The RTK modules depend on modules in the Astrobe library. Hence, you need to have a registered copy of Astrobe for Cortex-M0. If you don't, get it. It's good.
 
-The Oberon modules are written for the current version of Astrobe for Cortex-M0, v9.0.3
+The Oberon modules are written using the current version of Astrobe for Cortex-M0, v9.0.3

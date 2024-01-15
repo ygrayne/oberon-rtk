@@ -5,7 +5,8 @@ MODULE UART;
   * hw-buffered (fifo)
   * busy-waiting with buffer full
   --
-  Copyright (c) 2020-2023 Gray gray@grayraven.org
+  Copyright (c) 2020-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
 **)
 
   IMPORT SYSTEM, UARTd, TextIO;

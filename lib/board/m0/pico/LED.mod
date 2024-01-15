@@ -16,7 +16,8 @@ MODULE LED;
     SYSTEM.PUT(LED.CLR, {LED.Green}),
     SYSTEM.PUT(LED.XOR, {LED.Green})
   --
-  Copyright (c) 2023 Gray gray@grayraven.org
+  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
 **)
 
   IMPORT GPIO, MCU := MCU2;

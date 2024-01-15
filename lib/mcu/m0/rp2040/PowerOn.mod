@@ -13,7 +13,8 @@ MODULE PowerOn;
   --
   See 'PSM-*' values in MCU2.mod for blocks to reset
   --
-  Copyright (c) 2023 Gray gray@grayraven.org
+  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
 **)
 
   IMPORT SYSTEM, MCU := MCU2;

@@ -4,10 +4,10 @@ MODULE Error;
   Definition of fault and error codes and corresponding message strings.
   --
   Based on (and compatible with) Astrobe's module 'Error.mod'
-  See copyright notice at the bottom.
   --
   Copyright (c) 2019-2021 CFB Software, https://www.astrobe.com
-  Copyright (c) 2019-2023 Gray, gray@grayraven.org
+  Copyright (c) 2019-2024 Gray, gray@grayraven.org
+  Please refer to the licensing conditions as defined at the of this file.
 **)
 
   CONST

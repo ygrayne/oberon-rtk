@@ -12,7 +12,13 @@
 # --
 # Don't look too close, it's my first ever Python program. :)
 # --
-# (c) 2023 Gray gray@graraven.org
+# Copyright (c) 2023-2024 Gray, gray@graraven.org
+# https://oberon-rtk.org/licences/
+
+# The accompanying 'bootstage2.uf2' binary is
+# Copyright (c) 2019-2021 Raspberry Pi (Trading) Ltd.
+# SPDX-Licence-Identifier: BSD-3-Clause
+
 
 import argparse
 import struct

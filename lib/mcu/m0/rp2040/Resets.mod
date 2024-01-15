@@ -11,7 +11,8 @@ MODULE Resets;
   --
   See 'RESETS_*' values in MCU2.mod for subsytems to reset
   --
-  Copyright (c) 2023 Gray gray@grayraven.org
+  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
 **)
 
   IMPORT SYSTEM, MCU := MCU2;

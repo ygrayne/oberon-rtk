@@ -3,7 +3,8 @@ MODULE Out;
   Oberon RTK Framework
   Output to core-dedicated serial Terminal => UART
   --
-  Copyright (c) 2020-2023 Gray gray@grayraven.org
+  Copyright (c) 2020-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
 **)
 
   IMPORT SYSTEM, MCU := MCU2, TextIO, Texts;

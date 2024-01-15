@@ -20,7 +20,8 @@ MODULE Clocks;
   --
   Run 'python -m vcocalc -h' for PLL calculations.
   --
-  Copyright (c) 2023 Gray gray@grayraven.org
+  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
 **)
 
   IMPORT SYSTEM, MCU := MCU2, Resets, GPIO, PowerOn;

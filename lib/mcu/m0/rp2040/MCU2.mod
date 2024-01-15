@@ -18,7 +18,8 @@ MODULE MCU2;
   Don't use for registers that work on a mask anyway, such as for NVIC.
   See datasheet 2.1., p18
   --
-  Copyright (c) 2023 Gray gray@grayraven.org
+  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
 **)
 
 CONST
