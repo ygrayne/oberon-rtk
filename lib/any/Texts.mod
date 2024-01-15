@@ -17,7 +17,6 @@ MODULE Texts;
     LF = 0AX;
     Blanks = "                                "; (* 32 blanks *)
     MaxBlanks = 32;
-    MinIntPlusOne = -2147483647;
 
   VAR crlf: ARRAY 2 OF CHAR; (* module vars OK, as read only *)
 
@@ -25,27 +24,32 @@ MODULE Texts;
   PROCEDURE IntToString*(int: INTEGER; VAR str: ARRAY OF CHAR; VAR slen: INTEGER);
     VAR spos, dpos: INTEGER; digits: ARRAY 10 OF CHAR;
   BEGIN
-    ASSERT(int >= MinIntPlusOne, Error.PreCond);
     ASSERT(LEN(str) >= 12, Error.PreCond); (* 10 digits, minus sign, 0X *)
-    spos := 0;
-    IF int < 0 THEN
-      int := -int;
-      str[spos] := "-";
-      INC(spos)
-    END;
-    dpos := 0;
-    REPEAT
-      digits[dpos] := CHR(int MOD 10 + ORD("0"));
-      int := int DIV 10;
-      INC(dpos)
-    UNTIL int = 0;
-    DEC(dpos);
-    WHILE dpos >= 0 DO
-      str[spos] := digits[dpos];
-      DEC(dpos); INC(spos)
-    END;
-    str[spos] := 0X;
-    slen := spos
+    IF int = 080000000H THEN
+      str := "-2147483648";
+      str[11] := 0X;
+      slen := 11
+    ELSE
+      spos := 0;
+      IF int < 0 THEN
+        int := -int;
+        str[spos] := "-";
+        INC(spos)
+      END;
+      dpos := 0;
+      REPEAT
+        digits[dpos] := CHR(int MOD 10 + ORD("0"));
+        int := int DIV 10;
+        INC(dpos)
+      UNTIL int = 0;
+      DEC(dpos);
+      WHILE dpos >= 0 DO
+        str[spos] := digits[dpos];
+        DEC(dpos); INC(spos)
+      END;
+      str[spos] := 0X;
+      slen := spos
+    END
   END IntToString;
 
 

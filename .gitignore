@@ -11,6 +11,9 @@
 !/lib/
 !/examples/
 !/config/
+!/tools/
+!/tools/*.py
+!/tools/*.uf2
 
 /lib/mcu/m0/rp2040/_debug
 
@@ -20,4 +23,3 @@
 !*.md
 !*.txt
 !*.res
-

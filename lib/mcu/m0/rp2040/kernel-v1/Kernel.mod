@@ -28,7 +28,7 @@ MODULE Kernel;
     DefaultPrio* = 1;
 
     (* thread states *)
-    StateEnabled = 0;    (* triggered: will be queued at next trigger event; non-triggered: will be run from queue asap *)
+    StateEnabled = 0;    (* triggered: queued at next trigger event; queued at next scheduler run *)
     StateSuspended = 1;  (* must be (re-) enabled before it can run *)
 
     (* loop *)
@@ -292,7 +292,7 @@ MODULE Kernel;
     (* we'll not return here *)
   END Run;
 
-  (* module initialisation *)
+  (* installation *)
 
   PROCEDURE Install*(millisecsPerTick: INTEGER);
     VAR i, stkAddr: INTEGER; cid: INTEGER; ctx: CoreContext;
@@ -323,6 +323,7 @@ MODULE Kernel;
     SysTick.Init(millisecsPerTick)
   END Install;
 
+  (* module init *)
 
   PROCEDURE init;
   (* allocate core contexts *)

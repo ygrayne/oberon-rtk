@@ -88,6 +88,7 @@ MODULE UARTd;
 
     (* config UART device *)
     Resets.Release(dev.devNo);
+    Resets.AwaitReleaseDone(dev.devNo);
     SYSTEM.PUT(dev.CR, {}); (* disable *)
 
     x := (MCU.PeriClkFreq * 8) DIV baudrate;

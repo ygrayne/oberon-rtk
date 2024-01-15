@@ -23,12 +23,18 @@ MODULE Resets;
   BEGIN
     SYSTEM.GET(MCU.RESETS_DONE, x);
     IF ~(devNo IN x) THEN
-      SYSTEM.PUT(MCU.RESETS_RESET + MCU.ACLR, {devNo});
-      REPEAT
-        SYSTEM.GET(MCU.RESETS_DONE, x);
-      UNTIL (devNo IN x)
+      SYSTEM.PUT(MCU.RESETS_RESET + MCU.ACLR, {devNo})
     END
   END Release;
+
+
+  PROCEDURE AwaitReleaseDone*(devNo: INTEGER);
+    VAR x: SET;
+  BEGIN
+    REPEAT
+      SYSTEM.GET(MCU.RESETS_DONE, x);
+    UNTIL (devNo IN x)
+  END AwaitReleaseDone;
 
 
   (* note: if the reset controller block has been reset by the *)

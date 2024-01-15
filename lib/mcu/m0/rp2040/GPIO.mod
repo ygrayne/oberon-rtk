@@ -115,8 +115,7 @@ MODULE GPIO;
   Strictly speaking these functions should/could be alloacted
   in their specific module, since they are only one way to drive the
   GPIO pins, ie. just one function among others, on the same hierarchy
-  level. The nomenclature used is confusing, too many things
-  are called "GPIO".
+  level.
   *)
 
   PROCEDURE Set*(mask: SET);
@@ -185,7 +184,9 @@ MODULE GPIO;
   PROCEDURE init;
   BEGIN
     Resets.Release(MCU.RESETS_IO_BANK0);
-    Resets.Release(MCU.RESETS_PADS_BANK0)
+    Resets.AwaitReleaseDone(MCU.RESETS_IO_BANK0);
+    Resets.Release(MCU.RESETS_PADS_BANK0);
+    Resets.AwaitReleaseDone(MCU.RESETS_PADS_BANK0)
   END init;
 
 BEGIN

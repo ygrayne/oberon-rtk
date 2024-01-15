@@ -135,7 +135,8 @@ MODULE Clocks;
   (* at 48 MHz *)
     VAR x: INTEGER;
   BEGIN
-    Resets.Release(MCU.RESETS_PLL_SYS); (* will return when release is confirmed *)
+    Resets.Release(MCU.RESETS_PLL_SYS);
+    Resets.AwaitReleaseDone(MCU.RESETS_PLL_SYS);
     (* set freq 125 MHz *)
     SYSTEM.PUT(MCU.PLL_SYS_FBDIV_INT, 125);
     (* power up VCO and PLL *)
@@ -165,6 +166,7 @@ MODULE Clocks;
     VAR x: INTEGER;
   BEGIN
     Resets.Release(MCU.RESETS_PLL_USB);
+    Resets.AwaitReleaseDone(MCU.RESETS_PLL_USB);
     (* set freq 48 MHz *)
     SYSTEM.PUT(MCU.PLL_USB_FBDIV_INT, 64);
     (* power up VCO and PLL *)
