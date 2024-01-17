@@ -1,4 +1,4 @@
-MODULE UART;
+MODULE UARTstr;
 (**
   Oberon RTK Framework
   * text IO procedures
@@ -11,7 +11,7 @@ MODULE UART;
 
   IMPORT SYSTEM, UARTd, TextIO;
 
-
+(* to be removed
   PROCEDURE* PutChar*(dev: TextIO.Device; ch: CHAR);
     VAR dev0: UARTd.Device;
   BEGIN
@@ -19,8 +19,8 @@ MODULE UART;
     REPEAT UNTIL ~SYSTEM.BIT(dev0.FR, UARTd.FR_TXFF); (* not full *)
     SYSTEM.PUT(dev0.TDR, ch)
   END PutChar;
-
-
+*)
+(* to be removed
   PROCEDURE* GetChar*(dev: TextIO.Device; VAR ch: CHAR);
     VAR dev0: UARTd.Device;
   BEGIN
@@ -28,6 +28,7 @@ MODULE UART;
     REPEAT UNTIL ~SYSTEM.BIT(dev0.FR, UARTd.FR_RXFE);
     SYSTEM.GET(dev0.RDR, ch)
   END GetChar;
+*)
 
 
   PROCEDURE PutString*(dev: TextIO.Device; s: ARRAY OF CHAR; numChar: INTEGER);
@@ -44,4 +45,7 @@ MODULE UART;
     END
   END PutString;
 
-END UART.
+  PROCEDURE GetString*(dev: TextIO.Device; VAR string: ARRAY OF CHAR; del: CHAR);
+  END GetString;
+
+END UARTstr.
