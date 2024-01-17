@@ -14,7 +14,7 @@ MODULE Main;
     (* ignore the "is not used" warnings... :) *)
     (* LinkOptions is the first import of Config *)
     Config, Clocks, Memory, RuntimeErrors,
-    RuntimeErrorsOut, Terminal, Out;
+    RuntimeErrorsOut, UART := UARTstr, Terminal, Out;
 
   CONST
     Baudrate = 115200;
@@ -30,8 +30,8 @@ MODULE Main;
   PROCEDURE init;
   BEGIN
     (* open text output to two serial terminals *)
-    Terminal.Open(UART0, UART0_TxPinNo, UART0_RxPinNo, Baudrate);
-    Terminal.Open(UART1, UART1_TxPinNo, UART1_RxPinNo, Baudrate);
+    Terminal.Open(UART0, UART0_TxPinNo, UART0_RxPinNo, Baudrate, UART.PutString, UART.GetString);
+    Terminal.Open(UART1, UART1_TxPinNo, UART1_RxPinNo, Baudrate, UART.PutString, UART.GetString);
     (* init Out to use the terminals, from core 0 => terminal 0 etc. *)
     Out.Open(Terminal.W[0], Terminal.W[1]);
     (* init run-time error printing *)

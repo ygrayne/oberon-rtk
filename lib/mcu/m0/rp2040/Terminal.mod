@@ -9,7 +9,7 @@ MODULE Terminal;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT TextIO, UARTd, UART, Error;
+  IMPORT TextIO, UARTd, Error;
 
   CONST
     UART0* = 0;
@@ -24,7 +24,6 @@ MODULE Terminal;
   VAR
     W*: Ws;
     R*: Rs;
-    open: ARRAY NumUarts OF BOOLEAN;
 
 
   PROCEDURE initUARTdevice(VAR dev: UARTd.Device; uartNo, txPinNo, rxPinNo, baudrate: INTEGER);
@@ -36,23 +35,23 @@ MODULE Terminal;
   END initUARTdevice;
 
 
-  PROCEDURE Open*(uartNo, txPinNo, rxPinNo, baudrate: INTEGER);
+  PROCEDURE Open*(uartNo, txPinNo, rxPinNo, baudrate: INTEGER; psp: TextIO.PutStringProc; gcp: TextIO.GetStringProc);
     VAR dev: UARTd.Device;
   BEGIN
     ASSERT(uartNo IN UARTs);
-    IF ~open[uartNo] THEN
+    IF W[uartNo] = NIL THEN
       (* UART device *)
       initUARTdevice(dev, uartNo,  txPinNo, rxPinNo, baudrate);
 
       (* writer and reader *)
       NEW(W[uartNo]); ASSERT(W[uartNo] # NIL, Error.HeapOverflow);
       NEW(R[uartNo]); ASSERT(R[uartNo] # NIL, Error.HeapOverflow);
-      TextIO.OpenWriter(W[uartNo], dev, UART.PutChar, UART.PutString);
-      TextIO.OpenReader(R[uartNo], dev, UART.GetChar);
-      open[uartNo] := TRUE
+      TextIO.OpenWriter(W[uartNo], dev, psp);
+      TextIO.OpenReader(R[uartNo], dev, gcp)
     END
   END Open;
 
 BEGIN
-  open[0] := FALSE; open[1] := FALSE
+  W[0] := NIL; W[1] := NIL;
+  R[0] := NIL; R[1] := NIL
 END Terminal.

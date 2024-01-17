@@ -1,7 +1,7 @@
 MODULE Out;
 (**
   Oberon RTK Framework
-  Output to core-dedicated serial Terminal => UART
+  Output to core-dedicated serial Terminal
   --
   Copyright (c) 2020-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

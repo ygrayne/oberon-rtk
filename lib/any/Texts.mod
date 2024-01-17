@@ -4,8 +4,7 @@ MODULE Texts;
   Formatted output to a "channel", ie. using a 'TextIO.Writer'
   Input coming soon...
   --
-  These procedure are re-entrant, if the TextIO.Writer's procedures are.
-  The write string procedures are used as much as possible, to profit of buffering.
+  These procedure are re-entrant, if the TextIO.Writer's and TextIO.Writer's procedures are.
   --
   Copyright (c) 2020 - 2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -102,8 +101,10 @@ MODULE Texts;
 
 
   PROCEDURE Write*(W: TextIO.Writer; ch: CHAR);
+    VAR s: ARRAY 1 OF CHAR;
   BEGIN
-    W.putChar(W.dev, ch)
+    s[0] := ch;
+    W.putString(W.dev, s, 1)
   END Write;
 
 
