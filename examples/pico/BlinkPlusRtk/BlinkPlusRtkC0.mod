@@ -7,7 +7,7 @@ MODULE BlinkPlusRtkC0;
   MCU: RP2040
   Board: Pico
   --
-  Description: refer to https://oberon-rtk.org/examples/blinkplus-rtk0/
+  Description: refer to https://oberon-rtk.org/examples/blinkplusrtk/
   --
   Copyright (c) 2023 Gray, gray@grayraven.org
 **)

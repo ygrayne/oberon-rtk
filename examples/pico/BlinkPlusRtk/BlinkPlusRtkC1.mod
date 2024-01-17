@@ -48,8 +48,9 @@ MODULE BlinkPlusRtkC1;
       Timers.GetTimeL(endTime);
       runTime0 := endTime - startTime;
       (* uncomment me *)
+      (*
       Kernel.Next;
-
+      *)
       Timers.GetTimeL(startTime);
       i := 0;
       WHILE i < Limit1 DO
