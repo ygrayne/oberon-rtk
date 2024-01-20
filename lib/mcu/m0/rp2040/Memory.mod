@@ -108,10 +108,9 @@ MODULE Memory;
   PROCEDURE allocStack(VAR stkAddr: INTEGER; cid, stkSize: INTEGER);
     VAR limit: INTEGER;
   BEGIN
-    IF heaps[cid].heapLimit = 0 THEN
+    limit := heaps[cid].heapLimit;
+    IF limit = 0 THEN
       limit := heaps[cid].heapTop
-    ELSE
-      limit := heaps[cid].heapLimit
     END;
     IF stacks[cid].stacksBottom - stkSize > limit THEN
       DEC(stacks[cid].stacksBottom, stkSize);
@@ -120,7 +119,6 @@ MODULE Memory;
       stkAddr := 0
     END
   END allocStack;
-
 
   PROCEDURE AllocThreadStack*(VAR stkAddr: INTEGER; id, stkSize: INTEGER);
     VAR cid: INTEGER;

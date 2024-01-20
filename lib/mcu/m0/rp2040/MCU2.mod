@@ -44,14 +44,14 @@ CONST
   (* chip level, config, not code execution address *)
   (* datasheet 2.6.3.6, p127 *)
   (* shared *)
-  XIP_Base* = 014000000H; (* p127 *)
+  XIP_Base = 014000000H; (* p127 *)
   XIP_CTRL* = XIP_Base;
   XIP_FLUSH* = XIP_Base + 040H;
 
   (* === bus fabric === *)
   (* datasheet 2.1.5, p19 *)
   (* shared *)
-  BUSCTRL_Base* = 040030000H;
+  BUSCTRL_Base = 040030000H;
   BUSCTRL_BUS_PRIORITY*     = BUSCTRL_Base;
   BUSCTRL_BUS_PRIORITY_ACK* = BUSCTRL_Base + 04H;
 
@@ -61,14 +61,14 @@ CONST
   (* note: these are peripherals that need a reset release *)
   (* sys info *)
   (* datasheet 2.20, p303 *)
-  SYSINFO_Base* = 040000000H;
+  SYSINFO_Base = 040000000H;
   SYSINFO_CHIP_ID*        = SYSINFO_Base;
   SYSINFO_PLATFORM*       = SYSINFO_Base + 004H;
   SYSINFO_GITREF_RP2040*  = SYSINFO_Base + 008H;
 
   (* sys cfg *)
   (* datasheet 2.21, p204 *)
-  SYSCFG_Base* = 040004000H;
+  SYSCFG_Base = 040004000H;
   SYSCFG_PROC0_NMI_MASK*          = SYSCFG_Base;
   SYSCFG_PROC1_NMI_MASK*          = SYSCFG_Base + 004H;
   SYSCFG_PROC_CONFIG*             = SYSCFG_Base + 008H;
@@ -78,52 +78,87 @@ CONST
   SYSCFG_MEMPOWERDOWN*            = SYSCFG_Base + 018H;
 
 
-  (* === system control space === *)
-  (* registers are core-specific, ie. not shared *)
-  PPB_Base* = 0E0000000H; (* private peripheral bus *)
+  (* === system control === *)
+  PPB_Base = 0E0000000H; (* private peripheral bus *)
   (* sys tick *)
+  (* registers are core-specific, ie. not shared *)
   (* datasheet 2.4.5.1.1, p75 *)
   (* datasheet 2.4.8, p77 *)
-  SYST_Base* = PPB_Base + 0E010H;
-  SYST_CSR*   = SYST_Base;
-  SYST_RVR*   = SYST_Base + 04H;
-  SYST_CVR*   = SYST_Base + 08H;
-  SYST_CALIB* = SYST_Base + 0CH;
+  M0PLUS_SYST_Base  = PPB_Base + 0E010H;
+  M0PLUS_SYST_CSR*   = M0PLUS_SYST_Base;
+  M0PLUS_SYST_RVR*   = M0PLUS_SYST_Base + 04H;
+  M0PLUS_SYST_CVR*   = M0PLUS_SYST_Base + 08H;
+  M0PLUS_SYST_CALIB* = M0PLUS_SYST_Base + 0CH;
+
+  (* aliases *)
+  SYST_CSR*   = M0PLUS_SYST_CSR;
+  SYST_RVR*   = M0PLUS_SYST_RVR;
+  SYST_CVR*   = M0PLUS_SYST_CVR;
+  SYST_CALIB* = M0PLUS_SYST_CALIB;
+
 
   (* NVIC *)
+  (* registers are core-specific, ie. not shared *)
   (* datasheet 2.4.5.2, p75 *)
   (* datasheet 2.4.8, p77 *)
-  NVIC_Base* = PPB_Base + 0E100H;
-  NVIC_ISER* = NVIC_Base;
-  NVIC_ICER* = NVIC_Base + 0080H;
-  NVIC_ISPR* = NVIC_Base + 0100H;
-  NVIC_ICPR* = NVIC_Base + 0180H;
-  NVIC_IPR*  = NVIC_Base + 0300H;
+  M0PLUS_NVIC_Base = PPB_Base + 0E100H;
+  M0PLUS_NVIC_ISER* = M0PLUS_NVIC_Base;
+  M0PLUS_NVIC_ICER* = M0PLUS_NVIC_Base + 0080H;
+  M0PLUS_NVIC_ISPR* = M0PLUS_NVIC_Base + 0100H;
+  M0PLUS_NVIC_ICPR* = M0PLUS_NVIC_Base + 0180H;
+  M0PLUS_NVIC_IPR*  = M0PLUS_NVIC_Base + 0300H;
+
+  (* aliases *)
+  NVIC_ISER* = M0PLUS_NVIC_ISER;
+  NVIC_ICER* = M0PLUS_NVIC_ICER;
+  NVIC_ISPR* = M0PLUS_NVIC_ISPR;
+  NVIC_ICPR* = M0PLUS_NVIC_ICPR;
+  NVIC_IPR*  = M0PLUS_NVIC_IPR;
 
   (* system control block, SCB *)
+  (* registers are core-specific, ie. not shared *)
   (* datasheet 2.4.4, p74 *)
   (* datasheet 2.4.8, p77 *)
-  SCB_Base* = PPB_Base + 0ED00H;
-  SCB_CPUID*  = SCB_Base;
-  SCB_ICSR*   = SCB_Base + 004H;
-  SCB_VTOR*   = SCB_Base + 008H;
-  SCB_AIRCR*  = SCB_Base + 00CH;
-  SCB_SCR*    = SCB_Base + 010H;
-  SCB_CCR*    = SCB_Base + 014H;
-  SCB_SHPR2*  = SCB_Base + 01CH;
-  SCB_SHPR3*  = SCB_Base + 020H;
-  SCB_SHCSR*  = SCB_Base + 024H;
+  M0PLUS_SCB_Base = PPB_Base + 0ED00H;
+  M0PLUS_CPUID*  = M0PLUS_SCB_Base;
+  M0PLUS_ICSR*   = M0PLUS_SCB_Base + 004H;
+  M0PLUS_VTOR*   = M0PLUS_SCB_Base + 008H;
+  M0PLUS_AIRCR*  = M0PLUS_SCB_Base + 00CH;
+  M0PLUS_SCR*    = M0PLUS_SCB_Base + 010H;
+  M0PLUS_CCR*    = M0PLUS_SCB_Base + 014H;
+  M0PLUS_SHPR2*  = M0PLUS_SCB_Base + 01CH;
+  M0PLUS_SHPR3*  = M0PLUS_SCB_Base + 020H;
+  M0PLUS_SHCSR*  = M0PLUS_SCB_Base + 024H;
 
-  SCB_SHPR*   = SCB_Base + 018H; (* SCB_SHPR1 on eg. M3 *)
+  (* aliases *)
+  SCB_CPUID*  = M0PLUS_CPUID;
+  SCB_ICSR*   = M0PLUS_ICSR;
+  SCB_VTOR*   = M0PLUS_VTOR;
+  SCB_AIRCR*  = M0PLUS_AIRCR;
+  SCB_SCR*    = M0PLUS_SCR;
+  SCB_CCR*    = M0PLUS_CCR;
+  SCB_SHPR2*  = M0PLUS_SHPR2;
+  SCB_SHPR3*  = M0PLUS_SHPR3;
+  SCB_SHCSR*  = M0PLUS_SHCSR;
 
-  (* memory protection, MPU *)
+  SCB_SHPR*   = M0PLUS_SCB_Base + 018H; (* SCB_SHPR1 on eg. M3 *)
+
+  (* memory protection unit, MPU *)
+  (* registers are core-specific, ie. not shared *)
   (* datasheet 2.4.6.2, p76 *)
-  MPU_Base* = PPB_Base + 0ED90H;
-  MPU_TYPE* = MPU_Base;
-  MPU_CTRL* = MPU_Base + 004H;
-  MPU_RNR*  = MPU_Base + 008H;
-  MPU_RBAR* = MPU_Base + 00CH;
-  MPU_RASR* = MPU_Base + 010H;
+  M0PLUS_MPU_Base = PPB_Base + 0ED90H;
+  M0PLUS_MPU_TYPE* = M0PLUS_MPU_Base;
+  M0PLUS_MPU_CTRL* = M0PLUS_MPU_Base + 004H;
+  M0PLUS_MPU_RNR*  = M0PLUS_MPU_Base + 008H;
+  M0PLUS_MPU_RBAR* = M0PLUS_MPU_Base + 00CH;
+  M0PLUS_MPU_RASR* = M0PLUS_MPU_Base + 010H;
+
+  (* aliases *)
+  MPU_TYPE* = M0PLUS_MPU_TYPE;
+  MPU_CTRL* = M0PLUS_MPU_CTRL;
+  MPU_RNR*  = M0PLUS_MPU_RNR;
+  MPU_RBAR* = M0PLUS_MPU_RBAR;
+  MPU_RASR* = M0PLUS_MPU_RASR;
 
 
   (* === exception handler vector table === *)
@@ -142,7 +177,7 @@ CONST
   (* datasheet 2.5, p91 *)
   (* datasheet 2.5.7, p102 *)
   (* shared *)
-  DMA_Base* = 050000000H;
+  DMA_Base = 050000000H;
   DMA_CH0_READ_ADDR*    = DMA_Base;
   DMA_CH0_WRITE_ADDR*   = DMA_Base + 0004H;
   DMA_CH0_TRANS_COUNT*  = DMA_Base + 0008H;
@@ -181,7 +216,7 @@ CONST
   (* === single-cycle IO (SIO) === *)
   (* datasheet 2.3.1.17, p42 *)
   (* shared *)
-  SIO_Base* = 0D0000000H;
+  SIO_Base = 0D0000000H;
   SIO_CPUID*            = SIO_Base;
   (* GPIO lo bank, GPIO0 to GPIO29, "user GPIO"  *)
   SIO_GPIO_IN*          = SIO_Base + 04H;
@@ -208,8 +243,6 @@ CONST
   SIO_FIFO_WR*          = SIO_Base + 054H;
   SIO_FIFO_RD*          = SIO_Base + 058H;
 
-  (* lots more here *)
-
   (* spinlocks *)
   SIO_SPINLOCK*         = SIO_Base + 0100H;
   (* ... *)
@@ -221,7 +254,7 @@ CONST
   (* GPIO lo bank control *)
   (* datasheet 2.19.6.1, p243 *)
   (* shared *)
-  IO_BANK0_Base* = 040014000H;
+  IO_BANK0_Base = 040014000H;
   IO_BANK0_GPIO_STATUS* = IO_BANK0_Base;
   IO_BANK0_GPIO_CTRL*   = IO_BANK0_Base + 04H;
   (* ... *)
@@ -277,7 +310,7 @@ CONST
 
   (* GPIO hi bank control, QSPI *)
   (* datasheet 2.19.6.2, p287 *)
-  IO_QSPI_Base* = 040018000H;
+  IO_QSPI_Base = 040018000H;
   IO_QSPI_SCLK_STATUS*  = IO_QSPI_Base;
   IO_QSPI_SCLK_CTRL*    = IO_QSPI_Base + 004H;
   IO_QSPI_CS_STATUS*    = IO_QSPI_Base + 008H;
@@ -293,7 +326,7 @@ CONST
 
   (* GPIO lo bank PADS config *)
   (* datasheet 2.19.6.3, p298 *)
-  PADS_BANK0_Base* = 04001C000H;
+  PADS_BANK0_Base = 04001C000H;
   PADS_BANK0_VOLTAGE_SELECT*  = PADS_BANK0_Base;
   PADS_BANK0_GPIO*            = PADS_BANK0_Base + 004H;
   (* ... *)
@@ -306,7 +339,7 @@ CONST
 
   (* GPIO hi bank pads config *)
   (* datasheet 2.19.6.4, 301 *)
-  PADS_QSPI_Base* = 040020000H;
+  PADS_QSPI_Base = 040020000H;
   PADS_QSPI_VOLTAGE_SELECT* = PADS_QSPI_Base;
   PADS_QSPI_SCKL*           = PADS_QSPI_Base + 004H;
   PADS_QSPI_SD0*            = PADS_QSPI_Base + 008H;
@@ -320,7 +353,7 @@ CONST
   (* -- clocks -- *)
   (* datasheet 2.15.7, p195 *)
   (* shared *)
-  CLK_Base* = 040008000H;
+  CLK_Base = 040008000H;
   (* clk_gpout0 - 3 *)
   CLK_GPOUT0_CTRL*      = CLK_Base;
   CLK_GPOUT0_DIV*       = CLK_Base + 004H;
@@ -429,7 +462,7 @@ CONST
 
   (* external oscillator, 12 MHz on Pico *)
   (* datasheet 2.16.7, p219 *)
-  XOSC_Base* = 040024000H;
+  XOSC_Base = 040024000H;
   XOSC_CTRL*    = XOSC_Base;
   XOSC_STATUS*  = XOSC_Base + 004H;
   XOSC_DORMANT* = XOSC_Base + 008H;
@@ -438,13 +471,13 @@ CONST
 
   (* PLLs *)
   (* datasheet 2.18.4, p233 *)
-  PLL_SYS_Base* = 040028000H;
+  PLL_SYS_Base = 040028000H;
   PLL_SYS_CS*         = PLL_SYS_Base;
   PLL_SYS_PWR*        = PLL_SYS_Base + 04H;
   PLL_SYS_FBDIV_INT*  = PLL_SYS_Base + 08H;
   PLL_SYS_PRIM*       = PLL_SYS_Base + 0CH;
 
-  PLL_USB_Base* = 04002C000H;
+  PLL_USB_Base = 04002C000H;
   PLL_USB_CS*         = PLL_USB_Base;
   PLL_USB_PWR*        = PLL_USB_Base + 04H;
   PLL_USB_FBDIV_INT*  = PLL_USB_Base + 08H;
@@ -452,7 +485,7 @@ CONST
 
   (* ring oscillator *)
   (* datasheet 2.17.8, p223 *)
-  ROSC_Base* = 040060000H;
+  ROSC_Base = 040060000H;
   ROSC_CTRL*      = ROSC_Base;
   ROSC_FREQA*     = ROSC_Base + 004H;
   ROSC_FREQB*     = ROSC_Base + 008H;
@@ -474,7 +507,7 @@ CONST
   (* datasheet 2.13.5, p.171 *)
 
   (* blocks resets *)
-  PSM_Base* = 40010000H;
+  PSM_Base = 40010000H;
   PSM_FRCE_ON*  = PSM_Base;         (* force block out of reset (i.e. power it on) *)
   PSM_FRCE_OFF* = PSM_Base + 04H;   (* force into reset (i.e. power it off) *)
   PSM_WDSEL*    = PSM_Base + 08H;   (* set to 1 if this block should be reset when the watchdog fires *)
@@ -507,7 +540,7 @@ CONST
 
   (* subsystem resets *)
   (* datasheet 2.14.3, p177 *)
-  RESETS_Base* = 04000C000H;
+  RESETS_Base = 04000C000H;
   RESETS_RESET*       = RESETS_Base;        (* reset control: if a bit is set it means the peripheral is in reset *)
   RESETS_WDSEL*       = RESETS_Base + 04H;  (* set to 1 if this peripheral should be reset when the watchdog fires *)
   RESETS_DONE*        = RESETS_Base + 08H;  (* indicates that the peripheral�s registers are ready to be accessed *)
@@ -537,7 +570,7 @@ CONST
 
   (* voltage regulation and chip reset *)
   (* datasheet 2.16.10, p159 *)
-  VREG_AND_CHIP_RESET_Base* = 040064000H; (* p159 *)
+  VREG_AND_CHIP_RESET_Base = 040064000H; (* p159 *)
   VREG_AND_CHIP_RESET_VREG*       = VREG_AND_CHIP_RESET_Base;
   VREG_AND_CHIP_RESET_BOD*        = VREG_AND_CHIP_RESET_Base + 04H;
   VREG_AND_CHIP_RESET_CHIP_RESET* = VREG_AND_CHIP_RESET_Base + 08H;
@@ -545,8 +578,8 @@ CONST
 
   (* === programmable IO (PIO) === *)
   (* datasheet 3.7, p366 *)
-  PIO0_Base* = 050200000H;
-  PIO1_Base* = 050300000H;
+  PIO0_Base = 050200000H;
+  PIO1_Base = 050300000H;
 
 
   (* === peripherals === *)
@@ -657,7 +690,7 @@ CONST
 
   (* timer *)
   (* datasheet 4.6, p541 *)
-  TIMER_Base* = 040054000H;
+  TIMER_Base = 040054000H;
   TIMER_TIMEHW*   = TIMER_Base;
   TIMER_TIMELW*   = TIMER_Base + 004H;
   TIMER_TIMEHR*   = TIMER_Base + 008H;
@@ -681,7 +714,7 @@ CONST
 
   (* watchdog *)
   (* datasheet 4.7, p549 *)
-  WATCHDOG_Base*     = 040058000H;
+  WATCHDOG_Base     = 040058000H;
   WATCHDOG_CTRL*     = WATCHDOG_Base;
   WATCHDOG_LOAD*     = WATCHDOG_Base + 004H;
   WATCHDOG_REASON*   = WATCHDOG_Base + 008H;
@@ -705,7 +738,7 @@ CONST
 
   (* rtc *)
   (* datasheet 4.8, p555 *)
-  RTC_Base* = 04005C000H;
+  RTC_Base = 04005C000H;
   RTC_CLKDIV_M1*   = RTC_Base;
   RTC_SETUP_0*     = RTC_Base + 004H;
   RTC_SETUP_1*     = RTC_Base + 008H;
@@ -721,7 +754,7 @@ CONST
 
   (* adc *)
   (* datasheet 4.9, p566 *)
-  ADC_Base* = 04004C000H;
+  ADC_Base = 04004C000H;
   ADC_CS*     = ADC_Base;
   ADC_RESULT* = ADC_Base + 004H;
   ADC_FCS*    = ADC_Base + 008H;
@@ -733,7 +766,7 @@ CONST
   ADC_INTS*   = ADC_Base + 020H;
 
   (* USB p381 *)
-  USBCTRL_Base* = 050100000H;
+  USBCTRL_Base = 050100000H;
   USBCTRL_DPRAM_Base* = USBCTRL_Base;
   USBCTRL_REGS_Base* = 050110000H;
 

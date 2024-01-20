@@ -33,9 +33,9 @@ MODULE Main;
     Terminal.Open(UART0, UART0_TxPinNo, UART0_RxPinNo, Baudrate, UARTstr.PutString, UARTstr.GetString);
 
     (* busy waiting *)
-
+    
     Terminal.Open(UART1, UART1_TxPinNo, UART1_RxPinNo, Baudrate, UARTstr.PutString, UARTstr.GetString);
-
+    
     (* no busy waiting *)
     (*
     Terminal.Open(UART1, UART1_TxPinNo, UART1_RxPinNo, Baudrate, UARTkstr.PutString, UARTkstr.GetString);

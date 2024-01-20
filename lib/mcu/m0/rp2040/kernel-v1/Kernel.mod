@@ -105,7 +105,6 @@ MODULE Kernel;
     IF ctx.numThreads < MaxNumThreads THEN
       tid := ctx.numThreads;
       t := ctx.threads[tid];
-      t.tid := tid;
       INC(ctx.numThreads);
       t.state := StateSuspended;
       t.prio := DefaultPrio;
@@ -181,6 +180,7 @@ MODULE Kernel;
 
   PROCEDURE DelayMe*(delay: INTEGER);
   (* delay takes precedence over period *)
+  (* it can be combined with awaiting a device for timeout *)
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
     ASSERT(delay > 0, Error.PreCond);
@@ -204,6 +204,8 @@ MODULE Kernel;
   PROCEDURE AwaitDeviceSet*(addr: INTEGER; flags: SET);
   (* await any of the 'flags' at 'addr' to be set by hardware *)
   (* any resetting of the flags must be done by the thread *)
+  (* device awaiting takes precedence over period *)
+  (* it can be combined with a delay for timeout *)
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
@@ -329,6 +331,9 @@ MODULE Kernel;
     VAR i, stkAddr: INTEGER; cid: INTEGER; ctx: CoreContext;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
+
+    (* allocate and init the core's context *)
+    NEW(coreCon[cid]); ASSERT(coreCon[cid] # NIL, Error.HeapOverflow);
     ctx := coreCon[cid];
     ctx.Ct := NIL; ctx.ct := NIL;
     ctx.queued := {};
@@ -346,7 +351,7 @@ MODULE Kernel;
     WHILE i < MaxNumThreads DO
       NEW(ctx.threads[i]); ASSERT(ctx.threads[i] # NIL, Error.HeapOverflow);
       ctx.threads[i].state := StateSuspended;
-      ctx.threads[i].tid := 0;
+      ctx.threads[i].tid := i;
       NEW(ctx.threads[i].cor); ASSERT(ctx.threads[i].cor # NIL, Error.HeapOverflow);
       INC(i)
     END;
@@ -354,22 +359,7 @@ MODULE Kernel;
     SysTick.Init(millisecsPerTick)
   END Install;
 
-  (* module init *)
-
-  PROCEDURE init;
-  (* allocate core contexts *)
-  (* set proc aliases *)
-    VAR i: INTEGER;
-  BEGIN
-    i := 0;
-    WHILE i < NumCores DO
-      NEW(coreCon[i]); ASSERT(coreCon[i] # NIL, Error.HeapOverflow);
-      INC(i)
-    END;
-    Done := SuspendMe; Yield := Next
-  END init;
-
 BEGIN
   ASSERT(MaxNumThreads <= 32, Error.Config);
-  init
+  Done := SuspendMe; Yield := Next
 END Kernel.
