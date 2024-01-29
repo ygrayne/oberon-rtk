@@ -2,8 +2,10 @@ MODULE Terminal;
 (**
   Oberon RTK Framework
   Max two serial text terminals via UARTs
+  --
   Use module Texts to write/read to/from any open terminal
   See module Out for a use case
+  Each terminal can only be opened once.
   --
   Copyright (c) 2020-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

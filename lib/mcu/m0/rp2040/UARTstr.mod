@@ -1,17 +1,17 @@
 MODULE UARTstr;
 (**
   Oberon RTK Framework
-  * text IO procedures
-  * hw-buffered (fifo)
-  * busy-waiting with buffer full
+  UART string device driver, kernel not required (busy waiting)
   --
-  Copyright (c) 2020-2024 Gray gray@grayraven.org
+  * string IO procedures
+  * hw-buffered (fifo)
+  --
+  Copyright (c) 2020-2024 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
   IMPORT SYSTEM, UARTd, TextIO;
 
-(* to be removed
   PROCEDURE* PutChar*(dev: TextIO.Device; ch: CHAR);
     VAR dev0: UARTd.Device;
   BEGIN
@@ -19,16 +19,6 @@ MODULE UARTstr;
     REPEAT UNTIL ~SYSTEM.BIT(dev0.FR, UARTd.FR_TXFF); (* not full *)
     SYSTEM.PUT(dev0.TDR, ch)
   END PutChar;
-*)
-(* to be removed
-  PROCEDURE* GetChar*(dev: TextIO.Device; VAR ch: CHAR);
-    VAR dev0: UARTd.Device;
-  BEGIN
-    dev0 := dev(UARTd.Device);
-    REPEAT UNTIL ~SYSTEM.BIT(dev0.FR, UARTd.FR_RXFE);
-    SYSTEM.GET(dev0.RDR, ch)
-  END GetChar;
-*)
 
 
   PROCEDURE PutString*(dev: TextIO.Device; s: ARRAY OF CHAR; numChar: INTEGER);
@@ -45,7 +35,52 @@ MODULE UARTstr;
     END
   END PutString;
 
-  PROCEDURE GetString*(dev: TextIO.Device; VAR string: ARRAY OF CHAR; del: CHAR);
+
+  PROCEDURE* GetChar*(dev: TextIO.Device; VAR ch: CHAR);
+    VAR dev0: UARTd.Device;
+  BEGIN
+    dev0 := dev(UARTd.Device);
+    REPEAT UNTIL ~SYSTEM.BIT(dev0.FR, UARTd.FR_RXFE);
+    SYSTEM.GET(dev0.RDR, ch)
+  END GetChar;
+
+
+  PROCEDURE GetString*(dev: TextIO.Device; VAR s: ARRAY OF CHAR; VAR numCh, res: INTEGER);
+    VAR dev0: UARTd.Device; maxNumCh: INTEGER; ch: CHAR;
+  BEGIN
+    dev0 := dev(UARTd.Device);
+    bufLimit := LEN(s) - 1; (* space for 0X *)
+    res := TextIO.NoError;
+    numCh := 0;
+    GetChar(dev, ch);
+    WHILE (ch >= " ") & (numCh < bufLimit) DO
+      s[numCh] := ch;
+      INC(numCh);
+      GetChar(dev, ch)
+    END;
+    s[numCh] := 0X;
+    (* if buffer overflow, flush the rest *)
+    IF ch >= " "  THEN
+      res := TextIO.BufferOverflow;
+      GetChar(dev, ch);
+      WHILE ch >= " " DO
+        GetChar(dev, ch)
+      END;
+    END
   END GetString;
+
+
+  PROCEDURE DeviceStatus*(dev: TextIO.Device): SET;
+  (*
+    Mainly for getting fifo full/empty status, ie.
+    "TxAvail" and "RxAvail" extended for fifo
+    Bits as defined in UARTd
+  *)
+    VAR dev0: UARTd.Device;
+  BEGIN
+    dev0 := dev(UARTd.Device);
+    RETURN UARTd.Flags(dev0)
+  END DeviceStatus;
+
 
 END UARTstr.

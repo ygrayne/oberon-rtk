@@ -2,14 +2,14 @@ MODULE NoBusyWaitingC0;
 (**
   Oberon RTK Framework
   Example program, multi-threaded, multi-core
+  Description: https://oberon-rtk.org/examples/nobusywating/
+  --
   Program for core 1: 'NoBusyWaitingC1'
   --
   MCU: RP2040
   Board: Pico
   --
-  Description: refer to https://oberon-rtk.org/examples/nobusywating/
-  --
-  Copyright (c) 2023 Gray, gray@grayraven.org
+  Copyright (c) 2023-2024 Gray, gray@grayraven.org
 **)
 
   IMPORT Main, Kernel, MultiCore, Memory, GPIO, LED, CoreOne := NoBusyWaitingC1;

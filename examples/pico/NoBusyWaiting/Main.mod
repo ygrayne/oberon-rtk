@@ -5,7 +5,7 @@ MODULE Main;
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
-  Copyright (c) 2023 - 2024 Gray gray@grayraven.org
+  Copyright (c) 2023-2024, Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
@@ -33,7 +33,6 @@ MODULE Main;
     Terminal.Open(UART0, UART0_TxPinNo, UART0_RxPinNo, Baudrate, UARTstr.PutString, UARTstr.GetString);
 
     (* busy waiting *)
-    
     Terminal.Open(UART1, UART1_TxPinNo, UART1_RxPinNo, Baudrate, UARTstr.PutString, UARTstr.GetString);
     
     (* no busy waiting *)

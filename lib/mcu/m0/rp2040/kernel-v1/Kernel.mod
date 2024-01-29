@@ -52,8 +52,8 @@ MODULE Kernel;
       state: INTEGER;
       period, ticker: INTEGER;
       delay: INTEGER;
-      deviceAddr: INTEGER;
-      deviceFlags: SET;
+      devAddr: INTEGER;
+      devFlagsSet, devFlagsClr: SET;
       cor: Coroutines.Coroutine;
       retCode: INTEGER;
       next: Thread
@@ -109,7 +109,7 @@ MODULE Kernel;
       t.state := StateSuspended;
       t.prio := DefaultPrio;
       t.period := 0; t.delay := 0;
-      t.deviceAddr := 0;
+      t.devAddr := 0;
       Memory.AllocThreadStack(stackAddr, tid, stackSize);
       IF stackAddr # 0 THEN
         Coroutines.Init(t.cor, stackAddr, stackSize, tid);
@@ -124,15 +124,12 @@ MODULE Kernel;
 
 
   PROCEDURE Reallocate*(t: Thread; proc: PROC; VAR res: INTEGER);
-    VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
     res := OK;
     IF t.state = StateSuspended THEN
-      SYSTEM.GET(MCU.SIO_CPUID, cid);
-      ctx := coreCon[cid];
       t.prio := 1;
       t.period := 0; t.delay := 0;
-      t.deviceAddr := 0;
+      t.devAddr := 0;
       Coroutines. Allocate(t.cor, proc)
     ELSE
       res := Failed
@@ -159,6 +156,7 @@ MODULE Kernel;
     t.ticker := startAfter
   END SetPeriod;
 
+
   (* in-process api *)
 
   PROCEDURE Next*;
@@ -178,19 +176,6 @@ MODULE Kernel;
   END NextQueued;
 
 
-  PROCEDURE DelayMe*(delay: INTEGER);
-  (* delay takes precedence over period *)
-  (* it can be combined with awaiting a device for timeout *)
-    VAR cid: INTEGER; ctx: CoreContext;
-  BEGIN
-    ASSERT(delay > 0, Error.PreCond);
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
-    ctx := coreCon[cid];
-    ctx.Ct.delay := delay;
-    Coroutines.Transfer(ctx.Ct.cor, ctx.loop)
-  END DelayMe;
-
-
   PROCEDURE SuspendMe*;
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
@@ -201,19 +186,57 @@ MODULE Kernel;
   END SuspendMe;
 
 
-  PROCEDURE AwaitDeviceSet*(addr: INTEGER; flags: SET);
-  (* await any of the 'flags' at 'addr' to be set by hardware *)
-  (* any resetting of the flags must be done by the thread *)
-  (* device awaiting takes precedence over period *)
-  (* it can be combined with a delay for timeout *)
+  PROCEDURE DelayMe*(delay: INTEGER);
+  (* delay takes precedence over period *)
+  (* it can be combined with awaiting a device for timeout *)
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     ctx := coreCon[cid];
-    ctx.Ct.deviceAddr := addr;
-    ctx.Ct.deviceFlags := flags;
+    ctx.Ct.delay := delay;
     Coroutines.Transfer(ctx.Ct.cor, ctx.loop)
-  END AwaitDeviceSet;
+  END DelayMe;
+
+
+  PROCEDURE StartTimeout*(timeout: INTEGER);
+    VAR cid: INTEGER;
+  BEGIN
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    coreCon[cid].Ct.delay := timeout
+  END StartTimeout;
+
+
+  PROCEDURE CancelTimeout*;
+  BEGIN
+    StartTimeout(0)
+  END CancelTimeout;
+
+
+  PROCEDURE AwaitDeviceFlags*(addr: INTEGER; setFlags, clrFlags: SET);
+  (**
+    Await any of the 'setFlags' to be set, or any of the 'clrFlags'
+    to be set or cleared by the hardware, respectively.
+    Any resetting of the flags must be done by the thread.
+    Device flag awaiting takes precedence over period.
+    Can be combined with a delay for timeout, though.
+  **)
+    VAR cid: INTEGER; ctx: CoreContext;
+  BEGIN
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    ctx := coreCon[cid];
+    ctx.Ct.devAddr := addr;
+    ctx.Ct.devFlagsSet := setFlags;
+    ctx.Ct.devFlagsClr := clrFlags;
+    Coroutines.Transfer(ctx.Ct.cor, ctx.loop)
+  END AwaitDeviceFlags;
+
+  PROCEDURE CancelAwaitDeviceFlags*;
+    VAR cid: INTEGER; ctx: CoreContext;
+  BEGIN
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    ctx := coreCon[cid];
+    ctx.Ct.devAddr := 0
+  END CancelAwaitDeviceFlags;
 
 
   PROCEDURE Trigger*(): INTEGER;
@@ -222,6 +245,24 @@ MODULE Kernel;
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     RETURN coreCon[cid].Ct.retCode
   END Trigger;
+
+
+  PROCEDURE ChangePrio*(prio: INTEGER);
+    VAR cid: INTEGER;
+  BEGIN
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    coreCon[cid].Ct.prio := prio
+  END ChangePrio;
+
+
+  PROCEDURE ChangePeriod*(period, startAfter: INTEGER);
+     VAR cid: INTEGER; ctx: CoreContext;
+  BEGIN
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    ctx := coreCon[cid];
+    ctx.Ct.period := period;
+    ctx.Ct.ticker := startAfter
+  END ChangePeriod;
 
 
   PROCEDURE Ct*(): Thread;
@@ -247,33 +288,34 @@ MODULE Kernel;
   (* scheduler coroutine code *)
 
   PROCEDURE loopc;
-    VAR tid, cid: INTEGER; t: Thread; ctx: CoreContext; deviceFlags: SET;
+    VAR tid, cid: INTEGER; t: Thread; ctx: CoreContext; devFlags: SET;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     ctx := coreCon[cid];
     ctx.Ct := NIL;
     REPEAT
       IF SysTick.Tick() THEN
+
         tid := 0;
         WHILE tid < ctx.numThreads DO
           t := ctx.threads[tid];
           IF t.state = StateEnabled THEN
             t.retCode := TrigNone;
-            IF (t.delay <= 0) & (t.period = 0) & (t.deviceAddr = 0) THEN (* no triggers *)
+            IF (t.delay <= 0) & (t.period = 0) & (t.devAddr = 0) THEN (* no triggers *)
               slotIn(t, ctx)
             ELSE
-              IF t.delay > 0 THEN (* thread on delay *)
+              IF t.delay > 0 THEN (* thread on delay or timeout *)
                 DEC(t.delay, ctx.loopPeriod);
                 IF t.delay <= 0 THEN
                   slotIn(t, ctx);
                   t.retCode := TrigDelay
                 END
               END;
-              IF t.deviceAddr > 0 THEN (* waiting for device flags *)
-                SYSTEM.GET(t.deviceAddr, deviceFlags);
-                IF t.deviceFlags * deviceFlags # {} THEN
+              IF t.devAddr # 0 THEN (* waiting for device flags *)
+                SYSTEM.GET(t.devAddr, devFlags);
+                IF (t.devFlagsSet * devFlags # {}) OR (devFlags * t.devFlagsClr # t.devFlagsClr) THEN
                   slotIn(t, ctx);
-                  t.deviceAddr := 0;
+                  t.devAddr := 0;
                   t.retCode := TrigDevice
                 END
               END;
@@ -281,16 +323,18 @@ MODULE Kernel;
                 DEC(t.ticker, ctx.loopPeriod); (* keep period timing in any case *)
                 IF t.ticker <= 0 THEN
                   t.ticker := t.ticker + t.period;
-                  IF t.retCode = TrigNone THEN
-                    slotIn(t, ctx);
-                    t.retCode := TrigPeriod
+                  IF (t.delay <= 0) & (t.devAddr = 0) THEN
+                    IF t.retCode = TrigNone THEN
+                      slotIn(t, ctx);
+                      t.retCode := TrigPeriod
+                    END
                   END
                 END
               END
             END
           END;
           INC(tid)
-        END;
+        END
       END;
       WHILE ctx.ct # NIL DO
         t := ctx.ct;

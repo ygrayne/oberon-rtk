@@ -7,7 +7,7 @@ MODULE Out;
   For two threads only, tid = 0 and 1
   Only use on one core!
   --
-  Copyright (c) 2020-2024 Gray gray@grayraven.org
+  Copyright (c) 2020-2024 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

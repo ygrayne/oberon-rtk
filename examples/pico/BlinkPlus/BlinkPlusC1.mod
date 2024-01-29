@@ -2,13 +2,15 @@ MODULE BlinkPlusC1;
 (**
   Oberon RTK Framework
   Example program, multi-core
+  Description: refer to https://oberon-rtk.org/examples/blinkplus/
+  --
   See module 'BlinkPlusC0'
   Uncomment 'Run' in the module init section to run this program alone on core 0.
   --
   MCU: RP2040
   Board: Pico
   --
-  Copyright (c) 2023 Gray gray@grayraven.org
+  Copyright (c) 2023-2024 Gray, gray@grayraven.org
 **)
 
   IMPORT Main, Out, GPIO, LED, Timers;

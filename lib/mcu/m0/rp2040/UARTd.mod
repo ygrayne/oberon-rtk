@@ -38,6 +38,8 @@ MODULE UARTd;
     FR_TXFF* = 5;  (* transmit FIFO full *)
     FR_RXFE* = 4;  (* receive FIFO empty *)
 
+    RSR_OR*  = 3;  (* receive fifo overrun *)
+
     UART0txPinNo = {0, 12, 16, 28};
     UART0rxPinNo = {1, 13, 17, 29};
     UART1txPinNo = {4, 8, 20, 24};
@@ -49,11 +51,11 @@ MODULE UARTd;
   TYPE
     Device* = POINTER TO DeviceDesc;
     DeviceDesc* = RECORD(TextIO.DeviceDesc)
-      uartNo*: INTEGER;
+      uartNo: INTEGER;
       devNo: INTEGER;
       txPinNo, rxPinNo: INTEGER;
       CR, IBRD, FBRD, LCR_H: INTEGER;
-      TDR*, RDR*, FR*: INTEGER
+      TDR*, RDR*, FR*, RSR*: INTEGER
     END;
 
 
@@ -77,16 +79,18 @@ MODULE UARTd;
     dev.IBRD  := base + MCU.UART_IBRD_Offset;
     dev.FBRD  := base + MCU.UART_FBRD_Offset;
     dev.CR    := base + MCU.UART_CR_Offset;
-    dev.LCR_H := base + MCU.UART_LCR_H_Offset
+    dev.LCR_H := base + MCU.UART_LCR_H_Offset;
+    dev.RSR   := base + MCU.UART_RSR_Offset
   END Init;
 
 
   PROCEDURE Configure*(dev: Device; baudrate: INTEGER);
-  (* basic configuration: 8 bits, 1 stop bit, no parity, fifos enabled *)
+  (**
+    Basic configuration: 8 bits, 1 stop bit, no parity, fifos enabled
+  **)
     VAR x, intDiv, fracDiv: INTEGER;
   BEGIN
     ASSERT(dev # NIL, Error.PreCond);
-
     (* config UART device *)
     Resets.Release(dev.devNo);
     Resets.AwaitReleaseDone(dev.devNo);
@@ -117,7 +121,9 @@ MODULE UARTd;
 
 
   PROCEDURE ConfigureRaw*(dev: Device; lcrhValue: SET);
-  (* extended configuration *)
+  (**
+    Extended configuration: directly write 'LCR_H'
+  **)
   BEGIN
     ASSERT(dev # NIL, Error.PreCond);
     SYSTEM.PUT(dev.LCR_H, lcrhValue)
@@ -125,7 +131,10 @@ MODULE UARTd;
 
 
   PROCEDURE ConfigPads*(dev: Device; cfg: GPIO.PadConfig);
-  (* if a non-reset = non-default pad config shall be used *)
+  (**
+    Configure the pads for the pins of 'dev'
+    Pads work mostly fine in their reset = default state.
+  **)
   BEGIN
     ASSERT(dev # NIL, Error.PreCond);
     GPIO.ConfigurePad(dev.txPinNo, cfg);
@@ -144,5 +153,13 @@ MODULE UARTd;
     ASSERT(dev # NIL, Error.PreCond);
     SYSTEM.PUT(dev.CR, {})
   END Disable;
+
+
+  PROCEDURE Flags*(dev: Device): SET;
+    VAR flags: SET;
+  BEGIN
+    SYSTEM.GET(dev.FR, flags);
+    RETURN flags
+  END Flags;
 
 END UARTd.

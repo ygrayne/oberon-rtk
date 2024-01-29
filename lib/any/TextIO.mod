@@ -3,8 +3,9 @@ MODULE TextIO;
   Oberon RTK Framework
   Text IO channels using writers and readers
   --
-  * writer to use in output modules, eg. Texts
-  * reader to use in input modules, eg. Texts
+  * Device as abstraction for hardware IO peripheral devices.
+  * Writer to use in output modules, eg. Texts
+  * Reader to use in input modules, eg. Texts
   --
   Copyright (c) 2020-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -12,12 +13,21 @@ MODULE TextIO;
 
   IMPORT Error;
 
+  CONST
+    (* status/error codes *)
+    NoError* = 0;
+    BufferOverflow* = 1;
+    SyntaxError* = 2;
+    OutOfLimits* = 3;
+    NoInput* = 4;
+    FifoOverrun* = 5;
+
   TYPE
     Device* = POINTER TO DeviceDesc;
     DeviceDesc* = RECORD END;
 
     PutStringProc* = PROCEDURE(dev: Device; string: ARRAY OF CHAR; numChar: INTEGER);
-    GetStringProc* = PROCEDURE(dev: Device; VAR string: ARRAY OF CHAR; del: CHAR);
+    GetStringProc* = PROCEDURE(dev: Device; VAR string: ARRAY OF CHAR; VAR numChar, res: INTEGER);
 
     Writer* = POINTER TO WriterDesc;
     WriterDesc* = RECORD

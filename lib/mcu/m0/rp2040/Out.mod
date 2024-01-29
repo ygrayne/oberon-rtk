@@ -70,4 +70,6 @@ MODULE Out;
     Texts.WriteBin(W[cid], n, width)
   END Bin;
 
+BEGIN
+  W[0] := NIL; W[1] := NIL
 END Out.

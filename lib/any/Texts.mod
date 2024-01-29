@@ -1,16 +1,19 @@
 MODULE Texts;
 (**
   Oberon RTK Framework
-  Formatted output to a "channel", ie. using a 'TextIO.Writer'
-  Input coming soon...
+  Formatted output to a "channel", using a 'TextIO.Writer'
+  Formatted input from a "channel", using a 'TextIO.Reader'
   --
-  These procedure are re-entrant, if the TextIO.Writer's and TextIO.Writer's procedures are.
+  The behaviour of the procedures depends on the write string and read
+  procedures allocated to 'W' and 'R' parameters:
+  * blocking
+  * non-blocking (using the kernel)
   --
   Copyright (c) 2020 - 2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT TextIO, Error;
+  IMPORT TextIO, Error (*, Terminal, UART := UARTstr*);
 
   CONST
     CR = 0DX;
@@ -18,8 +21,22 @@ MODULE Texts;
     Blanks = "                                "; (* 32 blanks *)
     MaxBlanks = 32;
 
-  VAR crlf: ARRAY 2 OF CHAR; (* module vars OK, as read only *)
+    (* conversion constants *)
+    MaxInt* = 07FFFFFFFH; (*  2,147,483,647 *)
+    MinInt* = 080000000H; (* -2,147,483,648 *)
+    MaxIntDigits* = 10;   (* sans sign, sans leading zeros *)
 
+    (* read results *)
+    NoError* = TextIO.NoError;
+    BufferOverflow* = TextIO.BufferOverflow; (* a tool small buffer was provided or used *)
+    SyntaxError* = TextIO.SyntaxError;      (* zero length or non-numerical chars *)
+    OutOfLimits* = TextIO.OutOfLimits;    (* bigger than MaxInt, smaller than MinInt *)
+    NoInput* = TextIO.NoInput;
+    FifoOverrun* = TextIO.FifoOverrun;
+
+  VAR eol: ARRAY 2 OF CHAR;
+
+  (* write conversions *)
 
   PROCEDURE IntToString*(int: INTEGER; VAR str: ARRAY OF CHAR; VAR slen: INTEGER);
     VAR spos, dpos: INTEGER; digits: ARRAY 10 OF CHAR;
@@ -99,6 +116,7 @@ MODULE Texts;
     slen := 35
   END IntToBinString;
 
+  (* write *)
 
   PROCEDURE Write*(W: TextIO.Writer; ch: CHAR);
     VAR s: ARRAY 1 OF CHAR;
@@ -108,54 +126,172 @@ MODULE Texts;
   END Write;
 
 
-  PROCEDURE WriteString*(W: TextIO.Writer; s: ARRAY OF CHAR);
+  PROCEDURE WriteString*(W: TextIO.Writer; str: ARRAY OF CHAR);
     VAR i: INTEGER;
   BEGIN
     i := 0;
-    WHILE (s[i] # 0X) & (i < LEN(s)) DO INC(i) END;
-    W.putString(W.dev, s, i)
+    WHILE (str[i] # 0X) & (i < LEN(str)) DO INC(i) END;
+    W.putString(W.dev, str, i)
   END WriteString;
 
 
   PROCEDURE WriteLn*(W: TextIO.Writer);
   BEGIN
-    W.putString(W.dev, crlf, 2)
+    W.putString(W.dev, eol, 2)
   END WriteLn;
 
 
-  PROCEDURE writeNumString(W: TextIO.Writer; s: ARRAY OF CHAR; numChars, leftPadding: INTEGER);
+  PROCEDURE writeNumString(W: TextIO.Writer; str: ARRAY OF CHAR; numChars, leftPadding: INTEGER);
   BEGIN
     IF leftPadding > MaxBlanks THEN leftPadding := MaxBlanks END;
     IF leftPadding > 0 THEN
       W.putString(W.dev, Blanks, leftPadding)
     END;
-    W.putString(W.dev, s, numChars)
+    W.putString(W.dev, str, numChars)
   END writeNumString;
 
 
-  PROCEDURE WriteInt*(W: TextIO.Writer; n, width: INTEGER);
+  PROCEDURE WriteInt*(W: TextIO.Writer; int, width: INTEGER);
+  (**
+    Write an integer value in decimal form via 'W'.
+  **)
     VAR buffer: ARRAY 12 OF CHAR; strLen: INTEGER;
   BEGIN
-    IntToString(n, buffer, strLen);
+    IntToString(int, buffer, strLen);
     writeNumString(W, buffer, strLen, width - strLen)
   END WriteInt;
 
 
-  PROCEDURE WriteHex*(W: TextIO.Writer; n, width: INTEGER);
+  PROCEDURE WriteHex*(W: TextIO.Writer; int, width: INTEGER);
     VAR buffer: ARRAY 12 OF CHAR; strLen: INTEGER;
   BEGIN
-    IntToHexString(n, buffer, strLen);
+    IntToHexString(int, buffer, strLen);
     writeNumString(W, buffer, strLen, width - strLen)
   END WriteHex;
 
 
-  PROCEDURE WriteBin*(W: TextIO.Writer; n, width: INTEGER);
+  PROCEDURE WriteBin*(W: TextIO.Writer; int, width: INTEGER);
     VAR buffer: ARRAY 36 OF CHAR; strLen: INTEGER;
   BEGIN
-    IntToBinString(n, buffer, strLen);
+    IntToBinString(int, buffer, strLen);
     writeNumString(W, buffer, strLen, width - strLen)
   END WriteBin;
 
+  (* read conversions *)
+
+  PROCEDURE cleanLeft(str: ARRAY OF CHAR; VAR first: INTEGER; VAR neg: BOOLEAN);
+    VAR ch: CHAR;
+  BEGIN
+    first := 0;
+    WHILE str[first] = " " DO INC(first) END;
+    ch := str[first];
+    neg := ch = "-";
+    IF (ch = "-") OR (ch = "+") THEN INC(first) END;
+    WHILE str[first] = " " DO INC(first) END;
+    WHILE str[first] = "0" DO INC(first) END;
+  END cleanLeft;
+
+  PROCEDURE cleanRight(str: ARRAY OF CHAR; numCh: INTEGER; VAR last: INTEGER);
+  BEGIN
+    last := numCh - 1;
+    WHILE str[last] = " " DO
+      DEC(last)
+    END
+  END cleanRight;
+
+
+  PROCEDURE StrToInt*(str: ARRAY OF CHAR; numCh: INTEGER; VAR int: INTEGER; VAR res: INTEGER);
+  (* rolls over at 0100000000H = 2^32 *)
+    VAR first, last, digit: INTEGER; neg: BOOLEAN; ch: CHAR;
+  BEGIN
+    res := NoError;
+    cleanLeft(str, first, neg);
+    IF numCh - first > MaxIntDigits THEN
+      res := OutOfLimits;
+    END;
+    IF res = NoError THEN
+      cleanRight(str, numCh, last);
+      int := 0;
+      WHILE (first <= last) & (res = NoError) DO
+        ch := str[first];
+        IF (ch < "0") OR (ch > "9") THEN
+          res := SyntaxError;
+        ELSE
+          digit := ORD(ch) - ORD("0");
+          int := (int * 10) + digit;
+          IF MaxInt - int < 0 THEN  (* works across overflow *)
+            IF neg & (int = MinInt) THEN
+              neg := FALSE
+            ELSE
+              res := OutOfLimits
+            END
+          END;
+          INC(first)
+        END
+      END
+    END;
+    IF res = NoError THEN
+      IF neg THEN int := -int END
+    END
+  END StrToInt;
+
+  (* read *)
+
+  PROCEDURE ReadString*(R: TextIO.Reader; VAR s: ARRAY OF CHAR; VAR res: INTEGER);
+  (**
+    Read a string via 'R', terminated by any char < " ", usually a CR.
+    Flush the rest of the input in case of buffer overflow.
+    The string is truncated to the buffer length, terminated by 0X.
+  **)
+    VAR numCh: INTEGER;
+  BEGIN
+    R.getString(R.dev, s, numCh, res);
+    IF res = NoError THEN
+      IF numCh = 0 THEN
+        res := NoInput
+      END
+    END
+    (*
+    IF (res # BufferOverflow) & (res # FifoOverrun) THEN
+      IF numCh > 0 THEN
+        res := NoError
+      ELSE
+        res := NoInput
+      END
+    END
+    *)
+  END ReadString;
+
+
+  PROCEDURE ReadInt*(R: TextIO.Reader; VAR int, res: INTEGER);
+  (**
+    Read an integer in decimal form via 'R', terminated by any char < " ", usually a CR.
+    Flush the rest of the input in case of buffer overflow or fifo overrun.
+    The number is not valid in case of any error.
+    As long as there's no buffer overflow or fifo overrrun, any number of leading
+    blanks, blanks after the sign, leading zeros, and trailing blanks are permitted.
+  **)
+    VAR numCh: INTEGER; buf: ARRAY 32 OF CHAR;
+  BEGIN
+    R.getString(R.dev, buf, numCh, res);
+    IF res = NoError THEN
+      IF numCh > 0 THEN
+        StrToInt(buf, numCh, int, res)
+      ELSE
+        res := NoInput
+      END
+    END
+    (*
+    IF (res = BufferOverflow) OR (res = FifoOverrun) THEN
+      int := 0;
+    ELSIF numCh > 0 THEN
+      StrToInt(buf, numCh, int, res)
+    ELSE
+      int := 0; res := NoInput
+    END
+    *)
+  END ReadInt;
+
 BEGIN
-  crlf[0] := CR; crlf[1] := LF
+  eol[0] := CR; eol[1] := LF
 END Texts.
