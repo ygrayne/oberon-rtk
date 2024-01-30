@@ -24,9 +24,10 @@ MODULE Kernel;
 
     (* result codes *)
     OK* = 0;
+    NoError* = 0;
     Failed* = 1;
 
-    DefaultPrio* = 1;
+    DefaultPrio* = 2;
 
     (* thread states *)
     StateEnabled = 0;    (* triggered: queued at next trigger event; queued at next scheduler run *)
@@ -48,7 +49,7 @@ MODULE Kernel;
     PROC* = PROCEDURE; (* Modula-2 vibes *)
     Thread* = POINTER TO ThreadDesc;
     ThreadDesc* = RECORD
-      prio*, tid: INTEGER;
+      prio, tid: INTEGER;
       state: INTEGER;
       period, ticker: INTEGER;
       delay: INTEGER;
@@ -56,7 +57,7 @@ MODULE Kernel;
       devFlagsSet, devFlagsClr: SET;
       cor: Coroutines.Coroutine;
       retCode: INTEGER;
-      next: Thread
+      next*: Thread
     END;
 
     (* core-specific data *)
