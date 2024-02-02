@@ -24,7 +24,7 @@ MODULE Clocks;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Resets, GPIO, PowerOn;
+  IMPORT SYSTEM, MCU := MCU2, GPIO, StartUp;
 
   CONST
     (* CLK_GPOUT0_CTRL *)
@@ -115,7 +115,7 @@ MODULE Clocks;
     VAR x: INTEGER;
   BEGIN
     (* ensure register accessibility *)
-    PowerOn.AwaitResetDone(MCU.PSM_XOSC);
+    StartUp.AwaitPowerOnResetDone(MCU.PSM_XOSC);
     (* set start-up delay *)
     SYSTEM.PUT(MCU.XOSC_STARTUP, 94); (* about 2 ms *)
     (* enable *)
@@ -123,10 +123,11 @@ MODULE Clocks;
     BFI(x, 23, 12, XOSC_CTRL_ENABLE);
     SYSTEM.PUT(MCU.XOSC_CTRL, x);
     (* wait for osc to stabilize *)
-    (* compiler issue, reported => confirmed
-    REPEAT UNTIL SYSTEM.BIT(MCU.XOSC_STATUS, STABLE);
+    (* compiler issue, reported => confirmed *)
+    (* works with Astrobe v9.1, checked 2024-01-31
+    REPEAT UNTIL SYSTEM.BIT(MCU.XOSC_STATUS, XOSC_STATUS_STABLE);
     *)
-    REPEAT (* workaround *)
+    REPEAT (* workaround, left for v9.0.3 compat *)
       SYSTEM.GET(MCU.XOSC_STATUS, x)
     UNTIL XOSC_STATUS_STABLE IN BITS(x)
   END startXOSC;
@@ -136,16 +137,17 @@ MODULE Clocks;
   (* at 48 MHz *)
     VAR x: INTEGER;
   BEGIN
-    Resets.Release(MCU.RESETS_PLL_SYS);
-    Resets.AwaitReleaseDone(MCU.RESETS_PLL_SYS);
+    StartUp.ReleaseReset(MCU.RESETS_PLL_SYS);
+    StartUp.AwaitReleaseDone(MCU.RESETS_PLL_SYS);
     (* set freq 125 MHz *)
     SYSTEM.PUT(MCU.PLL_SYS_FBDIV_INT, 125);
     (* power up VCO and PLL *)
     SYSTEM.PUT(MCU.PLL_SYS_PWR + MCU.ACLR, {PLL_SYS_PWR_VCOPD, PLL_SYS_PWR_PD}); (* clear bits *)
-    (* compiler issue, reported => confirmed
-    REPEAT UNTIL SYSTEM.BIT(MCU.PLL_SYS_CS, LOCK);
+    (* compiler issue, reported => confirmed *)
+    (* works with Astrobe v9.1, checked 2024-01-31
+    REPEAT UNTIL SYSTEM.BIT(MCU.PLL_SYS_CS, PLL_SYS_CS_LOCK);
     *)
-    REPEAT (* workaround *)
+    REPEAT (* workaround, left for v9.0.3 compat *)
       SYSTEM.GET(MCU.PLL_SYS_CS, x)
     UNTIL PLL_SYS_CS_LOCK IN BITS(x);
     (* set post dividers *)
@@ -166,16 +168,17 @@ MODULE Clocks;
   (* we'll also feed the reference clock with this PLL *)
     VAR x: INTEGER;
   BEGIN
-    Resets.Release(MCU.RESETS_PLL_USB);
-    Resets.AwaitReleaseDone(MCU.RESETS_PLL_USB);
+    StartUp.ReleaseReset(MCU.RESETS_PLL_USB);
+    StartUp.AwaitReleaseDone(MCU.RESETS_PLL_USB);
     (* set freq 48 MHz *)
     SYSTEM.PUT(MCU.PLL_USB_FBDIV_INT, 64);
     (* power up VCO and PLL *)
     SYSTEM.PUT(MCU.PLL_USB_PWR + MCU.ACLR, {PLL_USB_PWR_VCOPD, PLL_USB_PWR_PD}); (* clear bits *)
-    (* compiler issue, reported
-    REPEAT UNTIL SYSTEM.BIT(MCU.PLL_USB_CS, LOCK);
+    (* compiler issue, reported *)
+    (* works with Astrobe v9.1, checked 2024-01-31
+    REPEAT UNTIL SYSTEM.BIT(MCU.PLL_USB_CS, PLL_USB_CS_LOCK);
     *)
-    REPEAT (* workaround *)
+    REPEAT (* workaround, left for v9.0.3 compat *)
       SYSTEM.GET(MCU.PLL_USB_CS, x)
     UNTIL PLL_USB_CS_LOCK IN BITS(x);
     (* set post dividers *)

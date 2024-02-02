@@ -16,7 +16,7 @@ MODULE GPIO;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Resets;
+  IMPORT SYSTEM, MCU := MCU2, StartUp;
 
   CONST
     (* pads *)
@@ -184,10 +184,10 @@ MODULE GPIO;
 
   PROCEDURE init;
   BEGIN
-    Resets.Release(MCU.RESETS_IO_BANK0);
-    Resets.AwaitReleaseDone(MCU.RESETS_IO_BANK0);
-    Resets.Release(MCU.RESETS_PADS_BANK0);
-    Resets.AwaitReleaseDone(MCU.RESETS_PADS_BANK0)
+    StartUp.ReleaseReset(MCU.RESETS_IO_BANK0);
+    StartUp.AwaitReleaseDone(MCU.RESETS_IO_BANK0);
+    StartUp.ReleaseReset(MCU.RESETS_PADS_BANK0);
+    StartUp.AwaitReleaseDone(MCU.RESETS_PADS_BANK0)
   END init;
 
 BEGIN

@@ -11,7 +11,7 @@ MODULE UARTd;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Error, MCU := MCU2, GPIO, Resets, TextIO;
+  IMPORT SYSTEM, Errors, MCU := MCU2, GPIO, StartUp, TextIO;
 
   CONST
     UART0* = 0;
@@ -62,7 +62,7 @@ MODULE UARTd;
   PROCEDURE Init*(dev: Device; uartNo, txPinNo, rxPinNo: INTEGER);
     VAR base: INTEGER;
   BEGIN
-    ASSERT(dev # NIL, Error.PreCond);
+    ASSERT(dev # NIL, Errors.PreCond);
     ASSERT(uartNo IN {UART0, UART1});
     ASSERT(txPinNo IN UARTtxPinNo);
     ASSERT(rxPinNo IN UARTrxPinNo);
@@ -90,10 +90,10 @@ MODULE UARTd;
   **)
     VAR x, intDiv, fracDiv: INTEGER;
   BEGIN
-    ASSERT(dev # NIL, Error.PreCond);
+    ASSERT(dev # NIL, Errors.PreCond);
     (* config UART device *)
-    Resets.Release(dev.devNo);
-    Resets.AwaitReleaseDone(dev.devNo);
+    StartUp.ReleaseReset(dev.devNo);
+    StartUp.AwaitReleaseDone(dev.devNo);
     SYSTEM.PUT(dev.CR, {}); (* disable *)
 
     x := (MCU.PeriClkFreq * 8) DIV baudrate;
@@ -125,7 +125,7 @@ MODULE UARTd;
     Extended configuration: directly write 'LCR_H'
   **)
   BEGIN
-    ASSERT(dev # NIL, Error.PreCond);
+    ASSERT(dev # NIL, Errors.PreCond);
     SYSTEM.PUT(dev.LCR_H, lcrhValue)
   END ConfigureRaw;
 
@@ -136,7 +136,7 @@ MODULE UARTd;
     Pads work mostly fine in their reset = default state.
   **)
   BEGIN
-    ASSERT(dev # NIL, Error.PreCond);
+    ASSERT(dev # NIL, Errors.PreCond);
     GPIO.ConfigurePad(dev.txPinNo, cfg);
     GPIO.ConfigurePad(dev.rxPinNo, cfg)
   END ConfigPads;
@@ -144,13 +144,13 @@ MODULE UARTd;
 
   PROCEDURE Enable*(dev: Device);
   BEGIN
-    ASSERT(dev # NIL, Error.PreCond);
+    ASSERT(dev # NIL, Errors.PreCond);
     SYSTEM.PUT(dev.CR, {CR_UARTEN, CR_RXE, CR_TXE})
   END Enable;
 
   PROCEDURE Disable*(dev: Device);
   BEGIN
-    ASSERT(dev # NIL, Error.PreCond);
+    ASSERT(dev # NIL, Errors.PreCond);
     SYSTEM.PUT(dev.CR, {})
   END Disable;
 
