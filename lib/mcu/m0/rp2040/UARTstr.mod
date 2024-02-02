@@ -46,7 +46,7 @@ MODULE UARTstr;
 
 
   PROCEDURE GetString*(dev: TextIO.Device; VAR s: ARRAY OF CHAR; VAR numCh, res: INTEGER);
-    VAR dev0: UARTd.Device; maxNumCh: INTEGER; ch: CHAR;
+    VAR dev0: UARTd.Device; bufLimit: INTEGER; ch: CHAR;
   BEGIN
     dev0 := dev(UARTd.Device);
     bufLimit := LEN(s) - 1; (* space for 0X *)

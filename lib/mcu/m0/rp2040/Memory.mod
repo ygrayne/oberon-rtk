@@ -9,7 +9,7 @@ MODULE Memory;
   Copyright (c) 2023-2024 Gray, gray@grayraven.org
   Portions copyright (c) 2012-2021 CFB Software, https://www.astrobe.com
   Used with permission.
-  Please refer to the licensing conditions as defined at the of this file.
+  Please refer to the licensing conditions as defined at the end of this file.
 **)
 
   IMPORT SYSTEM, MCU := MCU2, Config, MAU;

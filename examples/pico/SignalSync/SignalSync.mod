@@ -10,7 +10,7 @@ MODULE SignalSync;
   Copyright (c) 2024 Gray, gray@grayraven.org
 **)
 
-  IMPORT Main, Kernel, Out, MultiCore, Signals, Error, GPIO, LED;
+  IMPORT Main, Kernel, Out, MultiCore, Signals, Errors, GPIO, LED;
 
   CONST
     MillisecsPerTick  = 10;
@@ -82,19 +82,19 @@ MODULE SignalSync;
   PROCEDURE run;
     VAR res: INTEGER;
   BEGIN
-    NEW(sig); ASSERT(sig # NIL, Error.HeapOverflow);
+    NEW(sig); ASSERT(sig # NIL, Errors.HeapOverflow);
     Signals.Init(sig);
     Kernel.Install(MillisecsPerTick);
     (* blinker *)
-    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Error.Config);
+    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.Config);
     Kernel.SetPeriod(t0, 500, 0); Kernel.Enable(t0);
     (* two receivers, running the same code *)
-    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.OK, Error.Config);
+    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.OK, Errors.Config);
     Kernel.SetPrio(t1, 1); Kernel.Enable(t1); (* note: no period as triggered by signal *)
-    Kernel.Allocate(t1c, ThreadStackSize, t2, tid2, res); ASSERT(res = Kernel.OK, Error.Config);
+    Kernel.Allocate(t1c, ThreadStackSize, t2, tid2, res); ASSERT(res = Kernel.OK, Errors.Config);
     Kernel.SetPrio(t2, 1); Kernel.Enable(t2); (* note: no period as triggered by signal *)
     (* one sender *)
-    Kernel.Allocate(t3c, ThreadStackSize, t3, tid3, res); ASSERT(res = Kernel.OK, Error.Config);
+    Kernel.Allocate(t3c, ThreadStackSize, t3, tid3, res); ASSERT(res = Kernel.OK, Errors.Config);
     Kernel.SetPeriod(t3, 1000, 0); Kernel.Enable(t3);
     Kernel.Run
     (* we'll not return here *)

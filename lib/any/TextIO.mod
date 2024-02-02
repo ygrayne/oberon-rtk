@@ -11,7 +11,7 @@ MODULE TextIO;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT Error;
+  IMPORT Errors;
 
   CONST
     (* status/error codes *)
@@ -44,7 +44,7 @@ MODULE TextIO;
 
   PROCEDURE OpenWriter*(w: Writer; dev: Device; psp: PutStringProc);
   BEGIN
-    ASSERT(w # NIL, Error.PreCond);
+    ASSERT(w # NIL, Errors.PreCond);
     w.dev := dev;
     w.putString := psp
   END OpenWriter;
@@ -52,7 +52,7 @@ MODULE TextIO;
 
   PROCEDURE OpenReader*(r: Reader; dev: Device; gsp: GetStringProc);
   BEGIN
-    ASSERT(r # NIL, Error.PreCond);
+    ASSERT(r # NIL, Errors.PreCond);
     r.dev := dev;
     r.getString := gsp
   END OpenReader;

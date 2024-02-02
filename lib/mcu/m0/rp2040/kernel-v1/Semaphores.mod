@@ -9,7 +9,7 @@ MODULE Semaphores;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT Signals, Error;
+  IMPORT Signals, Errors;
 
   TYPE
     Semaphore* = POINTER TO SemaphoreDesc;
@@ -30,7 +30,7 @@ MODULE Semaphores;
 
   PROCEDURE Release*(s: Semaphore);
   BEGIN
-    ASSERT(s.claimed, Error.ConsCheck); (* unbalanced claim/release sequence *)
+    ASSERT(s.claimed, Errors.ConsCheck); (* unbalanced claim/release sequence *)
     IF Signals.Awaited(s.signal) THEN
       Signals.Send(s.signal)
     ELSE
@@ -47,7 +47,7 @@ MODULE Semaphores;
   PROCEDURE Init*(s: Semaphore);
   BEGIN
     s.claimed := FALSE;
-    NEW(s.signal); ASSERT(s.signal # NIL, Error.HeapOverflow);
+    NEW(s.signal); ASSERT(s.signal # NIL, Errors.HeapOverflow);
     Signals.Init(s.signal)
   END Init;
 

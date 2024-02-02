@@ -11,7 +11,7 @@
 
 MODULE Coroutines;
 
-  IMPORT SYSTEM, Error;
+  IMPORT SYSTEM, Errors;
 
   TYPE
     PROC* = PROCEDURE;
@@ -27,7 +27,7 @@ MODULE Coroutines;
   PROCEDURE Reset*(cor: Coroutine);
     VAR addr: SET;
   BEGIN
-    ASSERT(cor # NIL, Error.PreCond);
+    ASSERT(cor # NIL, Errors.PreCond);
     (* set up the stack memory for the initial 'Transfer' to 'cor' *)
     cor.sp := cor.stAddr + cor.stSize;
     (* put own address to mark top of stack for stack trace *)
@@ -51,7 +51,7 @@ MODULE Coroutines;
 
   PROCEDURE Allocate*(cor: Coroutine; p: PROC);
   BEGIN
-    ASSERT(cor # NIL, Error.PreCond);
+    ASSERT(cor # NIL, Errors.PreCond);
     cor.proc := p;
     Reset(cor)
   END Allocate;
@@ -59,7 +59,7 @@ MODULE Coroutines;
 
   PROCEDURE Init*(cor: Coroutine; stAddr, stSize, id: INTEGER);
   BEGIN
-    ASSERT(cor # NIL, Error.PreCond);
+    ASSERT(cor # NIL, Errors.PreCond);
     cor.stAddr := stAddr;
     cor.stSize := stSize;
     cor.id := id
@@ -69,8 +69,8 @@ MODULE Coroutines;
   PROCEDURE Transfer*(f, t: Coroutine);
     CONST SP = 13;
   BEGIN
-    ASSERT(f # NIL, Error.PreCond);
-    ASSERT(t # NIL, Error.PreCond);
+    ASSERT(f # NIL, Errors.PreCond);
+    ASSERT(t # NIL, Errors.PreCond);
     (* enter "as" f, f's stack in use *)
     (* prologue: push caller's 'lr' and parameters 'f' and 't' onto f's stack *)
     (* stack: 0: 'f', +4: 't', +8: 'lr' *)

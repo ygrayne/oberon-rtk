@@ -20,7 +20,7 @@ MODULE Exceptions;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Error;
+  IMPORT SYSTEM, MCU := MCU2, Errors;
 
   CONST
     (* IRQ numbers *)
@@ -126,7 +126,7 @@ MODULE Exceptions;
   (* prio: 0 to 3, 0 = highest *)
     VAR addr, x: INTEGER;
   BEGIN
-    ASSERT(excNo IN SysExcNo, Error.PreCond);
+    ASSERT(excNo IN SysExcNo, Errors.PreCond);
     addr := MCU.SCB_SHPR - 04H + (excNo DIV 4) * 4;
     SYSTEM.GET(addr, x);
     x := x + LSL(LSL(prio, 6), (excNo MOD 4) * 8);
@@ -136,7 +136,7 @@ MODULE Exceptions;
   PROCEDURE GetSysExcPrio*(excNo: INTEGER; VAR prio: INTEGER);
     VAR addr: INTEGER;
   BEGIN
-    ASSERT(excNo IN SysExcNo, Error.PreCond);
+    ASSERT(excNo IN SysExcNo, Errors.PreCond);
     addr := MCU.SCB_SHPR - 04H + (excNo DIV 4) * 4;
     SYSTEM.GET(addr, prio);
   END GetSysExcPrio;
@@ -157,7 +157,7 @@ MODULE Exceptions;
 
   PROCEDURE SetNMI*(cid: INTEGER; irqMask: SET);
   BEGIN
-    ASSERT(cid IN {0 .. 1}, Error.PreCond);
+    ASSERT(cid IN {0 .. 1}, Errors.PreCond);
     CASE cid OF
       0: SYSTEM.PUT(MCU.SYSCFG_PROC0_NMI_MASK, irqMask)
     | 1: SYSTEM.PUT(MCU.SYSCFG_PROC1_NMI_MASK, irqMask)

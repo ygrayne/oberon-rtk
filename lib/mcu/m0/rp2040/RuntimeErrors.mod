@@ -21,7 +21,7 @@ MODULE RuntimeErrors;
   Copyright (c) 2020-2024 Gray, gray@grayraven.org
   Portions copyright (c) 2008-2023 CFB Software, https://www.astrobe.com
   Used with permission.
-  Please refer to the licensing conditions as defined at the of this file.
+  Please refer to the licensing conditions as defined at the end of this file.
 **)
 
   IMPORT

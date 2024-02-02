@@ -16,7 +16,7 @@
 
 MODULE Kernel;
 
-  IMPORT SYSTEM, Coroutines, Config, Memory, SysTick, MCU := MCU2, Error;
+  IMPORT SYSTEM, Coroutines, Config, Memory, SysTick, MCU := MCU2, Errors;
 
   CONST
     MaxNumThreads* = Config.MaxNumThreads;
@@ -140,7 +140,7 @@ MODULE Kernel;
 
   PROCEDURE Enable*(t: Thread);
   BEGIN
-    ASSERT(t # NIL, Error.PreCond);
+    ASSERT(t # NIL, Errors.PreCond);
     t.state := StateEnabled
   END Enable;
 
@@ -378,15 +378,15 @@ MODULE Kernel;
     SYSTEM.GET(MCU.SIO_CPUID, cid);
 
     (* allocate and init the core's context *)
-    NEW(coreCon[cid]); ASSERT(coreCon[cid] # NIL, Error.HeapOverflow);
+    NEW(coreCon[cid]); ASSERT(coreCon[cid] # NIL, Errors.HeapOverflow);
     ctx := coreCon[cid];
     ctx.Ct := NIL; ctx.ct := NIL;
     ctx.queued := {};
     ctx.numThreads := 0;
     ctx.loopPeriod := millisecsPerTick;
-    NEW(ctx.jump); ASSERT(ctx.jump # NIL, Error.HeapOverflow);
-    NEW(ctx.loop); ASSERT(ctx.loop # NIL, Error.HeapOverflow);
-    Memory.AllocLoopStack(stkAddr, cid, LoopStackSize); ASSERT(stkAddr # 0, Error.StorageOverflow);
+    NEW(ctx.jump); ASSERT(ctx.jump # NIL, Errors.HeapOverflow);
+    NEW(ctx.loop); ASSERT(ctx.loop # NIL, Errors.HeapOverflow);
+    Memory.AllocLoopStack(stkAddr, cid, LoopStackSize); ASSERT(stkAddr # 0, Errors.StorageOverflow);
     Coroutines.Init(ctx.loop, stkAddr, LoopStackSize, LoopCorId);
     Coroutines.Allocate(ctx.loop, loopc);
 
@@ -394,10 +394,10 @@ MODULE Kernel;
     (* don't yet allocate the stacks *)
     i := 0;
     WHILE i < MaxNumThreads DO
-      NEW(ctx.threads[i]); ASSERT(ctx.threads[i] # NIL, Error.HeapOverflow);
+      NEW(ctx.threads[i]); ASSERT(ctx.threads[i] # NIL, Errors.HeapOverflow);
       ctx.threads[i].state := StateSuspended;
       ctx.threads[i].tid := i;
-      NEW(ctx.threads[i].cor); ASSERT(ctx.threads[i].cor # NIL, Error.HeapOverflow);
+      NEW(ctx.threads[i].cor); ASSERT(ctx.threads[i].cor # NIL, Errors.HeapOverflow);
       INC(i)
     END;
     (* start sys tick *)
@@ -405,6 +405,6 @@ MODULE Kernel;
   END Install;
 
 BEGIN
-  ASSERT(MaxNumThreads <= 32, Error.Config);
+  ASSERT(MaxNumThreads <= 32, Errors.Config);
   Done := SuspendMe; Yield := Next
 END Kernel.

@@ -1,4 +1,4 @@
-MODULE Terminal;
+MODULE Terminals;
 (**
   Oberon RTK Framework
   Max two serial text terminals via UARTs
@@ -11,7 +11,7 @@ MODULE Terminal;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT TextIO, UARTd, Error;
+  IMPORT TextIO, UARTd, Error := Errors;
 
   CONST
     UART0* = 0;
@@ -56,4 +56,4 @@ MODULE Terminal;
 BEGIN
   W[0] := NIL; W[1] := NIL;
   R[0] := NIL; R[1] := NIL
-END Terminal.
+END Terminals.

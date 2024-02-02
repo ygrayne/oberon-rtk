@@ -13,7 +13,7 @@ MODULE Texts;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT TextIO, Error (*, Terminal, UART := UARTstr*);
+  IMPORT TextIO, Errors;
 
   CONST
     CR = 0DX;
@@ -41,7 +41,7 @@ MODULE Texts;
   PROCEDURE IntToString*(int: INTEGER; VAR str: ARRAY OF CHAR; VAR slen: INTEGER);
     VAR spos, dpos: INTEGER; digits: ARRAY 10 OF CHAR;
   BEGIN
-    ASSERT(LEN(str) >= 12, Error.PreCond); (* 10 digits, minus sign, 0X *)
+    ASSERT(LEN(str) >= 12, Errors.PreCond); (* 10 digits, minus sign, 0X *)
     IF int = 080000000H THEN
       str := "-2147483648";
       str[11] := 0X;
@@ -73,7 +73,7 @@ MODULE Texts;
   PROCEDURE IntToHexString*(int: INTEGER; VAR str: ARRAY OF CHAR; VAR slen: INTEGER);
     VAR dpos, spos, d: INTEGER; digits: ARRAY 10 OF CHAR;
   BEGIN
-    ASSERT(LEN(str) >= 10, Error.PreCond);
+    ASSERT(LEN(str) >= 10, Errors.PreCond);
     dpos := 0;
     REPEAT
       d := int MOD 010H;
@@ -91,6 +91,7 @@ MODULE Texts;
       DEC(dpos); INC(spos)
     END;
     str[8] := "H";
+    str[9] := 0X;
     slen := 9
   END IntToHexString;
 
@@ -100,7 +101,7 @@ MODULE Texts;
       i, j, k: INTEGER;
       bits: SET;
   BEGIN
-    ASSERT(LEN(str) >= 36, Error.PreCond);
+    ASSERT(LEN(str) >= 36, Errors.PreCond);
     k := 0;
     FOR i := 0 TO 3 DO
       bits := BITS(BFX(int, 31, 24));
@@ -251,15 +252,6 @@ MODULE Texts;
         res := NoInput
       END
     END
-    (*
-    IF (res # BufferOverflow) & (res # FifoOverrun) THEN
-      IF numCh > 0 THEN
-        res := NoError
-      ELSE
-        res := NoInput
-      END
-    END
-    *)
   END ReadString;
 
 
@@ -281,15 +273,6 @@ MODULE Texts;
         res := NoInput
       END
     END
-    (*
-    IF (res = BufferOverflow) OR (res = FifoOverrun) THEN
-      int := 0;
-    ELSIF numCh > 0 THEN
-      StrToInt(buf, numCh, int, res)
-    ELSE
-      int := 0; res := NoInput
-    END
-    *)
   END ReadInt;
 
 BEGIN

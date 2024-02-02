@@ -10,7 +10,7 @@ MODULE SemaphoreSync;
   Copyright (c) 2024 Gray, gray@grayraven.org
 **)
 
-  IMPORT Main, Kernel, Out, MultiCore, Semaphores, Error, GPIO, LED;
+  IMPORT Main, Kernel, Out, MultiCore, Semaphores, Errors, GPIO, LED;
 
   CONST
     MillisecsPerTick  = 10;
@@ -60,16 +60,16 @@ MODULE SemaphoreSync;
   PROCEDURE run;
     VAR res: INTEGER;
   BEGIN
-    NEW(uart); ASSERT(uart # NIL, Error.HeapOverflow);
+    NEW(uart); ASSERT(uart # NIL, Errors.HeapOverflow);
     Semaphores.Init(uart);
     Kernel.Install(MillisecsPerTick);
     (* blinker *)
-    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.NoError, Error.Config);
+    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.NoError, Errors.Config);
     Kernel.SetPeriod(t0, 500, 0); Kernel.Enable(t0);
     (* two threads coordinating output, running the same code *)
-    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.NoError, Error.Config);
+    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.NoError, Errors.Config);
     Kernel.SetPeriod(t1, 500, 0); Kernel.Enable(t1);
-    Kernel.Allocate(t1c, ThreadStackSize, t2, tid2, res); ASSERT(res = Kernel.NoError, Error.Config);
+    Kernel.Allocate(t1c, ThreadStackSize, t2, tid2, res); ASSERT(res = Kernel.NoError, Errors.Config);
     Kernel.SetPeriod(t2, 500, 0); Kernel.Enable(t2);
     Kernel.Run
     (* we'll not return here *)

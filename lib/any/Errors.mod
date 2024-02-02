@@ -1,18 +1,17 @@
-MODULE Error;
+MODULE Errors;
 (**
   Oberon RTK Framework
   Definition of fault and error codes and corresponding message strings.
   --
-  Based on (and compatible with) Astrobe's module 'Error.mod'
-  --
-  Copyright (c) 2019-2021 CFB Software, https://www.astrobe.com
   Copyright (c) 2019-2024 Gray, gray@grayraven.org
-  Please refer to the licensing conditions as defined at the of this file.
 **)
+
+  IMPORT Error;
 
   CONST
     MaxMsgLength = 64;
     OK* = 0;
+    NoError* = 0;
     NotOK* = 1;
 
     (* MCU fault codes *)
@@ -24,29 +23,9 @@ MODULE Error;
     BusFault* = -5;
     UsageFault* = -6;
 
-    (* Astrobe compiler run-time error codes *)
+    (* Astrobe error codes, see Error.mod *)
     FirstAstrobeCode = 1;
-    rtIndex     = 1;
-    typeTest    = 2;
-    arrayLen    = 3;
-    case        = 4;
-    nilProc     = 5;
-    strLen      = 6;
-    intDiv      = 7;
-    fpuExp      = 8;
-    fpuOverflow = 9;
-    fpuNull     = 10;
-    heap        = 11;
-    nilPtr      = 12;
     AstrobeUnused = {13..19};
-
-    (* Astrobe library run-time error codes *)
-    input*    = 20;       (* Input parameter has an unexpected value *)
-    data*     = 21;       (* Data has an unexpected value *)
-    index*    = 22;       (* Index out of bounds *)
-    version*  = 23;       (* Version check failed *)
-    timeout*  = 24;       (* Timeout value exceeded *)
-    undefinedProc* = 25;  (* Procedure variable not yet defined *)
     LastAstrobeCode  = 25;
 
     (* RTK error/assert codes *)
@@ -133,36 +112,7 @@ MODULE Error;
           msg := "too many threads"
       END
     ELSIF (code >= FirstAstrobeCode) & (code <= LastAstrobeCode) & ~(code IN AstrobeUnused) THEN
-      CASE code OF
-        rtIndex, index:
-          msg := "index out of bounds"
-      | typeTest:
-          msg := "type test failure"
-      | arrayLen:
-          msg := "arrays are not the same length"
-      | case:
-          msg := "invalid value in case statement"
-      | nilProc, undefinedProc:
-          msg := "undefined procedure variable"
-      | strLen:
-          msg := "strings are not the same length"
-      | intDiv:
-          msg := "integer divided by zero or negative divisor"
-      | fpuExp, fpuOverflow, fpuNull:
-          msg := "FPU error"
-      | heap:
-          msg := "heap overflow"
-      | nilPtr:
-          msg := "attempt to dispose a NIL pointer"
-      | input:
-          msg := "input parameter has an unexpected value"
-      | data:
-          msg := "data has an unexpected value"
-      | version:
-          msg := "version check failed"
-      | timeout:
-          msg := "timeout value exceeded"
-      END
+      Error.Msg(code, msg)
     ELSE
       msg := "unknown error"
     END
@@ -187,24 +137,4 @@ MODULE Error;
     END
   END GetExceptionType;
 
-END Error.
-
-(* =========================================================================
-   Error - General library module assertion error codes
-
-   (c) 2019-2021 CFB Software
-   https://www.astrobe.com
-
-  Permission to use, copy, modify, and/or distribute this software and its
-  accompanying documentation (the "Software") for any purpose with or
-  without fee is hereby granted, provided that the above copyright notice
-  and this permission notice appear in all copies.
-
-  THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
-  WITH REGARD TO THE SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-  MERCHANTABILITY, FITNESS AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-  AUTHORS BE LIABLE FOR ANY CLAIM, SPECIAL, DIRECT, INDIRECT, OR
-  CONSEQUENTIAL DAMAGES OR ANY DAMAGES OR LIABILITY WHATSOEVER, WHETHER IN
-  AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-  CONNECTION WITH THE DEALINGS IN OR USE OR PERFORMANCE OF THE SOFTWARE.
-  ========================================================================= *)
+END Errors.

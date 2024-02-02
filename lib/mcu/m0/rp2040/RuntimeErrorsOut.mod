@@ -6,10 +6,10 @@ MODULE RuntimeErrorsOut;
   Copyright (c) 2020-2024 Gray, gray@grayraven.org
   Portions copyright (c) 2008-2023 CFB Software, https://www.astrobe.com
   Used with permission.
-  Please refer to the licensing conditions as defined at the of this file.
+  Please refer to the licensing conditions as defined at the end of this file.
 **)
 
-  IMPORT RuntimeErrors, TextIO, Texts, Error, ResData;
+  IMPORT RuntimeErrors, TextIO, Texts, Errors, ResData;
 
   CONST
     NoValue = -1;
@@ -140,7 +140,7 @@ MODULE RuntimeErrorsOut;
     VAR
       code, core, address, lineNo: INTEGER;
       moduleName, procName: Name;
-      msg: Error.String;
+      msg: Errors.String;
   BEGIN
     CASE er OF
       RuntimeErrors.FaultRec:
@@ -154,9 +154,9 @@ MODULE RuntimeErrorsOut;
         address := er.trace.tp[0].address;
         lineNo := er.trace.tp[0].lineNo
     END;
-    Error.GetExceptionType(code, msg);
+    Errors.GetExceptionType(code, msg);
     Texts.WriteString(W, "exception: "); Texts.WriteString(W, msg);
-    Error.Msg(code, msg);
+    Errors.Msg(code, msg);
     Texts.Write(W, " "); Texts.WriteInt(W, code, 0); Texts.WriteString(W, " core: ");
     Texts.WriteInt(W, core, 0); Texts.WriteLn(W);
     Texts.WriteString(W, msg); Texts.WriteLn(W);
@@ -183,7 +183,7 @@ MODULE RuntimeErrorsOut;
 
   PROCEDURE HandleException*(cpuId: INTEGER;  er: RuntimeErrors.ExceptionRec);
   BEGIN
-    ASSERT(cpuId < NumCores, Error.PreCond);
+    ASSERT(cpuId < NumCores, Errors.PreCond);
     PrintException(W[cpuId], er)
   END HandleException;
 
@@ -191,7 +191,7 @@ MODULE RuntimeErrorsOut;
 
   PROCEDURE SetWriter*(coreId: INTEGER; Wr: TextIO.Writer);
   BEGIN
-    ASSERT(coreId < NumCores, Error.PreCond);
+    ASSERT(coreId < NumCores, Errors.PreCond);
     W[coreId] := Wr
   END SetWriter;
 
