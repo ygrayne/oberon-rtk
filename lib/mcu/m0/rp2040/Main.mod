@@ -17,7 +17,7 @@ MODULE Main;
     (* ignore the "is not used" warnings... :) *)
     (* LinkOptions is the first import of Config *)
     Config, Clocks, Memory, RuntimeErrors,
-    RuntimeErrorsOut, Terminals, Out, In, UART := UARTstr; (* set UART := UARTstr for use WITHOUT kernel *)
+    RuntimeErrorsOut, Terminals, Out, In, UART := UARTkstr; (* set UART := UARTstr for use WITHOUT kernel *)
 
   CONST
     Baudrate0 = 38400; (* terminal 0 *)

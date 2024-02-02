@@ -1,11 +1,12 @@
 MODULE Watchdog;
 (**
   Oberon RTK Framework
-  Note: maybe put watchdog resets config in PowerOn and Resets here?
+  Watchdog controller
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
   Counting tick is set and initialised in module Clocks to 1 MHz.
+  Note the necessary factor of 2 for the time.
   --
   Copyright (c) 2023-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -51,7 +52,7 @@ MODULE Watchdog;
   WATCHDOG_CTRL, see above.
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Resets;
+  IMPORT SYSTEM, MCU := MCU2;
 
   CONST
     ScratchMagic4* = 0B007C0D3H;
@@ -73,17 +74,28 @@ MODULE Watchdog;
 
     ScratchRegs = {0..7};
 
-  VAR
-    (* only one device, so module var is OK *)
-    (* operate the watchdog only from one core *)
-    (* this is an issue with Kernel -- to be solved *)
-    load: INTEGER;
+  VAR load: INTEGER;
 
 
   PROCEDURE Init*;
   BEGIN
     SYSTEM.PUT(MCU.WATCHDOG_CTRL + MCU.ACLR, CTRL_RESET);
+    SYSTEM.PUT(MCU.PSM_WDSEL, 0);
+    SYSTEM.PUT(MCU.RESETS_WDSEL, 0)
   END Init;
+
+
+  PROCEDURE Enable*;
+  BEGIN
+    SYSTEM.PUT(MCU.WATCHDOG_CTRL + MCU.ASET, {CTRL_ENABLE})
+  END Enable;
+
+
+  PROCEDURE Disable*;
+  BEGIN
+    SYSTEM.PUT(MCU.WATCHDOG_CTRL + MCU.ACLR, {CTRL_ENABLE})
+  END Disable;
+
 
   PROCEDURE SetTime*(time: INTEGER); (* milliseconds *)
   BEGIN
@@ -91,20 +103,12 @@ MODULE Watchdog;
     SYSTEM.PUT(MCU.WATCHDOG_LOAD, load)
   END SetTime;
 
-  PROCEDURE Start*;
-  BEGIN
-    SYSTEM.PUT(MCU.WATCHDOG_CTRL + MCU.ASET, {CTRL_ENABLE})
-  END Start;
 
-  PROCEDURE Stop*;
-  BEGIN
-    SYSTEM.PUT(MCU.WATCHDOG_CTRL + MCU.ACLR, {CTRL_ENABLE})
-  END Stop;
-
-  PROCEDURE Restart*;
+  PROCEDURE Reload*;
   BEGIN
     SYSTEM.PUT(MCU.WATCHDOG_LOAD, load)
-  END Restart;
+  END Reload;
+
 
   PROCEDURE Trigger*;
   BEGIN
@@ -118,11 +122,23 @@ MODULE Watchdog;
   END GetResetReason;
 
 
-  PROCEDURE SetScratchReg*(which, value: INTEGER);
+  PROCEDURE SetPowerOnResets*(resets: SET);
+  BEGIN
+    SYSTEM.PUT(MCU.PSM_WDSEL, resets)
+  END SetPowerOnResets;
+
+
+  PROCEDURE SetResetResets*(resets: SET);
+  BEGIN
+    SYSTEM.PUT(MCU.RESETS_WDSEL, resets)
+  END SetResetResets;
+
+
+  PROCEDURE SetScratchReg*(regNo, value: INTEGER);
     VAR addr: INTEGER;
   BEGIN
-    ASSERT(which IN ScratchRegs);
-    addr := MCU.WATCHDOG_SCRATCH + (which * MCU.WATCHDOG_SCRATCH_Offset);
+    ASSERT(regNo IN ScratchRegs);
+    addr := MCU.WATCHDOG_SCRATCH + (regNo * MCU.WATCHDOG_SCRATCH_Offset);
     SYSTEM.PUT(addr, value)
   END SetScratchReg;
 

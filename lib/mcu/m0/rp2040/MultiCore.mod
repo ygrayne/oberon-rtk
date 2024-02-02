@@ -19,9 +19,10 @@ MODULE MultiCore;
     ST_RDY = 1;
     ST_VLD = 0;
 
-    (* SEV = 0BF40H; *)
+    (* works with Astrobe v9.1, checked 2024-01-31
+    SEV = 0BF40H;
+    *)
     NOPSEV = 046C0BF40H; (* workaround, SEV does not work with Astrobe v9.0.3 *)
-
 
   PROCEDURE CPUid*(): INTEGER;
     VAR x: INTEGER;
@@ -31,7 +32,7 @@ MODULE MultiCore;
   END CPUid;
 
 
-  PROCEDURE Send*(value: INTEGER);
+  PROCEDURE Send*(VAR value: INTEGER); (* VAR = workaround *)
   BEGIN
     SYSTEM.PUT(MCU.SIO_FIFO_WR, value)
   END Send;
@@ -75,15 +76,21 @@ MODULE MultiCore;
     cmd[5] := SYSTEM.VAL(INTEGER, startProc);
     INCL(BITS(cmd[5]), 0); (* thumb code *)
     i := 0;
+    Flush;
     REPEAT
-      IF cmd[i] = 0 THEN
-        Flush
-      END;
+      (* workaround, left for v9.0.3 compat *)
       SYSTEM.EMIT(NOPSEV);
+      (* works with Astrobe v9.1, checked 2024-01-31
+      SYSTEM.EMITH(SEV);
+      *)
       (* send value *)
       REPEAT UNTIL Ready();
       Send(cmd[i]);
+      (* workaround, left for v9.0.3 compat *)
       SYSTEM.EMIT(NOPSEV);
+      (* works with Astrobe v9.1, checked 2024-01-31
+      SYSTEM.EMITH(SEV);
+      *)
       (* receive value *)
       REPEAT UNTIL Valid();
       Receive(x);

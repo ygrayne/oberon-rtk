@@ -538,6 +538,8 @@ CONST
   PSM_XOSC*       = 1;
   PSM_ROSC*       = 0;
 
+  PSM_ALL*        = {0..16};
+
   (* subsystem resets *)
   (* datasheet 2.14.3, p177 *)
   RESETS_Base = 04000C000H;
