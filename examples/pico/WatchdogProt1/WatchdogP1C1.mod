@@ -56,7 +56,7 @@ MODULE WatchdogP1C1;
     tid := Kernel.Tid();
     REPEAT
       IF SysMsg.SendAvailable() THEN
-        SysMsg.Send(SysMsg.MsgWatchdog, SysMsg.RecSystem, 0, 0);
+        SysMsg.Send(SysMsg.MsgWatchdog, SysMsg.RecSystem, 0, 0)
       END;
       Kernel.Next
     UNTIL FALSE

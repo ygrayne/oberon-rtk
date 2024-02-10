@@ -3,7 +3,7 @@ MODULE Main;
   Oberon RTK Framework
   Main module
   --
-  For example BlinkPlus.
+  For example BlinkPlusRtk.
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --

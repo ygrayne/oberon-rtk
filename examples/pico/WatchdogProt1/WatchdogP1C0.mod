@@ -92,7 +92,6 @@ MODULE WatchdogP1C0;
     MultiCore.InitCoreOne(CoreOne.Run, Memory.DataMem[Core1].stackStart, Memory.DataMem[Core1].dataStart);
 
     Kernel.Install(MillisecsPerTick);
-    (* blinker *)
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.NoError, Errors.Config);
     Kernel.SetPeriod(t0, 500, 0); Kernel.Enable(t0);
     Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.NoError, Errors.Config);

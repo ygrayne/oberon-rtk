@@ -1,7 +1,9 @@
 MODULE Main;
 (**
   Oberon RTK Framework
-  Custom Main module for example 'NoBusyWaiting'
+  Main module
+  --
+  For example 'NoBusyWaiting'.
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
@@ -33,21 +35,25 @@ MODULE Main;
     Terminals.Open(UART0, UART0_TxPinNo, UART0_RxPinNo, Baudrate, UARTstr.PutString, UARTstr.GetString);
 
     (* busy waiting *)
-    Terminals.Open(UART1, UART1_TxPinNo, UART1_RxPinNo, Baudrate, UARTstr.PutString, UARTstr.GetString);
 
+    Terminals.Open(UART1, UART1_TxPinNo, UART1_RxPinNo, Baudrate, UARTstr.PutString, UARTstr.GetString);
     (* no busy waiting *)
     (*
     Terminals.Open(UART1, UART1_TxPinNo, UART1_RxPinNo, Baudrate, UARTkstr.PutString, UARTkstr.GetString);
     *)
 
     (* init Out to use the terminals, from thread 0 => terminal 0 etc. *)
+    (* (custom Out module) *)
     Out.Open(Terminals.W[0], Terminals.W[1]);
+
     (* init run-time error printing *)
     (* error output on core 0 to terminal 0 *)
-    RuntimeErrorsOut.SetWriter(Core0, Terminals.W[0]);
+    Terminals.OpenErr(UART0, UARTstr.PutString);
+    RuntimeErrorsOut.SetWriter(Core0, Terminals.Werr[0]);
     RuntimeErrors.SetHandler(Core0, RuntimeErrorsOut.HandleException);
     (* error output on core 1 to terminal 1 *)
-    RuntimeErrorsOut.SetWriter(Core1, Terminals.W[1]);
+    Terminals.OpenErr(UART1, UARTstr.PutString);
+    RuntimeErrorsOut.SetWriter(Core1, Terminals.Werr[1]);
     RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException);
   END init;
 
