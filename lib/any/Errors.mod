@@ -85,7 +85,7 @@ MODULE Errors;
       | ConsCheck:
           msg := "consistency check violation"
       | Config:
-          msg := "configuration error"
+          msg := "program design error"
       | BufferOverflow:
           msg := "buffer overflow"
       | BufferEmpty:

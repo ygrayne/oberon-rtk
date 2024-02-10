@@ -3,8 +3,8 @@ MODULE Main;
   Oberon RTK Framework
   Main module
   --
-  Default: WITH Kernel
-  See IMPORT list below of the simple code changes to use without.
+  Best practice: create a customised module for each program.
+  This library module will probably evolve.
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
@@ -17,7 +17,7 @@ MODULE Main;
     (* ignore the "is not used" warnings... :) *)
     (* LinkOptions is the first import of Config *)
     Config, Clocks, Memory, RuntimeErrors,
-    RuntimeErrorsOut, Terminals, Out, In, UART := UARTkstr; (* set UART := UARTstr for use WITHOUT kernel *)
+    RuntimeErrorsOut, Terminals, Out, In, UARTstr;
 
   CONST
     Baudrate0 = 38400; (* terminal 0 *)
@@ -35,8 +35,8 @@ MODULE Main;
   PROCEDURE init;
   BEGIN
     (* open text IO to/from two serial terminals *)
-    Terminals.Open(UART0, UART0_TxPinNo, UART0_RxPinNo, Baudrate0, UART.PutString, UART.GetString);
-    Terminals.Open(UART1, UART1_TxPinNo, UART1_RxPinNo, Baudrate1, UART.PutString, UART.GetString);
+    Terminals.Open(UART0, UART0_TxPinNo, UART0_RxPinNo, Baudrate0, UARTstr.PutString, UARTstr.GetString);
+    Terminals.Open(UART1, UART1_TxPinNo, UART1_RxPinNo, Baudrate1, UARTstr.PutString, UARTstr.GetString);
 
     (* init Out and In to use the terminals *)
     Out.Open(Terminals.W[0], Terminals.W[1]);
@@ -44,11 +44,15 @@ MODULE Main;
 
     (* init run-time error printing *)
     (* error output on core 0 to terminal 0 *)
-    RuntimeErrorsOut.SetWriter(Core0, Terminals.W[0]);
+    (* use error output writer *)
+    Terminals.OpenErr(UART0, UARTstr.PutString);
+    RuntimeErrorsOut.SetWriter(Core0, Terminals.Werr[0]);
     RuntimeErrors.SetHandler(Core0, RuntimeErrorsOut.HandleException);
 
     (* error output on core 1 to terminal 1 *)
-    RuntimeErrorsOut.SetWriter(Core1, Terminals.W[1]);
+    (* use error output writer *)
+    Terminals.OpenErr(UART1, UARTstr.PutString);
+    RuntimeErrorsOut.SetWriter(Core1, Terminals.Werr[1]);
     RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException);
   END init;
 

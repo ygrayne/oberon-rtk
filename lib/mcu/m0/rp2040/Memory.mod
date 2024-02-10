@@ -215,8 +215,8 @@ BEGIN
 END Memory.
 
 (**
-  Copyright © 2023-2024 Gray, gray@grayraven.org
-  Copyright © 2012-2021 CFB Software, https://www.astrobe.com
+  Copyright (c) 2023-2024 Gray, gray@grayraven.org
+  Copyright (c) 2012-2021 CFB Software, https://www.astrobe.com
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:

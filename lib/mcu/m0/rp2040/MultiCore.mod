@@ -4,6 +4,8 @@ MODULE MultiCore;
   Multi-core handling
   Very basic :)
   --
+  Todo: decide for signature of 'Send' and 'Receive'.
+  --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
   Copyright (c) 2023-2024 Gray gray@grayraven.org
@@ -24,6 +26,10 @@ MODULE MultiCore;
     *)
     NOPSEV = 046C0BF40H; (* workaround, SEV does not work with Astrobe v9.0.3 *)
 
+  TYPE
+    FifoValue* = ARRAY 4 OF BYTE; (* compatible with any 4-byte data structure, incl. basic types *)
+
+
   PROCEDURE CPUid*(): INTEGER;
     VAR x: INTEGER;
   BEGIN
@@ -31,14 +37,28 @@ MODULE MultiCore;
     RETURN x
   END CPUid;
 
-
+  (* to be decided: which signature to keep? *)
+  (*
   PROCEDURE Send*(VAR value: INTEGER); (* VAR = workaround *)
   BEGIN
     SYSTEM.PUT(MCU.SIO_FIFO_WR, value)
   END Send;
+  *)
 
+  PROCEDURE Send*(VAR value: FifoValue); (* VAR = workaround *)
+  BEGIN
+    SYSTEM.PUT(MCU.SIO_FIFO_WR, value)
+  END Send;
 
+  (* to be decided: which signature to keep? *)
+  (*
   PROCEDURE Receive*(VAR value: INTEGER);
+  BEGIN
+    SYSTEM.GET(MCU.SIO_FIFO_RD, value)
+  END Receive;
+  *)
+
+  PROCEDURE Receive*(VAR value: FifoValue);
   BEGIN
     SYSTEM.GET(MCU.SIO_FIFO_RD, value)
   END Receive;

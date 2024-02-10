@@ -27,7 +27,7 @@ MODULE Kernel;
     NoError* = 0;
     Failed* = 1;
 
-    DefaultPrio* = 2;
+    DefaultPrio* = 7;
 
     (* thread states *)
     StateEnabled = 0;    (* triggered: queued at next trigger event; queued at next scheduler run *)
@@ -42,6 +42,8 @@ MODULE Kernel;
     (* loop *)
     LoopStackSize = 1024; (* bytes *)
     LoopCorId = -1;
+
+    SloMo = 1;
 
 
   TYPE
@@ -61,8 +63,8 @@ MODULE Kernel;
     END;
 
     (* core-specific data *)
-    CoreContext* = POINTER TO CoreContextDesc;
-    CoreContextDesc* = RECORD
+    CoreContext = POINTER TO CoreContextDesc;
+    CoreContextDesc = RECORD
       threads: ARRAY MaxNumThreads OF Thread;
       Ct, ct: Thread;
       queued: SET;
@@ -102,38 +104,33 @@ MODULE Kernel;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     ctx := coreCon[cid];
-    res := OK;
+    res := Failed;
     IF ctx.numThreads < MaxNumThreads THEN
       tid := ctx.numThreads;
       t := ctx.threads[tid];
       INC(ctx.numThreads);
       t.state := StateSuspended;
       t.prio := DefaultPrio;
-      t.period := 0; t.delay := 0;
-      t.devAddr := 0;
+      t.period := 0; t.delay := 0; t.devAddr := 0;
       Memory.AllocThreadStack(stackAddr, tid, stackSize);
       IF stackAddr # 0 THEN
         Coroutines.Init(t.cor, stackAddr, stackSize, tid);
-        Coroutines.Allocate(t.cor, proc)
-      ELSE
-        res := Failed
+        Coroutines.Allocate(t.cor, proc);
+        res := NoError
       END
-    ELSE
-      res := Failed
     END
   END Allocate;
 
 
   PROCEDURE Reallocate*(t: Thread; proc: PROC; VAR res: INTEGER);
   BEGIN
-    res := OK;
+    res := Failed;
     IF t.state = StateSuspended THEN
       t.prio := 1;
       t.period := 0; t.delay := 0;
       t.devAddr := 0;
-      Coroutines. Allocate(t.cor, proc)
-    ELSE
-      res := Failed
+      Coroutines. Allocate(t.cor, proc);
+      res := NoError
     END
   END Reallocate;
 
@@ -188,8 +185,6 @@ MODULE Kernel;
 
 
   PROCEDURE DelayMe*(delay: INTEGER);
-  (* delay takes precedence over period *)
-  (* it can be combined with awaiting a device for timeout *)
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
@@ -230,6 +225,7 @@ MODULE Kernel;
     ctx.Ct.devFlagsClr := clrFlags;
     Coroutines.Transfer(ctx.Ct.cor, ctx.loop)
   END AwaitDeviceFlags;
+
 
   PROCEDURE CancelAwaitDeviceFlags*;
     VAR cid: INTEGER; ctx: CoreContext;
@@ -305,7 +301,15 @@ MODULE Kernel;
             IF (t.delay <= 0) & (t.period = 0) & (t.devAddr = 0) THEN (* no triggers *)
               slotIn(t, ctx)
             ELSE
-              IF t.delay > 0 THEN (* thread on delay or timeout *)
+              IF t.period > 0 THEN (* keep the periodic timing on schedule in any case *)
+                DEC(t.ticker, ctx.loopPeriod);
+                IF t.ticker <= 0 THEN
+                  t.ticker := t.ticker + t.period;
+                  t.retCode := TrigPeriod
+                  (* don't slot in here *)
+                END
+              END;
+              IF t.delay > 0 THEN (* on delay or timeout *)
                 DEC(t.delay, ctx.loopPeriod);
                 IF t.delay <= 0 THEN
                   slotIn(t, ctx);
@@ -320,16 +324,9 @@ MODULE Kernel;
                   t.retCode := TrigDevice
                 END
               END;
-              IF t.period > 0 THEN (* thread periodically triggered *)
-                DEC(t.ticker, ctx.loopPeriod); (* keep period timing in any case *)
-                IF t.ticker <= 0 THEN
-                  t.ticker := t.ticker + t.period;
-                  IF (t.delay <= 0) & (t.devAddr = 0) THEN
-                    IF t.retCode = TrigNone THEN
-                      slotIn(t, ctx);
-                      t.retCode := TrigPeriod
-                    END
-                  END
+              IF t.retCode = TrigPeriod THEN (* see above *)
+                IF (t.delay <= 0) & (t.devAddr = 0) THEN (* delay and device flags take precedence *)
+                  slotIn(t, ctx)
                 END
               END
             END
@@ -337,6 +334,18 @@ MODULE Kernel;
           INC(tid)
         END
       END;
+      (* print ready-queue for debugging *)
+      (* cannot be used together with UARTkstr, simply use UARTstr in Main.mod *)
+      (*
+      IF ctx.ct # NIL THEN
+        t := ctx.ct;
+        WHILE t # NIL DO
+          Out.Int(t.tid, 4); Out.String(" / "); Out.Int(t.prio, 0);
+          t := t.next
+        END;
+        Out.Ln;
+      END;
+      *)
       WHILE ctx.ct # NIL DO
         t := ctx.ct;
         ctx.ct := ctx.ct.next; EXCL(ctx.queued, t.tid); (* slot out ctx.ct *)
@@ -401,7 +410,7 @@ MODULE Kernel;
       INC(i)
     END;
     (* start sys tick *)
-    SysTick.Init(millisecsPerTick)
+    SysTick.Init(millisecsPerTick * SloMo)
   END Install;
 
 BEGIN
