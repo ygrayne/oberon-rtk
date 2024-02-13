@@ -17,7 +17,6 @@ MODULE Memory;
   CONST
     NumCores = Config.NumCores;
     MaxNumProcs = Config.MaxNumProcs;
-    NumLoops = NumCores;
 
   TYPE
     CoreHeap = RECORD
@@ -25,15 +24,14 @@ MODULE Memory;
       heapTop: INTEGER;
     END;
 
-    ThreadStack = RECORD
+    Stack = RECORD
       addr: INTEGER;
       size: INTEGER
     END;
 
     CoreStacks = RECORD
-      threadStacks: ARRAY MaxNumProcs OF ThreadStack;
-      loopStacks: ARRAY NumLoops OF ThreadStack;
-      mainStack: ThreadStack;
+      threadStacks: ARRAY MaxNumProcs OF Stack;
+      loopStack: Stack;
       stacksBottom, stacksTop: INTEGER;
       stackCheckEnabled: BOOLEAN
     END;
@@ -50,7 +48,7 @@ MODULE Memory;
     heaps: ARRAY NumCores OF CoreHeap;
     stacks: ARRAY NumCores OF CoreStacks;
 
-  (* heap memory *)
+  (* === heap memory === *)
 
   (* --- Astrobe code begin --- *)
 
@@ -95,7 +93,6 @@ MODULE Memory;
 
   (* --- Astrobe code end --- *)
 
-
   PROCEDURE LockHeaps*;
     CONST Core0 = 0; Core1 = 1;
   BEGIN
@@ -103,7 +100,51 @@ MODULE Memory;
     heaps[Core1].heapLimit := heaps[Core1].heapTop
   END LockHeaps;
 
-  (* thread & loop stacks *)
+  (* === thread & loop stacks === *)
+
+  PROCEDURE initStackCheck(addr, limit: INTEGER);
+  BEGIN
+    WHILE addr < limit DO
+      SYSTEM.PUT(addr, addr + 3);
+      INC(addr, 4)
+    END
+  END initStackCheck;
+
+
+  PROCEDURE checkStackUsage(addr, limit: INTEGER; VAR unused: INTEGER);
+    VAR value: INTEGER;
+  BEGIN
+    SYSTEM.GET(addr, value);
+    unused := 0;
+    WHILE (value = addr + 3) & (addr < limit) DO
+      INC(addr, 4); INC(unused, 4);
+      SYSTEM.GET(addr, value)
+    END
+  END checkStackUsage;
+
+  PROCEDURE CheckLoopStackUsage*(VAR size, used: INTEGER);
+    VAR cid, addr, limit, unused: INTEGER;
+  BEGIN
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    addr := stacks[cid].loopStack.addr;
+    size := stacks[cid].loopStack.size;
+    limit := addr + size;
+    checkStackUsage(addr, limit, unused);
+    used := size - unused
+  END CheckLoopStackUsage;
+
+
+  PROCEDURE CheckThreadStackUsage*(id: INTEGER; VAR size, used: INTEGER);
+    VAR cid, addr, limit, unused: INTEGER;
+  BEGIN
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    addr := stacks[cid].threadStacks[id].addr;
+    size := stacks[cid].threadStacks[id].size;
+    limit := addr + size;
+    checkStackUsage(addr, limit, unused);
+    used := size - unused
+  END CheckThreadStackUsage;
+
 
   PROCEDURE allocStack(VAR stkAddr: INTEGER; cid, stkSize: INTEGER);
     VAR limit: INTEGER;
@@ -120,6 +161,7 @@ MODULE Memory;
     END
   END allocStack;
 
+
   PROCEDURE AllocThreadStack*(VAR stkAddr: INTEGER; id, stkSize: INTEGER);
     VAR cid: INTEGER;
   BEGIN
@@ -127,63 +169,42 @@ MODULE Memory;
     allocStack(stkAddr, cid, stkSize);
     IF stkAddr # 0 THEN
       stacks[cid].threadStacks[id].addr := stkAddr;
-      stacks[cid].threadStacks[id].size := stkSize
+      stacks[cid].threadStacks[id].size := stkSize;
+      IF stacks[cid].stackCheckEnabled THEN
+        initStackCheck(stkAddr, stkAddr + stkSize)
+      END
     END
   END AllocThreadStack;
 
 
-  PROCEDURE AllocLoopStack*(VAR stkAddr: INTEGER; id, stkSize: INTEGER);
+  PROCEDURE AllocLoopStack*(VAR stkAddr: INTEGER; stkSize: INTEGER);
     VAR cid: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     allocStack(stkAddr, cid, stkSize);
     IF stkAddr # 0 THEN
-      stacks[cid].loopStacks[id].addr := stkAddr;
-      stacks[cid].loopStacks[id].size := stkSize
+      stacks[cid].loopStack.addr := stkAddr;
+      stacks[cid].loopStack.size := stkSize;
+      IF stacks[cid].stackCheckEnabled THEN
+        initStackCheck(stkAddr, stkAddr + stkSize)
+      END
     END
   END AllocLoopStack;
 
-(*
-  PROCEDURE InitMainStackCheck*(topMargin: INTEGER);
-  END InitMainStackCheck;
-
-  PROCEDURE InitThreadStackCheck*(id, topMargin: INTEGER);
-  END InitThreadStackCheck;
-
-  PROCEDURE InitLoopStackCheck*(id, topMargin: INTEGER);
-  END InitLoopStackCheck;
 
   PROCEDURE EnableStackCheck*(on: BOOLEAN);
+    VAR cid: INTEGER;
+  BEGIN
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    stacks[cid].stackCheckEnabled := on
   END EnableStackCheck;
 
-  PROCEDURE CheckMainStackUsage*(VAR unused: INTEGER);
-  END CheckMainStackUsage;
-
-  PROCEDURE CheckThreadStackUsage*(id: INTEGER; VAR unused: INTEGER);
-  END CheckThreadStackUsage;
-
-  PROCEDURE CheckLoopStackUsage*(id: INTEGER; VAR unused: INTEGER);
-  END CheckLoopStackUsage;
-
-  PROCEDURE GetMainStack*(VAR addr, size: INTEGER);
-  END GetMainStack;
-
-  PROCEDURE GetThreadStack*(pid: INTEGER; VAR addr, size: INTEGER);
-  END GetThreadStack;
-*)
-
-  (* init *)
-
-  PROCEDURE allocateMainStack(id, addr, size: INTEGER);
-  BEGIN
-    stacks[id].mainStack.addr := addr;
-    stacks[id].mainStack.size := size
-  END allocateMainStack;
+  (* === init === *)
 
   PROCEDURE init;
     CONST Core0 = 0; Core1 = 1;
   BEGIN
-    MAU.SetNew(Allocate);
+    MAU.SetNew(Allocate); MAU.SetDispose(Deallocate);
 
     (* exported info *)
     DataMem[Core0].stackStart := Config.CoreZeroStackStart;
@@ -204,10 +225,6 @@ MODULE Memory;
     stacks[Core1].stacksBottom := Config.CoreOneStackStart - Config.CoreOneMainStackSize;
     stacks[Core1].stacksTop := Config.CoreOneStackStart;
     stacks[Core1].stackCheckEnabled := FALSE;
-
-    (* main stacks *)
-    allocateMainStack(Core0, stacks[Core0].stacksBottom, Config.CoreZeroMainStackSize);
-    allocateMainStack(Core1, stacks[Core1].stacksBottom, Config.CoreOneMainStackSize)
   END init;
 
 BEGIN
