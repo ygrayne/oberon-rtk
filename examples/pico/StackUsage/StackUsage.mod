@@ -35,12 +35,8 @@ MODULE StackUsage;
   END tbc;
 
 
-  PROCEDURE done;
-  END done;
-
-
-  PROCEDURE do1(VAR cnt: INTEGER; lim: INTEGER);
-    CONST Asize = 16;
+  PROCEDURE do2(VAR cnt: INTEGER; lim: INTEGER);
+    CONST Asize = 32;
     VAR i: INTEGER; a: ARRAY Asize OF INTEGER;
   BEGIN
     i := 0;
@@ -48,17 +44,32 @@ MODULE StackUsage;
     WHILE cnt < lim DO
       INC(cnt)
     END;
-  END do1;
+  END do2;
 
 
-  PROCEDURE do0(VAR cnt: INTEGER; lim: INTEGER);
-    CONST Asize = 64;
+  PROCEDURE do1(VAR cnt: INTEGER; lim: INTEGER);
+    CONST Asize = 32;
     VAR i: INTEGER; a: ARRAY Asize OF INTEGER;
   BEGIN
     i := 0;
     WHILE i < Asize DO a[i] := 0; INC(i) END;
     WHILE cnt < lim DO
-      IF cnt >= 60 THEN
+      IF cnt >= 75 THEN
+        do2(cnt, lim)
+      END;
+      INC(cnt)
+    END;
+  END do1;
+
+
+  PROCEDURE do0(VAR cnt: INTEGER; lim: INTEGER);
+    CONST Asize = 32;
+    VAR i: INTEGER; a: ARRAY Asize OF INTEGER;
+  BEGIN
+    i := 0;
+    WHILE i < Asize DO a[i] := 0; INC(i) END;
+    WHILE cnt < lim DO
+      IF cnt >= 50 THEN
         do1(cnt, lim)
       END;
       INC(cnt)
@@ -73,7 +84,7 @@ MODULE StackUsage;
     REPEAT
       cnt := 0;
       WHILE cnt < limits[tid] DO
-        IF cnt = 30 THEN
+        IF cnt = 25 THEN
           do0(cnt, limits[tid])
         END;
         INC(cnt)
