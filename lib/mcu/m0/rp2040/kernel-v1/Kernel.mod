@@ -40,7 +40,7 @@ MODULE Kernel;
     TrigDevice* = 3;
 
     (* loop *)
-    LoopStackSize = 1024; (* bytes *)
+    LoopStackSize = 256; (* bytes *)
     LoopCorId = -1;
 
     SloMo = 1;
@@ -395,7 +395,7 @@ MODULE Kernel;
     ctx.loopPeriod := millisecsPerTick;
     NEW(ctx.jump); ASSERT(ctx.jump # NIL, Errors.HeapOverflow);
     NEW(ctx.loop); ASSERT(ctx.loop # NIL, Errors.HeapOverflow);
-    Memory.AllocLoopStack(stkAddr, cid, LoopStackSize); ASSERT(stkAddr # 0, Errors.StorageOverflow);
+    Memory.AllocLoopStack(stkAddr, LoopStackSize); ASSERT(stkAddr # 0, Errors.StorageOverflow);
     Coroutines.Init(ctx.loop, stkAddr, LoopStackSize, LoopCorId);
     Coroutines.Allocate(ctx.loop, loopc);
 

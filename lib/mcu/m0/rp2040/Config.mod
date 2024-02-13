@@ -62,9 +62,13 @@ MODULE Config;
     MaxNumProcs* = MaxNumThreads; (* legacy support *)
     NumCores* = MCU.NumCores;
 
+    (* in and out buffer for messaging across cores *)
+    MessagesMaxNumSndRcv* = 4;
+    MessagesBufferSize* = 4;
+
     (* core one base storage parameters *)
     CoreOneDataStart* = 020030000H;
-    CoreOneStackStart* = 020040000H - 04H;
+    CoreOneStackStart* = 020040000H - 04H; (* use same semantics as Astrobe *)
     CoreOneHeapStart*  = 020030200H;
     CoreOneHeapLimit* = 0;
 

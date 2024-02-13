@@ -17,8 +17,8 @@
 !/changes/
 
 /lib/mcu/m0/rp2040/_debug
-/lib/mcu/m0/rp2040/_old
-/lib/mcu/m0/rp2040/kernel-v1/_old
+/lib/mcu/m0/rp2040/_keep
+/lib/mcu/m0/rp2040/kernel-v1/_keep
 
 # add some files
 !*.ini

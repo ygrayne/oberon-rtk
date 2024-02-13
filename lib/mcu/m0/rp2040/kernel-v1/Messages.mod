@@ -9,11 +9,12 @@ MODULE Messages;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Kernel, MultiCore, Config, Signals, Errors, Out;
+  IMPORT SYSTEM, MCU := MCU2, Kernel, MultiCore, Config, Signals, Errors;
 
   CONST
-    BufSize = 4;
-    MaxNumSndRcv = 4;
+    BufferSize = Config.MessagesBufferSize;
+    MaxNumSndRcv = Config.MessagesMaxNumSndRcv;
+
     NumCores = Config.NumCores;
 
     NoError* = 0;
@@ -26,6 +27,8 @@ MODULE Messages;
     Unsubscribed = 0;
     Subscribed = 1;
 
+    (* to be tuned as soon as the corresponding measuring utilities in Memory are available *)
+    (* can prob be smaller *)
     FifoStackSize = 1024;
 
   TYPE
@@ -33,7 +36,7 @@ MODULE Messages;
     Message* = ARRAY 4 OF BYTE;
 
     MessageBuffer* = RECORD
-      data: ARRAY BufSize OF Message;
+      data: ARRAY BufferSize OF Message;
       wr, rd: INTEGER;
       flags: SET
     END;
@@ -78,7 +81,7 @@ MODULE Messages;
 
 
   PROCEDURE nextIndex(ci: INTEGER): INTEGER;
-    RETURN (ci + 1) MOD BufSize
+    RETURN (ci + 1) MOD BufferSize
   END nextIndex;
 
 
