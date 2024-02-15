@@ -131,7 +131,7 @@ MODULE Texts;
     VAR i: INTEGER;
   BEGIN
     i := 0;
-    WHILE (str[i] # 0X) & (i < LEN(str)) DO INC(i) END;
+    WHILE (i < LEN(str)) & (str[i] # 0X) DO INC(i) END;
     W.putString(W.dev, str, i)
   END WriteString;
 

@@ -137,7 +137,7 @@ MODULE RuntimeErrors;
   BEGIN
     SYSTEM.GET(addr + 1, b1);
     SYSTEM.GET(addr, b2);
-    value := LSL(b1, 8) + b2;
+    value := LSL(b1, 8) + b2
   END getHalfWord;
 
   PROCEDURE isBL(codeAddr: INTEGER): BOOLEAN;

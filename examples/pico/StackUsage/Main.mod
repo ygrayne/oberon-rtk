@@ -3,8 +3,7 @@ MODULE Main;
   Oberon RTK Framework
   Main module
   --
-  Best practice: create a customised module for each program.
-  This library module will probably evolve.
+  Main module for 'StackUsage'.
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
