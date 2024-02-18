@@ -25,6 +25,7 @@ MODULE LED;
   CONST
     LEDpinNo = 25;
     Green* = LEDpinNo;
+    Pico* = LEDpinNo;
     SET* = MCU.SIO_GPIO_OUT_SET;
     CLR* = MCU.SIO_GPIO_OUT_CLR;
     XOR* = MCU.SIO_GPIO_OUT_XOR;

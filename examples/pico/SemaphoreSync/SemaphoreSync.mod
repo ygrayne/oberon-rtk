@@ -64,12 +64,12 @@ MODULE SemaphoreSync;
     Semaphores.Init(uart);
     Kernel.Install(MillisecsPerTick);
     (* blinker *)
-    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.NoError, Errors.Config);
+    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.SetPeriod(t0, 500, 0); Kernel.Enable(t0);
     (* two threads coordinating output, running the same code *)
-    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.NoError, Errors.Config);
+    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.SetPeriod(t1, 500, 0); Kernel.Enable(t1);
-    Kernel.Allocate(t1c, ThreadStackSize, t2, tid2, res); ASSERT(res = Kernel.NoError, Errors.Config);
+    Kernel.Allocate(t1c, ThreadStackSize, t2, tid2, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.SetPeriod(t2, 500, 0); Kernel.Enable(t2);
     Kernel.Run
     (* we'll not return here *)
@@ -78,4 +78,3 @@ MODULE SemaphoreSync;
 BEGIN
   run
 END SemaphoreSync.
-

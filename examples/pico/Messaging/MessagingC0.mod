@@ -50,16 +50,16 @@ MODULE MessagingC0;
     cid := MultiCore.CPUid();
     tid := Kernel.Tid();
     cnt := 0;
-    Messages.Subscribe(SRno, sr, res); ASSERT(res = Messages.NoError, Errors.Config);
+    Messages.Subscribe(SRno, sr, res); ASSERT(res = Messages.NoError, Errors.ProgError);
     REPEAT
       (* essential *)
       Com.Await(sr); (* await wakeup *)
       Com.Receive(sr, rcv, msg, sender, data, flags);
 
       (* demo checks and output *)
-      ASSERT(rcv = SRno, Errors.Config);
-      ASSERT((msg = Wakeup0) OR (msg = Wakeup1), Errors.Config);
-      ASSERT(sender = "C", Errors.Config);
+      ASSERT(rcv = SRno, Errors.ProgError);
+      ASSERT((msg = Wakeup0) OR (msg = Wakeup1), Errors.ProgError);
+      ASSERT(sender = "C", Errors.ProgError);
       Com.WriteThreadInfo(tid, cid); Out.Int(cnt, 8);
       Com.WriteMsgData(msg, sender, data);
       Out.Ln;
@@ -85,16 +85,16 @@ MODULE MessagingC0;
     cid := MultiCore.CPUid();
     tid := Kernel.Tid();
     cnt := 0;
-    Messages.Subscribe(SRno, sr, res); ASSERT(res = Messages.NoError, Errors.Config);
+    Messages.Subscribe(SRno, sr, res); ASSERT(res = Messages.NoError, Errors.ProgError);
     REPEAT
       (* essential *)
       Com.Await(sr); (* await wakeup *)
       Com.Receive(sr, rcv, msg, sender, data, flags);
 
       (* demo checks and output *)
-      ASSERT(rcv = SRno, Errors.Config);
-      ASSERT(msg = Wakeup2, Errors.Config);
-      ASSERT(sender = "C", Errors.Config);
+      ASSERT(rcv = SRno, Errors.ProgError);
+      ASSERT(msg = Wakeup2, Errors.ProgError);
+      ASSERT(sender = "C", Errors.ProgError);
       Com.WriteThreadInfo(tid, cid); Out.Int(cnt, 8);
       Com.WriteMsgData(msg, sender, data);
       Out.String(" wakeup");
@@ -114,9 +114,9 @@ MODULE MessagingC0;
       Com.Receive(sr, rcv, msg, sender, data, flags);
 
       (* demo checks and output *)
-      ASSERT(rcv = SRno, Errors.Config); (* testing *)
-      ASSERT(msg = DataReceived, Errors.Config);
-      ASSERT(sender = "D", Errors.Config);
+      ASSERT(rcv = SRno, Errors.ProgError); (* testing *)
+      ASSERT(msg = DataReceived, Errors.ProgError);
+      ASSERT(sender = "D", Errors.ProgError);
       Com.WriteThreadInfo(tid, cid); Out.Int(cnt, 8);
       Com.WriteMsgData(msg, sender, data);
       Out.String(" data rec");
@@ -133,11 +133,11 @@ MODULE MessagingC0;
     MultiCore.InitCoreOne(MessagingC1.Run, Memory.DataMem[Core1].stackStart, Memory.DataMem[Core1].dataStart);
     Kernel.Install(MillisecsPerTick);
     Messages.Install(MsgHandlerPeriod, MsgHandlerPrio);
-    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.NoError, Errors.Config);
+    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.SetPeriod(t0, 500, 0); Kernel.Enable(t0);
-    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.NoError, Errors.Config);
+    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.Enable(t1);
-    Kernel.Allocate(t2c, ThreadStackSize, t2, tid2, res); ASSERT(res = Kernel.NoError, Errors.Config);
+    Kernel.Allocate(t2c, ThreadStackSize, t2, tid2, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.Enable(t2);
     Kernel.Run
     (* we'll not return here *)
@@ -146,4 +146,3 @@ MODULE MessagingC0;
 BEGIN
   run
 END MessagingC0.
-

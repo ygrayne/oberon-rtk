@@ -65,7 +65,7 @@ MODULE Messages;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     ctx := coreCon[cid];
-    ASSERT(srNo < MaxNumSndRcv, Errors.Config);
+    ASSERT(srNo < MaxNumSndRcv, Errors.ProgError);
     IF ctx.sndRcv[srNo].state = Unsubscribed THEN
       INC(ctx.numSndRcv);
       sr := ctx.sndRcv[srNo];
@@ -202,11 +202,10 @@ MODULE Messages;
     END;
 
     (* send/receive thread at the fifo *)
-    Kernel.Allocate(fifoc, FifoStackSize, t, tid, res); ASSERT(res = Kernel.NoError, Errors.Config);
+    Kernel.Allocate(fifoc, FifoStackSize, t, tid, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.SetPeriod(t, period, 0);
     Kernel.SetPrio(t, prio);
     Kernel.Enable(t)
   END Install;
 
 END Messages.
-

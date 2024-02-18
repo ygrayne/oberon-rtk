@@ -10,7 +10,7 @@ MODULE StackUsage;
   Copyright (c) 2024 Gray, gray@grayraven.org
 **)
 
-  IMPORT Main, Kernel, Memory, Out, Errors, GPIO, LED, Random, Timers;
+  IMPORT Main, Kernel, Memory, Out, Errors, GPIO, LED := LEDext, Random, Timers;
 
   CONST
     MillisecsPerTick  = 5;
@@ -27,9 +27,9 @@ MODULE StackUsage;
 
   PROCEDURE tbc;
   BEGIN
-    GPIO.Set({LED.Green});
+    GPIO.Set({LED.LEDpico});
     REPEAT
-      GPIO.Toggle({LED.Green});
+      GPIO.Toggle({LED.LEDpico});
       Kernel.Next
     UNTIL FALSE
   END tbc;
@@ -135,15 +135,15 @@ MODULE StackUsage;
     (* load *)
     i := 0;
     WHILE i < NumThreads DO
-      Kernel.Allocate(t0c, ThreadStackSize, t[i], id[i], res); ASSERT(res = Kernel.OK, Errors.Config);
+      Kernel.Allocate(t0c, ThreadStackSize, t[i], id[i], res); ASSERT(res = Kernel.OK, Errors.ProgError);
       Kernel.SetPeriod(t[i], 50, 0); Kernel.Enable(t[i]);
       INC(i)
     END;
     (* checker *)
-    Kernel.Allocate(t4c, ThreadStackSize, t4, tid4, res); ASSERT(res = Kernel.OK, Errors.Config);
+    Kernel.Allocate(t4c, ThreadStackSize, t4, tid4, res); ASSERT(res = Kernel.OK, Errors.ProgError);
     Kernel.SetPeriod(t4, 1000, 0); Kernel.Enable(t4);
     (* heartbeat *)
-    Kernel.Allocate(tbc, ThreadStackSize, tb, tidb, res); ASSERT(res = Kernel.OK, Errors.Config);
+    Kernel.Allocate(tbc, ThreadStackSize, tb, tidb, res); ASSERT(res = Kernel.OK, Errors.ProgError);
     Kernel.SetPeriod(tb, 500, 0); Kernel.Enable(tb);
     Kernel.Run
     (* we'll not return here *)
