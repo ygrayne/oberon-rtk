@@ -42,7 +42,7 @@ MODULE MessagingC1;
     cid := MultiCore.CPUid();
     tid := Kernel.Tid();
     cnt := 0;
-    Messages.Subscribe(SRno, sr, res); ASSERT(res = Messages.NoError, Errors.Config);
+    Messages.Subscribe(SRno, sr, res); ASSERT(res = Messages.NoError, Errors.ProgError);
     REPEAT
       Kernel.Next;
       Com.WriteThreadInfo(tid, cid);
@@ -71,16 +71,16 @@ MODULE MessagingC1;
     cid := MultiCore.CPUid();
     tid := Kernel.Tid();
     cnt := 0;
-    Messages.Subscribe(SRno, sr, res); ASSERT(res = Messages.NoError, Errors.Config);
+    Messages.Subscribe(SRno, sr, res); ASSERT(res = Messages.NoError, Errors.ProgError);
     REPEAT
       (* essential *)
       Com.Await(sr); (* await data ready in buffer *)
       Com.Receive(sr, rcv, msg, sender, numData, flags);
 
       (* demo checks and output *)
-      ASSERT(rcv = SRno, Errors.Config);
-      ASSERT(msg = DataReady, Errors.Config);
-      ASSERT(sender = "B", Errors.Config);
+      ASSERT(rcv = SRno, Errors.ProgError);
+      ASSERT(msg = DataReady, Errors.ProgError);
+      ASSERT(sender = "B", Errors.ProgError);
       Com.WriteThreadInfo(tid, cid); Out.Int(cnt, 8);
       Com.WriteMsgData(msg, sender, numData);
       Out.String(" data ready");
@@ -105,13 +105,12 @@ MODULE MessagingC1;
   BEGIN
     Kernel.Install(MillisecsPerTick);
     Messages.Install(MsgHandlerPeriod, MsgHandlerPrio);
-    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.NoError, Errors.Config);
+    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.SetPeriod(t0, 1000, 0); Kernel.Enable(t0);
-    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.NoError, Errors.Config);
+    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.Enable(t1);
     Kernel.Run
     (* we'll not return here *)
   END Run;
 
 END MessagingC1.
-

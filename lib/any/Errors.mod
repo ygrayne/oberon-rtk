@@ -34,7 +34,7 @@ MODULE Errors;
     PreCond* = 101;
     PostCond* = 102;
     ConsCheck* = 103;
-    Config* = 104;
+    ProgError* = 104;
     BufferOverflow* = 105;
     BufferEmpty* = 106;
     Timing* = 107;
@@ -49,6 +49,8 @@ MODULE Errors;
     NotImplemented* = 116;
     NumThreads* = 117;
     LastRTKcode = 117;
+
+    Config* = ProgError; (* legacy *)
 
   TYPE
     String* = ARRAY MaxMsgLength OF CHAR;
@@ -84,7 +86,7 @@ MODULE Errors;
           msg := "postcondition violation"
       | ConsCheck:
           msg := "consistency check violation"
-      | Config:
+      | ProgError:
           msg := "program design error"
       | BufferOverflow:
           msg := "buffer overflow"

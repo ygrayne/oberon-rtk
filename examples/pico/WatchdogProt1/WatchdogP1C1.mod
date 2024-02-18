@@ -67,9 +67,9 @@ MODULE WatchdogP1C1;
     VAR res: INTEGER;
   BEGIN
     Kernel.Install(MillisecsPerTick);
-    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.NoError, Errors.Config);
+    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.SetPeriod(t0, 1000, 0); Kernel.Enable(t0);
-    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.NoError, Errors.Config);
+    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.SetPeriod(t1, 20, 0); Kernel.Enable(t1);
     Kernel.Run
     (* we'll not return here *)
@@ -78,4 +78,3 @@ MODULE WatchdogP1C1;
 BEGIN
   (* Run *)
 END WatchdogP1C1.
-

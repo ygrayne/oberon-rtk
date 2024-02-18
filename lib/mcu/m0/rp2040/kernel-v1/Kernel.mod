@@ -414,6 +414,6 @@ MODULE Kernel;
   END Install;
 
 BEGIN
-  ASSERT(MaxNumThreads <= 32, Errors.Config);
+  ASSERT(MaxNumThreads <= 32, Errors.ProgError);
   Done := SuspendMe; Yield := Next
 END Kernel.

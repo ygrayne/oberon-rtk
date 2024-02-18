@@ -92,11 +92,11 @@ MODULE WatchdogP1C0;
     MultiCore.InitCoreOne(CoreOne.Run, Memory.DataMem[Core1].stackStart, Memory.DataMem[Core1].dataStart);
 
     Kernel.Install(MillisecsPerTick);
-    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.NoError, Errors.Config);
+    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.SetPeriod(t0, 500, 0); Kernel.Enable(t0);
-    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.NoError, Errors.Config);
+    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.SetPeriod(t1, 1000, 0); Kernel.Enable(t1);
-    Kernel.Allocate(t2c, ThreadStackSize, t2, tid2, res); ASSERT(res = Kernel.NoError, Errors.Config);
+    Kernel.Allocate(t2c, ThreadStackSize, t2, tid2, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.SetPeriod(t2, 20, 0); Kernel.Enable(t2);
 
     Watchdog.Init;
@@ -111,4 +111,3 @@ MODULE WatchdogP1C0;
 BEGIN
   run
 END WatchdogP1C0.
-

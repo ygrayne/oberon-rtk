@@ -68,7 +68,7 @@ MODULE Terminals;
   **)
   BEGIN
     ASSERT(uartNo IN UARTs, Errors.PreCond);
-    ASSERT(W[uartNo] # NIL, Errors.Config); (* main terminal must be open *)
+    ASSERT(W[uartNo] # NIL, Errors.ProgError); (* main terminal must be open *)
     IF Werr[uartNo] = NIL THEN
       NEW(Werr[uartNo]); ASSERT(Werr[uartNo] # NIL, Errors.HeapOverflow);
       TextIO.OpenWriter(Werr[uartNo], W[uartNo].dev, psp);
