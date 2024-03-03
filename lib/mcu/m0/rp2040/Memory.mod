@@ -199,6 +199,20 @@ MODULE Memory;
     stacks[cid].stackCheckEnabled := on
   END EnableStackCheck;
 
+
+  PROCEDURE ResetMainStack*(cid, numAddr: INTEGER);
+  (* to do: also reset main stack pointer to top *)
+  (* clear out the main stack from kernel loop to get clean stack traces *)
+    VAR i, addr: INTEGER;
+  BEGIN
+    addr := DataMem[cid].stackStart - 4;
+    i := 0;
+    WHILE i < numAddr DO
+      SYSTEM.PUT(addr, 0);
+      INC(i); DEC(addr, 4)
+    END
+  END ResetMainStack;
+
   (* === init === *)
 
   PROCEDURE init;
@@ -225,6 +239,10 @@ MODULE Memory;
     stacks[Core1].stacksBottom := Config.CoreOneStackStart - Config.CoreOneMainStackSize;
     stacks[Core1].stacksTop := Config.CoreOneStackStart;
     stacks[Core1].stackCheckEnabled := FALSE;
+
+    (* init main stacks for stack trace: mark top *)
+    SYSTEM.PUT(DataMem[Core0].stackStart, DataMem[Core0].stackStart);
+    SYSTEM.PUT(DataMem[Core1].stackStart, DataMem[Core1].stackStart)
   END init;
 
 BEGIN

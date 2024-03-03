@@ -45,10 +45,10 @@ MODULE Timers;
     VAR now, alarmAddr: INTEGER;
   BEGIN
     ASSERT(which IN Alarms);
+    SYSTEM.GET(MCU.TIMER_TIMERAWL, now);
     Exceptions.InstallIntHandler(which, handler); (* timer IRQs are 0 .. 3 *)
     SYSTEM.PUT(MCU.TIMER_INTE + MCU.ASET, {which});
     alarmAddr := MCU.TIMER_ALARM + (which * MCU.TIMER_ALARM_Offset);
-    SYSTEM.GET(MCU.TIMER_TIMERAWL, now);
     when := now + when; (* can roll over, but so will TIMER_TIMERAWL *)
     SYSTEM.PUT(alarmAddr, when);
     Exceptions.EnableInt({which})

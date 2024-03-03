@@ -41,7 +41,7 @@ MODULE MessagingC1;
   BEGIN
     cid := MultiCore.CPUid();
     tid := Kernel.Tid();
-    cnt := 0;
+    cnt := 2;
     Messages.Subscribe(SRno, sr, res); ASSERT(res = Messages.NoError, Errors.ProgError);
     REPEAT
       Kernel.Next;
@@ -74,8 +74,16 @@ MODULE MessagingC1;
     Messages.Subscribe(SRno, sr, res); ASSERT(res = Messages.NoError, Errors.ProgError);
     REPEAT
       (* essential *)
+      Com.WriteThreadInfo(tid, cid); Out.Int(cnt, 8); Out.String(" t1c await"); Out.Ln;
+
       Com.Await(sr); (* await data ready in buffer *)
       Com.Receive(sr, rcv, msg, sender, numData, flags);
+
+      Com.WriteThreadInfo(tid, cid); Out.Int(cnt, 8); Out.String(" t1c received");
+      Out.Int(rcv, 4);
+      Com.WriteMsgData(msg, sender, numData);
+      Out.Int(Kernel.Trigger(), 4);
+      Out.Ln;
 
       (* demo checks and output *)
       ASSERT(rcv = SRno, Errors.ProgError);
@@ -100,7 +108,7 @@ MODULE MessagingC1;
 
 
   PROCEDURE Run*;
-    CONST MsgHandlerPeriod = 50; MsgHandlerPrio = 0;
+    CONST MsgHandlerPeriod = 50; MsgHandlerPrio = Kernel.DefaultPrio;
     VAR res: INTEGER;
   BEGIN
     Kernel.Install(MillisecsPerTick);

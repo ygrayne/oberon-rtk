@@ -9,13 +9,13 @@ MODULE LEDext;
   --
   Usage:
   * Via SIO:
-    GPIO.Set({LED.LED0}),
-    GPIO.Clear({LED.LED0},
-    GPIO.Toggle({LED.LED0})
+    GPIO.Set({LEDext.LED0}),
+    GPIO.Clear({LEDext.LED0},
+    GPIO.Toggle({LEDext.LED0})
   * Direct, avoiding procedure calls, eg. for leaf procedures:
-    SYSTEM.PUT(LED.SET, {LED.LED0}),
-    SYSTEM.PUT(LED.CLR, {LED.LED0}),
-    SYSTEM.PUT(LED.XOR, {LED.LED0})
+    SYSTEM.PUT(LEDext.SET, {LEDext.LED0}),
+    SYSTEM.PUT(LEDext.CLR, {LEDext.LED0}),
+    SYSTEM.PUT(LEDext.XOR, {LEDext.LED0})
   --
   Copyright (c) 2023-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

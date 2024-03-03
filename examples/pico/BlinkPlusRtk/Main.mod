@@ -37,10 +37,6 @@ MODULE Main;
     Terminals.Open(UART0, UART0_TxPinNo, UART0_RxPinNo, Baudrate0, UART.PutString, UART.GetString);
     Terminals.Open(UART1, UART1_TxPinNo, UART1_RxPinNo, Baudrate1, UART.PutString, UART.GetString);
 
-    (* init Out and In to use the terminals *)
-    Out.Open(Terminals.W[0], Terminals.W[1]);
-    In.Open(Terminals.R[0], Terminals.R[1]);
-
     (* init run-time error printing *)
     (* error output on core 0 to terminal 0 *)
     RuntimeErrorsOut.SetWriter(Core0, Terminals.W[0]);
@@ -49,6 +45,10 @@ MODULE Main;
     (* error output on core 1 to terminal 1 *)
     RuntimeErrorsOut.SetWriter(Core1, Terminals.W[1]);
     RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException);
+
+    (* init Out and In to use the terminals *)
+    Out.Open(Terminals.W[0], Terminals.W[1]);
+    In.Open(Terminals.R[0], Terminals.R[1]);
   END init;
 
 BEGIN

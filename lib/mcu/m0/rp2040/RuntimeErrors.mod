@@ -63,7 +63,7 @@ MODULE RuntimeErrors;
         from here down, pushed by handler prologue
         +8    LR  = EXC_RETURN
         +4    local var of handler
-        SP => local vars of handler
+        SP => local var of handler
   *)
 
 

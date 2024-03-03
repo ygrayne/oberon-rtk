@@ -1,6 +1,6 @@
 (**
   Oberon RTK Framework
-  Multi-threading kernel, first iteration (Kernel v1)
+  Multi-threading kernel, first variant (Kernel-v1)
   --
   Based on coroutines
   Multi-core
@@ -285,7 +285,7 @@ MODULE Kernel;
   (* scheduler coroutine code *)
 
   PROCEDURE loopc;
-    VAR tid, cid: INTEGER; t: Thread; ctx: CoreContext; devFlags: SET;
+    VAR tid, cid: INTEGER; t, t0: Thread; ctx: CoreContext; devFlags: SET;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     Memory.ResetMainStack(cid, 128); (* for clean stack traces in main stack *)
@@ -296,10 +296,11 @@ MODULE Kernel;
         tid := 0;
         WHILE tid < ctx.numThreads DO
           t := ctx.threads[tid];
+          t0 := NIL;
           IF t.state = StateEnabled THEN
             t.retCode := TrigNone;
             IF (t.delay <= 0) & (t.period = 0) & (t.devAddr = 0) THEN (* no triggers *)
-              slotIn(t, ctx)
+              t0 := t;
             ELSE
               IF t.period > 0 THEN (* keep the periodic timing on schedule in any case *)
                 DEC(t.ticker, ctx.loopPeriod);
@@ -312,24 +313,27 @@ MODULE Kernel;
               IF t.delay > 0 THEN (* on delay or timeout *)
                 DEC(t.delay, ctx.loopPeriod);
                 IF t.delay <= 0 THEN
-                  slotIn(t, ctx);
+                  t0 := t;
                   t.retCode := TrigDelay
                 END
               END;
               IF t.devAddr # 0 THEN (* waiting for device flags *)
                 SYSTEM.GET(t.devAddr, devFlags);
                 IF (t.devFlagsSet * devFlags # {}) OR (devFlags * t.devFlagsClr # t.devFlagsClr) THEN
-                  slotIn(t, ctx);
+                  t0 := t;
                   t.devAddr := 0;
                   t.retCode := TrigDevice
                 END
               END;
               IF t.retCode = TrigPeriod THEN (* see above *)
                 IF (t.delay <= 0) & (t.devAddr = 0) THEN (* delay and device flags take precedence *)
-                  slotIn(t, ctx)
+                  t0 := t
                 END
               END
             END
+          END;
+          IF t0 # NIL THEN
+            slotIn(t, ctx)
           END;
           INC(tid)
         END

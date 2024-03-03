@@ -2,7 +2,7 @@ MODULE SysTick;
 (**
   Oberon RTK Framework
   System tick
-  For Kernel v1: poll sys tick count flag
+  for Kernel v2: use sys tick interrupt
   --
   Each core has its own sys tick, ie. registers
   are not shared.
@@ -13,24 +13,32 @@ MODULE SysTick;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2;
+  IMPORT SYSTEM, MCU := MCU2, Exceptions;
 
   CONST
     (* bits *)
     SYST_CSR_COUNTFLAG = 16;
     SYST_CSR_ENABLE = 0;
+    SYST_CSR_TICKINT = 1;
 
     CountPerMillisecond = MCU.SysTickFreq DIV 1000;
 
 
-  PROCEDURE Tick*(): BOOLEAN;
-    RETURN SYSTEM.BIT(MCU.SYST_CSR, SYST_CSR_COUNTFLAG)
-  END Tick;
+  PROCEDURE InstallHandler*(handler: PROCEDURE);
+  BEGIN
+    Exceptions.InstallExcHandler(MCU.SysTickHandlerOffset, handler)
+  END InstallHandler;
+
+
+  PROCEDURE SetPrio*(prio: INTEGER);
+  BEGIN
+    Exceptions.SetSysExcPrio(Exceptions.SysExcSysTickNo, prio)
+  END SetPrio;
 
 
   PROCEDURE Enable*;
   BEGIN
-    SYSTEM.PUT(MCU.SYST_CSR, {SYST_CSR_ENABLE})
+    SYSTEM.PUT(MCU.SYST_CSR, {SYST_CSR_TICKINT, SYST_CSR_ENABLE})
   END Enable;
 
 
@@ -43,3 +51,4 @@ MODULE SysTick;
   END Init;
 
 END SysTick.
+

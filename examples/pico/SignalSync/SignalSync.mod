@@ -90,9 +90,9 @@ MODULE SignalSync;
     Kernel.SetPeriod(t0, 500, 0); Kernel.Enable(t0);
     (* two receivers, running the same code *)
     Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.OK, Errors.ProgError);
-    Kernel.SetPrio(t1, 1); Kernel.Enable(t1); (* note: no period as triggered by signal *)
+    Kernel.Enable(t1); (* note: no period as triggered by signal *)
     Kernel.Allocate(t1c, ThreadStackSize, t2, tid2, res); ASSERT(res = Kernel.OK, Errors.ProgError);
-    Kernel.SetPrio(t2, 1); Kernel.Enable(t2); (* note: no period as triggered by signal *)
+    Kernel.Enable(t2); (* note: no period as triggered by signal *)
     (* one sender *)
     Kernel.Allocate(t3c, ThreadStackSize, t3, tid3, res); ASSERT(res = Kernel.OK, Errors.ProgError);
     Kernel.SetPeriod(t3, 1000, 0); Kernel.Enable(t3);

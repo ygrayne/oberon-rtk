@@ -43,6 +43,7 @@ MODULE Messages;
 
     SndRcv* = POINTER TO SndRcvDesc;
     SndRcvDesc* = RECORD
+      id: INTEGER; (* debug *)
       inb: MessageBuffer;
       outb: MessageBuffer;
       state: INTEGER;
@@ -69,6 +70,7 @@ MODULE Messages;
     IF ctx.sndRcv[srNo].state = Unsubscribed THEN
       INC(ctx.numSndRcv);
       sr := ctx.sndRcv[srNo];
+      sr.id := srNo;
       sr.state := Subscribed;
       sr.inb.wr := 0; sr.inb.rd := 0;
       sr.outb.wr := 0; sr.outb.rd := 0;
@@ -97,7 +99,7 @@ MODULE Messages;
 
   PROCEDURE AwaitSnd*(sr: SndRcv);
   BEGIN
-    IF nextIndex(sr.inb.wr) = sr.inb.rd THEN (* out buffer full *)
+    IF nextIndex(sr.outb.wr) = sr.outb.rd THEN (* out buffer full *)
       Signals.Await(sr.sigOut)
     END
   END AwaitSnd;
@@ -154,7 +156,7 @@ MODULE Messages;
             MultiCore.Send(sr.outb.data[sr.outb.rd]);
             sr.outb.rd := nextIndex(sr.outb.rd);
             sr.sndRdy := sr.outb.rd # sr.outb.wr; (* not empty *)
-            Signals.Send(sr.sigOut) (* multiple signal sends OK *)
+            Signals.Send(sr.sigOut)
           END
         END;
         INC(srNo)
@@ -166,11 +168,11 @@ MODULE Messages;
         IF nextIndex(sr.inb.wr) # sr.inb.rd THEN (* not full *)
           sr.inb.data[sr.inb.wr] := msg;
           sr.inb.wr := nextIndex(sr.inb.wr);
-          sr.inb.flags := {}
+          sr.inb.flags := {};
+          Signals.Send(sr.sigIn)
         ELSE
           INCL(sr.inb.flags, InBufOverrun)
-        END;
-        Signals.Send(sr.sigIn) (* multiple signal sends OK *)
+        END
       END;
       Kernel.Next
     UNTIL FALSE

@@ -63,8 +63,7 @@ MODULE MessagingC0;
       Com.WriteThreadInfo(tid, cid); Out.Int(cnt, 8);
       Com.WriteMsgData(msg, sender, data);
       Out.Ln;
-      INC(cnt);
-      Kernel.Next
+      INC(cnt)
     UNTIL FALSE
   END t1c;
 
@@ -114,7 +113,7 @@ MODULE MessagingC0;
       Com.Receive(sr, rcv, msg, sender, data, flags);
 
       (* demo checks and output *)
-      ASSERT(rcv = SRno, Errors.ProgError); (* testing *)
+      ASSERT(rcv = SRno, Errors.ProgError);
       ASSERT(msg = DataReceived, Errors.ProgError);
       ASSERT(sender = "D", Errors.ProgError);
       Com.WriteThreadInfo(tid, cid); Out.Int(cnt, 8);
@@ -127,7 +126,7 @@ MODULE MessagingC0;
 
 
   PROCEDURE run;
-    CONST MsgHandlerPeriod = 50; MsgHandlerPrio = 0;
+    CONST MsgHandlerPeriod = 50; MsgHandlerPrio = Kernel.DefaultPrio;
     VAR res: INTEGER;
   BEGIN
     MultiCore.InitCoreOne(MessagingC1.Run, Memory.DataMem[Core1].stackStart, Memory.DataMem[Core1].dataStart);

@@ -1,12 +1,12 @@
 (**
   Oberon RTK Framework
-  Multi-threading kernel, first iteration (Kernel v1)
+  Multi-threading kernel, second variant (kernel-v2)
+  Early prototype!
   --
   Based on coroutines
   Multi-core
-  Time-driven scheduler
+  Hybrid scheduler
   Cooperative scheduling
-  No support for interrupts yet
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
@@ -16,7 +16,7 @@
 
 MODULE Kernel;
 
-  IMPORT SYSTEM, Coroutines, Config, Memory, SysTick, MCU := MCU2, Errors;
+  IMPORT SYSTEM, Coroutines, Config, Memory, SysTick, MCU := MCU2, Errors, Exceptions;
 
   CONST
     MaxNumThreads* = Config.MaxNumThreads;
@@ -43,7 +43,19 @@ MODULE Kernel;
     LoopStackSize = 256; (* bytes *)
     LoopCorId = -1;
 
+    (* slow loop down for debugging *)
     SloMo = 1;
+
+    (* kernel traps *)
+    SlotInIntNo = 31;
+    SlotOutIntNo = 30;
+
+    SlotInIntPrio = 1;
+    SlotOutIntPrio = 1;
+
+    (* loop/scanner *)
+    (* sys tick exception handler *)
+    LoopIntPrio = 2;
 
 
   TYPE
@@ -80,12 +92,31 @@ MODULE Kernel;
     Yield*: PROCEDURE; (* alias for Next *)
 
 
-  (* ready queue *)
+  (* ready queue mgmt *)
+  (* via interrupt traps *)
 
   PROCEDURE slotIn(t: Thread; ctx: CoreContext);
-  (* put into ready queue, prio sorted *)
-    VAR t0, t1: Thread;
+    CONST R2 = 2; R3 = 3;
   BEGIN
+    SYSTEM.LDREG(R2, t);
+    SYSTEM.LDREG(R3, ctx);
+    SYSTEM.PUT(MCU.NVIC_ISPR, {SlotInIntNo})
+  END slotIn;
+
+
+  PROCEDURE slotInHandler[0];
+    CONST R2 = 2; R3 = 3;
+    VAR t, t0, t1: Thread; ctx: CoreContext;
+  BEGIN
+    (*
+    need to get PSP for this to work
+    SYSTEM.EMIT(MCU.MRS_R11_PSP);
+    sp := SYSTEM.REG(11)
+    SYSTEM.GET(sp + R2offset, t);
+    SYSTEM.GET(sp + R3offset, ctx);
+    *)
+    t := SYSTEM.VAL(Thread, SYSTEM.REG(R2));
+    ctx := SYSTEM.VAL(CoreContext, SYSTEM.REG(R3));
     IF ~(t.tid IN ctx.queued) THEN
       t0 := ctx.ct; t1 := t0;
       WHILE (t0 # NIL) & (t0.prio <= t.prio) DO
@@ -95,7 +126,27 @@ MODULE Kernel;
       t.next := t0;
       INCL(ctx.queued, t.tid)
     END
-  END slotIn;
+  END slotInHandler;
+
+
+  PROCEDURE slotOut(ctx: CoreContext);
+    CONST R3 = 3;
+  BEGIN
+    SYSTEM.LDREG(R3, ctx);
+    SYSTEM.PUT(MCU.NVIC_ISPR, {SlotOutIntNo})
+  END slotOut;
+
+
+  PROCEDURE slotOutHandler[0];
+    CONST R3 = 3;
+    VAR ctx: CoreContext;
+  BEGIN
+    ctx := SYSTEM.VAL(CoreContext, SYSTEM.REG(R3));
+    ctx.Ct := ctx.ct;
+    ctx.ct := ctx.ct.next;
+    EXCL(ctx.queued, ctx.Ct.tid)
+  END slotOutHandler;
+
 
   (* manage threads *)
 
@@ -125,7 +176,7 @@ MODULE Kernel;
   PROCEDURE Reallocate*(t: Thread; proc: PROC; VAR res: INTEGER);
   BEGIN
     res := Failed;
-    IF t.state = StateSuspended THEN
+    IF t.state = StateSuspended THEN (* todo: protect threads suspended on signals *)
       t.prio := 1;
       t.period := 0; t.delay := 0;
       t.devAddr := 0;
@@ -136,9 +187,15 @@ MODULE Kernel;
 
 
   PROCEDURE Enable*(t: Thread);
+    VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
-    ASSERT(t # NIL, Errors.PreCond);
-    t.state := StateEnabled
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    ctx := coreCon[cid];
+    t.state := StateEnabled;
+    IF (t.delay <= 0) & (t.period = 0) & (t.devAddr = 0) THEN (* no triggers *)
+      t.retCode := TrigNone;
+      slotIn(t, ctx)
+    END
   END Enable;
 
 
@@ -158,11 +215,16 @@ MODULE Kernel;
   (* in-process api *)
 
   PROCEDURE Next*;
-    VAR cid: INTEGER; ctx: CoreContext;
+    VAR cid: INTEGER; ctx: CoreContext; t: Thread;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     ctx := coreCon[cid];
-    Coroutines.Transfer(ctx.Ct.cor, ctx.loop)
+    t := ctx.Ct;
+    IF (t.delay <= 0) & (t.period = 0) & (t.devAddr = 0) THEN (* no triggers *)
+      t.retCode := TrigNone;
+      slotIn(t, ctx)
+    END;
+    Coroutines.Transfer(t.cor, ctx.loop)
   END Next;
 
 
@@ -282,79 +344,82 @@ MODULE Kernel;
     RETURN t.prio
   END Prio;
 
-  (* scheduler coroutine code *)
+  (* loop executive coroutine code *)
 
   PROCEDURE loopc;
-    VAR tid, cid: INTEGER; t: Thread; ctx: CoreContext; devFlags: SET;
+    VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     Memory.ResetMainStack(cid, 128); (* for clean stack traces in main stack *)
     ctx := coreCon[cid];
     ctx.Ct := NIL;
     REPEAT
-      IF SysTick.Tick() THEN
-        tid := 0;
-        WHILE tid < ctx.numThreads DO
-          t := ctx.threads[tid];
-          IF t.state = StateEnabled THEN
-            t.retCode := TrigNone;
-            IF (t.delay <= 0) & (t.period = 0) & (t.devAddr = 0) THEN (* no triggers *)
-              slotIn(t, ctx)
-            ELSE
-              IF t.period > 0 THEN (* keep the periodic timing on schedule in any case *)
-                DEC(t.ticker, ctx.loopPeriod);
-                IF t.ticker <= 0 THEN
-                  t.ticker := t.ticker + t.period;
-                  t.retCode := TrigPeriod
-                  (* don't slot in here *)
-                END
-              END;
-              IF t.delay > 0 THEN (* on delay or timeout *)
-                DEC(t.delay, ctx.loopPeriod);
-                IF t.delay <= 0 THEN
-                  slotIn(t, ctx);
-                  t.retCode := TrigDelay
-                END
-              END;
-              IF t.devAddr # 0 THEN (* waiting for device flags *)
-                SYSTEM.GET(t.devAddr, devFlags);
-                IF (t.devFlagsSet * devFlags # {}) OR (devFlags * t.devFlagsClr # t.devFlagsClr) THEN
-                  slotIn(t, ctx);
-                  t.devAddr := 0;
-                  t.retCode := TrigDevice
-                END
-              END;
-              IF t.retCode = TrigPeriod THEN (* see above *)
-                IF (t.delay <= 0) & (t.devAddr = 0) THEN (* delay and device flags take precedence *)
-                  slotIn(t, ctx)
-                END
-              END
-            END
-          END;
-          INC(tid)
-        END
-      END;
-      (* print ready-queue for debugging *)
-      (* cannot be used together with UARTkstr, simply use UARTstr in Main.mod *)
-      (*
-      IF ctx.ct # NIL THEN
+      WHILE ctx.ct # NIL DO
+        (*
         t := ctx.ct;
         WHILE t # NIL DO
           Out.Int(t.tid, 4); Out.String(" / "); Out.Int(t.prio, 0);
           t := t.next
         END;
         Out.Ln;
-      END;
-      *)
-      WHILE ctx.ct # NIL DO
-        t := ctx.ct;
-        ctx.ct := ctx.ct.next; EXCL(ctx.queued, t.tid); (* slot out ctx.ct *)
-        ctx.Ct := t;
-        Coroutines.Transfer(ctx.loop, t.cor);
+        *)
+        slotOut(ctx);
+        Coroutines.Transfer(ctx.loop, ctx.Ct.cor);
         ctx.Ct := NIL
       END;
     UNTIL FALSE
   END loopc;
+
+  (* loop sys tick int handler *)
+
+  PROCEDURE looph[0];
+    VAR tid, cid: INTEGER; t, t0: Thread; ctx: CoreContext; devFlags: SET;
+  BEGIN
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    ctx := coreCon[cid];
+    tid := 0;
+    WHILE tid < ctx.numThreads DO
+      t := ctx.threads[tid];
+      t0 := NIL;
+      IF t.state = StateEnabled THEN
+        IF t # ctx.Ct THEN (* allow Ct to mutate its data via in-thread API *)
+          t.retCode := TrigNone;
+          IF t.period > 0 THEN (* keep the periodic timing on schedule in any case *)
+            DEC(t.ticker, ctx.loopPeriod);
+            IF t.ticker <= 0 THEN
+              t.ticker := t.ticker + t.period;
+              t.retCode := TrigPeriod
+              (* don't slot in here *)
+            END
+          END;
+          IF t.delay > 0 THEN (* on delay or timeout *)
+            DEC(t.delay, ctx.loopPeriod);
+            IF t.delay <= 0 THEN
+              t0 := t;
+              t.retCode := TrigDelay
+            END
+          END;
+          IF t.devAddr # 0 THEN (* waiting for device flags *)
+            SYSTEM.GET(t.devAddr, devFlags);
+            IF (t.devFlagsSet * devFlags # {}) OR (devFlags * t.devFlagsClr # t.devFlagsClr) THEN
+              t0 := t;
+              t.devAddr := 0;
+              t.retCode := TrigDevice
+            END
+          END;
+          IF t.retCode = TrigPeriod THEN (* see above *)
+            IF (t.delay <= 0) & (t.devAddr = 0) THEN (* delay and device flags take precedence *)
+              t0 := t
+            END
+          END
+        END;
+        IF t0 # NIL THEN
+          slotIn(t, ctx)
+        END
+      END;
+      INC(tid)
+    END
+  END looph;
 
 
   (* scheduler start *)
@@ -409,8 +474,19 @@ MODULE Kernel;
       NEW(ctx.threads[i].cor); ASSERT(ctx.threads[i].cor # NIL, Errors.HeapOverflow);
       INC(i)
     END;
-    (* start sys tick *)
-    SysTick.Init(millisecsPerTick * SloMo)
+
+    Exceptions.InstallIntHandler(SlotInIntNo, slotInHandler);
+    Exceptions.SetIntPrio(SlotInIntNo, SlotInIntPrio);
+    Exceptions.EnableInt({SlotInIntNo});
+
+    Exceptions.InstallIntHandler(SlotOutIntNo, slotOutHandler);
+    Exceptions.SetIntPrio(SlotOutIntNo, SlotOutIntPrio);
+    Exceptions.EnableInt({SlotOutIntNo});
+
+    (* init and install sys tick *)
+    SysTick.Init(millisecsPerTick * SloMo);
+    SysTick.InstallHandler(looph);
+    SysTick.SetPrio(LoopIntPrio);
   END Install;
 
 BEGIN
