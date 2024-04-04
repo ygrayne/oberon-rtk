@@ -1,7 +1,7 @@
 MODULE Out;
 (**
   Oberon RTK Framework
-  Output to core-dedicated serial Terminal
+  Output via two TextIO.Writer.
   --
   Copyright (c) 2020-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

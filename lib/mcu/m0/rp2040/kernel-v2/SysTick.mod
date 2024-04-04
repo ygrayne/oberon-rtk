@@ -51,4 +51,3 @@ MODULE SysTick;
   END Init;
 
 END SysTick.
-

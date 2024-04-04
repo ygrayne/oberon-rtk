@@ -142,7 +142,7 @@ MODULE Messages;
   (* fifo handler thread code *)
 
   PROCEDURE fifoc;
-    VAR cid, srNo: INTEGER; sr: SndRcv; ctx: CoreContext; msg: Message;
+    VAR cid, srNo: INTEGER; sr: SndRcv; ctx: CoreContext; fifoVal: MultiCore.FifoValue; msg: Message;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     ctx := coreCon[cid];
@@ -153,7 +153,7 @@ MODULE Messages;
         sr := ctx.sndRcv[srNo];
         IF sr.state = Subscribed THEN
           WHILE sr.sndRdy & MultiCore.Ready() DO
-            MultiCore.Send(sr.outb.data[sr.outb.rd]);
+            MultiCore.Send(SYSTEM.VAL(MultiCore.FifoValue, sr.outb.data[sr.outb.rd]));
             sr.outb.rd := nextIndex(sr.outb.rd);
             sr.sndRdy := sr.outb.rd # sr.outb.wr; (* not empty *)
             Signals.Send(sr.sigOut)
@@ -163,7 +163,8 @@ MODULE Messages;
       END;
       (* receive *)
       WHILE MultiCore.Valid() DO
-        MultiCore.Receive(msg);
+        MultiCore.Receive(fifoVal);
+        msg := SYSTEM.VAL(Message, fifoVal);
         sr := ctx.sndRcv[msg[0]];
         IF nextIndex(sr.inb.wr) # sr.inb.rd THEN (* not full *)
           sr.inb.data[sr.inb.wr] := msg;

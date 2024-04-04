@@ -1,3 +1,4 @@
+MODULE Coroutines;
 (**
   Oberon RTK Framework
   Simple coroutines
@@ -8,8 +9,6 @@
   Copyright (c) 2020-2024 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
-
-MODULE Coroutines;
 
   IMPORT SYSTEM, Errors;
 

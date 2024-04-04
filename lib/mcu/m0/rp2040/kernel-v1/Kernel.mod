@@ -1,3 +1,4 @@
+MODULE Kernel;
 (**
   Oberon RTK Framework
   Multi-threading kernel, first variant (Kernel-v1)
@@ -13,8 +14,6 @@
   Copyright (c) 2020-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
-
-MODULE Kernel;
 
   IMPORT SYSTEM, Coroutines, Config, Memory, SysTick, MCU := MCU2, Errors;
 

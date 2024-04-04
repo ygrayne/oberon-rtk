@@ -43,7 +43,7 @@ MODULE BlinkPlusC1;
         before := timeL;
         INC(cnt)
       END;
-      IF cnt = 40 THEN fail END
+      IF cnt = 20 THEN fail END
     UNTIL FALSE
   END Run;
 

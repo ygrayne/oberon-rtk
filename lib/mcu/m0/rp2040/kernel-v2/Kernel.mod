@@ -1,3 +1,4 @@
+MODULE Kernel;
 (**
   Oberon RTK Framework
   Multi-threading kernel, second variant (kernel-v2)
@@ -13,8 +14,6 @@
   Copyright (c) 2020-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
-
-MODULE Kernel;
 
   IMPORT SYSTEM, Coroutines, Config, Memory, SysTick, MCU := MCU2, Errors, Exceptions;
 
@@ -98,9 +97,11 @@ MODULE Kernel;
   PROCEDURE slotIn(t: Thread; ctx: CoreContext);
     CONST R2 = 2; R3 = 3;
   BEGIN
-    SYSTEM.LDREG(R2, t);
-    SYSTEM.LDREG(R3, ctx);
-    SYSTEM.PUT(MCU.NVIC_ISPR, {SlotInIntNo})
+    IF ~(t.tid IN ctx.queued) THEN
+      SYSTEM.LDREG(R2, t);
+      SYSTEM.LDREG(R3, ctx);
+      SYSTEM.PUT(MCU.NVIC_ISPR, {SlotInIntNo})
+    END
   END slotIn;
 
 
@@ -117,15 +118,13 @@ MODULE Kernel;
     *)
     t := SYSTEM.VAL(Thread, SYSTEM.REG(R2));
     ctx := SYSTEM.VAL(CoreContext, SYSTEM.REG(R3));
-    IF ~(t.tid IN ctx.queued) THEN
-      t0 := ctx.ct; t1 := t0;
-      WHILE (t0 # NIL) & (t0.prio <= t.prio) DO
-        t1 := t0; t0 := t0.next
-      END;
-      IF t1 = t0 THEN ctx.ct := t ELSE t1.next := t END;
-      t.next := t0;
-      INCL(ctx.queued, t.tid)
-    END
+    t0 := ctx.ct; t1 := t0;
+    WHILE (t0 # NIL) & (t0.prio <= t.prio) DO
+      t1 := t0; t0 := t0.next
+    END;
+    IF t1 = t0 THEN ctx.ct := t ELSE t1.next := t END;
+    t.next := t0;
+    INCL(ctx.queued, t.tid)
   END slotInHandler;
 
 
@@ -438,7 +437,7 @@ MODULE Kernel;
     SYSTEM.LDREG(R11, ORD({MCU.CONTROL_SPSEL}));
     SYSTEM.EMIT(MCU.MSR_R11_CTL);
     SYSTEM.EMIT(MCU.ISB);
-    (* from here, we use the PSP *)
+    (* from here, we use the PSP, but are still in main stack memory space *)
     SysTick.Enable;
     Coroutines.Transfer(coreCon[cid].jump, coreCon[cid].loop)
     (* we'll not return here *)

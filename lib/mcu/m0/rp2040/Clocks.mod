@@ -123,13 +123,7 @@ MODULE Clocks;
     BFI(x, 23, 12, XOSC_CTRL_ENABLE);
     SYSTEM.PUT(MCU.XOSC_CTRL, x);
     (* wait for osc to stabilize *)
-    (* compiler issue, reported => confirmed *)
-    (* works with Astrobe v9.1, checked 2024-01-31
-    REPEAT UNTIL SYSTEM.BIT(MCU.XOSC_STATUS, XOSC_STATUS_STABLE);
-    *)
-    REPEAT (* workaround, left for v9.0.3 compat *)
-      SYSTEM.GET(MCU.XOSC_STATUS, x)
-    UNTIL XOSC_STATUS_STABLE IN BITS(x)
+    REPEAT UNTIL SYSTEM.BIT(MCU.XOSC_STATUS, XOSC_STATUS_STABLE)
   END startXOSC;
 
 
@@ -143,13 +137,7 @@ MODULE Clocks;
     SYSTEM.PUT(MCU.PLL_SYS_FBDIV_INT, 125);
     (* power up VCO and PLL *)
     SYSTEM.PUT(MCU.PLL_SYS_PWR + MCU.ACLR, {PLL_SYS_PWR_VCOPD, PLL_SYS_PWR_PD}); (* clear bits *)
-    (* compiler issue, reported => confirmed *)
-    (* works with Astrobe v9.1, checked 2024-01-31
     REPEAT UNTIL SYSTEM.BIT(MCU.PLL_SYS_CS, PLL_SYS_CS_LOCK);
-    *)
-    REPEAT (* workaround, left for v9.0.3 compat *)
-      SYSTEM.GET(MCU.PLL_SYS_CS, x)
-    UNTIL PLL_SYS_CS_LOCK IN BITS(x);
     (* set post dividers *)
     (* 125 Mhz, note: high VCO freq *)
     x := 0;
@@ -174,13 +162,7 @@ MODULE Clocks;
     SYSTEM.PUT(MCU.PLL_USB_FBDIV_INT, 64);
     (* power up VCO and PLL *)
     SYSTEM.PUT(MCU.PLL_USB_PWR + MCU.ACLR, {PLL_USB_PWR_VCOPD, PLL_USB_PWR_PD}); (* clear bits *)
-    (* compiler issue, reported *)
-    (* works with Astrobe v9.1, checked 2024-01-31
     REPEAT UNTIL SYSTEM.BIT(MCU.PLL_USB_CS, PLL_USB_CS_LOCK);
-    *)
-    REPEAT (* workaround, left for v9.0.3 compat *)
-      SYSTEM.GET(MCU.PLL_USB_CS, x)
-    UNTIL PLL_USB_CS_LOCK IN BITS(x);
     (* set post dividers *)
     x := 0;
     BFI(x, 18, 16, 4);

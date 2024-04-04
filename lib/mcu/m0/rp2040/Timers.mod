@@ -5,7 +5,7 @@ MODULE Timers;
   64 bit micro seconds => rolls over in 500,000+ years.
   --
   * get time, set time
-  * setting alarms
+  * alarm interrupt handling
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
@@ -14,9 +14,6 @@ MODULE Timers;
 **)
 
   IMPORT SYSTEM, MCU := MCU2, Exceptions;
-
-  CONST
-    Alarms = {0..3};
 
 
   PROCEDURE GetTime*(VAR timeH, timeL: INTEGER);
@@ -39,20 +36,32 @@ MODULE Timers;
   END GetTimeL;
 
 
-  PROCEDURE SetAlarm*(which, when: INTEGER; handler: PROCEDURE);
-  (* 'when': microseconds from now *)
-  (* will trigger when 'now + when' = TIMER_TIMERAWL *)
-    VAR now, alarmAddr: INTEGER;
+  PROCEDURE InstallAlarmIntHandler*(alarmNo: INTEGER; handler: PROCEDURE);
   BEGIN
-    ASSERT(which IN Alarms);
-    SYSTEM.GET(MCU.TIMER_TIMERAWL, now);
-    Exceptions.InstallIntHandler(which, handler); (* timer IRQs are 0 .. 3 *)
-    SYSTEM.PUT(MCU.TIMER_INTE + MCU.ASET, {which});
-    alarmAddr := MCU.TIMER_ALARM + (which * MCU.TIMER_ALARM_Offset);
-    when := now + when; (* can roll over, but so will TIMER_TIMERAWL *)
-    SYSTEM.PUT(alarmAddr, when);
-    Exceptions.EnableInt({which})
-  END SetAlarm;
+    Exceptions.InstallIntHandler(Exceptions.TIMER_IRQ_0 + alarmNo, handler)
+  END InstallAlarmIntHandler;
+
+
+  PROCEDURE SetAlarmIntPrio*(alarmNo, prio: INTEGER);
+  BEGIN
+    Exceptions.SetIntPrio(Exceptions.TIMER_IRQ_0 + alarmNo, prio)
+  END SetAlarmIntPrio;
+
+
+  PROCEDURE EnableAlarmInt*(alarmNo: INTEGER);
+    VAR en: SET;
+  BEGIN
+    en := {alarmNo}; (* compiler issue workaround v9.1 *)
+    SYSTEM.PUT(MCU.TIMER_INTE + MCU.ASET, en)
+  END EnableAlarmInt;
+
+
+  PROCEDURE DeassertAlarmInt*(alarmNo: INTEGER);
+    VAR en: SET;
+  BEGIN
+    en := {alarmNo}; (* compiler issue workaround v9.1 *)
+    SYSTEM.PUT(MCU.TIMER_INTR + MCU.ACLR, en);
+  END DeassertAlarmInt;
 
 
   PROCEDURE SetTime*(timeH, timeL: INTEGER);
@@ -69,3 +78,4 @@ MODULE Timers;
 *)
 
 END Timers.
+

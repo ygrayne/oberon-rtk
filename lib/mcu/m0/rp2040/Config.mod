@@ -75,6 +75,11 @@ MODULE Config;
     CoreZeroMainStackSize* = 1024;
     CoreOneMainStackSize* = 1024;
 
+    CoreZeroRamExtStart* = 020040000H;
+    CoreZeroRamExtEnd* = CoreZeroRamExtStart + 01000H;
+    CoreOneRamExtStart* = 020041000H;
+    CoreOneRamExtEnd* = CoreOneRamExtStart + 01000H;
+
   VAR
     CoreZeroDataStart*: INTEGER;
     CoreZeroStackStart*: INTEGER;

@@ -16,7 +16,7 @@ MODULE MCU2;
   * addr + 3000H: atomic bitmask clear on write
   Not true for SIO, can't use there.
   Don't use for registers that work on a mask anyway, such as for NVIC.
-  See datasheet 2.1., p18
+  See datasheet 2.1.2, p18
   --
   Copyright (c) 2023-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -45,15 +45,50 @@ CONST
   (* datasheet 2.6.3.6, p127 *)
   (* shared *)
   XIP_Base = 014000000H; (* p127 *)
-  XIP_CTRL* = XIP_Base;
-  XIP_FLUSH* = XIP_Base + 040H;
+  XIP_CTRL*        = XIP_Base;
+  XIP_FLUSH*       = XIP_Base + 004H;
+  XIP_STATUS*      = XIP_Base + 008H;
+  XIP_CTR_HIT*     = XIP_Base + 00CH;
+  XIP_CTR_ACC*     = XIP_Base + 010H;
+  XIP_STREAM_ADDR* = XIP_Base + 014H;
+  XIP_STREAM_CTR*  = XIP_Base + 018H;
+  XIP_STREAM_FIFO* = XIP_Base + 01CH;
 
   (* === bus fabric === *)
   (* datasheet 2.1.5, p19 *)
   (* shared *)
   BUSCTRL_Base = 040030000H;
   BUSCTRL_BUS_PRIORITY*     = BUSCTRL_Base;
-  BUSCTRL_BUS_PRIORITY_ACK* = BUSCTRL_Base + 04H;
+  BUSCTRL_BUS_PRIORITY_ACK* = BUSCTRL_Base + 004H;
+  BUSCTRL_PERFCTR0*         = BUSCTRL_Base + 008H;
+  BUSCTRL_PERFSEL0*         = BUSCTRL_Base + 00CH;
+  BUSCTRL_PERFCTR1*         = BUSCTRL_Base + 010H;
+  BUSCTRL_PERFSEL1*         = BUSCTRL_Base + 014H;
+  BUSCTRL_PERFCTR2*         = BUSCTRL_Base + 018H;
+  BUSCTRL_PERFSEL2*         = BUSCTRL_Base + 01CH;
+  BUSCTRL_PERFCTR3*         = BUSCTRL_Base + 020H;
+  BUSCTRL_PERFSEL3*         = BUSCTRL_Base + 024H;
+
+  BUSCTRL_PERFSEL_APB_CONT*   = 000H;
+  BUSCTRL_PERFSEL_APB*        = 001H;
+  BUSCTRL_PERFSEL_FASTPERI_CONT* = 002H;
+  BUSCTRL_PERFSEL_FASTPERI*   = 003H;
+  BUSCTRL_PERFSEL_SRAM5_CONT* = 004H;
+  BUSCTRL_PERFSEL_SRAM5*      = 005H;
+  BUSCTRL_PERFSEL_SRAM4_CONT* = 006H;
+  BUSCTRL_PERFSEL_SRAM4*      = 007H;
+  BUSCTRL_PERFSEL_SRAM3_CONT* = 008H;
+  BUSCTRL_PERFSEL_SRAM3*      = 009H;
+  BUSCTRL_PERFSEL_SRAM2_CONT* = 00AH;
+  BUSCTRL_PERFSEL_SRAM2*      = 00BH;
+  BUSCTRL_PERFSEL_SRAM1_CONT* = 00CH;
+  BUSCTRL_PERFSEL_SRAM1*      = 00DH;
+  BUSCTRL_PERFSEL_SRAM0_CONT* = 00EH;
+  BUSCTRL_PERFSEL_SRAM0*      = 00FH;
+  BUSCTRL_PERFSEL_XPI_CONT*   = 010H;
+  BUSCTRL_PERFSEL_XPI*        = 011H;
+  BUSCTRL_PERFSEL_ROM_CONT*   = 012H;
+  BUSCTRL_PERFSEL_ROM*        = 013H;
 
 
   (* === system info and config === *)

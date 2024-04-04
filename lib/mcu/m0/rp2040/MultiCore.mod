@@ -19,10 +19,7 @@ MODULE MultiCore;
     ST_RDY = 1;
     ST_VLD = 0;
 
-    (* works with Astrobe v9.1, checked 2024-01-31
     SEV = 0BF40H;
-    *)
-    NOPSEV = 046C0BF40H; (* workaround, SEV does not work with Astrobe v9.0.3 *)
 
   TYPE
     FifoValue* = ARRAY 4 OF BYTE; (* compatible with any 4-byte data structure, incl. basic types *)
@@ -36,7 +33,7 @@ MODULE MultiCore;
   END CPUid;
 
 
-  PROCEDURE Send*(VAR value: FifoValue); (* VAR = workaround *)
+  PROCEDURE Send*(value: FifoValue);
   BEGIN
     SYSTEM.PUT(MCU.SIO_FIFO_WR, value)
   END Send;
@@ -82,19 +79,11 @@ MODULE MultiCore;
     i := 0;
     Flush;
     REPEAT
-      (* workaround, left for v9.0.3 compat *)
-      SYSTEM.EMIT(NOPSEV);
-      (* works with Astrobe v9.1, checked 2024-01-31
       SYSTEM.EMITH(SEV);
-      *)
       (* send value *)
       REPEAT UNTIL Ready();
       Send(cmd[i]);
-      (* workaround, left for v9.0.3 compat *)
-      SYSTEM.EMIT(NOPSEV);
-      (* works with Astrobe v9.1, checked 2024-01-31
       SYSTEM.EMITH(SEV);
-      *)
       (* receive value *)
       REPEAT UNTIL Valid();
       Receive(x);

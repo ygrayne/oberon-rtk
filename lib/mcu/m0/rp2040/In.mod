@@ -1,7 +1,7 @@
 MODULE In;
 (**
   Oberon RTK Framework
-  Input from core-dedicated serial Terminal
+  Input vua two TextIO.Reader.
   --
   Copyright (c) 2020-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -49,4 +49,3 @@ MODULE In;
 BEGIN
   R[0] := NIL; R[1] := NIL
 END In.
-

@@ -10,6 +10,7 @@ MODULE BlinkPlusRtkC0;
   Board: Pico
   --
   Copyright (c) 2023-2024 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
 **)
 
   IMPORT Main, Kernel, Out, MultiCore, Memory, Timers, CoreOne := BlinkPlusRtkC1;

@@ -64,7 +64,7 @@ MODULE Exceptions;
   BEGIN
     SYSTEM.PUT(MCU.NVIC_ISER, irqMask)
   END EnableInt;
-  
+
 
   PROCEDURE GetEnabledInt*(VAR en: SET);
   BEGIN
