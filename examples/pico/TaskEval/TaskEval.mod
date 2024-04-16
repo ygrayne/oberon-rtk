@@ -33,6 +33,7 @@ MODULE TaskEval;
     TimerStart1 = 0FFFFFFFFH - 700;
     TimerStart2 = 0FFFFFFFFH - 570;
     TimerStart3 = 0FFFFFFFFH - 250;
+    TimerStart4 = 0FFFFFFFFH - 90;
     TimerStart = TimerStart0;
 
   VAR

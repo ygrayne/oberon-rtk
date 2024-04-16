@@ -127,7 +127,7 @@ MODULE Tasks;
     (* read parameters from stack *)
     IF 2 IN BITS(SYSTEM.REG(LR)) THEN
       SYSTEM.EMIT(MCU.MRS_R11_PSP);
-     regAddr := SYSTEM.REG(11)
+      regAddr := SYSTEM.REG(11)
     ELSE
       regAddr := SYSTEM.REG(SP) + 40;
     END;
