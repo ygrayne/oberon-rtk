@@ -62,37 +62,37 @@ MODULE Exceptions;
 
   PROCEDURE EnableInt*(irqMask: SET);
   BEGIN
-    SYSTEM.PUT(MCU.NVIC_ISER, irqMask)
+    SYSTEM.PUT(MCU.M0PLUS_NVIC_ISER, irqMask)
   END EnableInt;
 
 
   PROCEDURE GetEnabledInt*(VAR en: SET);
   BEGIN
-    SYSTEM.GET(MCU.NVIC_ISER, en)
+    SYSTEM.GET(MCU.M0PLUS_NVIC_ISER, en)
   END GetEnabledInt;
 
 
   PROCEDURE DisableInt*(irqMask: SET);
   BEGIN
-    SYSTEM.PUT(MCU.NVIC_ICER, irqMask)
+    SYSTEM.PUT(MCU.M0PLUS_NVIC_ICER, irqMask)
   END DisableInt;
 
 
   PROCEDURE SetPendingInt*(irqMask: SET);
   BEGIN
-    SYSTEM.PUT(MCU.NVIC_ISPR, irqMask)
+    SYSTEM.PUT(MCU.M0PLUS_NVIC_ISPR, irqMask)
   END SetPendingInt;
 
 
   PROCEDURE GetPendingInt*(VAR pend: SET);
   BEGIN
-    SYSTEM.GET(MCU.NVIC_ISPR, pend)
+    SYSTEM.GET(MCU.M0PLUS_NVIC_ISPR, pend)
   END GetPendingInt;
 
 
   PROCEDURE ClearPendingInt*(irqMask: SET);
   BEGIN
-    SYSTEM.PUT(MCU.NVIC_ICPR, irqMask)
+    SYSTEM.PUT(MCU.M0PLUS_NVIC_ICPR, irqMask)
   END ClearPendingInt;
 
 
@@ -100,7 +100,7 @@ MODULE Exceptions;
   (* prio: 0 to 3, 0 - highest *)
     VAR addr, x: INTEGER;
   BEGIN
-    addr := MCU.NVIC_IPR + ((irqNo DIV 4) * 4);
+    addr := MCU.M0PLUS_NVIC_IPR + ((irqNo DIV 4) * 4);
     SYSTEM.GET(addr, x);
     x := x + LSL(LSL(prio, 6), (irqNo MOD 4) * 8);
     SYSTEM.PUT(addr, x)
@@ -111,7 +111,7 @@ MODULE Exceptions;
   (* prio: 0 to 3, 0 - highest *)
     VAR addr: INTEGER;
   BEGIN
-    addr := MCU.NVIC_IPR + ((irqNo DIV 4) * 4);
+    addr := MCU.M0PLUS_NVIC_IPR + ((irqNo DIV 4) * 4);
     SYSTEM.GET(addr, prio)
   END GetIntPrio;
 
@@ -119,7 +119,7 @@ MODULE Exceptions;
   PROCEDURE InstallIntHandler*(irqNo: INTEGER; handler: PROCEDURE);
     VAR vectAddr, vtor: INTEGER; addr: SET;
   BEGIN
-    SYSTEM.GET(MCU.SCB_VTOR, vtor);
+    SYSTEM.GET(MCU.M0PLUS_VTOR, vtor);
     vectAddr := vtor + MCU.IrqZeroHandlerOffset + (4 * irqNo);
     SYSTEM.PUT(vectAddr, handler);
     SYSTEM.GET(vectAddr, addr);
@@ -135,7 +135,7 @@ MODULE Exceptions;
     VAR addr, x: INTEGER;
   BEGIN
     ASSERT(excNo IN SysExcNo, Errors.PreCond);
-    addr := MCU.SCB_SHPR - 04H + (excNo DIV 4) * 4;
+    addr := MCU.M0PLUS_SHPR - 04H + (excNo DIV 4) * 4;
     SYSTEM.GET(addr, x);
     x := x + LSL(LSL(prio, 6), (excNo MOD 4) * 8);
     SYSTEM.PUT(addr, x)
@@ -146,7 +146,7 @@ MODULE Exceptions;
     VAR addr: INTEGER;
   BEGIN
     ASSERT(excNo IN SysExcNo, Errors.PreCond);
-    addr := MCU.SCB_SHPR - 04H + (excNo DIV 4) * 4;
+    addr := MCU.M0PLUS_SHPR - 04H + (excNo DIV 4) * 4;
     SYSTEM.GET(addr, prio);
   END GetSysExcPrio;
 
@@ -154,7 +154,7 @@ MODULE Exceptions;
   PROCEDURE InstallExcHandler*(vectOffset: INTEGER; handler: PROCEDURE);
     VAR addr: SET; vtor, vectAddr: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SCB_VTOR, vtor);
+    SYSTEM.GET(MCU.M0PLUS_VTOR, vtor);
     vectAddr := vtor + vectOffset;
     SYSTEM.PUT(vectAddr, handler);
     SYSTEM.GET(vectAddr, addr);

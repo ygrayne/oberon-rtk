@@ -63,6 +63,20 @@ MODULE MemoryExt;
   END CopyProc;
 
 
+  PROCEDURE CacheProc*(procAddr: INTEGER);
+    CONST PushLr = 0B5H;
+    VAR addr, instr: INTEGER;
+  BEGIN
+    SYSTEM.GET(procAddr, instr);
+    addr := procAddr + 4;
+    SYSTEM.GET(addr, instr);
+    WHILE BFX(instr, 15, 8) # PushLr DO
+      INC(addr, 4);
+      SYSTEM.GET(addr, instr)
+    END
+  END CacheProc;
+
+
   PROCEDURE init;
     CONST Core0 = 0; Core1 = 1;
   BEGIN

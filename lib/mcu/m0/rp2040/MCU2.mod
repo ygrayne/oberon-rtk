@@ -165,6 +165,8 @@ CONST
   M0PLUS_SHPR3*  = M0PLUS_SCB_Base + 020H;
   M0PLUS_SHCSR*  = M0PLUS_SCB_Base + 024H;
 
+  M0PLUS_SHPR*   = M0PLUS_SCB_Base + 018H; (* SCB_SHPR1 on eg. M3 *)
+
   (* aliases *)
   SCB_CPUID*  = M0PLUS_CPUID;
   SCB_ICSR*   = M0PLUS_ICSR;
@@ -176,7 +178,7 @@ CONST
   SCB_SHPR3*  = M0PLUS_SHPR3;
   SCB_SHCSR*  = M0PLUS_SHCSR;
 
-  SCB_SHPR*   = M0PLUS_SCB_Base + 018H; (* SCB_SHPR1 on eg. M3 *)
+  SCB_SHPR*   = M0PLUS_SHPR;
 
   (* memory protection unit, MPU *)
   (* registers are core-specific, ie. not shared *)

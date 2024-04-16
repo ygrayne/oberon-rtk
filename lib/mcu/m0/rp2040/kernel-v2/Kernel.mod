@@ -47,7 +47,7 @@ MODULE Kernel;
 
     (* kernel traps *)
     SlotInIntNo = 31;
-    SlotOutIntNo = 30;
+    SlotOutIntNo = 30; (* implies higher prio than int no 31, when both are set to same prio *)
 
     SlotInIntPrio = 1;
     SlotOutIntPrio = 1;
