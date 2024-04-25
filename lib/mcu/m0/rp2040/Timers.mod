@@ -15,6 +15,9 @@ MODULE Timers;
 
   IMPORT SYSTEM, MCU := MCU2, Exceptions;
 
+  CONST
+    NumAlarms* = 4;
+
 
   PROCEDURE GetTime*(VAR timeH, timeL: INTEGER);
     VAR t0: INTEGER; done: BOOLEAN;
@@ -60,7 +63,7 @@ MODULE Timers;
     VAR en: SET;
   BEGIN
     en := {alarmNo}; (* compiler issue workaround v9.1 *)
-    SYSTEM.PUT(MCU.TIMER_INTR + MCU.ACLR, en);
+    SYSTEM.PUT(MCU.TIMER_INTR + MCU.ACLR, en)
   END DeassertAlarmInt;
 
 

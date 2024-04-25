@@ -6,6 +6,8 @@ MODULE MemoryExt;
     * SRAM block 4: core 0
     * SRAM block 5: core 1
     See module Config.mod.
+  * Copy procedure to SRAM
+  * Cache a procedure (maybe does not belong here)
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
@@ -65,14 +67,14 @@ MODULE MemoryExt;
 
   PROCEDURE CacheProc*(procAddr: INTEGER);
     CONST PushLr = 0B5H;
-    VAR addr, instr: INTEGER;
+    VAR instr: INTEGER;
   BEGIN
     SYSTEM.GET(procAddr, instr);
-    addr := procAddr + 4;
-    SYSTEM.GET(addr, instr);
+    INC(procAddr, 4);
+    SYSTEM.GET(procAddr, instr);
     WHILE BFX(instr, 15, 8) # PushLr DO
-      INC(addr, 4);
-      SYSTEM.GET(addr, instr)
+      INC(procAddr, 4);
+      SYSTEM.GET(procAddr, instr)
     END
   END CacheProc;
 

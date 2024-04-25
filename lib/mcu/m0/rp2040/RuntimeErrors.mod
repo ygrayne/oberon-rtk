@@ -356,12 +356,9 @@ MODULE RuntimeErrors;
 
 
   PROCEDURE* install(vectAddr: INTEGER; p: PROCEDURE);
-    VAR addr: SET;
   BEGIN
-    SYSTEM.PUT(vectAddr, p);
-    SYSTEM.GET(vectAddr, addr);
-    INCL(addr, 0); (* thumb code *)
-    SYSTEM.PUT(vectAddr, addr)
+    INCL(SYSTEM.VAL(SET, p), 0); (* thumb code *)
+    SYSTEM.PUT(vectAddr, p)
   END install;
 
 

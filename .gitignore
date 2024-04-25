@@ -19,6 +19,7 @@
 /lib/mcu/m0/rp2040/_debug
 /lib/mcu/m0/rp2040/_keep
 /lib/mcu/m0/rp2040/kernel-v1/_keep
+/**/_*
 
 # add some files
 !*.ini

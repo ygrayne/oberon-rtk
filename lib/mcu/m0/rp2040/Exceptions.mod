@@ -97,7 +97,7 @@ MODULE Exceptions;
 
 
   PROCEDURE SetIntPrio*(irqNo, prio: INTEGER);
-  (* prio: 0 to 3, 0 - highest *)
+  (* prio: 0 to 3, 0 = highest *)
     VAR addr, x: INTEGER;
   BEGIN
     addr := MCU.M0PLUS_NVIC_IPR + ((irqNo DIV 4) * 4);
@@ -117,16 +117,13 @@ MODULE Exceptions;
 
 
   PROCEDURE InstallIntHandler*(irqNo: INTEGER; handler: PROCEDURE);
-    VAR vectAddr, vtor: INTEGER; addr: SET;
+    VAR vectAddr, vtor: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.M0PLUS_VTOR, vtor);
     vectAddr := vtor + MCU.IrqZeroHandlerOffset + (4 * irqNo);
-    SYSTEM.PUT(vectAddr, handler);
-    SYSTEM.GET(vectAddr, addr);
-    INCL(addr, 0); (* thumb code *)
-    SYSTEM.PUT(vectAddr, addr)
+    INCL(SYSTEM.VAL(SET, handler), 0); (* thumb code *)
+    SYSTEM.PUT(vectAddr, handler)
   END InstallIntHandler;
-
 
   (* system handlers *)
 
@@ -152,14 +149,12 @@ MODULE Exceptions;
 
 
   PROCEDURE InstallExcHandler*(vectOffset: INTEGER; handler: PROCEDURE);
-    VAR addr: SET; vtor, vectAddr: INTEGER;
+    VAR vtor, vectAddr: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.M0PLUS_VTOR, vtor);
     vectAddr := vtor + vectOffset;
-    SYSTEM.PUT(vectAddr, handler);
-    SYSTEM.GET(vectAddr, addr);
-    INCL(addr, 0); (* thumb code *)
-    SYSTEM.PUT(vectAddr, addr)
+    INCL(SYSTEM.VAL(SET, handler), 0); (* thumb code *)
+    SYSTEM.PUT(vectAddr, handler)
   END InstallExcHandler;
 
 

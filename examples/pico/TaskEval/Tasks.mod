@@ -189,7 +189,7 @@ MODULE Tasks;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     NEW(coreCon[cid]);
-    ctx := coreCon[cid];
+    ctx := coreCon[cid]; ASSERT(ctx # NIL, Errors.HeapOverflow);
     ctx.nt := NIL;
     printQ := printQueue;
 
