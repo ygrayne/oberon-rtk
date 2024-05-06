@@ -2,7 +2,7 @@
 
 # Translate an Astrobe .bin file to UF2 format for Pico.
 # Optionally copy to Pico's "virtual drive".
-# Astrobe v9.0.3 for Cortex-M0.
+# Tested with .bin files created by Astrobe v9.1 for Cortex-M0.
 # --
 # Run with option -h for help.
 # --
