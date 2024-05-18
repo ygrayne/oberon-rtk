@@ -185,8 +185,8 @@ MODULE TrapHandlers;
     INC(recNo);
     r := recs[recNo];
     IF 2 IN BITS(SYSTEM.REG(LR)) THEN
-      SYSTEM.EMIT(MCU.MRS_R11_PSP); (* r11: save/restore on M3 and up *)
-      regAddr := SYSTEM.REG(11)
+      SYSTEM.EMIT(MCU.MRS_R03_PSP);
+      regAddr := SYSTEM.REG(3)
     ELSE
       regAddr := SYSTEM.REG(SP) + 28;
     END;
@@ -243,8 +243,8 @@ MODULE TrapHandlers;
     INC(recNo);
     r := recs[recNo];
     IF PSPflag IN BITS(SYSTEM.REG(LR)) THEN
-      SYSTEM.EMIT(MCU.MRS_R11_PSP);
-      regAddr := SYSTEM.REG(11)
+      SYSTEM.EMIT(MCU.MRS_R03_PSP);
+      regAddr := SYSTEM.REG(3)
     ELSE
       regAddr := SYSTEM.REG(SP) + 32
     END;
@@ -722,7 +722,7 @@ MODULE TrapHandlers;
       intPrio[Th] := 1;
       Alarms.Init(dev2, intNo[Ah2], TRUE);
       Alarms.Enable(dev2, intPrio[Ah2]);
-      Exceptions.InstallIntHandler(intNo[Th], th3); (* th2 *)
+      Exceptions.InstallIntHandler(intNo[Th], th3); (* th3 *)
       Exceptions.SetIntPrio(intNo[Th], intPrio[Th]);
       en := {intNo[Th]}; (* workaround v9.1 *)
       Exceptions.EnableInt(en);

@@ -1,6 +1,7 @@
 MODULE Terminals;
 (**
   Oberon RTK Framework
+  --
   Max two serial text terminals via UARTs
   --
   Use module Texts to write/read to/from any open terminal
@@ -13,7 +14,7 @@ MODULE Terminals;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT TextIO, UARTd, Errors;
+  IMPORT TextIO, UARTd := UARTdev, Errors;
 
   CONST
     UART0* = 0;

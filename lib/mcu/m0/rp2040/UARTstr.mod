@@ -1,6 +1,7 @@
 MODULE UARTstr;
 (**
   Oberon RTK Framework
+  --
   UART string device driver, kernel not required (busy waiting)
   --
   * string IO procedures
@@ -10,7 +11,7 @@ MODULE UARTstr;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, UARTd, TextIO;
+  IMPORT SYSTEM, UARTd := UARTdev, TextIO;
 
   PROCEDURE* PutChar*(dev: TextIO.Device; ch: CHAR);
     VAR dev0: UARTd.Device;

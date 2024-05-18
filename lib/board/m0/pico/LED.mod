@@ -8,13 +8,13 @@ MODULE LED;
   --
   Usage:
   * Via SIO:
-    GPIO.Set({LED.Green}),
-    GPIO.Clear({LED.Green},
-    GPIO.Toggle({LED.Green})
+    GPIO.Set({LED.Pico}),
+    GPIO.Clear({LED.Pico},
+    GPIO.Toggle({LED.Pico})
   * Direct, avoiding procedure calls, eg. for leaf procedures:
-    SYSTEM.PUT(LED.SET, {LED.Green}),
-    SYSTEM.PUT(LED.CLR, {LED.Green}),
-    SYSTEM.PUT(LED.XOR, {LED.Green})
+    SYSTEM.PUT(LED.SET, {LED.Pico}),
+    SYSTEM.PUT(LED.CLR, {LED.Pico}),
+    SYSTEM.PUT(LED.XOR, {LED.Pico})
   --
   Copyright (c) 2023-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -24,7 +24,7 @@ MODULE LED;
 
   CONST
     LEDpinNo = 25;
-    Green* = LEDpinNo;
+    Green* = LEDpinNo; (* deprecated *)
     Pico* = LEDpinNo;
     SET* = MCU.SIO_GPIO_OUT_SET;
     CLR* = MCU.SIO_GPIO_OUT_CLR;

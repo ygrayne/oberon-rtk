@@ -7,7 +7,7 @@ MODULE Kernel;
   Multi-core
   Time-driven scheduler
   Cooperative scheduling
-  No support for interrupts yet
+  No support for interrupts
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
@@ -371,10 +371,10 @@ MODULE Kernel;
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     (* set PSP to current MSP *)
     SYSTEM.LDREG(R11, SYSTEM.REG(SP));
-    SYSTEM.EMIT(MCU.MSR_R11_PSP);
+    SYSTEM.EMIT(MCU.MSR_PSP_R11);
     (* enable PSP use *)
     SYSTEM.LDREG(R11, ORD({MCU.CONTROL_SPSEL}));
-    SYSTEM.EMIT(MCU.MSR_R11_CTL);
+    SYSTEM.EMIT(MCU.MSR_CTL_R11);
     SYSTEM.EMIT(MCU.ISB);
     (* from here, we use the PSP *)
     SysTick.Enable;

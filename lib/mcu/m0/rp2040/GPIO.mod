@@ -22,6 +22,7 @@ MODULE GPIO;
     (* pads *)
     Enabled* = 1;
     Disabled* = 0;
+    CurrentValue* = -1;
     Drive2mA*  = 0;
     Drive4mA*  = 1;  (* reset *)
     Drive8mA*  = 2;
@@ -49,12 +50,11 @@ MODULE GPIO;
 
   TYPE
     PadConfig* = RECORD
-      inputEn: INTEGER;   (* reset: Enabled *)
-      drive: INTEGER;     (* reset: Drive4mA *)
-      pullDown: INTEGER;  (* reset: Enabled *)
-      pullUp: INTEGER;    (* reset: Enabled *)
-      schmitt: INTEGER;   (* reset: Enabled *)
-      slewRate: INTEGER   (* reset: SlewSlow *)
+      drive*: INTEGER;     (* reset: Drive4mA *)
+      pullUp*: INTEGER;    (* reset: Disabled *)
+      pullDown*: INTEGER;  (* reset: Enabled *)
+      schmittTrig*: INTEGER;   (* reset: Enabled *)
+      slewRate*: INTEGER   (* reset: SlewSlow *)
     END;
 
   (* --- GPIO device --- *)
@@ -69,10 +69,12 @@ MODULE GPIO;
   END SetFunction;
 
   PROCEDURE SetInverters*(pinNo: INTEGER; mask: SET);
-    VAR addr: INTEGER;
+    VAR addr, x: INTEGER;
   BEGIN
     addr := MCU.IO_BANK0_GPIO_CTRL + (pinNo * MCU.IO_BANK0_GPIO_Offset);
-    SYSTEM.PUT(addr, mask)
+    SYSTEM.GET(addr, x);
+    BFI(x, 31, 5, ORD(mask));
+    SYSTEM.PUT(addr, x)
   END SetInverters;
 
   (* define interrupts functions here *)
@@ -84,15 +86,15 @@ MODULE GPIO;
     VAR addr, x: INTEGER;
   BEGIN
     addr := MCU.PADS_BANK0_GPIO + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
-    x := 0;
-    BFI(x, 6, cfg.inputEn);
-    BFI(x, 5, 4, cfg.drive);
-    BFI(x, 3, cfg.pullDown);
-    BFI(x, 2, cfg.pullUp);
-    BFI(x, 1, cfg.schmitt);
-    BFI(x, 0, cfg.slewRate);
+    SYSTEM.GET(addr, x);
+    IF cfg.drive # CurrentValue THEN BFI(x, 5, 4, cfg.drive) END;
+    IF cfg.pullUp # CurrentValue THEN BFI(x, 3, cfg.pullUp) END;
+    IF cfg.pullDown # CurrentValue THEN BFI(x, 2, cfg.pullDown) END;
+    IF cfg.schmittTrig # CurrentValue THEN BFI(x, 1, cfg.schmittTrig) END;
+    IF cfg.slewRate # CurrentValue THEN BFI(x, 0, cfg.slewRate) END;
     SYSTEM.PUT(addr, x)
   END ConfigurePad;
+
 
   PROCEDURE DisableOutput*(pinNo: INTEGER);
   (* reset: enabled *)
@@ -101,6 +103,7 @@ MODULE GPIO;
     addr := MCU.PADS_BANK0_GPIO + MCU.ASET + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
     SYSTEM.PUT(addr, {OD})
   END DisableOutput;
+
 
   PROCEDURE DisableInput*(pinNo: INTEGER);
   (* reset: enabled *)
@@ -111,13 +114,8 @@ MODULE GPIO;
   END DisableInput;
 
 
-  (* GPIO control from SIO *)
-  (*
-  Strictly speaking these functions should/could be alloacted
-  in their specific module, since they are only one way to drive the
-  GPIO pins, ie. just one function among others, on the same hierarchy
-  level.
-  *)
+  (* GPIO control via SIO *)
+  (* Need to select function 'Fsio' *)
 
   PROCEDURE Set*(mask: SET);
   (* atomic *)

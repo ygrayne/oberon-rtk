@@ -643,8 +643,8 @@ CONST
   UART_DMACR_Offset*  = 0048H;
 
   (* SPI *)
-  SPIO0_Base* = 04003C000H;
-  SPIO1_Base* = 040040000H;
+  SPI0_Base* = 04003C000H;
+  SPI1_Base* = 040040000H;
 
   (* note: dropped the "SSP" prefix for every reg *)
   SPI_CR0_Offset*   = 0000H;
@@ -815,17 +815,22 @@ CONST
 
   (* === assembly instructions === *)
   NOP* = 046C0H;
-  (* read specical regs *)
+  (* read specical regs MRS *)
   (* 0F3EF8 B 09H r11(B) PSP(09) *)
-  MRS_R11_IPSR* = 0F3EF8B05H; (* read IPSR into r11 *)
-  MRS_R11_XPSR* = 0F3EF8B03H; (* read XPSR into r11 *)
-  MRS_R11_MSP*  = 0F3EF8B08H;  (* read MSP into r11 *)
-  MRS_R11_PSP*  = 0F3EF8B09H;  (* read PSP into r11 *)
-  MRS_R11_CTL*  = 0F3EF8B14H;  (* read CONTROL into r11 *)
-  (* write special regs *)
+  MRS_R11_IPSR* = 0F3EF8B05H;  (* move to r11 from IPSR  *)
+  MRS_R11_XPSR* = 0F3EF8B03H;  (* move to r11 from XPSR *)
+  MRS_R11_MSP*  = 0F3EF8B08H;  (* move to r11 from MSP *)
+  MRS_R11_PSP*  = 0F3EF8B09H;  (* move to r11 from PSP *)
+  MRS_R11_CTL*  = 0F3EF8B14H;  (* move to r11 from CONTROL *)
+  MRS_R03_IPSR* = 0F3EF8305H;  (* move to r3 from IPSR *)
+  MRS_R03_XPSR* = 0F3EF8303H;  (* move to r3 from XPSR *)
+  MRS_R03_MSP*  = 0F3EF8308H;  (* move to r3 from MSP *)
+  MRS_R03_PSP*  = 0F3EF8309H;  (* move to r3 from PSP *)
+  MRS_R03_CTL*  = 0F3EF8314H;  (* move to r3 from CONTROL *)
+  (* write special regs MSR *)
   (* 0F38 B 88 09H r11(B) PSP(09) *)
-  MSR_R11_PSP* = 0F38B8809H;  (* read r11 into PSP *)
-  MSR_R11_CTL* = 0F38B8814H;  (* read r11 into CONTROL *)
+  MSR_PSP_R11* = 0F38B8809H;  (* move to PSP from r11  *)
+  MSR_CTL_R11* = 0F38B8814H;  (* move to CONTROL from r11 *)
 
   (* instruction sync *)
   ISB* = 0F3BF8F6FH;

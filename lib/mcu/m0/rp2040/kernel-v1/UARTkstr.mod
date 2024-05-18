@@ -10,7 +10,7 @@ MODULE UARTkstr;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, UARTd, TextIO, Kernel, GPIO, LED;
+  IMPORT SYSTEM, UARTd := UARTdev, TextIO, Kernel, GPIO, LED;
 
 
   PROCEDURE PutString*(dev: TextIO.Device; s: ARRAY OF CHAR; numChar: INTEGER);
