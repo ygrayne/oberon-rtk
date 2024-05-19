@@ -1,6 +1,7 @@
 MODULE Texts;
 (**
   Oberon RTK Framework
+  --
   Formatted output to a "channel", using a 'TextIO.Writer'
   Formatted input from a "channel", using a 'TextIO.Reader'
   --

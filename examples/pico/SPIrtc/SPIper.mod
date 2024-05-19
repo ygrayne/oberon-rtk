@@ -46,11 +46,13 @@ MODULE SPIper;
 
 
   PROCEDURE Configure*(per: Peripheral);
+    VAR en: SET;
   BEGIN
     IF per.csMode = CSsio THEN
       GPIO.SetFunction(per.csPinNo, GPIO.Fsio);
-      GPIO.OutputEnable({per.csPinNo});
-      GPIO.Set({per.csPinNo})
+      en := {per.csPinNo};
+      GPIO.OutputEnable(en);
+      GPIO.Set(en)
     ELSE
       GPIO.SetFunction(per.csPinNo, GPIO.Fspi)
     END
@@ -58,17 +60,21 @@ MODULE SPIper;
 
 
   PROCEDURE Select*(per: Peripheral);
+    VAR en: SET;
   BEGIN
     IF per.csMode = CSsio THEN
-      GPIO.Clear({per.csPinNo})
+      en := {per.csPinNo}; (* workaround v9.1 *)
+      GPIO.Clear(en)
     END
   END Select;
 
 
   PROCEDURE Deselect*(per: Peripheral);
+    VAR en: SET;
   BEGIN
     IF per.csMode = CSsio THEN
-      GPIO.Set({per.csPinNo})
+      en := {per.csPinNo}; (* workaround v9.1 *)
+      GPIO.Set(en)
     END
   END Deselect;
 

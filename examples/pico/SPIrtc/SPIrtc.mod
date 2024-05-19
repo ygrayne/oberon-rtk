@@ -1,6 +1,7 @@
 MODULE SPIrtc;
 (**
   Oberon RTK Framework
+  --
   Example program, multi-threaded, one core
   Description: https://oberon-rtk.org/examples/spirtc/
   --

@@ -1,6 +1,7 @@
 MODULE Out;
 (**
   Oberon RTK Framework
+  --
   Output via two TextIO.Writer.
   --
   Copyright (c) 2020-2024 Gray gray@grayraven.org

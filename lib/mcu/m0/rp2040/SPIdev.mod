@@ -1,6 +1,7 @@
 MODULE SPIdev;
 (**
   Oberon RTK Framework
+  --
   SPI device (Motorola SPI only)
   * initialisation of SPI device data structure
   * configure IO bank and pads, serial clock rate, data size, CPOL, CPHA
