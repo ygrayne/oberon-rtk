@@ -276,6 +276,18 @@ MODULE Texts;
     END
   END ReadInt;
 
+
+  PROCEDURE FlushOut*(W: TextIO.Writer);
+  (**
+    Allow flushing on writers that don't need it to keep
+    program code independent of output channel if needed.
+  **)
+  BEGIN
+    IF W.flush # NIL THEN
+      W.flush(W.dev)
+    END
+  END FlushOut;
+
 BEGIN
   eol[0] := CR; eol[1] := LF
 END Texts.

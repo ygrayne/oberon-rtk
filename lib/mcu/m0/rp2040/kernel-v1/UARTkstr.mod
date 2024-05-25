@@ -1,6 +1,7 @@
 MODULE UARTkstr;
 (**
   Oberon RTK Framework
+  --
   UART string device driver for kernel use
   --
   * string IO procedures
@@ -10,35 +11,35 @@ MODULE UARTkstr;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, UARTd := UARTdev, TextIO, Kernel, GPIO, LED;
+  IMPORT SYSTEM, UARTdev, TextIO, Kernel (*, GPIO, LED *);
 
 
   PROCEDURE PutString*(dev: TextIO.Device; s: ARRAY OF CHAR; numChar: INTEGER);
-    VAR dev0: UARTd.Device; i: INTEGER;
+    VAR dev0: UARTdev.Device; i: INTEGER;
   BEGIN
-    dev0 := dev(UARTd.Device);
+    dev0 := dev(UARTdev.Device);
     IF numChar > LEN(s) THEN numChar := LEN(s) END;
     i := 0;
     WHILE i < numChar DO
-      IF ~SYSTEM.BIT(dev0.FR, UARTd.FR_TXFF) THEN (* not full *)
+      IF ~SYSTEM.BIT(dev0.FR, UARTdev.FR_TXFF) THEN (* not full *)
         SYSTEM.PUT(dev0.TDR, s[i]);
         INC(i)
       ELSE
-        Kernel.AwaitDeviceFlags(dev0.FR, {UARTd.FR_TXFE}, {})
+        Kernel.AwaitDeviceFlags(dev0.FR, {UARTdev.FR_TXFE}, {})
       END
     END
   END PutString;
 
 
   PROCEDURE GetChar*(dev: TextIO.Device; VAR ch: CHAR);
-    VAR dev0: UARTd.Device;
+    VAR dev0: UARTdev.Device;
   BEGIN
-    dev0 := dev(UARTd.Device);
-    IF SYSTEM.BIT(dev0.FR, UARTd.FR_RXFE) THEN
+    dev0 := dev(UARTdev.Device);
+    IF SYSTEM.BIT(dev0.FR, UARTdev.FR_RXFE) THEN
       (* debug/test
       GPIO.Clear({20}); (* for oscilloscope on pin 20 *)
       *)
-      Kernel.AwaitDeviceFlags(dev0.FR, {}, {UARTd.FR_RXFE});
+      Kernel.AwaitDeviceFlags(dev0.FR, {}, {UARTdev.FR_RXFE});
       (* debug/test
       ASSERT(Kernel.Trigger() = Kernel.TrigDevice);
       GPIO.Set({20})
@@ -48,16 +49,16 @@ MODULE UARTkstr;
   END GetChar;
 
 
-  PROCEDURE checkFifoOverrun(dev0: UARTd.Device; VAR overrun: BOOLEAN);
+  PROCEDURE checkFifoOverrun(dev0: UARTdev.Device; VAR overrun: BOOLEAN);
   BEGIN
-    overrun := SYSTEM.BIT(dev0.RSR, UARTd.RSR_OR)
+    overrun := SYSTEM.BIT(dev0.RSR, UARTdev.RSR_OR)
   END checkFifoOverrun;
 
   PROCEDURE GetString*(dev: TextIO.Device; VAR s: ARRAY OF CHAR; VAR numCh, res: INTEGER);
     CONST FifoCapture = 30;
-    VAR dev0: UARTd.Device; bufLimit, fifoLimit: INTEGER; ch: CHAR; overrun, done: BOOLEAN;
+    VAR dev0: UARTdev.Device; bufLimit, fifoLimit: INTEGER; ch: CHAR; overrun, done: BOOLEAN;
   BEGIN
-    dev0 := dev(UARTd.Device);
+    dev0 := dev(UARTdev.Device);
     bufLimit := LEN(s) - 1; (* space for 0X *)
     res := TextIO.NoError;
     numCh := 0;
@@ -105,12 +106,12 @@ MODULE UARTkstr;
   (*
     Mainly for getting fifo full/empty status, ie.
     "TxAvail" and "RxAvail" extended for fifo
-    Bits as defined in UARTd.
+    Bits as defined in UARTdev.
   *)
-    VAR dev0: UARTd.Device;
+    VAR dev0: UARTdev.Device;
   BEGIN
-    dev0 := dev(UARTd.Device);
-    RETURN UARTd.Flags(dev0)
+    dev0 := dev(UARTdev.Device);
+    RETURN UARTdev.Flags(dev0)
   END DeviceStatus;
 
 BEGIN

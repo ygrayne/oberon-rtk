@@ -8,7 +8,7 @@ MODULE Out;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, TextIO, Texts;
+  IMPORT SYSTEM, MCU := MCU2, Errors, TextIO, Texts;
 
   CONST
     NumTerminals = 2;
@@ -19,6 +19,8 @@ MODULE Out;
 
   PROCEDURE Open*(W0, W1: TextIO.Writer);
   BEGIN
+    ASSERT(W0 # NIL, Errors.PreCond);
+    ASSERT(W1 # NIL, Errors.PreCond);
     W[0] := W0;
     W[1] := W1
   END Open;
@@ -70,6 +72,14 @@ MODULE Out;
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     Texts.WriteBin(W[cid], n, width)
   END Bin;
+
+
+  PROCEDURE Flush*;
+    VAR cid: INTEGER;
+  BEGIN
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Texts.FlushOut(W[cid])
+  END Flush;
 
 BEGIN
   W[0] := NIL; W[1] := NIL

@@ -2,7 +2,7 @@ MODULE Terminals;
 (**
   Oberon RTK Framework
   --
-  Max two serial text terminals via UARTs
+  Max two text terminals via TextIO.Device, eg. UART
   --
   Use module Texts to write/read to/from any open terminal
   See module Out for a use case
@@ -14,53 +14,46 @@ MODULE Terminals;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT TextIO, UARTd := UARTdev, Errors;
+  IMPORT TextIO, UARTdev, Errors;
 
   CONST
-    UART0* = 0;
-    UART1* = 1;
-    UARTs = {0, 1};
-    NumUarts = 2;
+    TERM0* = 0;
+    TERM1* = 1;
+    NumTerms = 2;
 
   TYPE
-    Ws* = ARRAY NumUarts OF TextIO.Writer;
-    Rs* = ARRAY NumUarts OF TextIO.Reader;
+    Ws* = ARRAY NumTerms OF TextIO.Writer;
+    Rs* = ARRAY NumTerms OF TextIO.Reader;
 
   VAR
     W*, Werr*: Ws;
     R*: Rs;
-    StdOut*, StdErr*: Ws;
-    StdIn*: Rs;
 
 
-  PROCEDURE initUARTdevice(VAR dev: UARTd.Device; uartNo, txPinNo, rxPinNo, baudrate: INTEGER);
+  PROCEDURE InitUART*(uartNo: INTEGER; uartCfg: UARTdev.DeviceCfg; txPinNo, rxPinNo: INTEGER; VAR dev: UARTdev.Device);
+  (* utility procedure *)
   BEGIN
     NEW(dev); ASSERT(dev # NIL, Errors.HeapOverflow);
-    UARTd.Init(dev, uartNo, txPinNo, rxPinNo);
-    UARTd.Configure(dev, baudrate);
-    UARTd.Enable(dev)
-  END initUARTdevice;
+    UARTdev.Init(dev, uartNo);
+    UARTdev.Configure(dev, uartCfg, txPinNo, rxPinNo);
+    UARTdev.Enable(dev)
+  END InitUART;
 
 
-  PROCEDURE Open*(uartNo, txPinNo, rxPinNo, baudrate: INTEGER; psp: TextIO.PutStringProc; gsp: TextIO.GetStringProc);
-    VAR dev: UARTd.Device;
+  PROCEDURE Open*(termNo: INTEGER; dev: TextIO.Device; psp: TextIO.PutStringProc; gsp: TextIO.GetStringProc);
   BEGIN
-    ASSERT(uartNo IN UARTs);
-    IF W[uartNo] = NIL THEN
-      (* uart *)
-      initUARTdevice(dev, uartNo,  txPinNo, rxPinNo, baudrate);
-      (* writers and readers *)
-      NEW(W[uartNo]); ASSERT(W[uartNo] # NIL, Errors.HeapOverflow);
-      NEW(R[uartNo]); ASSERT(R[uartNo] # NIL, Errors.HeapOverflow);
-      TextIO.OpenWriter(W[uartNo], dev, psp);
-      TextIO.OpenReader(R[uartNo], dev, gsp);
-      StdOut[uartNo] := W[uartNo];
-      StdIn[uartNo] := R[uartNo];
+    ASSERT(termNo IN {TERM0, TERM1}, Errors.PreCond);
+    ASSERT(dev # NIL, Errors.PreCond);
+    IF W[termNo] = NIL THEN
+      NEW(W[termNo]); ASSERT(W[termNo] # NIL, Errors.HeapOverflow);
+      NEW(R[termNo]); ASSERT(R[termNo] # NIL, Errors.HeapOverflow);
+      TextIO.OpenWriter(W[termNo], dev, psp);
+      TextIO.OpenReader(R[termNo], dev, gsp)
     END
   END Open;
 
 
-  PROCEDURE OpenErr*(uartNo: INTEGER; psp: TextIO.PutStringProc);
+  PROCEDURE OpenErr*(termNo: INTEGER; psp: TextIO.PutStringProc);
   (**
     Add an error output terminal, eg. using a simple busy-wait output.
     Not much worries about thread mis-timing in case of an error, better get that
@@ -68,12 +61,11 @@ MODULE Terminals;
     See module Main for an example.
   **)
   BEGIN
-    ASSERT(uartNo IN UARTs, Errors.PreCond);
-    ASSERT(W[uartNo] # NIL, Errors.ProgError); (* main terminal must be open *)
-    IF Werr[uartNo] = NIL THEN
-      NEW(Werr[uartNo]); ASSERT(Werr[uartNo] # NIL, Errors.HeapOverflow);
-      TextIO.OpenWriter(Werr[uartNo], W[uartNo].dev, psp);
-      StdErr[uartNo] := Werr[uartNo];
+    ASSERT(termNo IN {TERM0, TERM1}, Errors.PreCond);
+    ASSERT(W[termNo] # NIL, Errors.ProgError); (* main terminal must be open *)
+    IF Werr[termNo] = NIL THEN
+      NEW(Werr[termNo]); ASSERT(Werr[termNo] # NIL, Errors.HeapOverflow);
+      TextIO.OpenWriter(Werr[termNo], W[termNo].dev, psp);
     END
   END OpenErr;
 

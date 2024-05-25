@@ -1,6 +1,7 @@
 MODULE TextIO;
 (**
   Oberon RTK Framework
+  --
   Text IO channels using writers and readers
   --
   * Device as abstraction for hardware IO peripheral devices.
@@ -28,11 +29,13 @@ MODULE TextIO;
 
     PutStringProc* = PROCEDURE(dev: Device; string: ARRAY OF CHAR; numChar: INTEGER);
     GetStringProc* = PROCEDURE(dev: Device; VAR string: ARRAY OF CHAR; VAR numChar, res: INTEGER);
+    FlushOutProc* = PROCEDURE(dev: Device);
 
     Writer* = POINTER TO WriterDesc;
     WriterDesc* = RECORD
       dev*: Device;
-      putString*: PutStringProc
+      putString*: PutStringProc;
+      flush*: FlushOutProc
     END;
 
     Reader* = POINTER TO ReaderDesc;
@@ -46,8 +49,16 @@ MODULE TextIO;
   BEGIN
     ASSERT(w # NIL, Errors.PreCond);
     w.dev := dev;
-    w.putString := psp
+    w.putString := psp;
+    w.flush := NIL
   END OpenWriter;
+
+
+  PROCEDURE InstallFlushOutProc*(w: Writer; fp: FlushOutProc);
+  BEGIN
+    ASSERT(w # NIL, Errors.PreCond);
+    w.flush := fp
+  END InstallFlushOutProc;
 
 
   PROCEDURE OpenReader*(r: Reader; dev: Device; gsp: GetStringProc);

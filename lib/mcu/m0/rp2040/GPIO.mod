@@ -51,11 +51,11 @@ MODULE GPIO;
 
   TYPE
     PadConfig* = RECORD
-      drive*: INTEGER;     (* reset: Drive4mA *)
-      pullUp*: INTEGER;    (* reset: Disabled *)
-      pullDown*: INTEGER;  (* reset: Enabled *)
-      schmittTrig*: INTEGER;   (* reset: Enabled *)
-      slewRate*: INTEGER   (* reset: SlewSlow *)
+      drive*: INTEGER;       (* reset: Drive4mA *)
+      pullUp*: INTEGER;      (* reset: Disabled *)
+      pullDown*: INTEGER;    (* reset: Enabled *)
+      schmittTrig*: INTEGER; (* reset: Enabled *)
+      slewRate*: INTEGER     (* reset: SlewSlow *)
     END;
 
   (* --- GPIO device --- *)

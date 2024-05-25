@@ -145,17 +145,21 @@ MODULE RTCds3234;
   END Timestamp;
 
 
-  PROCEDURE GetSPIparams*(VAR sclkFreq, dataSize, cpol, cpha, txShift: INTEGER);
+  PROCEDURE GetSPIcfg*(VAR cfg: SPId.DeviceCfg);
   BEGIN
-    SPIp.GetSPIparams(rtc, sclkFreq, dataSize, cpol, cpha, txShift)
-  END GetSPIparams;
+    cfg.sclkFreq := SclkFreq;
+    cfg.dataSize := DataSize;
+    cfg.cpol := CPOL;
+    cfg.cpha := CPHA;
+    cfg.txShift := TxShift
+  END GetSPIcfg;
 
 
-  PROCEDURE Install*(spiDev: SPId.Device; csPinNo: INTEGER; csMode: INTEGER);
+  PROCEDURE Install*(spiDev: SPId.Device; csPinNo, csMode: INTEGER);
   BEGIN
     ASSERT(spiDev # NIL, Errors.PreCond);
     NEW(rtc); ASSERT(rtc # NIL, Errors.HeapOverflow);
-    SPIp.Init(rtc, SclkFreq, DataSize, CPOL, CPHA, csPinNo, TxShift, csMode);
+    SPIp.Init(rtc, csPinNo, csMode);
     SPIp.Configure(rtc);
     spi := spiDev
   END Install;

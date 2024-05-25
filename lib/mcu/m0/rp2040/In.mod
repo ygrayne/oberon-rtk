@@ -7,7 +7,7 @@ MODULE In;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, TextIO, Texts;
+  IMPORT SYSTEM, MCU := MCU2, Errors, TextIO, Texts;
 
   CONST
     NumTerminals = 2;
@@ -26,6 +26,8 @@ MODULE In;
 
   PROCEDURE Open*(R0, R1: TextIO.Reader);
   BEGIN
+    ASSERT(R0 # NIL, Errors.PreCond);
+    ASSERT(R1 # NIL, Errors.PreCond);
     R[0] := R0;
     R[1] := R1
   END Open;

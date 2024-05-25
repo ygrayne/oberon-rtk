@@ -49,22 +49,32 @@ MODULE LEDext;
     CLR* = MCU.SIO_GPIO_OUT_CLR;
     XOR* = MCU.SIO_GPIO_OUT_XOR;
 
-    ClearMask = {LED0, LED1, LED2, LED3, LED4, LED5, LED6, LED7};
+    NumLeds = 8;
 
   VAR LED*: ARRAY 8 OF INTEGER;
 
 
-  PROCEDURE SetValue*(v: INTEGER);
-    VAR i: INTEGER; mask: INTEGER;
+  PROCEDURE SetLedBits*(v, highBit, lowBit: INTEGER);
+    VAR i, numBits: INTEGER; setMask, clearMask: INTEGER;
   BEGIN
-    mask := 0;
-    FOR i := 0 TO 7 DO
+    setMask := 0; clearMask := 0;
+    i := 0; numBits := highBit - lowBit;
+    WHILE i <= numBits DO
       IF i IN BITS(v) THEN
-        INCL(BITS(mask), LED[i])
-      END
+        INCL(BITS(setMask), LED[i + lowBit])
+      ELSE
+        INCL(BITS(clearMask), LED[i + lowBit])
+      END;
+      INC(i)
     END;
-    GPIO.Clear(ClearMask);
-    GPIO.Set(BITS(mask))
+    GPIO.Clear(BITS(clearMask));
+    GPIO.Set(BITS(setMask))
+  END SetLedBits;
+
+
+  PROCEDURE SetValue*(v: INTEGER);
+  BEGIN
+    SetLedBits(v, 7, 0)
   END SetValue;
 
 
@@ -82,7 +92,7 @@ MODULE LEDext;
     GPIO.SetFunction(LEDpinNoPico, GPIO.Fsio);
     GPIO.OutputEnable({LEDpinNoPico});
     i := 0;
-    WHILE i < 8 DO
+    WHILE i < NumLeds DO
       GPIO.SetFunction(LED[i], GPIO.Fsio);
       en := ORD({LED[i]}); (* workaround v9.1 and 9.2 *)
       GPIO.OutputEnable(BITS(en));

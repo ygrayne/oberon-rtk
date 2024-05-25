@@ -105,7 +105,7 @@ MODULE Alarms;
     en := {dev.alarmNo}; (* compiler issue workaround v9.1 *)
     SYSTEM.PUT(MCU.TIMER_INTE + MCU.ASET, en);
     DeassertInt(dev);
-    en := {dev.intNo}; (* compiler issue workaround v9.1 *)
+    en := {dev.intNo};
     Exceptions.ClearPendingInt(en);
     Exceptions.SetIntPrio(dev.intNo, prio);
     Exceptions.EnableInt(en)

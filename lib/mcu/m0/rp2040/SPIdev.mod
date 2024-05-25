@@ -19,9 +19,6 @@ MODULE SPIdev;
   National Semiconductor Microwire frame formats.
   They are not considered/implemented here.
   --
-  * 'Device' denotes the circuit in the MCU
-  * 'Peripheral' denotes the MCU-external equipment, eg. a temperature sensor
-  --
   Serial clock rate conditions:
   * clkRate (max) * 2 <= MCU.PeriClkFreq
   * clkRate (min) * 254 * 256 <= MCU.PeriClkFreq
@@ -91,8 +88,15 @@ MODULE SPIdev;
       (* interrupt/dma regs will be added as/when needed *)
     END;
 
+    DeviceCfg* = RECORD
+      sclkFreq*: INTEGER;
+      dataSize*: INTEGER;
+      cpol*, cpha*: INTEGER;
+      txShift*: INTEGER
+    END;
 
-  PROCEDURE Init*(dev: Device; spiNo, (*mosiPinNo, misoPinNo, sclkPinNo,*) txShift: INTEGER);
+
+  PROCEDURE Init*(dev: Device; spiNo, txShift: INTEGER);
     VAR base: INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
@@ -113,13 +117,13 @@ MODULE SPIdev;
   END Init;
 
 
-  PROCEDURE Configure*(dev: Device; sclkRate, dataSize, cpol, cpha, mosiPinNo, misoPinNo, sclkPinNo: INTEGER);
+  PROCEDURE Configure*(dev: Device; cfg: DeviceCfg; mosiPinNo, misoPinNo, sclkPinNo: INTEGER);
     VAR preDiv, scr, x: INTEGER; misoCfg: GPIO.PadConfig;
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
-    ASSERT(dataSize IN {DSSval_8, DSSval_16}, Errors.PreCond);
-    ASSERT(cpol IN {0, 1}, Errors.PreCond);
-    ASSERT(cpha IN {0, 1}, Errors.PreCond);
+    ASSERT(cfg.dataSize IN {DSSval_8, DSSval_16}, Errors.PreCond);
+    ASSERT(cfg.cpol IN {0, 1}, Errors.PreCond);
+    ASSERT(cfg.cpha IN {0, 1}, Errors.PreCond);
     (* release reset on SPI device *)
     StartUp.ReleaseReset(dev.devNo);
     StartUp.AwaitReleaseDone(dev.devNo);
@@ -128,7 +132,7 @@ MODULE SPIdev;
     (* find/set serial clock rate *)
     (* preDiv is an even integer between 2 and 254, inclusive *)
     (* scr is an integer between 1 and 255, inclusive *)
-    x := (MCU.PeriClkFreq * 8) DIV sclkRate;
+    x := (MCU.PeriClkFreq * 8) DIV cfg.sclkFreq;
     preDiv := 2;
     WHILE (preDiv < 255) & (preDiv * 2048 <= x) DO
       INC(preDiv, 2)
@@ -142,25 +146,17 @@ MODULE SPIdev;
     (* set config regs *)
     SYSTEM.PUT(dev.CPSR, preDiv);
     x := 0;
-    BFI(x, CR0_DSS1, CR0_DSS0, dataSize);
+    BFI(x, CR0_DSS1, CR0_DSS0, cfg.dataSize);
     BFI(x, CR0_FRF1, CR0_FRF0, FRFval_SPI); (* fixed: SPI format *)
-    BFI(x, CR0_SPO, cpol);
-    BFI(x, CR0_SPH, cpha);
+    BFI(x, CR0_SPO, cfg.cpol);
+    BFI(x, CR0_SPH, cfg.cpha);
     BFI(x, CR0_SCR1, CR0_SCR0, scr);
     SYSTEM.PUT(dev.CR0, x);
 
     (* config GPIO device *)
     GPIO.SetFunction(mosiPinNo, GPIO.Fspi);
     GPIO.SetFunction(misoPinNo, GPIO.Fspi);
-    GPIO.SetFunction(sclkPinNo, GPIO.Fspi);
-
-    (* config miso pad *)
-    misoCfg.drive := GPIO.CurrentValue;
-    misoCfg.pullUp := GPIO.Enabled; (* pull-up on *)
-    misoCfg.pullDown := GPIO.Disabled; (* pull-down off *)
-    misoCfg.schmittTrig := GPIO.CurrentValue;
-    misoCfg.slewRate := GPIO.CurrentValue;
-    GPIO.ConfigurePad(misoPinNo, misoCfg)
+    GPIO.SetFunction(sclkPinNo, GPIO.Fspi)
   END Configure;
 
 

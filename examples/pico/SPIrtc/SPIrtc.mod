@@ -12,7 +12,7 @@ MODULE SPIrtc;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT Main, Kernel, MultiCore, Out, Errors, GPIO, LED, SPId := SPIdev, SPIp := SPIper, RTC := RTCds3234, LEDext;
+  IMPORT Main, Kernel, MultiCore, Out, Errors, GPIO, SPIdev, SPIper, RTC := RTCds3234, LEDext;
 
   CONST
     MillisecsPerTick  = 10;
@@ -23,7 +23,7 @@ MODULE SPIrtc;
     SPImisoPinNo = 12;
     RTCcsPinNo = 13;
 
-    SPIno = SPId.SPI1;
+    SPIno = SPIdev.SPI1;
 
   VAR
     t0, t1: Kernel.Thread;
@@ -77,15 +77,28 @@ MODULE SPIrtc;
   END t1c;
 
 
+  PROCEDURE configMisoPad(misoPinNo: INTEGER);
+    VAR cfg: GPIO.PadConfig;
+  BEGIN
+    cfg.drive := GPIO.CurrentValue;
+    cfg.pullUp := GPIO.Enabled; (* pull-up on *)
+    cfg.pullDown := GPIO.Disabled; (* pull-down off *)
+    cfg.schmittTrig := GPIO.CurrentValue;
+    cfg.slewRate := GPIO.CurrentValue;
+    GPIO.ConfigurePad(misoPinNo, cfg)
+  END configMisoPad;
+
+
   PROCEDURE run;
-    VAR res, sclkFreq, dataSize, cpol, cpha, txShift: INTEGER; spi: SPId.Device;
+    VAR res: INTEGER; spi: SPIdev.Device; cfg: SPIdev.DeviceCfg;
   BEGIN
     NEW(spi); ASSERT(spi # NIL, Errors.HeapOverflow);
-    RTC.Install(spi, RTCcsPinNo, SPIp.CSsio);
-    RTC.GetSPIparams(sclkFreq, dataSize, cpol, cpha, txShift);
-    SPId.Init(spi, SPIno, txShift);
-    SPId.Configure(spi, sclkFreq, dataSize, cpol, cpha, SPImosiPinNo, SPImisoPinNo, SPIsclkPinNo);
-    SPId.Enable(spi);
+    RTC.Install(spi, RTCcsPinNo, SPIper.CSsio);
+    RTC.GetSPIcfg(cfg);
+    SPIdev.Init(spi, SPIno, cfg.txShift);
+    SPIdev.Configure(spi, cfg, SPImosiPinNo, SPImisoPinNo, SPIsclkPinNo);
+    configMisoPad(SPImisoPinNo);
+    SPIdev.Enable(spi);
     Kernel.Install(MillisecsPerTick);
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.ProgError);
     Kernel.SetPeriod(t0, 500, 0); Kernel.Enable(t0);

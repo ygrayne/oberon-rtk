@@ -11,25 +11,26 @@ MODULE UARTstr;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, UARTd := UARTdev, TextIO;
+  IMPORT SYSTEM, UARTdev, TextIO;
+
 
   PROCEDURE* PutChar*(dev: TextIO.Device; ch: CHAR);
-    VAR dev0: UARTd.Device;
+    VAR dev0: UARTdev.Device;
   BEGIN
-    dev0 := dev(UARTd.Device);
-    REPEAT UNTIL ~SYSTEM.BIT(dev0.FR, UARTd.FR_TXFF); (* not full *)
+    dev0 := dev(UARTdev.Device);
+    REPEAT UNTIL ~SYSTEM.BIT(dev0.FR, UARTdev.FR_TXFF); (* not full *)
     SYSTEM.PUT(dev0.TDR, ch)
   END PutChar;
 
 
   PROCEDURE PutString*(dev: TextIO.Device; s: ARRAY OF CHAR; numChar: INTEGER);
-    VAR dev0: UARTd.Device; i: INTEGER;
+    VAR dev0: UARTdev.Device; i: INTEGER;
   BEGIN
-    dev0 := dev(UARTd.Device);
+    dev0 := dev(UARTdev.Device);
     IF numChar > LEN(s) THEN numChar := LEN(s) END;
     i := 0;
     WHILE i < numChar DO
-      IF ~SYSTEM.BIT(dev0.FR, UARTd.FR_TXFF) THEN (* not full *)
+      IF ~SYSTEM.BIT(dev0.FR, UARTdev.FR_TXFF) THEN (* not full *)
         SYSTEM.PUT(dev0.TDR, s[i]);
         INC(i)
       END
@@ -38,18 +39,18 @@ MODULE UARTstr;
 
 
   PROCEDURE* GetChar*(dev: TextIO.Device; VAR ch: CHAR);
-    VAR dev0: UARTd.Device;
+    VAR dev0: UARTdev.Device;
   BEGIN
-    dev0 := dev(UARTd.Device);
-    REPEAT UNTIL ~SYSTEM.BIT(dev0.FR, UARTd.FR_RXFE);
+    dev0 := dev(UARTdev.Device);
+    REPEAT UNTIL ~SYSTEM.BIT(dev0.FR, UARTdev.FR_RXFE);
     SYSTEM.GET(dev0.RDR, ch)
   END GetChar;
 
 
   PROCEDURE GetString*(dev: TextIO.Device; VAR s: ARRAY OF CHAR; VAR numCh, res: INTEGER);
-    VAR dev0: UARTd.Device; bufLimit: INTEGER; ch: CHAR;
+    VAR dev0: UARTdev.Device; bufLimit: INTEGER; ch: CHAR;
   BEGIN
-    dev0 := dev(UARTd.Device);
+    dev0 := dev(UARTdev.Device);
     bufLimit := LEN(s) - 1; (* space for 0X *)
     res := TextIO.NoError;
     numCh := 0;
@@ -75,12 +76,12 @@ MODULE UARTstr;
   (*
     Mainly for getting fifo full/empty status, ie.
     "TxAvail" and "RxAvail" extended for fifo
-    Bits as defined in UARTd
+    Bits as defined in UARTdev
   *)
-    VAR dev0: UARTd.Device;
+    VAR dev0: UARTdev.Device;
   BEGIN
-    dev0 := dev(UARTd.Device);
-    RETURN UARTd.Flags(dev0)
+    dev0 := dev(UARTdev.Device);
+    RETURN UARTdev.Flags(dev0)
   END DeviceStatus;
 
 

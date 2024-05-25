@@ -216,12 +216,24 @@ CONST
   (* datasheet 2.5.7, p102 *)
   (* shared *)
   DMA_Base = 050000000H;
-  DMA_CH0_READ_ADDR*    = DMA_Base;
-  DMA_CH0_WRITE_ADDR*   = DMA_Base + 0004H;
-  DMA_CH0_TRANS_COUNT*  = DMA_Base + 0008H;
-  DMA_CH0_CTRL_TRIG*    = DMA_Base + 000CH;
+  DMA_CH0_READ_ADDR*             = DMA_Base;
+  DMA_CH0_WRITE_ADDR*            = DMA_Base + 0004H;
+  DMA_CH0_TRANS_COUNT*           = DMA_Base + 0008H;
+  DMA_CH0_CTRL_TRIG*             = DMA_Base + 000CH;
+  DMA_CH0_ALT1_CTRL*             = DMA_Base + 0010H;
+  DMA_CH0_ALT1_READ_ADDR*        = DMA_Base + 0014H;
+  DMA_CH0_ALT1_WRITE_ADDR*       = DMA_Base + 0018H;
+  DMA_CH0_ALT1_TRANS_COUNT_TRIG* = DMA_Base + 001CH;
+  DMA_CH0_ALT2_CTRL*             = DMA_Base + 0020H;
+  DMA_CH0_ALT2_TRANS_COUNT*      = DMA_Base + 0024H;
+  DMA_CH0_ALT2_READ_ADDR*        = DMA_Base + 0028H;
+  DMA_CH0_ALT2_WRITE_ADDR_TRIG*  = DMA_Base + 002CH;
+  DMA_CH0_ALT3_CTRL*             = DMA_Base + 0030H;
+  DMA_CH0_ALT3_WRITE_ADDR*       = DMA_Base + 0034H;
+  DMA_CH0_ALT3_TRANS_COUNT*      = DMA_Base + 0038H;
+  DMA_CH0_ALT3_READ_ADDR_TRIG*   = DMA_Base + 003CH;
   (* ... *)
-  (* 4 registers per DMA channel, offset: 040H, range 0 to 11 *)
+  (* 16 registers per DMA channel, offset: 040H, range 0 to 11 *)
   (* ... *)
   DMA_CH_Offset*    = 040H;
 
@@ -581,11 +593,12 @@ CONST
   (* subsystem resets *)
   (* datasheet 2.14.3, p177 *)
   RESETS_Base = 04000C000H;
-  RESETS_RESET*       = RESETS_Base;        (* reset control: if a bit is set it means the peripheral is in reset *)
-  RESETS_WDSEL*       = RESETS_Base + 04H;  (* set to 1 if this peripheral should be reset when the watchdog fires *)
-  RESETS_DONE*        = RESETS_Base + 08H;  (* indicates that the peripheral�s registers are ready to be accessed *)
+  RESETS_RESET*       = RESETS_Base;
+  RESETS_WDSEL*       = RESETS_Base + 04H;
+  RESETS_DONE*        = RESETS_Base + 08H;
 
-  (* bits in all RESETS.* registers *)
+  (* bits in all RESETS_* registers *)
+  RESETS_USBCTRL*     = 24;
   RESETS_UART1*       = 23;
   RESETS_UART0*       = 22;
   RESETS_TIMER*       = 21;
@@ -599,7 +612,10 @@ CONST
   RESETS_PLL_SYS*     = 12;
   RESETS_PIO1*        = 11;
   RESETS_PIO0*        = 10;
+  RESETS_PADS_QSPI*   = 9;
   RESETS_PADS_BANK0*  = 8;
+  RESETS_JTAG*        = 7;
+  RESETS_QSPI*        = 6;
   RESETS_IO_BANK0*    = 5;
   RESETS_I2C1*        = 4;
   RESETS_I2C0*        = 3;
@@ -618,8 +634,8 @@ CONST
 
   (* === programmable IO (PIO) === *)
   (* datasheet 3.7, p366 *)
-  PIO0_Base = 050200000H;
-  PIO1_Base = 050300000H;
+  PIO0_Base* = 050200000H;
+  PIO1_Base* = 050300000H;
 
 
   (* === peripherals === *)

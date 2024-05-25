@@ -9,9 +9,6 @@ MODULE UARTdev;
   Other modules implement the actual specific IO functionality. 'UARTstr'
   implements string/text IO, a module 'UARTdata' could implement binary data IO.
   --
-  * 'Device' denotes the circuit in the MCU
-  * 'Peripheral' denotes the MCU-external equipment, eg. a serial terminal
-  --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
   Copyright (c) 2020-2024 Gray gray@grayraven.org
@@ -46,6 +43,23 @@ MODULE UARTdev;
     LCR_H_EPS* = 2;  (* even parity select, reset = disabled, ie. odd parity *)
     LCR_H_PEN* = 1;  (* parity enable, reset = disabled *)
 
+    DataBits8* = WLENval_8;
+    DataBits7* = WLENval_7;
+    DataBits6* = WLENval_6;
+    DataBits5* = WLENval_5;
+
+    StopBits1* = 0;
+    StopBits2* = 1;
+
+    FifoOff* = Disabled;
+    FifoOn* = Enabled;
+
+    EvenParityOff* = Disabled;
+    EvenParityOn* = Enabled;
+
+    ParityOff* = Disabled;
+    ParityOn* = Enabled;
+
     (* FR bits *)
     FR_TXFE* = 7;  (* transmit FIFO empty *)
     FR_RXFF* = 6;  (* receive FIFO full *)
@@ -60,21 +74,25 @@ MODULE UARTdev;
     DeviceDesc* = RECORD(TextIO.DeviceDesc)
       uartNo: INTEGER;
       devNo: INTEGER;
-      txPinNo, rxPinNo: INTEGER;
       CR, IBRD, FBRD, LCR_H: INTEGER;
       TDR*, RDR*, FR*, RSR*: INTEGER
       (* interrupt/dma regs will be added as/when needed *)
     END;
 
+    DeviceCfg* = RECORD
+      baudrate*: INTEGER;
+      dataBits*, stopBits*: INTEGER;
+      parity*, evenParity*: INTEGER;
+      fifo*: INTEGER
+    END;
 
-  PROCEDURE Init*(dev: Device; uartNo, txPinNo, rxPinNo: INTEGER);
+
+  PROCEDURE Init*(dev: Device; uartNo: INTEGER);
     VAR base: INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
     ASSERT(uartNo IN {UART0, UART1});
     dev.uartNo := uartNo;
-    dev.txPinNo := txPinNo;
-    dev.rxPinNo := rxPinNo;
     CASE uartNo OF
       UART0: base := MCU.UART0_Base; dev.devNo := MCU.RESETS_UART0
     | UART1: base := MCU.UART1_Base; dev.devNo := MCU.RESETS_UART1
@@ -90,19 +108,24 @@ MODULE UARTdev;
   END Init;
 
 
-  PROCEDURE Configure*(dev: Device; baudrate: INTEGER);
+  PROCEDURE Configure*(dev: Device; cfg: DeviceCfg; txPinNo, rxPinNo: INTEGER);
   (**
     Basic configuration: 8 bits, 1 stop bit, no parity, fifos enabled
   **)
     VAR x, intDiv, fracDiv: INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
-    (* config UART device *)
+    ASSERT(cfg.dataBits IN {DataBits5 .. DataBits8}, Errors.PreCond);
+    ASSERT(cfg.stopBits IN {StopBits1, StopBits2}, Errors.PreCond);
+    ASSERT(cfg.parity IN {ParityOff, ParityOn}, Errors.PreCond);
+    ASSERT(cfg.evenParity IN {EvenParityOff, EvenParityOn}, Errors.PreCond);
+    ASSERT(cfg.fifo IN {FifoOff, FifoOn}, Errors.PreCond);
+
     StartUp.ReleaseReset(dev.devNo);
     StartUp.AwaitReleaseDone(dev.devNo);
     SYSTEM.PUT(dev.CR, {}); (* disable *)
 
-    x := (MCU.PeriClkFreq * 8) DIV baudrate;
+    x := (MCU.PeriClkFreq * 8) DIV cfg.baudrate;
     intDiv := LSR(x, 7);
     IF intDiv = 0 THEN
       intDiv := 1; fracDiv := 0
@@ -114,16 +137,19 @@ MODULE UARTdev;
     SYSTEM.PUT(dev.IBRD, intDiv);
     SYSTEM.PUT(dev.FBRD, fracDiv);
 
-    (* note: LCR_H cfg MUST appear after baudrate cfg, 4.2.7.1, p426*)
+    (* note: LCR_H cfg MUST appear after baudrate cfg, 4.2.7.1, p426 *)
     x := 0;
-    BFI(x, LCR_H_WLEN1, LCR_H_WLEN0, WLENval_8);
-    BFI(x, LCR_H_FEN, Enabled);
+    BFI(x, LCR_H_WLEN1, LCR_H_WLEN0, cfg.dataBits);
+    BFI(x, LCR_H_FEN, cfg.fifo);
+    BFI(x, LCR_H_STP2, cfg.stopBits);
+    BFI(x, LCR_H_EPS, cfg.evenParity);
+    BFI(x, LCR_H_PEN, cfg.parity);
     SYSTEM.PUT(dev.LCR_H, x);
 
-    (* config GPIO device *)
-    GPIO.SetFunction(dev.txPinNo, GPIO.Fuart);
-    GPIO.SetFunction(dev.rxPinNo, GPIO.Fuart)
+    GPIO.SetFunction(txPinNo, GPIO.Fuart);
+    GPIO.SetFunction(rxPinNo, GPIO.Fuart)
   END Configure;
+
 
 
   PROCEDURE ConfigureRaw*(dev: Device; lcrhValue: SET);
@@ -134,18 +160,6 @@ MODULE UARTdev;
     ASSERT(dev # NIL, Errors.PreCond);
     SYSTEM.PUT(dev.LCR_H, lcrhValue)
   END ConfigureRaw;
-
-
-  PROCEDURE ConfigPads*(dev: Device; txCfg, rxCfg: GPIO.PadConfig);
-  (**
-    Configure the pads for the pins of 'dev'
-    Pads work mostly fine in their reset = default state.
-  **)
-  BEGIN
-    ASSERT(dev # NIL, Errors.PreCond);
-    GPIO.ConfigurePad(dev.txPinNo, txCfg);
-    GPIO.ConfigurePad(dev.rxPinNo, rxCfg)
-  END ConfigPads;
 
 
   PROCEDURE Enable*(dev: Device);
