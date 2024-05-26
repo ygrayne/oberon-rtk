@@ -42,6 +42,7 @@ MODULE Main;
     uartCfg.dataBits := UARTdev.DataBits8;
     uartCfg.stopBits := UARTdev.StopBits1;
     uartCfg.parity := UARTdev.ParityOff;
+    uartCfg.evenParity := UARTdev.EvenParityOff;
     uartCfg.fifo := UARTdev.FifoOn;
 
     Terminals.InitUART(UART0, uartCfg, UART0_TxPinNo, UART0_RxPinNo, uartDev0);
