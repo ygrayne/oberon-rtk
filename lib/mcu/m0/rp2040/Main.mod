@@ -41,8 +41,9 @@ MODULE Main;
     uartCfg.baudrate := Baudrate0;
     uartCfg.dataBits := UARTdev.DataBits8;
     uartCfg.stopBits := UARTdev.StopBits1;
-    uartCfg.parity := UARTdev.ParityOff;
-    uartCfg.fifo := UARTdev.FifoOn;
+    uartCfg.parityEn := UARTdev.ParityOff;
+    uartCfg.evenParity := UARTdev.EvenParityOff;
+    uartCfg.fifoEn := UARTdev.FifoOn;
 
     Terminals.InitUART(UART0, uartCfg, UART0_TxPinNo, UART0_RxPinNo, uartDev0);
     Terminals.Open(TERM0, uartDev0, UARTstr.PutString, UARTstr.GetString);
