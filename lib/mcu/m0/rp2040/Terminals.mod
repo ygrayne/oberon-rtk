@@ -30,12 +30,12 @@ MODULE Terminals;
     R*: Rs;
 
 
-  PROCEDURE InitUART*(uartNo: INTEGER; uartCfg: UARTdev.DeviceCfg; txPinNo, rxPinNo: INTEGER; VAR dev: UARTdev.Device);
+  PROCEDURE InitUART*(uartNo: INTEGER; uartCfg: UARTdev.DeviceCfg; baudrate, txPinNo, rxPinNo: INTEGER; VAR dev: UARTdev.Device);
   (* utility procedure *)
   BEGIN
     NEW(dev); ASSERT(dev # NIL, Errors.HeapOverflow);
     UARTdev.Init(dev, uartNo);
-    UARTdev.Configure(dev, uartCfg, txPinNo, rxPinNo);
+    UARTdev.Configure(dev, uartCfg, baudrate, txPinNo, rxPinNo);
     UARTdev.Enable(dev)
   END InitUART;
 

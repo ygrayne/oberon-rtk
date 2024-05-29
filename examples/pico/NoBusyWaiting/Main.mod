@@ -2,7 +2,7 @@ MODULE Main;
 (**
   Oberon RTK Framework
   Main module
-  For example program NoBusyWaiting
+  For example program NoBusyWaiting, https://oberon-rtk.org/examples/nobusywaiting
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
@@ -37,24 +37,21 @@ MODULE Main;
       uartDev0, uartDev1: UARTdev.Device;
       uartCfg: UARTdev.DeviceCfg;
   BEGIN
+    (* define UART cfg *)
+    UARTdev.GetBaseCfg(uartCfg);
+    uartCfg.fifoEn := UARTdev.Enabled;
+
     (* open text IO to/from two serial terminals *)
-    uartCfg.baudrate := Baudrate0;
-    uartCfg.dataBits := UARTdev.DataBits8;
-    uartCfg.stopBits := UARTdev.StopBits1;
-    uartCfg.parity := UARTdev.ParityOff;
-    uartCfg.evenParity := UARTdev.EvenParityOff;
-    uartCfg.fifo := UARTdev.FifoOn;
-
-    Terminals.InitUART(UART0, uartCfg, UART0_TxPinNo, UART0_RxPinNo, uartDev0);
+    Terminals.InitUART(UART0, uartCfg, Baudrate0, UART0_TxPinNo, UART0_RxPinNo, uartDev0);
     Terminals.Open(TERM0, uartDev0, UARTstr.PutString, UARTstr.GetString);
-
-    uartCfg.baudrate := Baudrate1;
-    Terminals.InitUART(UART1, uartCfg, UART1_TxPinNo, UART1_RxPinNo, uartDev1);
+    Terminals.InitUART(UART1, uartCfg, Baudrate1, UART1_TxPinNo, UART1_RxPinNo, uartDev1);
 
     Terminals.Open(TERM1, uartDev1, UARTstr.PutString, UARTstr.GetString);
-    (*
+
+    (* see https://oberon-rtk.org/examples/nobusywaiting
     Terminals.Open(TERM1, uartDev1, UARTkstr.PutString, UARTkstr.GetString);
     *)
+
     (* init Out and In to use the string buffers or terminals *)
     Out.Open(Terminals.W[0], Terminals.W[1]);
     In.Open(Terminals.R[0], Terminals.R[1]);

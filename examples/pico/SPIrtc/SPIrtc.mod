@@ -17,6 +17,7 @@ MODULE SPIrtc;
   CONST
     MillisecsPerTick  = 10;
     ThreadStackSize = 1024;
+    NumCfg = 4;
 
     SPIsclkPinNo = 10;
     SPImosiPinNo = 11;
@@ -25,9 +26,18 @@ MODULE SPIrtc;
 
     SPIno = SPIdev.SPI1;
 
+  TYPE
+    Cfgs = ARRAY NumCfg OF SPIdev.DeviceCfg;
+    RunCfgs = ARRAY NumCfg OF SPIdev.DeviceRunCfg;
+    TxShifts = ARRAY NumCfg OF INTEGER;
+
   VAR
     t0, t1: Kernel.Thread;
     tid0, tid1: INTEGER;
+    runCfgs: RunCfgs;
+    cfgs: Cfgs;
+    txShifts: TxShifts;
+    spi: SPIdev.Device;
 
 
   PROCEDURE writeThreadInfo(tid, cid: INTEGER);
@@ -58,20 +68,29 @@ MODULE SPIrtc;
 
 
   PROCEDURE t1c;
-    VAR tid, cid, year, month, day, hours, mins, secs, dt: INTEGER;
+    VAR tid, cid, cfgNo, year, month, day, hours, mins, secs, dt: INTEGER;
   BEGIN
     cid := MultiCore.CPUid();
     tid := Kernel.Tid();
+    cfgNo := 0;
     REPEAT
       writeThreadInfo(tid, cid);
+      SPIdev.PutRunCfg(spi, runCfgs[cfgNo]);
+      (* read time, date, and timestamp *)
       RTC.GetTime(hours, mins, secs);
       RTC.GetDate(year, month, day);
-      writeDateTime(year, month, day, hours, mins, secs);
       dt := RTC.Timestamp();
+      (* write date and time, timestamp, and decoded timestamp *)
+      writeDateTime(year, month, day, hours, mins, secs);
       Out.Int(dt, 12);
       RTC.Decode(dt, year, month, day, hours, mins, secs);
       writeDateTime(year, month, day, hours, mins, secs);
+      (* write SPI parameters *)
+      Out.Int(SPIdev.SclkRate(spi), 10);
+      Out.Int(cfgs[cfgNo].cpol, 3);
+      Out.Hex(txShifts[cfgNo], 11);
       Out.Ln;
+      cfgNo := (cfgNo + 1) MOD NumCfg;
       Kernel.Next
     UNTIL FALSE
   END t1c;
@@ -80,28 +99,57 @@ MODULE SPIrtc;
   PROCEDURE configMisoPad(misoPinNo: INTEGER);
     VAR cfg: GPIO.PadConfig;
   BEGIN
-    cfg.drive := GPIO.CurrentValue;
-    cfg.pullUp := GPIO.Enabled; (* pull-up on *)
-    cfg.pullDown := GPIO.Disabled; (* pull-down off *)
-    cfg.schmittTrig := GPIO.CurrentValue;
-    cfg.slewRate := GPIO.CurrentValue;
+    GPIO.GetPadBaseCfg(cfg);
+    cfg.pullUpEn := GPIO.Enabled;     (* pull-up on *)
+    cfg.pullDownEn := GPIO.Disabled;  (* pull-down off *)
     GPIO.ConfigurePad(misoPinNo, cfg)
   END configMisoPad;
 
 
+  PROCEDURE createCfgVariants(cfg: SPIdev.DeviceCfg; txShift: INTEGER; VAR cfgRuns: RunCfgs);
+    VAR i: INTEGER;
+  BEGIN
+    (* copy base cfg and txShift *)
+    i := 0;
+    WHILE i < NumCfg DO
+      cfgs[i] := cfg;
+      txShifts[i] := txShift;
+      INC(i)
+    END;
+    (* make some changes *)
+    cfgs[1].scr := SPIdev.SCRvalue(spi, 1000000);
+    cfgs[2].cpol := 1;
+    txShifts[3] := 0AAH;
+    (* make run cfgs *)
+    i := 0;
+    WHILE i < NumCfg DO
+      SPIdev.MakeRunCfg(cfgs[i], txShifts[i], cfgRuns[i]); INC(i)
+    END
+  END createCfgVariants;
+
+
   PROCEDURE run;
-    VAR res: INTEGER; spi: SPIdev.Device; cfg: SPIdev.DeviceCfg;
+    VAR res, sclkRate, txShift, low, high: INTEGER; cfg: SPIdev.DeviceCfg;
   BEGIN
     NEW(spi); ASSERT(spi # NIL, Errors.HeapOverflow);
     RTC.Install(spi, RTCcsPinNo, SPIper.CSsio);
-    RTC.GetSPIcfg(cfg);
-    SPIdev.Init(spi, SPIno, cfg.txShift);
-    SPIdev.Configure(spi, cfg, SPImosiPinNo, SPImisoPinNo, SPIsclkPinNo);
+    RTC.GetSPIparams(sclkRate, cfg.dataSize, cfg.cpol, cfg.cpha, txShift);
+
+    SPIdev.Init(spi, SPIno);
+    SPIdev.Configure(spi, sclkRate, SPImosiPinNo, SPImisoPinNo, SPIsclkPinNo, cfg.scr);
+    createCfgVariants(cfg, txShift, runCfgs);
     configMisoPad(SPImisoPinNo);
+
+    SPIdev.GetSclkRateRange(spi, low, high);
+    Out.String("lowRate:"); Out.Int(low, 10);
+    Out.String(" highRate:"); Out.Int(high, 10);
+    Out.String(" SCR:"); Out.Int(cfg.scr, 10);
+    Out.Ln;
+
     SPIdev.Enable(spi);
     Kernel.Install(MillisecsPerTick);
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.ProgError);
-    Kernel.SetPeriod(t0, 500, 0); Kernel.Enable(t0);
+    Kernel.SetPeriod(t0, 100, 0); Kernel.Enable(t0);
     Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.OK, Errors.ProgError);
     Kernel.SetPeriod(t1, 1000, 0); Kernel.Enable(t1);
     Kernel.Run

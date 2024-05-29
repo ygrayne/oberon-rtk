@@ -24,7 +24,7 @@ MODULE RTCds3234;
     (* SPI device config parameters *)
     CPOL = 0;
     CPHA = 1;
-    SclkFreq = 2000000;
+    SclkFreq = 500000;
     DataSize = SPId.DataSize8;
     TxShift = 0F0H;
 
@@ -145,14 +145,14 @@ MODULE RTCds3234;
   END Timestamp;
 
 
-  PROCEDURE GetSPIcfg*(VAR cfg: SPId.DeviceCfg);
+  PROCEDURE GetSPIparams*(VAR sclkRate, dataSize, cpol, cpha, txShift: INTEGER);
   BEGIN
-    cfg.sclkFreq := SclkFreq;
-    cfg.dataSize := DataSize;
-    cfg.cpol := CPOL;
-    cfg.cpha := CPHA;
-    cfg.txShift := TxShift
-  END GetSPIcfg;
+    sclkRate := SclkFreq;
+    dataSize := DataSize;
+    cpol := CPOL;
+    cpha := CPHA;
+    txShift := TxShift
+  END GetSPIparams;
 
 
   PROCEDURE Install*(spiDev: SPId.Device; csPinNo, csMode: INTEGER);

@@ -32,33 +32,24 @@ MODULE UARTdev;
     CR_UARTEN = 0;
 
     (* LCR_H bits/values *)
-    LCR_H_WLEN1* = 6; (* [6:5] transmit/receive word length *)
-    LCR_H_WLEN0* = 5;
-    WLENval_8* = 3;
-    WLENval_7* = 2;
-    WLENval_6* = 1;
-    WLENval_5* = 0; (* reset *)
-    LCR_H_FEN* = 4;  (* fifo enable, reset = disabled *)
-    LCR_H_STP2* = 3; (* two stop bits select, reset = disabled, ie. one stop bit *)
-    LCR_H_EPS* = 2;  (* even parity select, reset = disabled, ie. odd parity *)
-    LCR_H_PEN* = 1;  (* parity enable, reset = disabled *)
+    LCR_H_SPS*      = 7;
+    LCR_H_WLEN1*    = 6; (* [6:5] transmit/receive word length *)
+    LCR_H_WLEN0*    = 5;
+      WLENval_8* = 3;
+      WLENval_7* = 2;
+      WLENval_6* = 1;
+      WLENval_5* = 0; (* reset *)
+    LCR_H_FEN*      = 4;  (* fifo enable, reset = disabled *)
+    LCR_H_STP2*     = 3; (* two stop bits select, reset = disabled, ie. one stop bit *)
+    LCR_H_EPS*      = 2;  (* even parity select, reset = disabled, ie. odd parity *)
+    LCR_H_PEN*      = 1;  (* parity enable, reset = disabled *)
+    LCR_H_BRK*      = 0;
 
+    (* value aliases *)
     DataBits8* = WLENval_8;
     DataBits7* = WLENval_7;
     DataBits6* = WLENval_6;
     DataBits5* = WLENval_5;
-
-    StopBits1* = 0;
-    StopBits2* = 1;
-
-    FifoOff* = Disabled;
-    FifoOn* = Enabled;
-
-    EvenParityOff* = Disabled;
-    EvenParityOn* = Enabled;
-
-    ParityOff* = Disabled;
-    ParityOn* = Enabled;
 
     (* FR bits *)
     FR_TXFE* = 7;  (* transmit FIFO empty *)
@@ -79,11 +70,15 @@ MODULE UARTdev;
       (* interrupt/dma regs will be added as/when needed *)
     END;
 
-    DeviceCfg* = RECORD
-      baudrate*: INTEGER;
-      dataBits*, stopBits*: INTEGER;
-      parity*, evenParity*: INTEGER;
-      fifo*: INTEGER
+    DeviceCfg* = RECORD (* see ASSERTs in 'Configure' for valid values *)
+      (* reg LCR_H *)
+      stickyParityEn*: INTEGER;
+      dataBits*: INTEGER;
+      fifoEn*: INTEGER;
+      twoStopBitsEn*: INTEGER;
+      evenParityEn*: INTEGER;
+      parityEn*: INTEGER;
+      sendBreak*: INTEGER
     END;
 
 
@@ -108,24 +103,29 @@ MODULE UARTdev;
   END Init;
 
 
-  PROCEDURE Configure*(dev: Device; cfg: DeviceCfg; txPinNo, rxPinNo: INTEGER);
+  PROCEDURE Configure*(dev: Device; cfg: DeviceCfg; baudrate, txPinNo, rxPinNo: INTEGER);
   (**
-    Basic configuration: 8 bits, 1 stop bit, no parity, fifos enabled
+    Configure UART, after 'Init';
   **)
     VAR x, intDiv, fracDiv: INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
+    ASSERT(cfg.stickyParityEn IN {Disabled, Enabled}, Errors.PreCond);
     ASSERT(cfg.dataBits IN {DataBits5 .. DataBits8}, Errors.PreCond);
-    ASSERT(cfg.stopBits IN {StopBits1, StopBits2}, Errors.PreCond);
-    ASSERT(cfg.parity IN {ParityOff, ParityOn}, Errors.PreCond);
-    ASSERT(cfg.evenParity IN {EvenParityOff, EvenParityOn}, Errors.PreCond);
-    ASSERT(cfg.fifo IN {FifoOff, FifoOn}, Errors.PreCond);
+    ASSERT(cfg.fifoEn IN {Disabled, Enabled}, Errors.PreCond);
+    ASSERT(cfg.twoStopBitsEn IN {Disabled, Enabled}, Errors.PreCond);
+    ASSERT(cfg.evenParityEn IN {Disabled, Enabled}, Errors.PreCond);
+    ASSERT(cfg.parityEn IN {Disabled, Enabled}, Errors.PreCond);
+    ASSERT(cfg.sendBreak IN {Disabled, Enabled}, Errors.PreCond);
 
+    (* release reset on UART device *)
     StartUp.ReleaseReset(dev.devNo);
     StartUp.AwaitReleaseDone(dev.devNo);
-    SYSTEM.PUT(dev.CR, {}); (* disable *)
 
-    x := (MCU.PeriClkFreq * 8) DIV cfg.baudrate;
+    (* disable *)
+    SYSTEM.PUT(dev.CR, {});
+
+    x := (MCU.PeriClkFreq * 8) DIV baudrate;
     intDiv := LSR(x, 7);
     IF intDiv = 0 THEN
       intDiv := 1; fracDiv := 0
@@ -139,11 +139,13 @@ MODULE UARTdev;
 
     (* note: LCR_H cfg MUST appear after baudrate cfg, 4.2.7.1, p426 *)
     x := 0;
+    BFI(x, LCR_H_SPS, cfg.stickyParityEn);
     BFI(x, LCR_H_WLEN1, LCR_H_WLEN0, cfg.dataBits);
-    BFI(x, LCR_H_FEN, cfg.fifo);
-    BFI(x, LCR_H_STP2, cfg.stopBits);
-    BFI(x, LCR_H_EPS, cfg.evenParity);
-    BFI(x, LCR_H_PEN, cfg.parity);
+    BFI(x, LCR_H_FEN, cfg.fifoEn);
+    BFI(x, LCR_H_STP2, cfg.twoStopBitsEn);
+    BFI(x, LCR_H_EPS, cfg.evenParityEn);
+    BFI(x, LCR_H_PEN, cfg.parityEn);
+    BFI(x, LCR_H_BRK, cfg.sendBreak);
     SYSTEM.PUT(dev.LCR_H, x);
 
     GPIO.SetFunction(txPinNo, GPIO.Fuart);
@@ -151,15 +153,36 @@ MODULE UARTdev;
   END Configure;
 
 
-
-  PROCEDURE ConfigureRaw*(dev: Device; lcrhValue: SET);
+  PROCEDURE GetBaseCfg*(VAR cfg: DeviceCfg);
   (**
-    Extended configuration: directly write 'LCR_H'
+    stickyParityEn = Disabled,   hardware reset value
+    dataBits       = WLENval_8,  hardware reset override
+    fifoEn         = Disabled,   hardware reset value
+    twoStopBitsEn  = Disabled,   hardware reset value
+    evenParityEn   = Disabled,   hardware reset value;
+    parityEn       = Disabled,   hardware reset value
+    sendBreak      = Disabled,   hardware reset value
+    --
+    See ASSERTs in 'Configure' for valid values.
   **)
   BEGIN
-    ASSERT(dev # NIL, Errors.PreCond);
-    SYSTEM.PUT(dev.LCR_H, lcrhValue)
-  END ConfigureRaw;
+    CLEAR(cfg);
+    cfg.dataBits := WLENval_8
+  END GetBaseCfg;
+
+
+  PROCEDURE GetCurrentCfg*(dev: Device; VAR cfg: DeviceCfg);
+    VAR x: INTEGER;
+  BEGIN
+    SYSTEM.GET(dev.LCR_H, x);
+    cfg.stickyParityEn := BFX(x, LCR_H_SPS);
+    cfg.dataBits := BFX(x, LCR_H_WLEN1, LCR_H_WLEN0);
+    cfg.fifoEn := BFX(x, LCR_H_FEN);
+    cfg.twoStopBitsEn := BFX(x, LCR_H_STP2);
+    cfg.evenParityEn := BFX(x, LCR_H_EPS);
+    cfg.parityEn := BFX(x, LCR_H_PEN);
+    cfg.sendBreak := BFX(x, LCR_H_BRK)
+  END GetCurrentCfg;
 
 
   PROCEDURE Enable*(dev: Device);
