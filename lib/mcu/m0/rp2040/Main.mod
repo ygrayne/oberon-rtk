@@ -15,7 +15,7 @@ MODULE Main;
     (* ignore the "is not used" warnings... :) *)
     (* LinkOptions is the first import of Config *)
     Config, Clocks, Memory, RuntimeErrors,
-    RuntimeErrorsOut, Terminals, Out, In, UARTdev, UARTstr;
+    RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr;
 
   CONST
     Baudrate0 = 38400; (* terminal 0 *)
@@ -32,6 +32,13 @@ MODULE Main;
     UART1_RxPinNo = 5;
 
 
+  PROCEDURE configPins(txPinNo, rxPinNo: INTEGER);
+  BEGIN
+    GPIO.SetFunction(txPinNo, GPIO.Fuart);
+    GPIO.SetFunction(rxPinNo, GPIO.Fuart)
+  END configPins;
+
+
   PROCEDURE init;
     VAR
       uartDev0, uartDev1: UARTdev.Device;
@@ -41,10 +48,14 @@ MODULE Main;
     UARTdev.GetBaseCfg(uartCfg);
     uartCfg.fifoEn := UARTdev.Enabled;
 
+    (* configure the pins and pads *)
+    configPins(UART0_TxPinNo, UART0_RxPinNo);
+    configPins(UART1_TxPinNo, UART1_RxPinNo);
+
     (* open text IO to/from two serial terminals *)
-    Terminals.InitUART(UART0, uartCfg, Baudrate0, UART0_TxPinNo, UART0_RxPinNo, uartDev0);
+    Terminals.InitUART(UART0, uartCfg, Baudrate0, uartDev0);
     Terminals.Open(TERM0, uartDev0, UARTstr.PutString, UARTstr.GetString);
-    Terminals.InitUART(UART1, uartCfg, Baudrate1, UART1_TxPinNo, UART1_RxPinNo, uartDev1);
+    Terminals.InitUART(UART1, uartCfg, Baudrate1, uartDev1);
     Terminals.Open(TERM1, uartDev1, UARTstr.PutString, UARTstr.GetString);
 
     (* init Out and In to use the string buffers or terminals *)

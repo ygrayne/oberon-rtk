@@ -1,9 +1,9 @@
-MODULE SPIrtc;
+MODULE SPIrtc2;
 (**
   Oberon RTK Framework
   --
   Example program, multi-threaded, one core
-  Description: https://oberon-rtk.org/examples/spirtc/
+  Description: https://oberon-rtk.org/examples/spirtc2/
   --
   MCU: Cortex-M0+ RP2040
   Board: Pico
@@ -12,12 +12,11 @@ MODULE SPIrtc;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT Main, Kernel, MultiCore, Out, Errors, GPIO, SPIdev, SPIper, RTC := RTCds3234, LEDext;
+  IMPORT Main, Kernel, MultiCore, Out, Errors, SPIdev, GPIO, LEDext, RTC := RTCds3234;
 
   CONST
     MillisecsPerTick  = 10;
     ThreadStackSize = 1024;
-    NumCfg = 4;
 
     SPIsclkPinNo = 10;
     SPImosiPinNo = 11;
@@ -26,18 +25,9 @@ MODULE SPIrtc;
 
     SPIno = SPIdev.SPI1;
 
-  TYPE
-    Cfgs = ARRAY NumCfg OF SPIdev.DeviceCfg;
-    RunCfgs = ARRAY NumCfg OF SPIdev.DeviceRunCfg;
-    TxShifts = ARRAY NumCfg OF INTEGER;
-
   VAR
     t0, t1: Kernel.Thread;
     tid0, tid1: INTEGER;
-    runCfgs: RunCfgs;
-    cfgs: Cfgs;
-    txShifts: TxShifts;
-    spi: SPIdev.Device;
 
 
   PROCEDURE writeThreadInfo(tid, cid: INTEGER);
@@ -68,14 +58,12 @@ MODULE SPIrtc;
 
 
   PROCEDURE t1c;
-    VAR tid, cid, cfgNo, year, month, day, hours, mins, secs, dt: INTEGER;
+    VAR tid, cid, year, month, day, hours, mins, secs, dt: INTEGER;
   BEGIN
     cid := MultiCore.CPUid();
     tid := Kernel.Tid();
-    cfgNo := 0;
     REPEAT
       writeThreadInfo(tid, cid);
-      SPIdev.PutRunCfg(spi, runCfgs[cfgNo]);
       (* read time, date, and timestamp *)
       RTC.GetTime(hours, mins, secs);
       RTC.GetDate(year, month, day);
@@ -85,68 +73,59 @@ MODULE SPIrtc;
       Out.Int(dt, 12);
       RTC.Decode(dt, year, month, day, hours, mins, secs);
       writeDateTime(year, month, day, hours, mins, secs);
-      (* write SPI parameters *)
-      Out.Int(SPIdev.SclkRate(spi), 10);
-      Out.Int(cfgs[cfgNo].cpol, 3);
-      Out.Hex(txShifts[cfgNo], 11);
       Out.Ln;
-      cfgNo := (cfgNo + 1) MOD NumCfg;
       Kernel.Next
     UNTIL FALSE
   END t1c;
 
 
-  PROCEDURE configMisoPad(misoPinNo: INTEGER);
-    VAR cfg: GPIO.PadCfg;
+  PROCEDURE configPins;
+    VAR mask: SET; padCfg: GPIO.PadCfg;
   BEGIN
-    GPIO.GetPadBaseCfg(cfg);
-    cfg.pullupEn := GPIO.Enabled;     (* pull-up on *)
-    cfg.pulldownEn := GPIO.Disabled;  (* pull-down off *)
-    GPIO.ConfigurePad(misoPinNo, cfg)
-  END configMisoPad;
+    (* config SPI GPIO devices *)
+    GPIO.SetFunction(SPImosiPinNo, GPIO.Fspi);
+    GPIO.SetFunction(SPImisoPinNo, GPIO.Fspi);
+    GPIO.SetFunction(SPIsclkPinNo, GPIO.Fspi);
 
+    (* config miso pad *)
+    GPIO.GetPadBaseCfg(padCfg);
+    padCfg.pulldownEn := GPIO.Disabled;
+    padCfg.pullupEn := GPIO.Enabled;
+    GPIO.ConfigurePad(SPImisoPinNo, padCfg);
 
-  PROCEDURE createCfgVariants(cfg: SPIdev.DeviceCfg; txShift: INTEGER; VAR cfgRuns: RunCfgs);
-    VAR i: INTEGER;
-  BEGIN
-    (* copy base cfg and txShift *)
-    i := 0;
-    WHILE i < NumCfg DO
-      cfgs[i] := cfg;
-      txShifts[i] := txShift;
-      INC(i)
-    END;
-    (* make some changes *)
-    cfgs[1].scr := SPIdev.SCRvalue(spi, 1000000);
-    cfgs[2].cpol := 1;
-    txShifts[3] := 0AAH;
-    (* make run cfgs *)
-    i := 0;
-    WHILE i < NumCfg DO
-      SPIdev.MakeRunCfg(cfgs[i], txShifts[i], cfgRuns[i]); INC(i)
-    END
-  END createCfgVariants;
+    (* config chip select *)
+    GPIO.SetFunction(RTCcsPinNo, GPIO.Fsio);
+    mask := {RTCcsPinNo};
+    GPIO.OutputEnable(mask);
+    GPIO.Set(mask) (* active low *)
+  END configPins;
 
 
   PROCEDURE run;
-    VAR res, sclkRate, txShift, low, high: INTEGER; cfg: SPIdev.DeviceCfg;
+    VAR
+      res: INTEGER;
+      spi: SPIdev.Device;
+      cfg: SPIdev.DeviceCfg;
   BEGIN
     NEW(spi); ASSERT(spi # NIL, Errors.HeapOverflow);
-    RTC.Install(spi, RTCcsPinNo, SPIper.CSsio);
-    RTC.GetSPIparams(sclkRate, cfg.dataSize, cfg.cpol, cfg.cpha, txShift);
 
+    (* SPI device cfg *)
+    SPIdev.GetBaseCfg(cfg);
+    cfg.cpha := RTC.CPHA;
+    cfg.txShift := RTC.TxShift;
+
+    (* init SPI device *)
     SPIdev.Init(spi, SPIno);
-    SPIdev.Configure(spi, sclkRate, SPImosiPinNo, SPImisoPinNo, SPIsclkPinNo, cfg.scr);
-    createCfgVariants(cfg, txShift, runCfgs);
-    configMisoPad(SPImisoPinNo);
-
-    SPIdev.GetSclkRateRange(spi, low, high);
-    Out.String("lowRate:"); Out.Int(low, 10);
-    Out.String(" highRate:"); Out.Int(high, 10);
-    Out.String(" SCR:"); Out.Int(cfg.scr, 10);
-    Out.Ln;
-
+    SPIdev.Configure(spi, cfg, RTC.SclkRate);
     SPIdev.Enable(spi);
+
+    (* configure the pins and pads *)
+    configPins;
+
+    (* pass required parameters to RTC *)
+    RTC.Install(spi, RTCcsPinNo);
+
+    (* threads *)
     Kernel.Install(MillisecsPerTick);
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.ProgError);
     Kernel.SetPeriod(t0, 100, 0); Kernel.Enable(t0);
@@ -158,5 +137,5 @@ MODULE SPIrtc;
 
 BEGIN
   run
-END SPIrtc.
+END SPIrtc2.
 

@@ -69,12 +69,12 @@ MODULE GPIO;
 
 
   TYPE
-    PadConfig* = RECORD (* see ASSERTs in 'ConfigurePad' for valid values *)
+    PadCfg* = RECORD (* see ASSERTs in 'ConfigurePad' for valid values *)
       outputDe*: INTEGER;       (* reset: Disabled *)
       inputEn*: INTEGER;        (* reset: Enabled *)
       driveStrength*: INTEGER;  (* reset: Drive4mA *)
-      pullUpEn*: INTEGER;       (* reset: Disabled *)
-      pullDownEn*: INTEGER;     (* reset: Enabled *)
+      pullupEn*: INTEGER;       (* reset: Disabled *)
+      pulldownEn*: INTEGER;     (* reset: Enabled *)
       schmittTrigEn*: INTEGER;  (* reset: Enabled *)
       slewRate*: INTEGER        (* reset: SlewSlow *)
     END;
@@ -105,22 +105,22 @@ MODULE GPIO;
 
   (* --- pads --- *)
 
-  PROCEDURE ConfigurePad*(pinNo: INTEGER; cfg: PadConfig);
+  PROCEDURE ConfigurePad*(pinNo: INTEGER; cfg: PadCfg);
     VAR addr, x: INTEGER;
   BEGIN
     ASSERT(cfg.outputDe IN {Disabled, Enabled}, Errors.PreCond);
     ASSERT(cfg.inputEn IN {Disabled, Enabled}, Errors.PreCond);
     ASSERT(cfg.driveStrength IN {DRIVE_val_2mA .. DRIVE_val_12mA}, Errors.PreCond);
-    ASSERT(cfg.pullUpEn IN {Disabled, Enabled}, Errors.PreCond);
-    ASSERT(cfg.pullDownEn IN {Disabled, Enabled}, Errors.PreCond);
+    ASSERT(cfg.pullupEn IN {Disabled, Enabled}, Errors.PreCond);
+    ASSERT(cfg.pulldownEn IN {Disabled, Enabled}, Errors.PreCond);
     ASSERT(cfg.schmittTrigEn IN {Disabled, Enabled}, Errors.PreCond);
     ASSERT(cfg.slewRate IN {SLEWFAST_val_slow, SLEWFAST_val_fast}, Errors.PreCond);
 
     addr := MCU.PADS_BANK0_GPIO + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
     x := cfg.slewRate;
     x := x + LSL(cfg.schmittTrigEn, BANK0_GPIO_SCHMITT);
-    x := x + LSL(cfg.pullDownEn, BANK0_GPIO_PDE);
-    x := x + LSL(cfg.pullUpEn, BANK0_GPIO_PUE);
+    x := x + LSL(cfg.pulldownEn, BANK0_GPIO_PDE);
+    x := x + LSL(cfg.pullupEn, BANK0_GPIO_PUE);
     x := x + LSL(cfg.driveStrength, BANK0_GPIO_DRIVE0);
     x := x + LSL(cfg.inputEn, BANK0_GPIO_IE);
     x := x + LSL(cfg.outputDe, BANK0_GPIO_OD);
@@ -128,13 +128,13 @@ MODULE GPIO;
   END ConfigurePad;
 
 
-  PROCEDURE GetPadBaseCfg*(VAR cfg: PadConfig);
+  PROCEDURE GetPadBaseCfg*(VAR cfg: PadCfg);
   (**
     outputDe        = Disabled,           hardware reset value, ie. output is enabled
     inputEn         = Enabled,            hardware reset value
     driveStrength   = DRIVE_val_4mA,      hardware reset value
-    pullUpEn        = Disabled,           hardware reset value
-    pullDownEn      = Enabled,            hardware reset value
+    pullupEn        = Disabled,           hardware reset value
+    pulldownEn      = Enabled,            hardware reset value
     schmittTrigEn   = Enabled,            hardware reset value
     slewRate        = SLEWFAST_val_slow,  hardware reset value
     --
@@ -144,7 +144,7 @@ MODULE GPIO;
     CLEAR(cfg);
     cfg.inputEn := Enabled;
     cfg.driveStrength := DRIVE_val_4mA;
-    cfg.pullDownEn := Enabled;
+    cfg.pulldownEn := Enabled;
     cfg.schmittTrigEn := Enabled
   END GetPadBaseCfg;
 

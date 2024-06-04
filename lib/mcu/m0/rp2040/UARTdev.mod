@@ -9,13 +9,15 @@ MODULE UARTdev;
   Other modules implement the actual specific IO functionality. 'UARTstr'
   implements string/text IO, a module 'UARTdata' could implement binary data IO.
   --
+  The GPIO pins and pads used must be configured by the client module or program.
+  --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
   Copyright (c) 2020-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Errors, MCU := MCU2, GPIO, StartUp, TextIO;
+  IMPORT SYSTEM, Errors, MCU := MCU2, StartUp, TextIO;
 
   CONST
     UART0* = 0;
@@ -81,6 +83,8 @@ MODULE UARTdev;
       sendBreak*: INTEGER
     END;
 
+    CfgPins* = PROCEDURE;
+
 
   PROCEDURE Init*(dev: Device; uartNo: INTEGER);
     VAR base: INTEGER;
@@ -103,7 +107,7 @@ MODULE UARTdev;
   END Init;
 
 
-  PROCEDURE Configure*(dev: Device; cfg: DeviceCfg; baudrate, txPinNo, rxPinNo: INTEGER);
+  PROCEDURE Configure*(dev: Device; cfg: DeviceCfg; baudrate: INTEGER);
   (**
     Configure UART, after 'Init';
   **)
@@ -146,10 +150,7 @@ MODULE UARTdev;
     BFI(x, LCR_H_EPS, cfg.evenParityEn);
     BFI(x, LCR_H_PEN, cfg.parityEn);
     BFI(x, LCR_H_BRK, cfg.sendBreak);
-    SYSTEM.PUT(dev.LCR_H, x);
-
-    GPIO.SetFunction(txPinNo, GPIO.Fuart);
-    GPIO.SetFunction(rxPinNo, GPIO.Fuart)
+    SYSTEM.PUT(dev.LCR_H, x)
   END Configure;
 
 
