@@ -84,7 +84,7 @@ MODULE SPIdev;
 
 
   TYPE
-    (* used with 'SetRunCfg' *)
+    (* used with 'PutRunCfg' *)
     RunCfg* = RECORD
       cr0Value: INTEGER;
       txShift: INTEGER
@@ -162,10 +162,9 @@ MODULE SPIdev;
     (* scr is an integer between 0 and 255, inclusive *)
     x := (x DIV (preScale * 8)) - 1;
     scr := 255;
-    WHILE (scr > -1) & (scr > x) DO
+    WHILE (scr >= 0) & (scr > x) DO
       DEC(scr)
     END;
-    IF scr < 0 THEN scr := 0 END;
 
     (* set CR0 *)
     x := cfg.dataSize;
@@ -222,10 +221,9 @@ MODULE SPIdev;
     x := (MCU.PeriClkFreq * 8) DIV sclkRate;
     x := (x DIV (cpsr * 8)) - 1;
     scr := 255;
-    WHILE (scr > -1) & (scr > x) DO
+    WHILE (scr >= 0) & (scr > x) DO
       DEC(scr)
     END;
-    IF scr < 0 THEN scr := 0 END;
     BFI(runCfg.cr0Value, CR0_SCR1, CR0_SCR0, scr)
   END SetSclkRate;
 

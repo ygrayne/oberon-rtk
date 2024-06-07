@@ -11,7 +11,7 @@ MODULE LEDext;
   Usage:
   * Via SIO:
     GPIO.Set({LEDext.LED0}),
-    GPIO.Clear({LEDext.LED0},
+    GPIO.Clear({LEDext.LED0}),
     GPIO.Toggle({LEDext.LED0})
   * Direct, avoiding procedure calls, eg. for leaf procedures:
     SYSTEM.PUT(LEDext.SET, {LEDext.LED0}),

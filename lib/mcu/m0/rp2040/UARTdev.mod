@@ -37,10 +37,10 @@ MODULE UARTdev;
     LCR_H_SPS*      = 7;
     LCR_H_WLEN1*    = 6; (* [6:5] transmit/receive word length *)
     LCR_H_WLEN0*    = 5;
-      WLENval_8* = 3;
-      WLENval_7* = 2;
-      WLENval_6* = 1;
-      WLENval_5* = 0; (* reset *)
+      WLEN_val_8* = 3;
+      WLEN_val_7* = 2;
+      WLEN_val_6* = 1;
+      WLEN_val_5* = 0; (* reset *)
     LCR_H_FEN*      = 4;  (* fifo enable, reset = disabled *)
     LCR_H_STP2*     = 3; (* two stop bits select, reset = disabled, ie. one stop bit *)
     LCR_H_EPS*      = 2;  (* even parity select, reset = disabled, ie. odd parity *)
@@ -48,10 +48,10 @@ MODULE UARTdev;
     LCR_H_BRK*      = 0;
 
     (* value aliases *)
-    DataBits8* = WLENval_8;
-    DataBits7* = WLENval_7;
-    DataBits6* = WLENval_6;
-    DataBits5* = WLENval_5;
+    DataBits8* = WLEN_val_8;
+    DataBits7* = WLEN_val_7;
+    DataBits6* = WLEN_val_6;
+    DataBits5* = WLEN_val_5;
 
     (* FR bits *)
     FR_TXFE* = 7;  (* transmit FIFO empty *)
@@ -82,8 +82,6 @@ MODULE UARTdev;
       parityEn*: INTEGER;
       sendBreak*: INTEGER
     END;
-
-    CfgPins* = PROCEDURE;
 
 
   PROCEDURE Init*(dev: Device; uartNo: INTEGER);
@@ -168,7 +166,7 @@ MODULE UARTdev;
   **)
   BEGIN
     CLEAR(cfg);
-    cfg.dataBits := WLENval_8
+    cfg.dataBits := WLEN_val_8
   END GetBaseCfg;
 
 
