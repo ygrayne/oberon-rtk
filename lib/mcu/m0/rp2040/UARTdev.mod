@@ -4,10 +4,9 @@ MODULE UARTdev;
   --
   UART device
   * initialisation of device data structure
-  * configure IO bank and pads, baudrate
-  * enable physical device
-  Other modules implement the actual specific IO functionality. 'UARTstr'
-  implements string/text IO, a module 'UARTdata' could implement binary data IO.
+  * configure UART hardware
+  * enable physical UART device
+  * configure and enable interrupts
   --
   The GPIO pins and pads used must be configured by the client module or program.
   --
@@ -22,6 +21,7 @@ MODULE UARTdev;
   CONST
     UART0* = 0;
     UART1* = 1;
+    NumUART* = 2;
 
     (* generic values *)
     Enabled* = 1;
@@ -62,14 +62,42 @@ MODULE UARTdev;
     (* RSR bits *)
     RSR_OR*  = 3;  (* receive fifo overrun *)
 
+    (* DMACR bits *)
+    DMACR_DMAONERR* = 2;
+    DMACR_TXDMAE*   = 1; (* transmit via DMA enabled *)
+    DMACR_RXDMAE*   = 0; (* receive via DMA enabled *)
+
+    (* IFLS bits and values *)
+    IFLS_RXIFLSEL1*     = 5;
+    IFLS_RXIFLSEL0*     = 3;
+    IFLS_TXIFLSEL1*     = 2;
+    IFLS_TXIFLSEL0*     = 0;
+
+    RXIFLSEL_val_18* = 000H; (* 1/8 full:        4 items in fifo *)
+    RXIFLSEL_val_28* = 001H; (* 2/8 = 1/4 full:  8 *)
+    RXIFLSEL_val_48* = 002H; (* 4/8 = 1/2 full: 16 *)
+    RXIFLSEL_val_68* = 003H; (* 6/8 = 3/4 full: 24 *)
+    RXIFLSEL_val_78* = 004H; (* 7/8 full:       28 *)
+
+    TXIFLSEL_val_18* = 000H; (* 1/8 full:        4 items in fifo *)
+    TXIFLSEL_val_28* = 001H; (* 2/8 = 1/4 full:  8 *)
+    TXIFLSEL_val_48* = 002H; (* 4/8 = 1/2 full: 16 *)
+    TXIFLSEL_val_68* = 003H; (* 6/8 = 3/4 full: 24 *)
+    TXIFLSEL_val_78* = 004H; (* 7/8 full:       28 *)
+
+    (* IMSC bits *)
+    IMSC_TXIM* = 5;
+
+
   TYPE
     Device* = POINTER TO DeviceDesc;
     DeviceDesc* = RECORD(TextIO.DeviceDesc)
-      uartNo: INTEGER;
+      uartNo*: INTEGER;
       devNo: INTEGER;
+      intNo*: INTEGER;
       CR, IBRD, FBRD, LCR_H: INTEGER;
-      TDR*, RDR*, FR*, RSR*: INTEGER
-      (* interrupt/dma regs will be added as/when needed *)
+      TDR*, RDR*, FR*, RSR*: INTEGER;
+      DMACR, IFLS, IMSC, MIS, ICR: INTEGER
     END;
 
     DeviceCfg* = RECORD (* see ASSERTs in 'Configure' for valid values *)
@@ -85,14 +113,17 @@ MODULE UARTdev;
 
 
   PROCEDURE Init*(dev: Device; uartNo: INTEGER);
+  (**
+    Init Device data.
+  **)
     VAR base: INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
     ASSERT(uartNo IN {UART0, UART1});
     dev.uartNo := uartNo;
     CASE uartNo OF
-      UART0: base := MCU.UART0_Base; dev.devNo := MCU.RESETS_UART0
-    | UART1: base := MCU.UART1_Base; dev.devNo := MCU.RESETS_UART1
+      UART0: base := MCU.UART0_Base; dev.devNo := MCU.RESETS_UART0; dev.intNo := MCU.NVIC_UART0_IRQ
+    | UART1: base := MCU.UART1_Base; dev.devNo := MCU.RESETS_UART1; dev.intNo := MCU.NVIC_UART1_IRQ
     END;
     dev.CR    := base + MCU.UART_CR_Offset;
     dev.IBRD  := base + MCU.UART_IBRD_Offset;
@@ -101,13 +132,18 @@ MODULE UARTdev;
     dev.TDR   := base + MCU.UART_DR_Offset;
     dev.RDR   := base + MCU.UART_DR_Offset;
     dev.FR    := base + MCU.UART_FR_Offset;
-    dev.RSR   := base + MCU.UART_RSR_Offset
+    dev.RSR   := base + MCU.UART_RSR_Offset;
+    dev.DMACR := base + MCU.UART_DMACR_Offset;
+    dev.IFLS  := base + MCU.UART_IFLS_Offset;
+    dev.IMSC  := base + MCU.UART_IMSC_Offset;
+    dev.MIS   := base + MCU.UART_MIS_Offset;
+    dev.ICR   := base + MCU.UART_ICR_Offset
   END Init;
 
 
   PROCEDURE Configure*(dev: Device; cfg: DeviceCfg; baudrate: INTEGER);
   (**
-    Configure UART, after 'Init';
+    Configure UART hardware, after 'Init'.
   **)
     VAR x, intDiv, fracDiv: INTEGER;
   BEGIN
@@ -127,6 +163,7 @@ MODULE UARTdev;
     (* disable *)
     SYSTEM.PUT(dev.CR, {});
 
+    (* baudrate *)
     x := (MCU.PeriClkFreq * 8) DIV baudrate;
     intDiv := LSR(x, 7);
     IF intDiv = 0 THEN
@@ -152,13 +189,36 @@ MODULE UARTdev;
   END Configure;
 
 
+  PROCEDURE Enable*(dev: Device);
+  BEGIN
+    ASSERT(dev # NIL, Errors.PreCond);
+    SYSTEM.PUT(dev.CR + MCU.ASET, {CR_UARTEN, CR_RXE, CR_TXE})
+  END Enable;
+
+
+  PROCEDURE Disable*(dev: Device);
+  BEGIN
+    ASSERT(dev # NIL, Errors.PreCond);
+    SYSTEM.PUT(dev.CR + MCU.ACLR, {CR_UARTEN, CR_RXE, CR_TXE})
+  END Disable;
+
+
+  PROCEDURE Flags*(dev: Device): SET;
+    VAR flags: SET;
+  BEGIN
+    SYSTEM.GET(dev.FR, flags)
+    RETURN flags
+  END Flags;
+
+  (* configuration data *)
+
   PROCEDURE GetBaseCfg*(VAR cfg: DeviceCfg);
   (**
     stickyParityEn = Disabled,   hardware reset value
     dataBits       = WLENval_8,  hardware reset override
     fifoEn         = Disabled,   hardware reset value
     twoStopBitsEn  = Disabled,   hardware reset value
-    evenParityEn   = Disabled,   hardware reset value;
+    evenParityEn   = Disabled,   hardware reset value
     parityEn       = Disabled,   hardware reset value
     sendBreak      = Disabled,   hardware reset value
     --
@@ -183,26 +243,46 @@ MODULE UARTdev;
     cfg.sendBreak := BFX(x, LCR_H_BRK)
   END GetCurrentCfg;
 
+  (* interrupts *)
 
-  PROCEDURE Enable*(dev: Device);
+  PROCEDURE ConfigInt*(dev: Device; txFifoLvl, rxFifoLvl: INTEGER);
+    VAR x: INTEGER;
   BEGIN
-    ASSERT(dev # NIL, Errors.PreCond);
-    SYSTEM.PUT(dev.CR + MCU.ASET, {CR_UARTEN, CR_RXE, CR_TXE})
-  END Enable;
+    ASSERT(txFifoLvl IN {TXIFLSEL_val_18 .. TXIFLSEL_val_78});
+    ASSERT(rxFifoLvl IN {RXIFLSEL_val_18 .. RXIFLSEL_val_78});
+    x := txFifoLvl;
+    x := x + LSL(rxFifoLvl, IFLS_RXIFLSEL0);
+    SYSTEM.PUT(dev.IFLS, x)
+  END ConfigInt;
 
 
-  PROCEDURE Disable*(dev: Device);
+  PROCEDURE EnableInt*(dev: Device; intMask: SET);
   BEGIN
-    ASSERT(dev # NIL, Errors.PreCond);
-    SYSTEM.PUT(dev.CR + MCU.ACLR, {CR_UARTEN, CR_RXE, CR_TXE})
-  END Disable;
+    SYSTEM.PUT(dev.IMSC + MCU.ASET, intMask)
+  END EnableInt;
 
 
-  PROCEDURE Flags*(dev: Device): SET;
-    VAR flags: SET;
+  PROCEDURE DisableInt*(dev: Device; intMask: SET);
   BEGIN
-    SYSTEM.GET(dev.FR, flags)
-    RETURN flags
-  END Flags;
+    SYSTEM.PUT(dev.IMSC + MCU.ACLR, intMask)
+  END DisableInt;
+
+
+  PROCEDURE GetEnabledInt*(dev: Device; VAR enabled: SET);
+  BEGIN
+    SYSTEM.GET(dev.IMSC, enabled)
+  END GetEnabledInt;
+
+
+  PROCEDURE GetIntStatus*(dev: Device; VAR status: SET);
+  BEGIN
+    SYSTEM.GET(dev.MIS, status)
+  END GetIntStatus;
+
+
+  PROCEDURE ClearInt*(dev: Device; intMask: SET);
+  BEGIN
+    SYSTEM.PUT(dev.ICR + MCU.ASET, intMask)
+  END ClearInt;
 
 END UARTdev.

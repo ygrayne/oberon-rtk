@@ -151,6 +151,34 @@ CONST
   NVIC_ICPR* = M0PLUS_NVIC_ICPR;
   NVIC_IPR*  = M0PLUS_NVIC_IPR;
 
+  (* IRQ numbers *)
+  NVIC_TIMER_IRQ_0*    = 0;
+  NVIC_TIMER_IRQ_1*    = 1;
+  NVIC_TIMER_IRQ_2*    = 2;
+  NVIC_TIMER_IRQ_3*    = 3;
+  NVIC_PWM_IRQ_WRAP*   = 4;
+  NVIC_USBCTRL_IRQ*    = 5;
+  NVIC_XIP_IRQ*        = 6;
+  NVIC_PIO0_IRQ_0*     = 7;
+  NVIC_PIO0_IRQ_1*     = 8;
+  NVIC_PIO1_IRQ_0*     = 9;
+  NVIC_PIO1_IRQ_1*     = 10;
+  NVIC_DMA_IRQ_0*      = 11; (* config via MCU.DMA_INTE0 *)
+  NVIC_DMA_IRQ_1*      = 12; (* config via MCU.DMA_INTE1 *)
+  NVIC_IO_IRQ_BANK0*   = 13;
+  NVIC_IO_IRQ_QSPI*    = 14;
+  NVIC_SIO_IRQ_PROC0*  = 15;
+  NVIC_SIO_IRQ_PROC1*  = 16;
+  NVIC_CLOCKS_IRQ*     = 17;
+  NVIC_SPI0_IRQ*       = 18;
+  NVIC_SPI1_IRQ*       = 19;
+  NVIC_UART0_IRQ*      = 20;
+  NVIC_UART1_IRQ*      = 21;
+  NVIC_ADC_IRQ_FIFO*   = 22;
+  NVIC_I2C0_IRQ*       = 23;
+  NVIC_I2C1_IRQ*       = 24;
+  NVIC_RTC_IRQ*        = 25;
+
   (* system control block, SCB *)
   (* registers are core-specific, ie. not shared *)
   (* datasheet 2.4.4, p74 *)
@@ -215,23 +243,23 @@ CONST
   (* datasheet 2.5, p91 *)
   (* datasheet 2.5.7, p102 *)
   (* shared *)
-  DMA_Base = 050000000H;
-  DMA_CH0_READ_ADDR*             = DMA_Base;
-  DMA_CH0_WRITE_ADDR*            = DMA_Base + 0004H;
-  DMA_CH0_TRANS_COUNT*           = DMA_Base + 0008H;
-  DMA_CH0_CTRL_TRIG*             = DMA_Base + 000CH;
-  DMA_CH0_ALT1_CTRL*             = DMA_Base + 0010H;
-  DMA_CH0_ALT1_READ_ADDR*        = DMA_Base + 0014H;
-  DMA_CH0_ALT1_WRITE_ADDR*       = DMA_Base + 0018H;
-  DMA_CH0_ALT1_TRANS_COUNT_TRIG* = DMA_Base + 001CH;
-  DMA_CH0_ALT2_CTRL*             = DMA_Base + 0020H;
-  DMA_CH0_ALT2_TRANS_COUNT*      = DMA_Base + 0024H;
-  DMA_CH0_ALT2_READ_ADDR*        = DMA_Base + 0028H;
-  DMA_CH0_ALT2_WRITE_ADDR_TRIG*  = DMA_Base + 002CH;
-  DMA_CH0_ALT3_CTRL*             = DMA_Base + 0030H;
-  DMA_CH0_ALT3_WRITE_ADDR*       = DMA_Base + 0034H;
-  DMA_CH0_ALT3_TRANS_COUNT*      = DMA_Base + 0038H;
-  DMA_CH0_ALT3_READ_ADDR_TRIG*   = DMA_Base + 003CH;
+  DMA_Base* = 050000000H;
+  DMA_READ_ADDR_Offset*             = 0000H;
+  DMA_WRITE_ADDR_Offset*            = 0004H;
+  DMA_TRANS_COUNT_Offset*           = 0008H;
+  DMA_CTRL_TRIG_Offset*             = 000CH;
+  DMA_ALT1_CTRL_Offset*             = 0010H;
+  DMA_ALT1_READ_ADDR_Offset*        = 0014H;
+  DMA_ALT1_WRITE_ADDR_Offset*       = 0018H;
+  DMA_ALT1_TRANS_COUNT_TRIG_Offset* = 001CH;
+  DMA_ALT2_CTRL_Offset*             = 0020H;
+  DMA_ALT2_TRANS_COUNT_Offset*      = 0024H;
+  DMA_ALT2_READ_ADDR_Offset*        = 0028H;
+  DMA_ALT2_WRITE_ADDR_TRIG_Offset*  = 002CH;
+  DMA_ALT3_CTRL_Offset*             = 0030H;
+  DMA_ALT3_WRITE_ADDR_Offset*       = 0034H;
+  DMA_ALT3_TRANS_COUNT_Offset*      = 0038H;
+  DMA_ALT3_READ_ADDR_TRIG_Offset*   = 003CH;
   (* ... *)
   (* 16 registers per DMA channel, offset: 040H, range 0 to 11 *)
   (* ... *)
@@ -255,12 +283,55 @@ CONST
   DMA_CHAN_ABORT*   = DMA_Base + 0444H;
   DMA_N_CHANNELS*   = DMA_Base + 0448H;
 
-  DMA_CH0_DBG_CTDREQ* = DMA_Base + 0800H;
-  DMA_CH0_DBG_TCR*    = DMA_Base + 0800H;
+  DMA_DBG_Base* = DMA_Base + 8000H;
+  DMA_DBG_CTDREQ_Offset* = 0000H;
+  DMA_DBG_TCR_Offset*    = 0004H;
   (* ... *)
   (* 2 registers per channel, offset 040H, range 0 to 11 *)
   (* ... *)
   DMA_CH_DBG_Offset* = 040H;
+
+  (* DREQ *)
+  DMA_DREQ_PIO0_TX0*   = 0;
+  DMA_DREQ_PIO0_TX1*   = 1;
+  DMA_DREQ_PIO0_TX2*   = 2;
+  DMA_DREQ_PIO0_TX3*   = 3;
+  DMA_DREQ_PIO0_RX0*   = 4;
+  DMA_DREQ_PIO0_RX1*   = 5;
+  DMA_DREQ_PIO0_RX2*   = 6;
+  DMA_DREQ_PIO0_RX3*   = 7;
+  DMA_DREQ_PIO1_TX0*   = 8;
+  DMA_DREQ_PIO1_TX1*   = 9;
+  DMA_DREQ_PIO1_TX2*   = 10;
+  DMA_DREQ_PIO1_TX3*   = 11;
+  DMA_DREQ_PIO1_RX0*   = 12;
+  DMA_DREQ_PIO1_RX1*   = 13;
+  DMA_DREQ_PIO1_RX2*   = 14;
+  DMA_DREQ_PIO1_RX3*   = 15;
+  DMA_DREQ_SPI0_TX*    = 16;
+  DMA_DREQ_SPI0_RX*    = 17;
+  DMA_DREQ_SPI1_TX*    = 18;
+  DMA_DREQ_SPI1_RX*    = 19;
+  DMA_DREQ_UART0_TX*   = 20;
+  DMA_DREQ_UART0_RX*   = 21;
+  DMA_DREQ_UART1_TX*   = 22;
+  DMA_DREQ_UART1_RX*   = 23;
+  DMA_DREQ_PWM_WRAP0*  = 24;
+  DMA_DREQ_PWM_WRAP1*  = 25;
+  DMA_DREQ_PWM_WRAP2*  = 26;
+  DMA_DREQ_PWM_WRAP3*  = 27;
+  DMA_DREQ_PWM_WRAP4*  = 28;
+  DMA_DREQ_PWM_WRAP5*  = 29;
+  DMA_DREQ_PWM_WRAP6*  = 30;
+  DMA_DREQ_PWM_WRAP7*  = 31;
+  DMA_DREQ_IC20_TX*    = 32;
+  DMA_DREQ_IC20_RX*    = 33;
+  DMA_DREQ_IC21_TX*    = 34;
+  DMA_DREQ_IC21_RX*    = 35;
+  DMA_DREQ_ADC*        = 36;
+  DMA_DREQ_XIP_STREAM* = 37;
+  DMA_DREQ_XIP_SSITX*  = 38;
+  DMA_DREQ_XIP_SSIRX*  = 39;
 
 
   (* === single-cycle IO (SIO) === *)
