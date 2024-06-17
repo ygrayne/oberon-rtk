@@ -15,7 +15,7 @@ MODULE UARTint;
   IMPORT SYSTEM, MCU := MCU2, Main, Kernel, Out, Errors, GPIO, LEDext;
 
   CONST
-    MillisecsPerTick  = 10;
+    MillisecsPerTick  = 2;
     ThreadStackSize = 1024;
 
   VAR
@@ -62,6 +62,18 @@ MODULE UARTint;
         fill(ts, 42, "0");
         Out.String(ts);
         fill(ts, 42, "a");
+        Out.String(ts);
+      ELSIF Main.TestCase IN {4} THEN
+        fill(ts, 42, "0");
+        Out.String(ts);
+        Kernel.DelayMe(1);
+        fill(ts, 42, "a");
+        Out.String(ts);
+      ELSIF Main.TestCase IN {5} THEN
+        fill(ts, 80, "0");
+        Out.String(ts);
+        Kernel.DelayMe(1);
+        fill(ts, 80, "a");
         Out.String(ts);
       ELSE
         ASSERT(FALSE)
