@@ -708,6 +708,48 @@ CONST
   PIO0_Base* = 050200000H;
   PIO1_Base* = 050300000H;
 
+  PIO_CTRL_Offset*            = 0000H;
+  PIO_FSTAT_Offset*           = 0004H;
+  PIO_FDEBUG_Offset*          = 0008H;
+  PIO_FLEVEL_Offset*          = 000CH;
+  PIO_TXF0_Offset*            = 0010H;
+  PIO_TXF1_Offset*            = 0014H;
+  PIO_TXF2_Offset*            = 0018H;
+  PIO_TXF3_Offset*            = 001CH;
+  PIO_RXF0_Offset*            = 0020H;
+  PIO_RXF1_Offset*            = 0024H;
+  PIO_RXF2_Offset*            = 0028H;
+  PIO_RXF3_Offset*            = 002CH;
+  PIO_IRQ_Offset*             = 0030H;
+  PIO_IRQ_FORCE*              = 0034H;
+  PIO_INPUT_SYNC_BYPASS_Offset* = 0038H;
+  PIO_DBG_PADOUT_Offset*      = 003CH;
+  PIO_DBG_PADOE_Offset*       = 0040H;
+  PIO_DBG_CFGINFO_Offset*     = 0044H;
+
+  PIO_INSTR_MEM_Base_Offset*  = 0048H;  (* offset from PIO0_Base or PIO1_Base *)
+  PIO_INSTR_MEM_Offset*       = 0004H;  (* 32 registers, offset from PIO_INSTR_MEM_Base_Offset *)
+
+  PIO_SM0_Base_Offset*        = 00C8H;  (* offset from PIO0_Base or PIO1_Base *)
+  PIO_SM1_Base_Offset*        = 00E0H;
+  PIO_SM2_Base_Offset*        = 00F8H;
+  PIO_SM3_Base_Offset*        = 0110H;
+
+  PIO_SM_CLKDIV_Offset*       = 0000H;  (* offset from PIO_SMx_Base_Offset, x = 0 .. 3 *)
+  PIO_SM_EXECCTRL_Offset*     = 0004H;
+  PIO_SM_SHIFTCTRL_Offset*    = 0008H;
+  PIO_SM_ADDR_Offset*         = 000CH;
+  PIO_SM_INSTR_Offset*        = 0010H;
+  PIO_SM_PINCTRL_Offset*      = 0014H;
+
+  PIO_INTR_Offset*            = 0128H;  (* offset from PIO0_Base or PIO1_Base *)
+  PIO_IRQ0_INTE_Offset*       = 012CH;
+  PIO_IRQ0_INTF_Offset*       = 0130H;
+  PIO_IRQ0_INTS_Offset*       = 0134H;
+  PIO_IRQ1_INTE_Offset*       = 0138H;
+  PIO_IRQ1_INTF_Offset*       = 013CH;
+  PIO_IRQ1_INTS_Offset*       = 0140H;
+
 
   (* === peripherals === *)
   (* all peripherals are shared *)

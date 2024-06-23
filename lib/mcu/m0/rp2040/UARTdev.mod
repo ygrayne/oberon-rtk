@@ -97,7 +97,7 @@ MODULE UARTdev;
       intNo*: INTEGER;
       CR, IBRD, FBRD, LCR_H: INTEGER;
       TDR*, RDR*, FR*, RSR*: INTEGER;
-      DMACR, IFLS, IMSC, MIS, ICR: INTEGER
+      DMACR, IFLS, IMSC*, MIS, ICR: INTEGER
     END;
 
     DeviceCfg* = RECORD (* see ASSERTs in 'Configure' for valid values *)
@@ -245,7 +245,7 @@ MODULE UARTdev;
 
   (* interrupts *)
 
-  PROCEDURE ConfigInt*(dev: Device; txFifoLvl, rxFifoLvl: INTEGER);
+  PROCEDURE SetFifoLvl*(dev: Device; txFifoLvl, rxFifoLvl: INTEGER);
     VAR x: INTEGER;
   BEGIN
     ASSERT(txFifoLvl IN {TXIFLSEL_val_18 .. TXIFLSEL_val_78});
@@ -253,7 +253,7 @@ MODULE UARTdev;
     x := txFifoLvl;
     x := x + LSL(rxFifoLvl, IFLS_RXIFLSEL0);
     SYSTEM.PUT(dev.IFLS, x)
-  END ConfigInt;
+  END SetFifoLvl;
 
 
   PROCEDURE EnableInt*(dev: Device; intMask: SET);

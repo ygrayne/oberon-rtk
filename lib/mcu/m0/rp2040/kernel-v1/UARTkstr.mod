@@ -25,7 +25,7 @@ MODULE UARTkstr;
         SYSTEM.PUT(dev0.TDR, s[i]);
         INC(i)
       ELSE
-        Kernel.AwaitDeviceFlags(dev0.FR, {UARTdev.FR_TXFE}, {})
+        Kernel.AwaitDeviceFlags(dev0.FR, {UARTdev.FR_TXFE}, {}) (* empty *)
       END
     END
   END PutString;

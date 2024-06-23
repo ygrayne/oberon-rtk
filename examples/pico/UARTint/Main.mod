@@ -61,9 +61,9 @@ MODULE Main;
 
     UARTintStr.InstallIntHandlers(uartDev0);
     IF TestCase IN {0, 1, 3, 4, 5} THEN
-      UARTdev.ConfigInt(uartDev0, UARTdev.TXIFLSEL_val_48, 0)
+      UARTdev.SetFifoLvl(uartDev0, UARTdev.TXIFLSEL_val_48, 0)
     ELSIF TestCase IN {2} THEN
-      UARTdev.ConfigInt(uartDev0, UARTdev.TXIFLSEL_val_78, 0)
+      UARTdev.SetFifoLvl(uartDev0, UARTdev.TXIFLSEL_val_78, 0)
     ELSE
       ASSERT(FALSE)
     END;
