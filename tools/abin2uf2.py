@@ -6,7 +6,7 @@
 # --
 # Run with option -h for help.
 # --
-# Put into a directory on the PYTHONPATH, together with the default
+# Put into a directory on $PYTHONPATH, together with the default
 # bootstage 2 file, and run as 'python -m abin2uf2 ...'
 # No idea if that's the right way, but it works.
 # --

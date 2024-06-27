@@ -21,9 +21,13 @@
 /lib/mcu/m0/rp2040/kernel-v1/_keep
 /**/_*
 
+
 # add some files
 !*.ini
 !*.mod
 !*.md
 !*.txt
 !*.res
+!*.pio
+
+_*

@@ -3,7 +3,7 @@ MODULE PIO;
   Oberon RTK Framework
   --
   PIO device
-  Rudimentary implementation as of now, to get example program running.
+  Rudimentary implementation as of now, to get the example program running.
   See https://oberon-rtk.org/examples/piosquare/
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
@@ -55,6 +55,12 @@ MODULE PIO;
     SM_CLKDIV_INT0  = 16;
     SM_CLKDIV_FRAC1 = 15;
     SM_CLKDIV_FRAC0 = 8;
+
+    (* SM_EXECCTRL bits and values (per state machine) *)
+    SM_EXECCTRL_WRAP_TOP1     = 16;
+    SM_EXECCTRL_WRAP_TOP0     = 12;
+    SM_EXECCTRL_WRAP_BOTTOM1  = 11;
+    SM_EXECCTRL_WRAP_BOTTOM0  = 7;
 
   TYPE
     StateMachineRegs* = RECORD
@@ -138,17 +144,17 @@ MODULE PIO;
   END RestartClockDivs;
 
 
-  PROCEDURE LoadCode*(dev: Device; code: ARRAY OF INTEGER; offset, numInstr: INTEGER);
+  PROCEDURE PutCode*(dev: Device; code: ARRAY OF INTEGER; offset, numInstr: INTEGER);
     VAR i, regAddr: INTEGER;
   BEGIN
     ASSERT(offset + numInstr <= MaxNumInstr, Errors.ProgError);
-    regAddr := dev.INSTR_MEM + offset;
+    regAddr := dev.INSTR_MEM + (offset * MCU.PIO_INSTR_MEM_Offset);
     i := 0;
     WHILE i < numInstr DO
       SYSTEM.PUT(regAddr, code[i]);
       INC(i); INC(regAddr, MCU.PIO_INSTR_MEM_Offset)
     END
-  END LoadCode;
+  END PutCode;
 
 
   PROCEDURE ConfigPinsSet*(dev: Device; smNo: INTEGER; basePinNo, count: INTEGER);
@@ -169,5 +175,20 @@ MODULE PIO;
     SYSTEM.PUT(dev.SM[smNo].CLKDIV, x)
   END ConfigClockDiv;
 
-END PIO.
 
+  PROCEDURE ConfigWrap*(dev: Device; smNo: INTEGER; wrapBottom, wrapTop: INTEGER);
+    CONST ClearMask = {SM_EXECCTRL_WRAP_BOTTOM0 .. SM_EXECCTRL_WRAP_BOTTOM1, SM_EXECCTRL_WRAP_TOP0 .. SM_EXECCTRL_WRAP_TOP1};
+    VAR x: INTEGER;
+  BEGIN
+    x := LSL(wrapBottom, SM_EXECCTRL_WRAP_BOTTOM0) + LSL(wrapTop, SM_EXECCTRL_WRAP_TOP0);
+    SYSTEM.PUT(dev.SM[smNo].EXECCTRL + MCU.ACLR, ClearMask);
+    SYSTEM.PUT(dev.SM[smNo].EXECCTRL + MCU.ASET, x)
+  END ConfigWrap;
+
+
+  PROCEDURE SetStartAddr*(dev: Device; smNo: INTEGER; addr: INTEGER);
+  BEGIN
+    SYSTEM.PUT(dev.SM[smNo].INSTR, addr) (* JMP to addr *)
+  END SetStartAddr;
+
+END PIO.

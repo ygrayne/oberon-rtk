@@ -2,21 +2,39 @@ MODULE PIOsquarePio;
 (**
   Oberon RTK Framework
   Generated module from PIO assembly code.
-  Assembly program:
-    .program squarewave
+  Assembly programs:
+    .program square_wave
       set pindirs 1
     loop:
       set pins 1 [1]
       set pins 0
       jmp loop
+
+    .program square_wave_asym
+      set pindirs 1
+      .wrap_target
+      set pins 1 [1]
+      set pins 0
+      .wrap
 **)
 
-  PROCEDURE GetCode*(VAR code: ARRAY OF INTEGER; VAR n: INTEGER);
+  PROCEDURE GetCode*(progName: ARRAY OF CHAR; VAR code: ARRAY OF INTEGER; VAR numInstr, wrapTarget, wrap: INTEGER);
   BEGIN
-    code[0] := 0E081H;
-    code[1] := 0E101H;
-    code[2] := 0E000H;
-    code[3] := 00001H;
-    n := 4
+    IF progName = "square_wave" THEN
+      code[0] := 0E081H;
+      code[1] := 0E101H;
+      code[2] := 0E000H;
+      code[3] := 00001H;
+      numInstr := 4;
+      wrapTarget := 0;
+      wrap := 3
+    ELSIF progName = "square_wave_asym" THEN
+      code[0] := 0E081H;
+      code[1] := 0E101H;
+      code[2] := 0E000H;
+      numInstr := 3;
+      wrapTarget := 1;
+      wrap := 2
+    END;
   END GetCode;
 END PIOsquarePio.

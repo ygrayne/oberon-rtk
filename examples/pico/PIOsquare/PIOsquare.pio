@@ -1,0 +1,21 @@
+/**
+  Oberon RTK Framework
+  --
+  PIO programs for example program PIOsquare.
+  See https://oberon-rtk.org/examples/piosquare/
+**/
+
+    .program square_wave
+      set pindirs 1
+    loop:
+      set pins 1 [1]
+      set pins 0
+      jmp loop
+
+    .program square_wave_asym
+      set pindirs 1
+      .wrap_target
+      set pins 1 [1]
+      set pins 0
+      .wrap
+

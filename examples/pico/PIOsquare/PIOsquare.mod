@@ -15,26 +15,37 @@ MODULE PIOsquare;
   IMPORT Main, PIOsquarePio, PIO, GPIO, Out, Errors;
 
 (*
-  PIO; (* PIO assembly code *)
-    .program squarewave
+  PIOBEGIN
+    .program square_wave
       set pindirs 1
     loop:
       set pins 1 [1]
       set pins 0
       jmp loop
-  PIO.
+
+    .program square_wave_asym
+      set pindirs 1
+      .wrap_target
+      set pins 1 [1]
+      set pins 0
+      .wrap
+  PIOEND
 *)
 
   CONST
-    WavePinNo = 22;
+    WavePinNo0 = 16;
+    WavePinNo1 = 17;
     WaveNumPins = 1;
-    SM = PIO.SM0;
+    PIOprog0 = "square_wave";
+    PIOprog1 = "square_wave_asym";
+    SM0 = PIO.SM0;
+    SM1 = PIO.SM1;
 
   PROCEDURE run;
     VAR
       pioDev: PIO.Device;
       code: ARRAY PIO.MaxNumInstr OF INTEGER;
-      numInstr: INTEGER;
+      numInstr, wrap, wrapTarget, offset: INTEGER;
   BEGIN
     Out.String("init"); Out.Ln;
 
@@ -43,19 +54,29 @@ MODULE PIOsquare;
     PIO.Init(pioDev, PIO.PIO0);
     PIO.Configure(pioDev);
 
-    (* GPIO pin *)
-    GPIO.SetFunction(WavePinNo, GPIO.Fpio0);
-    GPIO.OutputEnable({WavePinNo});
-    GPIO.Clear({WavePinNo});
+    (* GPIO pins *)
+    GPIO.SetFunction(WavePinNo0, GPIO.Fpio0);
+    GPIO.SetFunction(WavePinNo1, GPIO.Fpio0);
 
     (* get and load PIO code *)
-    PIOsquarePio.GetCode(code, numInstr);
-    PIO.LoadCode(pioDev, code, 0, numInstr);
+    offset := 0;
+    PIOsquarePio.GetCode(PIOprog0, code, numInstr, wrapTarget, wrap);
+    PIO.PutCode(pioDev, code, offset, numInstr);
+    PIO.ConfigWrap(pioDev, SM0, wrapTarget, wrap);
+    PIO.SetStartAddr(pioDev, SM0, offset);
 
-    (* configure state machine *)
-    PIO.ConfigPinsSet(pioDev, SM, WavePinNo, WaveNumPins);
-    PIO.ConfigClockDiv(pioDev, SM, 0, 0);
-    PIO.EnableStateMachines(pioDev, {SM});
+    offset := offset + numInstr;
+    PIOsquarePio.GetCode(PIOprog1, code, numInstr, wrapTarget, wrap);
+    PIO.PutCode(pioDev, code, offset, numInstr);
+    PIO.ConfigWrap(pioDev, SM1, wrapTarget + offset, wrap + offset);
+    PIO.SetStartAddr(pioDev, SM1, offset);
+
+    (* configure state machines *)
+    PIO.ConfigPinsSet(pioDev, SM0, WavePinNo0, WaveNumPins);
+    PIO.ConfigPinsSet(pioDev, SM1, WavePinNo1, WaveNumPins);
+    PIO.ConfigClockDiv(pioDev, SM0, 0, 0);
+    PIO.ConfigClockDiv(pioDev, SM1, 0, 0);
+    PIO.EnableStateMachines(pioDev, {SM0, SM1});
 
     Out.String("waving..."); Out.Ln;
   END run;
@@ -63,4 +84,3 @@ MODULE PIOsquare;
 BEGIN
   run
 END PIOsquare.
-
