@@ -53,6 +53,13 @@ MODULE Terminals;
   END Open;
 
 
+  PROCEDURE Close*(termNo: INTEGER; VAR dev: TextIO.Device);
+  BEGIN
+    dev := W[termNo].dev;
+    W[termNo] := NIL
+  END Close;
+
+
   PROCEDURE OpenErr*(termNo: INTEGER; psp: TextIO.PutStringProc);
   (**
     Add an error output terminal, eg. using a simple busy-wait output.
