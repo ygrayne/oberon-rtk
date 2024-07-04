@@ -3,8 +3,9 @@ MODULE Kernel;
   Oberon RTK Framework
   Multi-threading kernel, first variant (Kernel-v1)
   --
-  Customised version for example programs, instrumented with GPIO pin
-  ops for thread tid = 1.
+  Customised version for example program with GPIO pins
+  for measuring the scheduler performance.
+  See https://oberon-rtk.org/examples/kernelperf/
   --
   Based on coroutines
   Multi-core
@@ -50,7 +51,7 @@ MODULE Kernel;
     ThreadRunningPinNo = 16;
     SlotInPinNo = 17;
     LoopRunningPinNo = 18;
-    Th1RunningPioNo = 19;
+    Th0RunningPioNo = 19;
 
 
   TYPE
@@ -354,9 +355,9 @@ MODULE Kernel;
         ctx.ct := ctx.ct.next; EXCL(ctx.queued, t.tid); (* slot out ctx.ct *)
         ctx.Ct := t;
         SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {ThreadRunningPinNo});
-        IF t.tid = 0 THEN SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {19}) END;
+        IF t.tid = 0 THEN SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {Th0RunningPioNo}) END;
         Coroutines.Transfer(ctx.loop, t.cor);
-        IF t.tid = 0 THEN SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {19}) END;
+        IF t.tid = 0 THEN SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {Th0RunningPioNo}) END;
         SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {ThreadRunningPinNo});
         ctx.Ct := NIL
       END;
@@ -426,7 +427,7 @@ BEGIN
   GPIO.SetFunction(ThreadRunningPinNo, GPIO.Fsio);
   GPIO.SetFunction(LoopRunningPinNo, GPIO.Fsio);
   GPIO.SetFunction(SlotInPinNo, GPIO.Fsio);
-  GPIO.SetFunction(Th1RunningPioNo, GPIO.Fsio);
-  GPIO.OutputEnable({ThreadRunningPinNo, LoopRunningPinNo, SlotInPinNo, Th1RunningPioNo});
-  GPIO.Clear({ThreadRunningPinNo, LoopRunningPinNo, SlotInPinNo, Th1RunningPioNo})
+  GPIO.SetFunction(Th0RunningPioNo, GPIO.Fsio);
+  GPIO.OutputEnable({ThreadRunningPinNo, LoopRunningPinNo, SlotInPinNo, Th0RunningPioNo});
+  GPIO.Clear({ThreadRunningPinNo, LoopRunningPinNo, SlotInPinNo, Th0RunningPioNo})
 END Kernel.
