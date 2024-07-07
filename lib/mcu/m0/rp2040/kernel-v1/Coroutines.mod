@@ -68,10 +68,6 @@ MODULE Coroutines;
   PROCEDURE Transfer*(f, t: Coroutine);
     CONST SP = 13;
   BEGIN
-  (*
-    ASSERT(f # NIL, Errors.PreCond);
-    ASSERT(t # NIL, Errors.PreCond);
-  *)
     (* enter "as" f, f's stack in use *)
     (* prologue: push caller's 'lr' and parameters 'f' and 't' onto f's stack *)
     (* stack: 0: 'f', +4: 't', +8: 'lr' *)

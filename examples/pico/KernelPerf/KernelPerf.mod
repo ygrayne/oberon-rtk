@@ -12,7 +12,7 @@ MODULE KernelPerf;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT Main, Kernel, Terminals, Out, TextIO, UARTkstr, Errors;
+  IMPORT SYSTEM, MCU := MCU2, Main, Kernel, Terminals, Out, TextIO, UARTkstr, Errors;
 
   CONST
     MillisecsPerTick  = 8;
@@ -27,7 +27,10 @@ MODULE KernelPerf;
     TestString40 = "1234567890123456789012345678901234567890";
     TestString50 = "12345678901234567890123456789012345678901234567890";
 
-    TestCase = 0;
+    TestCase = 12;
+
+    ThreadRunningPinNo = 16;
+    Th0RunningPioNo = 19;
 
   VAR
     t: ARRAY NumThreads OF Kernel.Thread;
@@ -47,7 +50,11 @@ MODULE KernelPerf;
       ELSE
         ASSERT(FALSE)
       END;
-      Kernel.Next
+      SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {ThreadRunningPinNo});
+      SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {Th0RunningPioNo});
+      Kernel.Next;
+      SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {Th0RunningPioNo});
+      SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {ThreadRunningPinNo})
     UNTIL FALSE
   END t0c;
 
@@ -60,7 +67,9 @@ MODULE KernelPerf;
       WHILE cnt < maxCount DO
         INC(cnt)
       END;
-      Kernel.Next
+      SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {ThreadRunningPinNo});
+      Kernel.Next;
+      SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {ThreadRunningPinNo})
     UNTIL FALSE
   END tc;
 
@@ -115,7 +124,7 @@ MODULE KernelPerf;
     CONST MaxThreads = 16;
     VAR prio: INTEGER;
   BEGIN
-    IF TestCase IN {0 ..10, 12} THEN
+    IF TestCase IN {0 .. 10, 12} THEN
       prio := Kernel.DefaultPrio
     ELSIF TestCase IN {11} THEN
       prio := MaxThreads - tid

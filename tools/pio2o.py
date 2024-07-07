@@ -155,12 +155,12 @@ def main():
     # arguments
     import argparse
     parser = argparse.ArgumentParser(
-    prog = "pio2o",
-    description="Create an Oberon module for PIO assembly code. 'pioasm' is used to assemble the \
-        PIO code, which then can be accessed from the Oberon module." ,
-    epilog = "PIO source code can be extracted from an Oberon module (.mod), \
-        or read from a separate file (.pio). In the Oberon module, place \
-        the code inside a comment and keywords {} and {}.".format(PIOBEGIN, PIOEND))
+        prog = "pio2o",
+        description = "Create an Oberon module for PIO assembly code. 'pioasm' is used to assemble the \
+            PIO code, which then can be accessed from the Oberon module." ,
+        epilog = "PIO source code can be extracted from an Oberon module (.mod), \
+            or read from a separate file (.pio). In the Oberon module, place \
+            the code inside a comment and keywords {} and {}.".format(PIOBEGIN, PIOEND))
     parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="print feedback")
     parser.add_argument("-o", dest="module", help="output module name (Oberon)")
     parser.add_argument("ifn", help="input file (.mod or .pio)")

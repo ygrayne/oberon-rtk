@@ -15,7 +15,7 @@
 # Copyright (c) 2023-2024 Gray, gray@graraven.org
 # https://oberon-rtk.org/licences/
 
-# The accompanying 'bootstage2.uf2' binary is
+# The accompanying 'boot2.uf2' binary is
 # Copyright (c) 2019-2021 Raspberry Pi (Trading) Ltd.
 # SPDX-Licence-Identifier: BSD-3-Clause
 
@@ -28,16 +28,16 @@ import shutil
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="print too much feedback")
-parser.add_argument("ifn", help="input file (binary)")
-parser.add_argument("-o", "--ofn", help="output file (uf2), default: ifn.uf2")
-parser.add_argument("-l", "--lfn", help="bootstage 2 file (uf2), default: 'bootstage2.uf2'")
+parser.add_argument("ifn", help="input file (.bin)")
+parser.add_argument("-o", "--ofn", help="output file (.uf2), default: ifn.uf2")
+parser.add_argument("-l", "--lfn", help="bootstage 2 file (.uf2), default: 'boot2.uf2'")
 parser.add_argument("-d", "--drive", dest="drv", help="install drive, eg. 'F:'")
 
 args = parser.parse_args()
 
 # The default bootstage 2 file is in the scripts directory
-runDir = os.path.dirname(os.path.realpath(sys.argv[0])) + "/"
-if args.lfn == None: lfn = runDir + "bootstage2.uf2"
+run_dir = os.path.dirname(os.path.realpath(sys.argv[0])) + "/"
+if args.lfn == None: lfn = run_dir + "boot2.uf2"
 else: lfn = args.lfn
 
 if args.ofn == None: ofn = os.path.splitext(args.ifn)[0] + ".uf2"

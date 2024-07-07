@@ -354,11 +354,7 @@ MODULE Kernel;
         t := ctx.ct;
         ctx.ct := ctx.ct.next; EXCL(ctx.queued, t.tid); (* slot out ctx.ct *)
         ctx.Ct := t;
-        SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {ThreadRunningPinNo});
-        IF t.tid = 0 THEN SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {Th0RunningPioNo}) END;
         Coroutines.Transfer(ctx.loop, t.cor);
-        IF t.tid = 0 THEN SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {Th0RunningPioNo}) END;
-        SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {ThreadRunningPinNo});
         ctx.Ct := NIL
       END;
     UNTIL FALSE
