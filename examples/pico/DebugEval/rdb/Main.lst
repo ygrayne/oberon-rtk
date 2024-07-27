@@ -1,0 +1,207 @@
+.     0  <Pad: 0>
+MODULE Main;
+(**
+  Oberon RTK Framework
+  --
+  Main module
+  --
+  MCU: Cortex-M0+ RP2040, tested on Pico
+  --
+  Copyright (c) 2023 - 2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT
+    (* the first row of modules "auto-init", keep their order in the list *)
+    (* ignore the "is not used" warnings... :) *)
+    (* LinkOptions is the first import of Config *)
+    Config, Clocks, Memory, RuntimeErrors,
+    RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr;
+
+  CONST
+    Baudrate0 = 38400; (* terminal 0 *)
+    Baudrate1 = 38400;
+    Core0 = 0;
+    Core1 = 1;
+    TERM0 = Terminals.TERM0;
+    TERM1 = Terminals.TERM1;
+    UART0 = UARTdev.UART0;
+    UART1 = UARTdev.UART1;
+    UART0_TxPinNo = 0;
+    UART0_RxPinNo = 1;
+    UART1_TxPinNo = 4;
+    UART1_RxPinNo = 5;
+
+
+  PROCEDURE configPins(txPinNo, rxPinNo: INTEGER);
+  BEGIN
+.     4     04H  0B503H          push     { r0, r1, lr }
+    GPIO.SetFunction(txPinNo, GPIO.Fuart);
+.     6     06H  09800H          ldr      r0,[sp]
+.     8     08H  02102H          movs     r1,#2
+.    10     0AH  004020000H      bl.w     Ext Proc #2
+.    14     0EH  0E000H          b        0 -> 18
+.    16  <LineNo: 37>
+    GPIO.SetFunction(rxPinNo, GPIO.Fuart)
+.    18    012H  09801H          ldr      r0,[sp,#4]
+.    20    014H  02102H          movs     r1,#2
+  END configPins;
+.    22    016H  004020005H      bl.w     Ext Proc #2
+.    26    01AH  0E000H          b        0 -> 30
+.    28  <LineNo: 38>
+.    30    01EH  0B002H          add      sp,#8
+.    32    020H  0BD00H          pop      { pc }
+.    34    022H  046C0H          nop
+
+
+  PROCEDURE init;
+    VAR
+      uartDev0, uartDev1: UARTdev.Device;
+      uartCfg: UARTdev.DeviceCfg;
+  BEGIN
+.    36    024H  0B500H          push     { lr }
+.    38    026H  0B089H          sub      sp,#36
+    (* define UART cfg *)
+    UARTdev.GetBaseCfg(uartCfg);
+.    40    028H  0A802H          add      r0,sp,#8
+.    42    02AH  04937H          ldr      r1,[pc,#220] -> 264
+.    44    02CH  004080000H      bl.w     Ext Proc #8
+.    48    030H  0E000H          b        0 -> 52
+.    50  <LineNo: 48>
+    uartCfg.fifoEn := UARTdev.Enabled;
+.    52    034H  02001H          movs     r0,#1
+.    54    036H  09004H          str      r0,[sp,#16]
+
+    (* configure the pins and pads *)
+    configPins(UART0_TxPinNo, UART0_RxPinNo);
+.    56    038H  02000H          movs     r0,#0
+.    58    03AH  02101H          movs     r1,#1
+.    60    03CH  0F7FFFFE2H      bl.w     -60 -> 4
+.    64    040H  0E000H          b        0 -> 68
+.    66  <LineNo: 52>
+    configPins(UART1_TxPinNo, UART1_RxPinNo);
+.    68    044H  02004H          movs     r0,#4
+.    70    046H  02105H          movs     r1,#5
+.    72    048H  0F7FFFFDCH      bl.w     -72 -> 4
+.    76    04CH  0E000H          b        0 -> 80
+.    78  <LineNo: 53>
+
+    (* open text IO to/from two serial terminals *)
+    Terminals.InitUART(UART0, uartCfg, Baudrate0, uartDev0);
+.    80    050H  02000H          movs     r0,#0
+.    82    052H  0A902H          add      r1,sp,#8
+.    84    054H  04A2CH          ldr      r2,[pc,#176] -> 264
+.    86    056H  0234BH          movs     r3,#75
+.    88    058H  0025BH          lsls     r3,r3,#9
+.    90    05AH  0466CH          mov      r4,sp
+.    92    05CH  004040000H      bl.w     Ext Proc #4
+.    96    060H  0E000H          b        0 -> 100
+.    98  <LineNo: 56>
+    Terminals.Open(TERM0, uartDev0, UARTstr.PutString, UARTstr.GetString);
+.   100    064H  02000H          movs     r0,#0
+.   102    066H  09900H          ldr      r1,[sp]
+.   104    068H  04A28H          ldr      r2,[pc,#160] -> 268
+.   106    06AH  04B29H          ldr      r3,[pc,#164] -> 272
+.   108    06CH  00405002EH      bl.w     Ext Proc #5
+.   112    070H  0E000H          b        0 -> 116
+.   114  <LineNo: 57>
+    Terminals.InitUART(UART1, uartCfg, Baudrate1, uartDev1);
+.   116    074H  02001H          movs     r0,#1
+.   118    076H  0A902H          add      r1,sp,#8
+.   120    078H  04A23H          ldr      r2,[pc,#140] -> 264
+.   122    07AH  0234BH          movs     r3,#75
+.   124    07CH  0025BH          lsls     r3,r3,#9
+.   126    07EH  0AC01H          add      r4,sp,#4
+.   128    080H  004040036H      bl.w     Ext Proc #4
+.   132    084H  0E000H          b        0 -> 136
+.   134  <LineNo: 58>
+    Terminals.Open(TERM1, uartDev1, UARTstr.PutString, UARTstr.GetString);
+.   136    088H  02001H          movs     r0,#1
+.   138    08AH  09901H          ldr      r1,[sp,#4]
+.   140    08CH  04A1FH          ldr      r2,[pc,#124] -> 268
+.   142    08EH  04B20H          ldr      r3,[pc,#128] -> 272
+.   144    090H  004050040H      bl.w     Ext Proc #5
+.   148    094H  0E000H          b        0 -> 152
+.   150  <LineNo: 59>
+
+    (* init Out and In to use the string buffers or terminals *)
+    Out.Open(Terminals.W[0], Terminals.W[1]);
+.   152    098H  0481EH          ldr      r0,[pc,#120] -> 276
+.   154    09AH  06800H          ldr      r0,[r0]
+.   156    09CH  0491DH          ldr      r1,[pc,#116] -> 276
+.   158    09EH  06849H          ldr      r1,[r1,#4]
+.   160    0A0H  004010000H      bl.w     Ext Proc #1
+.   164    0A4H  0E000H          b        0 -> 168
+.   166  <LineNo: 62>
+    In.Open(Terminals.R[0], Terminals.R[1]);
+.   168    0A8H  0481BH          ldr      r0,[pc,#108] -> 280
+.   170    0AAH  06800H          ldr      r0,[r0]
+.   172    0ACH  0491AH          ldr      r1,[pc,#104] -> 280
+.   174    0AEH  06849H          ldr      r1,[r1,#4]
+.   176    0B0H  004010000H      bl.w     Ext Proc #1
+.   180    0B4H  0E000H          b        0 -> 184
+.   182  <LineNo: 63>
+
+    (* init run-time error printing *)
+    (* error output on core 0 to terminal 0 *)
+    (* use error output writer *)
+    Terminals.OpenErr(TERM0, UARTstr.PutString);
+.   184    0B8H  02000H          movs     r0,#0
+.   186    0BAH  04914H          ldr      r1,[pc,#80] -> 268
+.   188    0BCH  004070048H      bl.w     Ext Proc #7
+.   192    0C0H  0E000H          b        0 -> 196
+.   194  <LineNo: 68>
+    RuntimeErrorsOut.SetWriter(Core0, Terminals.Werr[0]);
+.   196    0C4H  02000H          movs     r0,#0
+.   198    0C6H  04915H          ldr      r1,[pc,#84] -> 284
+.   200    0C8H  06809H          ldr      r1,[r1]
+.   202    0CAH  004040000H      bl.w     Ext Proc #4
+.   206    0CEH  0E000H          b        0 -> 210
+.   208  <LineNo: 69>
+    RuntimeErrors.SetHandler(Core0, RuntimeErrorsOut.HandleException);
+.   210    0D2H  02000H          movs     r0,#0
+.   212    0D4H  04912H          ldr      r1,[pc,#72] -> 288
+.   214    0D6H  004090000H      bl.w     Ext Proc #9
+.   218    0DAH  0E000H          b        0 -> 222
+.   220  <LineNo: 70>
+
+    (* error output on core 1 to terminal 1 *)
+    (* use error output writer *)
+    Terminals.OpenErr(TERM1, UARTstr.PutString);
+.   222    0DEH  02001H          movs     r0,#1
+.   224    0E0H  0490AH          ldr      r1,[pc,#40] -> 268
+.   226    0E2H  00407005EH      bl.w     Ext Proc #7
+.   230    0E6H  0E000H          b        0 -> 234
+.   232  <LineNo: 74>
+    RuntimeErrorsOut.SetWriter(Core1, Terminals.Werr[1]);
+.   234    0EAH  02001H          movs     r0,#1
+.   236    0ECH  0490BH          ldr      r1,[pc,#44] -> 284
+.   238    0EEH  06849H          ldr      r1,[r1,#4]
+.   240    0F0H  004040065H      bl.w     Ext Proc #4
+.   244    0F4H  0E000H          b        0 -> 248
+.   246  <LineNo: 75>
+    RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException);
+.   248    0F8H  02001H          movs     r0,#1
+.   250    0FAH  04909H          ldr      r1,[pc,#36] -> 288
+.   252    0FCH  00409006BH      bl.w     Ext Proc #9
+.   256   0100H  0E000H          b        0 -> 260
+.   258  <LineNo: 76>
+  END init;
+.   260   0104H  0B009H          add      sp,#36
+.   262   0106H  0BD00H          pop      { pc }
+.   264  <Global: 002020016H  02020016H>
+.   268  <Global: 001020000H  01020000H>
+.   272  <Global: 001040086H  01040086H>
+.   276  <Global: 000010071H  010071H>
+.   280  <Global: 00003008AH  03008AH>
+.   284  <Global: 00002008CH  02008CH>
+.   288  <Global: 001030078H  01030078H>
+
+BEGIN
+.   292   0124H  0B500H          push     { lr }
+  init
+END Main.
+.   294   0126H  0F7FFFF7DH      bl.w     -262 -> 36
+.   298   012AH  0E000H          b        0 -> 302
+.   300  <LineNo: 80>
+.   302   012EH  0BD00H          pop      { pc }

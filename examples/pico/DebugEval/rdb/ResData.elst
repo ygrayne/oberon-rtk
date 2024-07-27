@@ -1,0 +1,645 @@
+.     0    010002D68H   <Pad: 0>
+MODULE ResData;
+(** =========================================================================
+   Astrobe Library Functions for Resource Data
+
+   (c) 2009-2021 CFB Software
+   https://www.astrobe.com
+
+   ========================================================================= *)
+
+IMPORT Error, LinkOptions, SYSTEM;
+
+CONST
+  (* ID: "OB7R" in hex *)
+  OB7R = 05237424FH;
+  VersionOffset = 4;
+  NameOffset = 8;
+  TypeOffset = 16;
+  BytesOffset = 20;
+  DataOffset = 24;
+
+  (* Data type *)
+  Binary* = 0;
+  Text* = 1;
+
+TYPE
+  Name = ARRAY 12 OF CHAR;
+  Resource* = RECORD
+    dataStart, nBytes, nItems: INTEGER
+  END;
+.     4    010002D6CH   <Type: 12>
+.     8    010002D70H   <Type: 0>
+.    12    010002D74H   <Type: 0>
+.    16    010002D78H   <Type: 0>
+.    20    010002D7CH   <Type: 0>
+
+  DirEntry* = RECORD
+    name*: Name;
+    size*: INTEGER
+  END;
+.    24    010002D80H   <Type: 16>
+.    28    010002D84H   <Type: 0>
+.    32    010002D88H   <Type: 0>
+.    36    010002D8CH   <Type: 0>
+.    40    010002D90H   <Type: 0>
+
+
+  PROCEDURE* Size*(r: Resource): INTEGER;
+    RETURN r.nBytes
+.    44    010002D94H        0B503H    push     { r0, r1, lr }
+  END Size;
+.    46    010002D96H        09800H    ldr      r0,[sp]
+.    48    010002D98H        06840H    ldr      r0,[r0,#4]
+.    50    010002D9AH        0B002H    add      sp,#8
+.    52    010002D9CH        0BD00H    pop      { pc }
+.    54    010002D9EH        046C0H    nop
+
+
+  PROCEDURE* GetInt*(r: Resource; index: INTEGER; VAR data: INTEGER);
+  BEGIN
+.    56    010002DA0H        0B50FH    push     { r0, r1, r2, r3, lr }
+    ASSERT(index <= r.nItems, Error.index);
+.    58    010002DA2H        09802H    ldr      r0,[sp,#8]
+.    60    010002DA4H        09900H    ldr      r1,[sp]
+.    62    010002DA6H        06889H    ldr      r1,[r1,#8]
+.    64    010002DA8H        04288H    cmp      r0,r1
+.    66    010002DAAH        0DD01H    ble.n    2 -> 72
+.    68    010002DACH        0DF16H    svc      22
+.    70    010002DAEH   <LineNo: 44>
+    SYSTEM.GET(r.dataStart + (index * 4), data)
+.    72    010002DB0H        09802H    ldr      r0,[sp,#8]
+.    74    010002DB2H          080H    lsls     r0,r0,#2
+.    76    010002DB4H        09900H    ldr      r1,[sp]
+.    78    010002DB6H        06809H    ldr      r1,[r1]
+.    80    010002DB8H        01808H    adds     r0,r1,r0
+  END GetInt;
+.    82    010002DBAH        06801H    ldr      r1,[r0]
+.    84    010002DBCH        09A03H    ldr      r2,[sp,#12]
+.    86    010002DBEH        06011H    str      r1,[r2]
+.    88    010002DC0H        0B004H    add      sp,#16
+.    90    010002DC2H        0BD00H    pop      { pc }
+
+
+  PROCEDURE* GetByte*(r: Resource; index: INTEGER; VAR data: BYTE);
+  BEGIN
+.    92    010002DC4H        0B50FH    push     { r0, r1, r2, r3, lr }
+    ASSERT(index <= r.nBytes, Error.index);
+.    94    010002DC6H        09802H    ldr      r0,[sp,#8]
+.    96    010002DC8H        09900H    ldr      r1,[sp]
+.    98    010002DCAH        06849H    ldr      r1,[r1,#4]
+.   100    010002DCCH        04288H    cmp      r0,r1
+.   102    010002DCEH        0DD01H    ble.n    2 -> 108
+.   104    010002DD0H        0DF16H    svc      22
+.   106    010002DD2H   <LineNo: 51>
+    SYSTEM.GET(r.dataStart + index, data)
+.   108    010002DD4H        09800H    ldr      r0,[sp]
+.   110    010002DD6H        06800H    ldr      r0,[r0]
+.   112    010002DD8H        09902H    ldr      r1,[sp,#8]
+.   114    010002DDAH        01840H    adds     r0,r0,r1
+  END GetByte;
+.   116    010002DDCH        07801H    ldrb     r1,[r0]
+.   118    010002DDEH        09A03H    ldr      r2,[sp,#12]
+.   120    010002DE0H        07011H    strb     r1,[r2]
+.   122    010002DE2H        0B004H    add      sp,#16
+.   124    010002DE4H        0BD00H    pop      { pc }
+.   126    010002DE6H        046C0H    nop
+
+
+  PROCEDURE* GetChar*(r: Resource; index: INTEGER; VAR ch: CHAR);
+  BEGIN
+.   128    010002DE8H        0B50FH    push     { r0, r1, r2, r3, lr }
+    ASSERT(index <= r.nBytes, Error.index);
+.   130    010002DEAH        09802H    ldr      r0,[sp,#8]
+.   132    010002DECH        09900H    ldr      r1,[sp]
+.   134    010002DEEH        06849H    ldr      r1,[r1,#4]
+.   136    010002DF0H        04288H    cmp      r0,r1
+.   138    010002DF2H        0DD01H    ble.n    2 -> 144
+.   140    010002DF4H        0DF16H    svc      22
+.   142    010002DF6H   <LineNo: 58>
+    SYSTEM.GET(r.dataStart + index, ch)
+.   144    010002DF8H        09800H    ldr      r0,[sp]
+.   146    010002DFAH        06800H    ldr      r0,[r0]
+.   148    010002DFCH        09902H    ldr      r1,[sp,#8]
+.   150    010002DFEH        01840H    adds     r0,r0,r1
+  END GetChar;
+.   152    010002E00H        07801H    ldrb     r1,[r0]
+.   154    010002E02H        09A03H    ldr      r2,[sp,#12]
+.   156    010002E04H        07011H    strb     r1,[r2]
+.   158    010002E06H        0B004H    add      sp,#16
+.   160    010002E08H        0BD00H    pop      { pc }
+.   162    010002E0AH        046C0H    nop
+
+
+  PROCEDURE* GetIntArray*(r: Resource; index: INTEGER; count: INTEGER; VAR items: ARRAY OF INTEGER): INTEGER;
+  VAR
+    i, p: INTEGER;
+  BEGIN
+.   164    010002E0CH        0B53FH    push     { r0, r1, r2, r3, r4, r5, lr }
+.   166    010002E0EH        0B082H    sub      sp,#8
+    ASSERT(index <= r.nItems, Error.index);
+.   168    010002E10H        09804H    ldr      r0,[sp,#16]
+.   170    010002E12H        09902H    ldr      r1,[sp,#8]
+.   172    010002E14H        06889H    ldr      r1,[r1,#8]
+.   174    010002E16H        04288H    cmp      r0,r1
+.   176    010002E18H        0DD01H    ble.n    2 -> 182
+.   178    010002E1AH        0DF16H    svc      22
+.   180    010002E1CH   <LineNo: 67>
+    IF index + count > r.nItems THEN count := r.nItems - index + 1 END;
+.   182    010002E1EH        09804H    ldr      r0,[sp,#16]
+.   184    010002E20H        09905H    ldr      r1,[sp,#20]
+.   186    010002E22H        01840H    adds     r0,r0,r1
+.   188    010002E24H        09902H    ldr      r1,[sp,#8]
+.   190    010002E26H        06889H    ldr      r1,[r1,#8]
+.   192    010002E28H        04288H    cmp      r0,r1
+.   194    010002E2AH        0DC01H    bgt.n    2 -> 200
+.   196    010002E2CH        0E006H    b        12 -> 212
+.   198    010002E2EH        046C0H    nop
+.   200    010002E30H        09802H    ldr      r0,[sp,#8]
+.   202    010002E32H        06880H    ldr      r0,[r0,#8]
+.   204    010002E34H        09904H    ldr      r1,[sp,#16]
+.   206    010002E36H        01A40H    subs     r0,r0,r1
+.   208    010002E38H        03001H    adds     r0,#1
+.   210    010002E3AH        09005H    str      r0,[sp,#20]
+    ASSERT(count <= LEN(items), Error.index);
+.   212    010002E3CH        09805H    ldr      r0,[sp,#20]
+.   214    010002E3EH        09907H    ldr      r1,[sp,#28]
+.   216    010002E40H        04288H    cmp      r0,r1
+.   218    010002E42H        0DD01H    ble.n    2 -> 224
+.   220    010002E44H        0DF16H    svc      22
+.   222    010002E46H   <LineNo: 69>
+    p := r.dataStart + (index * 4);
+.   224    010002E48H        09804H    ldr      r0,[sp,#16]
+.   226    010002E4AH          080H    lsls     r0,r0,#2
+.   228    010002E4CH        09902H    ldr      r1,[sp,#8]
+.   230    010002E4EH        06809H    ldr      r1,[r1]
+.   232    010002E50H        01808H    adds     r0,r1,r0
+.   234    010002E52H        09001H    str      r0,[sp,#4]
+    FOR i := 0 TO count - 1 DO
+.   236    010002E54H        02000H    movs     r0,#0
+.   238    010002E56H        09000H    str      r0,[sp]
+.   240    010002E58H        09805H    ldr      r0,[sp,#20]
+.   242    010002E5AH        03801H    subs     r0,#1
+      SYSTEM.GET(p, items[i]);
+.   244    010002E5CH        09900H    ldr      r1,[sp]
+.   246    010002E5EH        04281H    cmp      r1,r0
+.   248    010002E60H        0DD01H    ble.n    2 -> 254
+.   250    010002E62H        0E00EH    b        28 -> 282
+.   252    010002E64H        046C0H    nop
+.   254    010002E66H        09800H    ldr      r0,[sp]
+.   256    010002E68H        09906H    ldr      r1,[sp,#24]
+.   258    010002E6AH          080H    lsls     r0,r0,#2
+.   260    010002E6CH        01808H    adds     r0,r1,r0
+.   262    010002E6EH        09901H    ldr      r1,[sp,#4]
+.   264    010002E70H        0680AH    ldr      r2,[r1]
+.   266    010002E72H        06002H    str      r2,[r0]
+      INC(p, 4)
+    END;
+.   268    010002E74H        09801H    ldr      r0,[sp,#4]
+.   270    010002E76H        03004H    adds     r0,#4
+.   272    010002E78H        09001H    str      r0,[sp,#4]
+.   274    010002E7AH        09800H    ldr      r0,[sp]
+.   276    010002E7CH        03001H    adds     r0,#1
+.   278    010002E7EH        09000H    str      r0,[sp]
+.   280    010002E80H        0E7EAH    b        -44 -> 240
+    RETURN count
+  END GetIntArray;
+.   282    010002E82H        09805H    ldr      r0,[sp,#20]
+.   284    010002E84H        0B008H    add      sp,#32
+.   286    010002E86H        0BD00H    pop      { pc }
+
+
+  PROCEDURE* GetReal*(r: Resource; index: INTEGER; VAR data: REAL);
+  BEGIN
+.   288    010002E88H        0B50FH    push     { r0, r1, r2, r3, lr }
+    ASSERT(index < r.nItems, Error.index);
+.   290    010002E8AH        09802H    ldr      r0,[sp,#8]
+.   292    010002E8CH        09900H    ldr      r1,[sp]
+.   294    010002E8EH        06889H    ldr      r1,[r1,#8]
+.   296    010002E90H        04288H    cmp      r0,r1
+.   298    010002E92H        0DB01H    blt.n    2 -> 304
+.   300    010002E94H        0DF16H    svc      22
+.   302    010002E96H   <LineNo: 81>
+    SYSTEM.GET(r.dataStart + (index * 4), data)
+.   304    010002E98H        09802H    ldr      r0,[sp,#8]
+.   306    010002E9AH          080H    lsls     r0,r0,#2
+.   308    010002E9CH        09900H    ldr      r1,[sp]
+.   310    010002E9EH        06809H    ldr      r1,[r1]
+.   312    010002EA0H        01808H    adds     r0,r1,r0
+  END GetReal;
+.   314    010002EA2H        06801H    ldr      r1,[r0]
+.   316    010002EA4H        09A03H    ldr      r2,[sp,#12]
+.   318    010002EA6H        06011H    str      r1,[r2]
+.   320    010002EA8H        0B004H    add      sp,#16
+.   322    010002EAAH        0BD00H    pop      { pc }
+
+
+  PROCEDURE* GetRealArray*(r: Resource; index: INTEGER; count: INTEGER; VAR items: ARRAY OF REAL): INTEGER;
+  VAR
+    i, p: INTEGER;
+  BEGIN
+.   324    010002EACH        0B53FH    push     { r0, r1, r2, r3, r4, r5, lr }
+.   326    010002EAEH        0B082H    sub      sp,#8
+    ASSERT(index <= r.nItems, Error.index);
+.   328    010002EB0H        09804H    ldr      r0,[sp,#16]
+.   330    010002EB2H        09902H    ldr      r1,[sp,#8]
+.   332    010002EB4H        06889H    ldr      r1,[r1,#8]
+.   334    010002EB6H        04288H    cmp      r0,r1
+.   336    010002EB8H        0DD01H    ble.n    2 -> 342
+.   338    010002EBAH        0DF16H    svc      22
+.   340    010002EBCH   <LineNo: 90>
+    IF index + count > r.nItems THEN count := r.nItems - index + 1 END;
+.   342    010002EBEH        09804H    ldr      r0,[sp,#16]
+.   344    010002EC0H        09905H    ldr      r1,[sp,#20]
+.   346    010002EC2H        01840H    adds     r0,r0,r1
+.   348    010002EC4H        09902H    ldr      r1,[sp,#8]
+.   350    010002EC6H        06889H    ldr      r1,[r1,#8]
+.   352    010002EC8H        04288H    cmp      r0,r1
+.   354    010002ECAH        0DC01H    bgt.n    2 -> 360
+.   356    010002ECCH        0E006H    b        12 -> 372
+.   358    010002ECEH        046C0H    nop
+.   360    010002ED0H        09802H    ldr      r0,[sp,#8]
+.   362    010002ED2H        06880H    ldr      r0,[r0,#8]
+.   364    010002ED4H        09904H    ldr      r1,[sp,#16]
+.   366    010002ED6H        01A40H    subs     r0,r0,r1
+.   368    010002ED8H        03001H    adds     r0,#1
+.   370    010002EDAH        09005H    str      r0,[sp,#20]
+    ASSERT(count <= LEN(items), Error.index);
+.   372    010002EDCH        09805H    ldr      r0,[sp,#20]
+.   374    010002EDEH        09907H    ldr      r1,[sp,#28]
+.   376    010002EE0H        04288H    cmp      r0,r1
+.   378    010002EE2H        0DD01H    ble.n    2 -> 384
+.   380    010002EE4H        0DF16H    svc      22
+.   382    010002EE6H   <LineNo: 92>
+    p := r.dataStart + (index * 4);
+.   384    010002EE8H        09804H    ldr      r0,[sp,#16]
+.   386    010002EEAH          080H    lsls     r0,r0,#2
+.   388    010002EECH        09902H    ldr      r1,[sp,#8]
+.   390    010002EEEH        06809H    ldr      r1,[r1]
+.   392    010002EF0H        01808H    adds     r0,r1,r0
+.   394    010002EF2H        09001H    str      r0,[sp,#4]
+    FOR i := 0 TO count - 1 DO
+.   396    010002EF4H        02000H    movs     r0,#0
+.   398    010002EF6H        09000H    str      r0,[sp]
+.   400    010002EF8H        09805H    ldr      r0,[sp,#20]
+.   402    010002EFAH        03801H    subs     r0,#1
+      SYSTEM.GET(p, items[i]);
+.   404    010002EFCH        09900H    ldr      r1,[sp]
+.   406    010002EFEH        04281H    cmp      r1,r0
+.   408    010002F00H        0DD01H    ble.n    2 -> 414
+.   410    010002F02H        0E00EH    b        28 -> 442
+.   412    010002F04H        046C0H    nop
+.   414    010002F06H        09800H    ldr      r0,[sp]
+.   416    010002F08H        09906H    ldr      r1,[sp,#24]
+.   418    010002F0AH          080H    lsls     r0,r0,#2
+.   420    010002F0CH        01808H    adds     r0,r1,r0
+.   422    010002F0EH        09901H    ldr      r1,[sp,#4]
+.   424    010002F10H        0680AH    ldr      r2,[r1]
+.   426    010002F12H        06002H    str      r2,[r0]
+      INC(p, 4)
+    END;
+.   428    010002F14H        09801H    ldr      r0,[sp,#4]
+.   430    010002F16H        03004H    adds     r0,#4
+.   432    010002F18H        09001H    str      r0,[sp,#4]
+.   434    010002F1AH        09800H    ldr      r0,[sp]
+.   436    010002F1CH        03001H    adds     r0,#1
+.   438    010002F1EH        09000H    str      r0,[sp]
+.   440    010002F20H        0E7EAH    b        -44 -> 400
+    RETURN count
+  END GetRealArray;
+.   442    010002F22H        09805H    ldr      r0,[sp,#20]
+.   444    010002F24H        0B008H    add      sp,#32
+.   446    010002F26H        0BD00H    pop      { pc }
+
+
+  PROCEDURE* GetName(adr: INTEGER; VAR resName: Name);
+  VAR
+    i: INTEGER;
+    s: ARRAY 4 OF CHAR;
+  BEGIN
+.   448    010002F28H        0B503H    push     { r0, r1, lr }
+.   450    010002F2AH        0B082H    sub      sp,#8
+    SYSTEM.GET(adr, s);
+.   452    010002F2CH        09802H    ldr      r0,[sp,#8]
+.   454    010002F2EH        06801H    ldr      r1,[r0]
+.   456    010002F30H        09101H    str      r1,[sp,#4]
+    FOR i := 0 TO 3 DO resName[i] := s[i] END;
+.   458    010002F32H        02000H    movs     r0,#0
+.   460    010002F34H        09000H    str      r0,[sp]
+.   462    010002F36H        09800H    ldr      r0,[sp]
+.   464    010002F38H        02803H    cmp      r0,#3
+.   466    010002F3AH        0DD01H    ble.n    2 -> 472
+.   468    010002F3CH        0E00CH    b        24 -> 496
+.   470    010002F3EH        046C0H    nop
+.   472    010002F40H        09800H    ldr      r0,[sp]
+.   474    010002F42H        09903H    ldr      r1,[sp,#12]
+.   476    010002F44H        01808H    adds     r0,r1,r0
+.   478    010002F46H        09900H    ldr      r1,[sp]
+.   480    010002F48H        0466AH    mov      r2,sp
+.   482    010002F4AH        01851H    adds     r1,r2,r1
+.   484    010002F4CH        07909H    ldrb     r1,[r1,#4]
+.   486    010002F4EH        07001H    strb     r1,[r0]
+.   488    010002F50H        09800H    ldr      r0,[sp]
+.   490    010002F52H        03001H    adds     r0,#1
+.   492    010002F54H        09000H    str      r0,[sp]
+.   494    010002F56H        0E7EEH    b        -36 -> 462
+    SYSTEM.GET(adr + 4, s);
+.   496    010002F58H        09802H    ldr      r0,[sp,#8]
+.   498    010002F5AH        03004H    adds     r0,#4
+.   500    010002F5CH        06801H    ldr      r1,[r0]
+.   502    010002F5EH        09101H    str      r1,[sp,#4]
+    FOR i := 0 TO 3 DO resName[i + 4] := s[i] END;
+.   504    010002F60H        02000H    movs     r0,#0
+.   506    010002F62H        09000H    str      r0,[sp]
+.   508    010002F64H        09800H    ldr      r0,[sp]
+.   510    010002F66H        02803H    cmp      r0,#3
+.   512    010002F68H        0DD01H    ble.n    2 -> 518
+.   514    010002F6AH        0E00DH    b        26 -> 544
+.   516    010002F6CH        046C0H    nop
+.   518    010002F6EH        09800H    ldr      r0,[sp]
+.   520    010002F70H        03004H    adds     r0,#4
+.   522    010002F72H        09903H    ldr      r1,[sp,#12]
+.   524    010002F74H        01808H    adds     r0,r1,r0
+.   526    010002F76H        09900H    ldr      r1,[sp]
+.   528    010002F78H        0466AH    mov      r2,sp
+.   530    010002F7AH        01851H    adds     r1,r2,r1
+.   532    010002F7CH        07909H    ldrb     r1,[r1,#4]
+.   534    010002F7EH        07001H    strb     r1,[r0]
+.   536    010002F80H        09800H    ldr      r0,[sp]
+.   538    010002F82H        03001H    adds     r0,#1
+.   540    010002F84H        09000H    str      r0,[sp]
+.   542    010002F86H        0E7EDH    b        -38 -> 508
+    resName[8] := 0X
+  END GetName;
+.   544    010002F88H        02000H    movs     r0,#0
+.   546    010002F8AH        09903H    ldr      r1,[sp,#12]
+.   548    010002F8CH        07208H    strb     r0,[r1,#8]
+.   550    010002F8EH        0B004H    add      sp,#16
+.   552    010002F90H        0BD00H    pop      { pc }
+.   554    010002F92H        046C0H    nop
+
+
+  PROCEDURE* Count*(): INTEGER;
+  VAR
+    i, resSize, resStart: INTEGER;
+    id: INTEGER;
+  BEGIN
+.   556    010002F94H        0B500H    push     { lr }
+.   558    010002F96H        0B084H    sub      sp,#16
+    resStart := LinkOptions.ResourceStart;
+.   560    010002F98H        04811H    ldr      r0,[pc,#68] -> 632 ; Global: 02002FFE8H
+.   562    010002F9AH        06800H    ldr      r0,[r0]
+.   564    010002F9CH        09002H    str      r0,[sp,#8]
+    SYSTEM.GET(resStart, id);
+.   566    010002F9EH        09802H    ldr      r0,[sp,#8]
+.   568    010002FA0H        06801H    ldr      r1,[r0]
+.   570    010002FA2H        09103H    str      r1,[sp,#12]
+    i := 0;
+.   572    010002FA4H        02000H    movs     r0,#0
+.   574    010002FA6H        09000H    str      r0,[sp]
+    WHILE (id = OB7R) DO
+.   576    010002FA8H        09803H    ldr      r0,[sp,#12]
+.   578    010002FAAH        0490CH    ldr      r1,[pc,#48] -> 628 ; Const: 05237424FH 1379353167
+.   580    010002FACH        04288H    cmp      r0,r1
+.   582    010002FAEH        0D001H    beq.n    2 -> 588
+.   584    010002FB0H        0E010H    b        32 -> 620
+.   586    010002FB2H        046C0H    nop
+      SYSTEM.GET(resStart + BytesOffset, resSize);
+.   588    010002FB4H        09802H    ldr      r0,[sp,#8]
+.   590    010002FB6H        03014H    adds     r0,#20
+.   592    010002FB8H        06801H    ldr      r1,[r0]
+.   594    010002FBAH        09101H    str      r1,[sp,#4]
+      resStart := resStart + DataOffset + resSize;
+.   596    010002FBCH        09802H    ldr      r0,[sp,#8]
+.   598    010002FBEH        03018H    adds     r0,#24
+.   600    010002FC0H        09901H    ldr      r1,[sp,#4]
+.   602    010002FC2H        01840H    adds     r0,r0,r1
+.   604    010002FC4H        09002H    str      r0,[sp,#8]
+      SYSTEM.GET(resStart, id);
+.   606    010002FC6H        09802H    ldr      r0,[sp,#8]
+.   608    010002FC8H        06801H    ldr      r1,[r0]
+.   610    010002FCAH        09103H    str      r1,[sp,#12]
+      INC(i)
+    END;
+.   612    010002FCCH        09800H    ldr      r0,[sp]
+.   614    010002FCEH        03001H    adds     r0,#1
+.   616    010002FD0H        09000H    str      r0,[sp]
+.   618    010002FD2H        0E7E9H    b        -46 -> 576
+    RETURN i
+  END Count;
+.   620    010002FD4H        09800H    ldr      r0,[sp]
+.   622    010002FD6H        0B004H    add      sp,#16
+.   624    010002FD8H        0BD00H    pop      { pc }
+.   626    010002FDAH        046C0H    nop
+.   628    010002FDCH   <Const: 05237424FH 1379353167>
+.   632    010002FE0H   <Global: 02002FFE8H>
+
+
+  PROCEDURE GetDirectory*(VAR list: ARRAY OF DirEntry);
+  VAR
+    i, resStart, resSize: INTEGER;
+    id: INTEGER;
+  BEGIN
+.   636    010002FE4H        0B503H    push     { r0, r1, lr }
+.   638    010002FE6H        0B084H    sub      sp,#16
+    resStart := LinkOptions.ResourceStart;
+.   640    010002FE8H        04820H    ldr      r0,[pc,#128] -> 772 ; Global: 02002FFE8H
+.   642    010002FEAH        06800H    ldr      r0,[r0]
+.   644    010002FECH        09001H    str      r0,[sp,#4]
+    SYSTEM.GET(resStart, id);
+.   646    010002FEEH        09801H    ldr      r0,[sp,#4]
+.   648    010002FF0H        06801H    ldr      r1,[r0]
+.   650    010002FF2H        09103H    str      r1,[sp,#12]
+    i := 0;
+.   652    010002FF4H        02000H    movs     r0,#0
+.   654    010002FF6H        09000H    str      r0,[sp]
+    WHILE (id = OB7R) & (i < LEN(list)) DO
+.   656    010002FF8H        09803H    ldr      r0,[sp,#12]
+.   658    010002FFAH        0491BH    ldr      r1,[pc,#108] -> 768 ; Const: 05237424FH 1379353167
+.   660    010002FFCH        04288H    cmp      r0,r1
+.   662    010002FFEH        0D001H    beq.n    2 -> 668
+.   664    010003000H        0E030H    b        96 -> 764
+.   666    010003002H        046C0H    nop
+.   668    010003004H        09800H    ldr      r0,[sp]
+.   670    010003006H        09905H    ldr      r1,[sp,#20]
+.   672    010003008H        04288H    cmp      r0,r1
+.   674    01000300AH        0DB01H    blt.n    2 -> 680
+.   676    01000300CH        0E02AH    b        84 -> 764
+.   678    01000300EH        046C0H    nop
+      GetName(resStart + NameOffset, list[i].name);
+.   680    010003010H        09801H    ldr      r0,[sp,#4]
+.   682    010003012H        03008H    adds     r0,#8
+.   684    010003014H        09900H    ldr      r1,[sp]
+.   686    010003016H        09A05H    ldr      r2,[sp,#20]
+.   688    010003018H        04291H    cmp      r1,r2
+.   690    01000301AH        0D301H    bcc.n    2 -> 696
+.   692    01000301CH        0DF01H    svc      1
+.   694    01000301EH   <LineNo: 142>
+.   696    010003020H        09A04H    ldr      r2,[sp,#16]
+.   698    010003022H         0109H    lsls     r1,r1,#4
+.   700    010003024H        01851H    adds     r1,r2,r1
+.   702    010003026H    0F7FFFF7FH    bl.w     ResData.GetName
+.   706    01000302AH        0E000H    b        0 -> 710
+.   708    01000302CH   <LineNo: 142>
+      SYSTEM.GET(resStart + BytesOffset, resSize);
+.   710    01000302EH        09801H    ldr      r0,[sp,#4]
+.   712    010003030H        03014H    adds     r0,#20
+.   714    010003032H        06801H    ldr      r1,[r0]
+.   716    010003034H        09102H    str      r1,[sp,#8]
+      list[i].size := resSize;
+.   718    010003036H        09800H    ldr      r0,[sp]
+.   720    010003038H        09905H    ldr      r1,[sp,#20]
+.   722    01000303AH        04288H    cmp      r0,r1
+.   724    01000303CH        0D301H    bcc.n    2 -> 730
+.   726    01000303EH        0DF01H    svc      1
+.   728    010003040H   <LineNo: 144>
+.   730    010003042H        09904H    ldr      r1,[sp,#16]
+.   732    010003044H         0100H    lsls     r0,r0,#4
+.   734    010003046H        01808H    adds     r0,r1,r0
+.   736    010003048H        09902H    ldr      r1,[sp,#8]
+.   738    01000304AH        060C1H    str      r1,[r0,#12]
+      resStart := resStart + DataOffset + resSize;
+.   740    01000304CH        09801H    ldr      r0,[sp,#4]
+.   742    01000304EH        03018H    adds     r0,#24
+.   744    010003050H        09902H    ldr      r1,[sp,#8]
+.   746    010003052H        01840H    adds     r0,r0,r1
+.   748    010003054H        09001H    str      r0,[sp,#4]
+      SYSTEM.GET(resStart, id);
+.   750    010003056H        09801H    ldr      r0,[sp,#4]
+.   752    010003058H        06801H    ldr      r1,[r0]
+.   754    01000305AH        09103H    str      r1,[sp,#12]
+      INC(i)
+    END
+.   756    01000305CH        09800H    ldr      r0,[sp]
+.   758    01000305EH        03001H    adds     r0,#1
+.   760    010003060H        09000H    str      r0,[sp]
+.   762    010003062H        0E7C9H    b        -110 -> 656
+  END GetDirectory;
+.   764    010003064H        0B006H    add      sp,#24
+.   766    010003066H        0BD00H    pop      { pc }
+.   768    010003068H   <Const: 05237424FH 1379353167>
+.   772    01000306CH   <Global: 02002FFE8H>
+
+
+  PROCEDURE Open*(VAR r: Resource; name: ARRAY OF CHAR);
+  VAR
+    version, dataType, resStart, resSize: INTEGER;
+    id: INTEGER;
+    resName: Name;
+  BEGIN
+.   776    010003070H        0B50FH    push     { r0, r1, r2, r3, lr }
+.   778    010003072H        0B088H    sub      sp,#32
+    r.nBytes := 0;
+.   780    010003074H        02000H    movs     r0,#0
+.   782    010003076H        09908H    ldr      r1,[sp,#32]
+.   784    010003078H        06048H    str      r0,[r1,#4]
+    r.dataStart := 0;
+.   786    01000307AH        02000H    movs     r0,#0
+.   788    01000307CH        09908H    ldr      r1,[sp,#32]
+.   790    01000307EH        06008H    str      r0,[r1]
+    r.nItems := 0;
+.   792    010003080H        02000H    movs     r0,#0
+.   794    010003082H        09908H    ldr      r1,[sp,#32]
+.   796    010003084H        06088H    str      r0,[r1,#8]
+    resStart := LinkOptions.ResourceStart;
+.   798    010003086H        04828H    ldr      r0,[pc,#160] -> 960 ; Global: 02002FFE8H
+.   800    010003088H        06800H    ldr      r0,[r0]
+.   802    01000308AH        09002H    str      r0,[sp,#8]
+    SYSTEM.GET(resStart, id);
+.   804    01000308CH        09802H    ldr      r0,[sp,#8]
+.   806    01000308EH        06801H    ldr      r1,[r0]
+.   808    010003090H        09104H    str      r1,[sp,#16]
+    ASSERT(id = OB7R, Error.data);
+.   810    010003092H        09804H    ldr      r0,[sp,#16]
+.   812    010003094H        04923H    ldr      r1,[pc,#140] -> 956 ; Const: 05237424FH 1379353167
+.   814    010003096H        04288H    cmp      r0,r1
+.   816    010003098H        0D001H    beq.n    2 -> 822
+.   818    01000309AH        0DF15H    svc      21
+.   820    01000309CH   <LineNo: 163>
+    WHILE id = OB7R DO
+.   822    01000309EH        09804H    ldr      r0,[sp,#16]
+.   824    0100030A0H        04920H    ldr      r1,[pc,#128] -> 956 ; Const: 05237424FH 1379353167
+.   826    0100030A2H        04288H    cmp      r0,r1
+.   828    0100030A4H        0D001H    beq.n    2 -> 834
+.   830    0100030A6H        0E03AH    b        116 -> 950
+.   832    0100030A8H        046C0H    nop
+      GetName(resStart + NameOffset, resName);
+.   834    0100030AAH        09802H    ldr      r0,[sp,#8]
+.   836    0100030ACH        03008H    adds     r0,#8
+.   838    0100030AEH        0A905H    add      r1,sp,#20
+.   840    0100030B0H    0F7FFFF3AH    bl.w     ResData.GetName
+.   844    0100030B4H        0E000H    b        0 -> 848
+.   846    0100030B6H   <LineNo: 165>
+      SYSTEM.GET(resStart + VersionOffset, version);
+.   848    0100030B8H        09802H    ldr      r0,[sp,#8]
+.   850    0100030BAH        03004H    adds     r0,#4
+.   852    0100030BCH        06801H    ldr      r1,[r0]
+.   854    0100030BEH        09100H    str      r1,[sp]
+      ASSERT(version = 1, Error.version);
+.   856    0100030C0H        09800H    ldr      r0,[sp]
+.   858    0100030C2H        02801H    cmp      r0,#1
+.   860    0100030C4H        0D001H    beq.n    2 -> 866
+.   862    0100030C6H        0DF17H    svc      23
+.   864    0100030C8H   <LineNo: 167>
+      SYSTEM.GET(resStart + BytesOffset, resSize);
+.   866    0100030CAH        09802H    ldr      r0,[sp,#8]
+.   868    0100030CCH        03014H    adds     r0,#20
+.   870    0100030CEH        06801H    ldr      r1,[r0]
+.   872    0100030D0H        09103H    str      r1,[sp,#12]
+      IF name = resName THEN
+.   874    0100030D2H        02000H    movs     r0,#0
+.   876    0100030D4H        0990AH    ldr      r1,[sp,#40]
+.   878    0100030D6H        0AA05H    add      r2,sp,#20
+.   880    0100030D8H        05C0BH    ldrb     r3,[r1,r0]
+.   882    0100030DAH        05C14H    ldrb     r4,[r2,r0]
+.   884    0100030DCH        03001H    adds     r0,#1
+.   886    0100030DEH        042A3H    cmp      r3,r4
+.   888    0100030E0H        0D101H    bne.n    2 -> 894
+.   890    0100030E2H        02B00H    cmp      r3,#0
+.   892    0100030E4H        0D1F8H    bne.n    -16 -> 880
+.   894    0100030E6H        0D001H    beq.n    2 -> 900
+.   896    0100030E8H        0E010H    b        32 -> 932
+.   898    0100030EAH        046C0H    nop
+        r.nBytes := resSize;
+.   900    0100030ECH        09803H    ldr      r0,[sp,#12]
+.   902    0100030EEH        09908H    ldr      r1,[sp,#32]
+.   904    0100030F0H        06048H    str      r0,[r1,#4]
+        SYSTEM.GET(resStart + TypeOffset, dataType);
+.   906    0100030F2H        09802H    ldr      r0,[sp,#8]
+.   908    0100030F4H        03010H    adds     r0,#16
+.   910    0100030F6H        06801H    ldr      r1,[r0]
+.   912    0100030F8H        09101H    str      r1,[sp,#4]
+        r.dataStart := resStart + DataOffset;
+.   914    0100030FAH        09802H    ldr      r0,[sp,#8]
+.   916    0100030FCH        03018H    adds     r0,#24
+.   918    0100030FEH        09908H    ldr      r1,[sp,#32]
+.   920    010003100H        06008H    str      r0,[r1]
+        r.nItems := r.nBytes DIV 4
+      END;
+.   922    010003102H        09808H    ldr      r0,[sp,#32]
+.   924    010003104H        06840H    ldr      r0,[r0,#4]
+.   926    010003106H        01080H    asrs     r0,r0,#2
+.   928    010003108H        09908H    ldr      r1,[sp,#32]
+.   930    01000310AH        06088H    str      r0,[r1,#8]
+      resStart := resStart + DataOffset + resSize;
+.   932    01000310CH        09802H    ldr      r0,[sp,#8]
+.   934    01000310EH        03018H    adds     r0,#24
+.   936    010003110H        09903H    ldr      r1,[sp,#12]
+.   938    010003112H        01840H    adds     r0,r0,r1
+.   940    010003114H        09002H    str      r0,[sp,#8]
+      SYSTEM.GET(resStart, id)
+    END
+.   942    010003116H        09802H    ldr      r0,[sp,#8]
+.   944    010003118H        06801H    ldr      r1,[r0]
+.   946    01000311AH        09104H    str      r1,[sp,#16]
+.   948    01000311CH        0E7BFH    b        -130 -> 822
+  END Open;
+.   950    01000311EH        0B00CH    add      sp,#48
+.   952    010003120H        0BD00H    pop      { pc }
+.   954    010003122H        046C0H    nop
+.   956    010003124H   <Const: 05237424FH 1379353167>
+.   960    010003128H   <Global: 02002FFE8H>
+
+END ResData.
+.   964    01000312CH        0B500H    push     { lr }
+.   966    01000312EH        0BD00H    pop      { pc }

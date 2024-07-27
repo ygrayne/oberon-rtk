@@ -59,7 +59,8 @@ MODULE Main;
 
     Terminals.Open(TERM1, uartDev1, UARTstr.PutString, UARTstr.GetString);
 
-    (* see https://oberon-rtk.org/examples/nobusywaiting
+    (* see https://oberon-rtk.org/examples/nobusywaiting *)
+    (*
     Terminals.Open(TERM1, uartDev1, UARTkstr.PutString, UARTkstr.GetString);
     *)
 

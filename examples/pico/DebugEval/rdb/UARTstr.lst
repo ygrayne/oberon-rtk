@@ -1,0 +1,322 @@
+.     0  <Pad: 0>
+MODULE UARTstr;
+(**
+  Oberon RTK Framework
+  --
+  UART string device driver, kernel not required (busy waiting)
+  --
+  * string IO procedures
+  * hw-buffered (fifo)
+  --
+  Copyright (c) 2020-2024 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, UARTdev, TextIO;
+
+
+  PROCEDURE* PutChar*(dev: TextIO.Device; ch: CHAR);
+    VAR dev0: UARTdev.Device;
+  BEGIN
+.     4     04H  0B503H          push     { r0, r1, lr }
+.     6     06H  0B081H          sub      sp,#4
+    dev0 := dev(UARTdev.Device);
+.     8     08H  09801H          ldr      r0,[sp,#4]
+.    10     0AH  04A0AH          ldr      r2,[pc,#40] -> 52
+.    12     0CH  05881H          ldr      r1,[r0,r2]
+.    14     0EH  06849H          ldr      r1,[r1,#4]
+.    16    010H  04A09H          ldr      r2,[pc,#36] -> 56
+.    18    012H  04291H          cmp      r1,r2
+.    20    014H  0D001H          beq.n    2 -> 26
+.    22    016H  0DF02H          svc      2
+.    24  <LineNo: 20>
+.    26    01AH  09000H          str      r0,[sp]
+    REPEAT UNTIL ~SYSTEM.BIT(dev0.FR, UARTdev.FR_TXFF); (* not full *)
+.    28    01CH  09800H          ldr      r0,[sp]
+.    30    01EH  06A40H          ldr      r0,[r0,#36]
+.    32    020H  06801H          ldr      r1,[r0]
+.    34    022H  00689H          lsls     r1,r1,#26
+.    36    024H  0D4FAH          bmi.n    -12 -> 28
+    SYSTEM.PUT(dev0.TDR, ch)
+  END PutChar;
+.    38    026H  09800H          ldr      r0,[sp]
+.    40    028H  069C0H          ldr      r0,[r0,#28]
+.    42    02AH  0A902H          add      r1,sp,#8
+.    44    02CH  07809H          ldrb     r1,[r1]
+.    46    02EH  07001H          strb     r1,[r0]
+.    48    030H  0B003H          add      sp,#12
+.    50    032H  0BD00H          pop      { pc }
+.    52  <Const: 0FFFFFFFCH  -4>
+.    56  <Global: 002010000H  02010000H>
+
+
+  PROCEDURE PutString*(dev: TextIO.Device; s: ARRAY OF CHAR; numChar: INTEGER);
+    VAR dev0: UARTdev.Device; i: INTEGER;
+  BEGIN
+.    60    03CH  0B50FH          push     { r0, r1, r2, r3, lr }
+.    62    03EH  0B082H          sub      sp,#8
+    dev0 := dev(UARTdev.Device);
+.    64    040H  09802H          ldr      r0,[sp,#8]
+.    66    042H  04A19H          ldr      r2,[pc,#100] -> 168
+.    68    044H  05881H          ldr      r1,[r0,r2]
+.    70    046H  06849H          ldr      r1,[r1,#4]
+.    72    048H  04A18H          ldr      r2,[pc,#96] -> 172
+.    74    04AH  04291H          cmp      r1,r2
+.    76    04CH  0D001H          beq.n    2 -> 82
+.    78    04EH  0DF02H          svc      2
+.    80  <LineNo: 29>
+.    82    052H  09000H          str      r0,[sp]
+    IF numChar > LEN(s) THEN numChar := LEN(s) END;
+.    84    054H  09805H          ldr      r0,[sp,#20]
+.    86    056H  09904H          ldr      r1,[sp,#16]
+.    88    058H  04288H          cmp      r0,r1
+.    90    05AH  0DC01H          bgt.n    2 -> 96
+.    92    05CH  0E002H          b        4 -> 100
+.    94    05EH  046C0H          nop
+.    96    060H  09804H          ldr      r0,[sp,#16]
+.    98    062H  09005H          str      r0,[sp,#20]
+    i := 0;
+.   100    064H  02000H          movs     r0,#0
+.   102    066H  09001H          str      r0,[sp,#4]
+    WHILE i < numChar DO
+.   104    068H  09801H          ldr      r0,[sp,#4]
+.   106    06AH  09905H          ldr      r1,[sp,#20]
+.   108    06CH  04288H          cmp      r0,r1
+.   110    06EH  0DB01H          blt.n    2 -> 116
+.   112    070H  0E017H          b        46 -> 162
+.   114    072H  046C0H          nop
+      IF ~SYSTEM.BIT(dev0.FR, UARTdev.FR_TXFF) THEN (* not full *)
+.   116    074H  09800H          ldr      r0,[sp]
+.   118    076H  06A40H          ldr      r0,[r0,#36]
+.   120    078H  06801H          ldr      r1,[r0]
+.   122    07AH  00689H          lsls     r1,r1,#26
+.   124    07CH  0D501H          bpl.n    2 -> 130
+.   126    07EH  0E00FH          b        30 -> 160
+.   128    080H  046C0H          nop
+        SYSTEM.PUT(dev0.TDR, s[i]);
+.   130    082H  09801H          ldr      r0,[sp,#4]
+.   132    084H  09904H          ldr      r1,[sp,#16]
+.   134    086H  04288H          cmp      r0,r1
+.   136    088H  0D301H          bcc.n    2 -> 142
+.   138    08AH  0DF01H          svc      1
+.   140  <LineNo: 34>
+.   142    08EH  09903H          ldr      r1,[sp,#12]
+.   144    090H  01808H          adds     r0,r1,r0
+.   146    092H  09900H          ldr      r1,[sp]
+.   148    094H  069C9H          ldr      r1,[r1,#28]
+.   150    096H  07800H          ldrb     r0,[r0]
+.   152    098H  07008H          strb     r0,[r1]
+        INC(i)
+      END
+.   154    09AH  09801H          ldr      r0,[sp,#4]
+.   156    09CH  03001H          adds     r0,#1
+.   158    09EH  09001H          str      r0,[sp,#4]
+    END
+.   160    0A0H  0E7E2H          b        -60 -> 104
+  END PutString;
+.   162    0A2H  0B006H          add      sp,#24
+.   164    0A4H  0BD00H          pop      { pc }
+.   166    0A6H  046C0H          nop
+.   168  <Const: 0FFFFFFFCH  -4>
+.   172  <Global: 00201001CH  0201001CH>
+
+
+  PROCEDURE* GetChar*(dev: TextIO.Device; VAR ch: CHAR);
+    VAR dev0: UARTdev.Device;
+  BEGIN
+.   176    0B0H  0B503H          push     { r0, r1, lr }
+.   178    0B2H  0B081H          sub      sp,#4
+    dev0 := dev(UARTdev.Device);
+.   180    0B4H  09801H          ldr      r0,[sp,#4]
+.   182    0B6H  04A0AH          ldr      r2,[pc,#40] -> 224
+.   184    0B8H  05881H          ldr      r1,[r0,r2]
+.   186    0BAH  06849H          ldr      r1,[r1,#4]
+.   188    0BCH  04A09H          ldr      r2,[pc,#36] -> 228
+.   190    0BEH  04291H          cmp      r1,r2
+.   192    0C0H  0D001H          beq.n    2 -> 198
+.   194    0C2H  0DF02H          svc      2
+.   196  <LineNo: 44>
+.   198    0C6H  09000H          str      r0,[sp]
+    REPEAT UNTIL ~SYSTEM.BIT(dev0.FR, UARTdev.FR_RXFE);
+.   200    0C8H  09800H          ldr      r0,[sp]
+.   202    0CAH  06A40H          ldr      r0,[r0,#36]
+.   204    0CCH  06801H          ldr      r1,[r0]
+.   206    0CEH  006C9H          lsls     r1,r1,#27
+.   208    0D0H  0D4FAH          bmi.n    -12 -> 200
+    SYSTEM.GET(dev0.RDR, ch)
+  END GetChar;
+.   210    0D2H  09800H          ldr      r0,[sp]
+.   212    0D4H  06A00H          ldr      r0,[r0,#32]
+.   214    0D6H  07801H          ldrb     r1,[r0]
+.   216    0D8H  09A02H          ldr      r2,[sp,#8]
+.   218    0DAH  07011H          strb     r1,[r2]
+.   220    0DCH  0B003H          add      sp,#12
+.   222    0DEH  0BD00H          pop      { pc }
+.   224  <Const: 0FFFFFFFCH  -4>
+.   228  <Global: 002010056H  02010056H>
+
+
+  PROCEDURE GetString*(dev: TextIO.Device; VAR s: ARRAY OF CHAR; VAR numCh, res: INTEGER);
+    VAR dev0: UARTdev.Device; bufLimit: INTEGER; ch: CHAR;
+  BEGIN
+.   232    0E8H  0B51FH          push     { r0, r1, r2, r3, r4, lr }
+.   234    0EAH  0B083H          sub      sp,#12
+    dev0 := dev(UARTdev.Device);
+.   236    0ECH  09803H          ldr      r0,[sp,#12]
+.   238    0EEH  04A32H          ldr      r2,[pc,#200] -> 440
+.   240    0F0H  05881H          ldr      r1,[r0,r2]
+.   242    0F2H  06849H          ldr      r1,[r1,#4]
+.   244    0F4H  04A31H          ldr      r2,[pc,#196] -> 444
+.   246    0F6H  04291H          cmp      r1,r2
+.   248    0F8H  0D001H          beq.n    2 -> 254
+.   250    0FAH  0DF02H          svc      2
+.   252  <LineNo: 53>
+.   254    0FEH  09000H          str      r0,[sp]
+    bufLimit := LEN(s) - 1; (* space for 0X *)
+.   256   0100H  09805H          ldr      r0,[sp,#20]
+.   258   0102H  03801H          subs     r0,#1
+.   260   0104H  09001H          str      r0,[sp,#4]
+    res := TextIO.NoError;
+.   262   0106H  02000H          movs     r0,#0
+.   264   0108H  09907H          ldr      r1,[sp,#28]
+.   266   010AH  06008H          str      r0,[r1]
+    numCh := 0;
+.   268   010CH  02000H          movs     r0,#0
+.   270   010EH  09906H          ldr      r1,[sp,#24]
+.   272   0110H  06008H          str      r0,[r1]
+    GetChar(dev, ch);
+.   274   0112H  09803H          ldr      r0,[sp,#12]
+.   276   0114H  0A902H          add      r1,sp,#8
+.   278   0116H  0F7FFFFCBH      bl.w     -106 -> 176
+.   282   011AH  0E000H          b        0 -> 286
+.   284  <LineNo: 57>
+    WHILE (ch >= " ") & (numCh < bufLimit) DO
+.   286   011EH  0A802H          add      r0,sp,#8
+.   288   0120H  07800H          ldrb     r0,[r0]
+.   290   0122H  02820H          cmp      r0,#32
+.   292   0124H  0DA01H          bge.n    2 -> 298
+.   294   0126H  0E01EH          b        60 -> 358
+.   296   0128H  046C0H          nop
+.   298   012AH  09806H          ldr      r0,[sp,#24]
+.   300   012CH  06800H          ldr      r0,[r0]
+.   302   012EH  09901H          ldr      r1,[sp,#4]
+.   304   0130H  04288H          cmp      r0,r1
+.   306   0132H  0DB01H          blt.n    2 -> 312
+.   308   0134H  0E017H          b        46 -> 358
+.   310   0136H  046C0H          nop
+      s[numCh] := ch;
+.   312   0138H  09806H          ldr      r0,[sp,#24]
+.   314   013AH  06800H          ldr      r0,[r0]
+.   316   013CH  09905H          ldr      r1,[sp,#20]
+.   318   013EH  04288H          cmp      r0,r1
+.   320   0140H  0D301H          bcc.n    2 -> 326
+.   322   0142H  0DF01H          svc      1
+.   324  <LineNo: 59>
+.   326   0146H  09904H          ldr      r1,[sp,#16]
+.   328   0148H  01808H          adds     r0,r1,r0
+.   330   014AH  0A902H          add      r1,sp,#8
+.   332   014CH  07809H          ldrb     r1,[r1]
+.   334   014EH  07001H          strb     r1,[r0]
+      INC(numCh);
+.   336   0150H  09806H          ldr      r0,[sp,#24]
+.   338   0152H  06801H          ldr      r1,[r0]
+.   340   0154H  03101H          adds     r1,#1
+.   342   0156H  06001H          str      r1,[r0]
+      GetChar(dev, ch)
+.   344   0158H  09803H          ldr      r0,[sp,#12]
+.   346   015AH  0A902H          add      r1,sp,#8
+    END;
+.   348   015CH  0F7FFFFA8H      bl.w     -176 -> 176
+.   352   0160H  0E000H          b        0 -> 356
+.   354  <LineNo: 61>
+.   356   0164H  0E7DBH          b        -74 -> 286
+    s[numCh] := 0X;
+.   358   0166H  09806H          ldr      r0,[sp,#24]
+.   360   0168H  06800H          ldr      r0,[r0]
+.   362   016AH  09905H          ldr      r1,[sp,#20]
+.   364   016CH  04288H          cmp      r0,r1
+.   366   016EH  0D301H          bcc.n    2 -> 372
+.   368   0170H  0DF01H          svc      1
+.   370  <LineNo: 63>
+.   372   0174H  09904H          ldr      r1,[sp,#16]
+.   374   0176H  01808H          adds     r0,r1,r0
+.   376   0178H  02100H          movs     r1,#0
+.   378   017AH  07001H          strb     r1,[r0]
+    (* if buffer overflow, flush the rest *)
+    IF ch >= " "  THEN
+.   380   017CH  0A802H          add      r0,sp,#8
+.   382   017EH  07800H          ldrb     r0,[r0]
+.   384   0180H  02820H          cmp      r0,#32
+.   386   0182H  0DA01H          bge.n    2 -> 392
+.   388   0184H  0E016H          b        44 -> 436
+.   390   0186H  046C0H          nop
+      res := TextIO.BufferOverflow;
+.   392   0188H  02001H          movs     r0,#1
+.   394   018AH  09907H          ldr      r1,[sp,#28]
+.   396   018CH  06008H          str      r0,[r1]
+      GetChar(dev, ch);
+.   398   018EH  09803H          ldr      r0,[sp,#12]
+.   400   0190H  0A902H          add      r1,sp,#8
+.   402   0192H  0F7FFFF8DH      bl.w     -230 -> 176
+.   406   0196H  0E000H          b        0 -> 410
+.   408  <LineNo: 67>
+      WHILE ch >= " " DO
+.   410   019AH  0A802H          add      r0,sp,#8
+.   412   019CH  07800H          ldrb     r0,[r0]
+.   414   019EH  02820H          cmp      r0,#32
+.   416   01A0H  0DA01H          bge.n    2 -> 422
+.   418   01A2H  0E007H          b        14 -> 436
+.   420   01A4H  046C0H          nop
+        GetChar(dev, ch)
+.   422   01A6H  09803H          ldr      r0,[sp,#12]
+.   424   01A8H  0A902H          add      r1,sp,#8
+      END;
+.   426   01AAH  0F7FFFF81H      bl.w     -254 -> 176
+.   430   01AEH  0E000H          b        0 -> 434
+.   432  <LineNo: 69>
+.   434   01B2H  0E7F2H          b        -28 -> 410
+    END
+  END GetString;
+.   436   01B4H  0B008H          add      sp,#32
+.   438   01B6H  0BD00H          pop      { pc }
+.   440  <Const: 0FFFFFFFCH  -4>
+.   444  <Global: 002010072H  02010072H>
+
+
+  PROCEDURE DeviceStatus*(dev: TextIO.Device): SET;
+  (*
+    Mainly for getting fifo full/empty status, ie.
+    "TxAvail" and "RxAvail" extended for fifo
+    Bits as defined in UARTdev
+  *)
+    VAR dev0: UARTdev.Device;
+  BEGIN
+.   448   01C0H  0B501H          push     { r0, lr }
+.   450   01C2H  0B081H          sub      sp,#4
+    dev0 := dev(UARTdev.Device);
+.   452   01C4H  09801H          ldr      r0,[sp,#4]
+.   454   01C6H  04A08H          ldr      r2,[pc,#32] -> 488
+.   456   01C8H  05881H          ldr      r1,[r0,r2]
+.   458   01CAH  06849H          ldr      r1,[r1,#4]
+.   460   01CCH  04A07H          ldr      r2,[pc,#28] -> 492
+.   462   01CEH  04291H          cmp      r1,r2
+.   464   01D0H  0D001H          beq.n    2 -> 470
+.   466   01D2H  0DF02H          svc      2
+.   468  <LineNo: 83>
+.   470   01D6H  09000H          str      r0,[sp]
+    RETURN UARTdev.Flags(dev0)
+.   472   01D8H  09800H          ldr      r0,[sp]
+  END DeviceStatus;
+.   474   01DAH  0040700DEH      bl.w     Ext Proc #7
+.   478   01DEH  0E000H          b        0 -> 482
+.   480  <LineNo: 83>
+.   482   01E2H  0B002H          add      sp,#8
+.   484   01E4H  0BD00H          pop      { pc }
+.   486   01E6H  046C0H          nop
+.   488  <Const: 0FFFFFFFCH  -4>
+.   492  <Global: 0020100EDH  020100EDH>
+
+
+END UARTstr.
+.   496   01F0H  0B500H          push     { lr }
+.   498   01F2H  0BD00H          pop      { pc }

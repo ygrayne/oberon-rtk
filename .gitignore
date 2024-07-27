@@ -15,13 +15,24 @@
 !/tools/*.py
 !/tools/*.uf2
 !/tools/*.bin
+!/tools/*.elf
+!/tools/pylib/
+!/tools/pylib/*.py
 !/changes/
+
+!/examples/pico/
+!/examples/pico/DebugEval/
+!/examples/pico/DebugEval/*.lst
+!/examples/pico/DebugEval/*.asm
+!/examples/pico/DebugEval/rdb/
+!/examples/pico/DebugEval/rdb/*.elst
+!/examples/pico/DebugEval/rdb/*.easm
+!/examples/pico/DebugEval/rdb/*.lst
 
 /lib/mcu/m0/rp2040/_debug
 /lib/mcu/m0/rp2040/_keep
 /lib/mcu/m0/rp2040/kernel-v1/_keep
 /**/_*
-
 
 # add some files
 !*.ini

@@ -1,0 +1,813 @@
+.     0    010003960H   <Pad: 0>
+MODULE UARTdev;
+(**
+  Oberon RTK Framework
+  --
+  UART device
+  * initialisation of device data structure
+  * configure UART hardware
+  * enable physical UART device
+  * configure and enable interrupts
+  --
+  The GPIO pins and pads used must be configured by the client module or program.
+  --
+  MCU: Cortex-M0+ RP2040, tested on Pico
+  --
+  Copyright (c) 2020-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, Errors, MCU := MCU2, StartUp, TextIO;
+
+  CONST
+    UART0* = 0;
+    UART1* = 1;
+    NumUART* = 2;
+
+    (* generic values *)
+    Enabled* = 1;
+    Disabled* = 0;
+    None* = 0;
+
+    (* CR bits *)
+    CR_RXE = 9;
+    CR_TXE = 8;
+    CR_UARTEN = 0;
+
+    (* LCR_H bits/values *)
+    LCR_H_SPS*      = 7;
+    LCR_H_WLEN1*    = 6; (* [6:5] transmit/receive word length *)
+    LCR_H_WLEN0*    = 5;
+      WLEN_val_8* = 3;
+      WLEN_val_7* = 2;
+      WLEN_val_6* = 1;
+      WLEN_val_5* = 0; (* reset *)
+    LCR_H_FEN*      = 4;  (* fifo enable, reset = disabled *)
+    LCR_H_STP2*     = 3; (* two stop bits select, reset = disabled, ie. one stop bit *)
+    LCR_H_EPS*      = 2;  (* even parity select, reset = disabled, ie. odd parity *)
+    LCR_H_PEN*      = 1;  (* parity enable, reset = disabled *)
+    LCR_H_BRK*      = 0;
+
+    (* value aliases *)
+    DataBits8* = WLEN_val_8;
+    DataBits7* = WLEN_val_7;
+    DataBits6* = WLEN_val_6;
+    DataBits5* = WLEN_val_5;
+
+    (* FR bits *)
+    FR_TXFE* = 7;  (* transmit FIFO empty *)
+    FR_RXFF* = 6;  (* receive FIFO full *)
+    FR_TXFF* = 5;  (* transmit FIFO full *)
+    FR_RXFE* = 4;  (* receive FIFO empty *)
+
+    (* RSR bits *)
+    RSR_OR*  = 3;  (* receive fifo overrun *)
+
+    (* DMACR bits *)
+    DMACR_DMAONERR* = 2;
+    DMACR_TXDMAE*   = 1; (* transmit via DMA enabled *)
+    DMACR_RXDMAE*   = 0; (* receive via DMA enabled *)
+
+    (* IFLS bits and values *)
+    IFLS_RXIFLSEL1*     = 5;
+    IFLS_RXIFLSEL0*     = 3;
+    IFLS_TXIFLSEL1*     = 2;
+    IFLS_TXIFLSEL0*     = 0;
+
+    RXIFLSEL_val_18* = 000H; (* 1/8 full:        4 items in fifo *)
+    RXIFLSEL_val_28* = 001H; (* 2/8 = 1/4 full:  8 *)
+    RXIFLSEL_val_48* = 002H; (* 4/8 = 1/2 full: 16 *)
+    RXIFLSEL_val_68* = 003H; (* 6/8 = 3/4 full: 24 *)
+    RXIFLSEL_val_78* = 004H; (* 7/8 full:       28 *)
+
+    TXIFLSEL_val_18* = 000H; (* 1/8 full:        4 items in fifo *)
+    TXIFLSEL_val_28* = 001H; (* 2/8 = 1/4 full:  8 *)
+    TXIFLSEL_val_48* = 002H; (* 4/8 = 1/2 full: 16 *)
+    TXIFLSEL_val_68* = 003H; (* 6/8 = 3/4 full: 24 *)
+    TXIFLSEL_val_78* = 004H; (* 7/8 full:       28 *)
+
+    (* IMSC bits *)
+    IMSC_TXIM* = 5;
+
+
+  TYPE
+    Device* = POINTER TO DeviceDesc;
+    DeviceDesc* = RECORD(TextIO.DeviceDesc)
+      uartNo*: INTEGER;
+      devNo: INTEGER;
+      intNo*: INTEGER;
+      CR, IBRD, FBRD, LCR_H: INTEGER;
+      TDR*, RDR*, FR*, RSR*: INTEGER;
+      DMACR, IFLS, IMSC*, MIS, ICR: INTEGER
+    END;
+.     4    010003964H   <Type: 64>
+.     8    010003968H   <Type: 010003964H>
+.    12    01000396CH   <Type: 0>
+.    16    010003970H   <Type: 0>
+.    20    010003974H   <Type: 0>
+
+    DeviceCfg* = RECORD (* see ASSERTs in 'Configure' for valid values *)
+      (* reg LCR_H *)
+      stickyParityEn*: INTEGER;
+      dataBits*: INTEGER;
+      fifoEn*: INTEGER;
+      twoStopBitsEn*: INTEGER;
+      evenParityEn*: INTEGER;
+      parityEn*: INTEGER;
+      sendBreak*: INTEGER
+    END;
+.    24    010003978H   <Type: 28>
+.    28    01000397CH   <Type: 0>
+.    32    010003980H   <Type: 0>
+.    36    010003984H   <Type: 0>
+.    40    010003988H   <Type: 0>
+
+
+  PROCEDURE Init*(dev: Device; uartNo: INTEGER);
+  (**
+    Init Device data.
+  **)
+    VAR base: INTEGER;
+  BEGIN
+.    44    01000398CH        0B503H    push     { r0, r1, lr }
+.    46    01000398EH        0B081H    sub      sp,#4
+    ASSERT(dev # NIL, Errors.PreCond);
+.    48    010003990H        09801H    ldr      r0,[sp,#4]
+.    50    010003992H        02800H    cmp      r0,#0
+.    52    010003994H        0D101H    bne.n    2 -> 58
+.    54    010003996H        0DF65H    svc      101
+.    56    010003998H   <LineNo: 121>
+    ASSERT(uartNo IN {UART0, UART1});
+.    58    01000399AH        02003H    movs     r0,#3
+.    60    01000399CH        09902H    ldr      r1,[sp,#8]
+.    62    01000399EH        02201H    movs     r2,#1
+.    64    0100039A0H        0408AH    lsls     r2,r1
+.    66    0100039A2H        04210H    tst      r0,r2
+.    68    0100039A4H        0D101H    bne.n    2 -> 74
+.    70    0100039A6H        0DF00H    svc      0
+.    72    0100039A8H   <LineNo: 122>
+    dev.uartNo := uartNo;
+.    74    0100039AAH        09802H    ldr      r0,[sp,#8]
+.    76    0100039ACH        09901H    ldr      r1,[sp,#4]
+.    78    0100039AEH        06008H    str      r0,[r1]
+    CASE uartNo OF
+      UART0: base := MCU.UART0_Base; dev.devNo := MCU.RESETS_UART0; dev.intNo := MCU.NVIC_UART0_IRQ
+.    80    0100039B0H        09802H    ldr      r0,[sp,#8]
+.    82    0100039B2H        04601H    mov      r1,r0
+.    84    0100039B4H        046C0H    nop
+.    86    0100039B6H        02901H    cmp      r1,#1
+.    88    0100039B8H        0DD01H    ble.n    2 -> 94
+.    90    0100039BAH        0DF04H    svc      4
+.    92    0100039BCH   <LineNo: 124>
+.    94    0100039BEH          049H    lsls     r1,r1,#1
+.    96    0100039C0H        04A01H    ldr      r2,[pc,#4] -> 104 ; Const: 02DH 45
+.    98    0100039C2H        01852H    adds     r2,r2,r1
+.   100    0100039C4H        0447AH    add      r2,pc
+.   102    0100039C6H        04710H    bx       r2
+.   104    0100039C8H   <Const: 02DH 45>
+.   108    0100039CCH        04825H    ldr      r0,[pc,#148] -> 260 ; Const: 040034000H 1073954816
+.   110    0100039CEH        09000H    str      r0,[sp]
+.   112    0100039D0H        02016H    movs     r0,#22
+.   114    0100039D2H        09901H    ldr      r1,[sp,#4]
+.   116    0100039D4H        06048H    str      r0,[r1,#4]
+    | UART1: base := MCU.UART1_Base; dev.devNo := MCU.RESETS_UART1; dev.intNo := MCU.NVIC_UART1_IRQ
+.   118    0100039D6H        02014H    movs     r0,#20
+.   120    0100039D8H        09901H    ldr      r1,[sp,#4]
+.   122    0100039DAH        06088H    str      r0,[r1,#8]
+.   124    0100039DCH        0E00CH    b        24 -> 152
+.   126    0100039DEH        046C0H    nop
+.   128    0100039E0H        04821H    ldr      r0,[pc,#132] -> 264 ; Const: 040038000H 1073971200
+.   130    0100039E2H        09000H    str      r0,[sp]
+.   132    0100039E4H        02017H    movs     r0,#23
+.   134    0100039E6H        09901H    ldr      r1,[sp,#4]
+.   136    0100039E8H        06048H    str      r0,[r1,#4]
+    END;
+.   138    0100039EAH        02015H    movs     r0,#21
+.   140    0100039ECH        09901H    ldr      r1,[sp,#4]
+.   142    0100039EEH        06088H    str      r0,[r1,#8]
+.   144    0100039F0H        0E002H    b        4 -> 152
+.   146    0100039F2H        046C0H    nop
+.   148    0100039F4H        0E7EAH    b        -44 -> 108
+.   150    0100039F6H        0E7F3H    b        -26 -> 128
+    dev.CR    := base + MCU.UART_CR_Offset;
+.   152    0100039F8H        09800H    ldr      r0,[sp]
+.   154    0100039FAH        03030H    adds     r0,#48
+.   156    0100039FCH        09901H    ldr      r1,[sp,#4]
+.   158    0100039FEH        060C8H    str      r0,[r1,#12]
+    dev.IBRD  := base + MCU.UART_IBRD_Offset;
+.   160    010003A00H        09800H    ldr      r0,[sp]
+.   162    010003A02H        03024H    adds     r0,#36
+.   164    010003A04H        09901H    ldr      r1,[sp,#4]
+.   166    010003A06H        06108H    str      r0,[r1,#16]
+    dev.FBRD  := base + MCU.UART_FBRD_Offset;
+.   168    010003A08H        09800H    ldr      r0,[sp]
+.   170    010003A0AH        03028H    adds     r0,#40
+.   172    010003A0CH        09901H    ldr      r1,[sp,#4]
+.   174    010003A0EH        06148H    str      r0,[r1,#20]
+    dev.LCR_H := base + MCU.UART_LCR_H_Offset;
+.   176    010003A10H        09800H    ldr      r0,[sp]
+.   178    010003A12H        0302CH    adds     r0,#44
+.   180    010003A14H        09901H    ldr      r1,[sp,#4]
+.   182    010003A16H        06188H    str      r0,[r1,#24]
+    dev.TDR   := base + MCU.UART_DR_Offset;
+.   184    010003A18H        09800H    ldr      r0,[sp]
+.   186    010003A1AH        03000H    adds     r0,#0
+.   188    010003A1CH        09901H    ldr      r1,[sp,#4]
+.   190    010003A1EH        061C8H    str      r0,[r1,#28]
+    dev.RDR   := base + MCU.UART_DR_Offset;
+.   192    010003A20H        09800H    ldr      r0,[sp]
+.   194    010003A22H        03000H    adds     r0,#0
+.   196    010003A24H        09901H    ldr      r1,[sp,#4]
+.   198    010003A26H        06208H    str      r0,[r1,#32]
+    dev.FR    := base + MCU.UART_FR_Offset;
+.   200    010003A28H        09800H    ldr      r0,[sp]
+.   202    010003A2AH        03018H    adds     r0,#24
+.   204    010003A2CH        09901H    ldr      r1,[sp,#4]
+.   206    010003A2EH        06248H    str      r0,[r1,#36]
+    dev.RSR   := base + MCU.UART_RSR_Offset;
+.   208    010003A30H        09800H    ldr      r0,[sp]
+.   210    010003A32H        03004H    adds     r0,#4
+.   212    010003A34H        09901H    ldr      r1,[sp,#4]
+.   214    010003A36H        06288H    str      r0,[r1,#40]
+    dev.DMACR := base + MCU.UART_DMACR_Offset;
+.   216    010003A38H        09800H    ldr      r0,[sp]
+.   218    010003A3AH        03048H    adds     r0,#72
+.   220    010003A3CH        09901H    ldr      r1,[sp,#4]
+.   222    010003A3EH        062C8H    str      r0,[r1,#44]
+    dev.IFLS  := base + MCU.UART_IFLS_Offset;
+.   224    010003A40H        09800H    ldr      r0,[sp]
+.   226    010003A42H        03034H    adds     r0,#52
+.   228    010003A44H        09901H    ldr      r1,[sp,#4]
+.   230    010003A46H        06308H    str      r0,[r1,#48]
+    dev.IMSC  := base + MCU.UART_IMSC_Offset;
+.   232    010003A48H        09800H    ldr      r0,[sp]
+.   234    010003A4AH        03038H    adds     r0,#56
+.   236    010003A4CH        09901H    ldr      r1,[sp,#4]
+.   238    010003A4EH        06348H    str      r0,[r1,#52]
+    dev.MIS   := base + MCU.UART_MIS_Offset;
+.   240    010003A50H        09800H    ldr      r0,[sp]
+.   242    010003A52H        03040H    adds     r0,#64
+.   244    010003A54H        09901H    ldr      r1,[sp,#4]
+.   246    010003A56H        06388H    str      r0,[r1,#56]
+    dev.ICR   := base + MCU.UART_ICR_Offset
+  END Init;
+.   248    010003A58H        09800H    ldr      r0,[sp]
+.   250    010003A5AH        03044H    adds     r0,#68
+.   252    010003A5CH        09901H    ldr      r1,[sp,#4]
+.   254    010003A5EH        063C8H    str      r0,[r1,#60]
+.   256    010003A60H        0B003H    add      sp,#12
+.   258    010003A62H        0BD00H    pop      { pc }
+.   260    010003A64H   <Const: 040034000H 1073954816>
+.   264    010003A68H   <Const: 040038000H 1073971200>
+
+
+  PROCEDURE Configure*(dev: Device; cfg: DeviceCfg; baudrate: INTEGER);
+  (**
+    Configure UART hardware, after 'Init'.
+  **)
+    VAR x, intDiv, fracDiv: INTEGER;
+  BEGIN
+.   268    010003A6CH        0B50FH    push     { r0, r1, r2, r3, lr }
+.   270    010003A6EH        0B083H    sub      sp,#12
+    ASSERT(dev # NIL, Errors.PreCond);
+.   272    010003A70H        09803H    ldr      r0,[sp,#12]
+.   274    010003A72H        02800H    cmp      r0,#0
+.   276    010003A74H        0D101H    bne.n    2 -> 282
+.   278    010003A76H        0DF65H    svc      101
+.   280    010003A78H   <LineNo: 150>
+    ASSERT(cfg.stickyParityEn IN {Disabled, Enabled}, Errors.PreCond);
+.   282    010003A7AH        02003H    movs     r0,#3
+.   284    010003A7CH        09904H    ldr      r1,[sp,#16]
+.   286    010003A7EH        06809H    ldr      r1,[r1]
+.   288    010003A80H        02201H    movs     r2,#1
+.   290    010003A82H        0408AH    lsls     r2,r1
+.   292    010003A84H        04210H    tst      r0,r2
+.   294    010003A86H        0D101H    bne.n    2 -> 300
+.   296    010003A88H        0DF65H    svc      101
+.   298    010003A8AH   <LineNo: 151>
+    ASSERT(cfg.dataBits IN {DataBits5 .. DataBits8}, Errors.PreCond);
+.   300    010003A8CH        0200FH    movs     r0,#15
+.   302    010003A8EH        09904H    ldr      r1,[sp,#16]
+.   304    010003A90H        06849H    ldr      r1,[r1,#4]
+.   306    010003A92H        02201H    movs     r2,#1
+.   308    010003A94H        0408AH    lsls     r2,r1
+.   310    010003A96H        04210H    tst      r0,r2
+.   312    010003A98H        0D101H    bne.n    2 -> 318
+.   314    010003A9AH        0DF65H    svc      101
+.   316    010003A9CH   <LineNo: 152>
+    ASSERT(cfg.fifoEn IN {Disabled, Enabled}, Errors.PreCond);
+.   318    010003A9EH        02003H    movs     r0,#3
+.   320    010003AA0H        09904H    ldr      r1,[sp,#16]
+.   322    010003AA2H        06889H    ldr      r1,[r1,#8]
+.   324    010003AA4H        02201H    movs     r2,#1
+.   326    010003AA6H        0408AH    lsls     r2,r1
+.   328    010003AA8H        04210H    tst      r0,r2
+.   330    010003AAAH        0D101H    bne.n    2 -> 336
+.   332    010003AACH        0DF65H    svc      101
+.   334    010003AAEH   <LineNo: 153>
+    ASSERT(cfg.twoStopBitsEn IN {Disabled, Enabled}, Errors.PreCond);
+.   336    010003AB0H        02003H    movs     r0,#3
+.   338    010003AB2H        09904H    ldr      r1,[sp,#16]
+.   340    010003AB4H        068C9H    ldr      r1,[r1,#12]
+.   342    010003AB6H        02201H    movs     r2,#1
+.   344    010003AB8H        0408AH    lsls     r2,r1
+.   346    010003ABAH        04210H    tst      r0,r2
+.   348    010003ABCH        0D101H    bne.n    2 -> 354
+.   350    010003ABEH        0DF65H    svc      101
+.   352    010003AC0H   <LineNo: 154>
+    ASSERT(cfg.evenParityEn IN {Disabled, Enabled}, Errors.PreCond);
+.   354    010003AC2H        02003H    movs     r0,#3
+.   356    010003AC4H        09904H    ldr      r1,[sp,#16]
+.   358    010003AC6H        06909H    ldr      r1,[r1,#16]
+.   360    010003AC8H        02201H    movs     r2,#1
+.   362    010003ACAH        0408AH    lsls     r2,r1
+.   364    010003ACCH        04210H    tst      r0,r2
+.   366    010003ACEH        0D101H    bne.n    2 -> 372
+.   368    010003AD0H        0DF65H    svc      101
+.   370    010003AD2H   <LineNo: 155>
+    ASSERT(cfg.parityEn IN {Disabled, Enabled}, Errors.PreCond);
+.   372    010003AD4H        02003H    movs     r0,#3
+.   374    010003AD6H        09904H    ldr      r1,[sp,#16]
+.   376    010003AD8H        06949H    ldr      r1,[r1,#20]
+.   378    010003ADAH        02201H    movs     r2,#1
+.   380    010003ADCH        0408AH    lsls     r2,r1
+.   382    010003ADEH        04210H    tst      r0,r2
+.   384    010003AE0H        0D101H    bne.n    2 -> 390
+.   386    010003AE2H        0DF65H    svc      101
+.   388    010003AE4H   <LineNo: 156>
+    ASSERT(cfg.sendBreak IN {Disabled, Enabled}, Errors.PreCond);
+.   390    010003AE6H        02003H    movs     r0,#3
+.   392    010003AE8H        09904H    ldr      r1,[sp,#16]
+.   394    010003AEAH        06989H    ldr      r1,[r1,#24]
+.   396    010003AECH        02201H    movs     r2,#1
+.   398    010003AEEH        0408AH    lsls     r2,r1
+.   400    010003AF0H        04210H    tst      r0,r2
+.   402    010003AF2H        0D101H    bne.n    2 -> 408
+.   404    010003AF4H        0DF65H    svc      101
+.   406    010003AF6H   <LineNo: 157>
+
+    (* release reset on UART device *)
+    StartUp.ReleaseReset(dev.devNo);
+.   408    010003AF8H        09803H    ldr      r0,[sp,#12]
+.   410    010003AFAH        06840H    ldr      r0,[r0,#4]
+.   412    010003AFCH    0F7FCFCD8H    bl.w     StartUp.ReleaseReset
+.   416    010003B00H        0E000H    b        0 -> 420
+.   418    010003B02H   <LineNo: 160>
+    StartUp.AwaitReleaseDone(dev.devNo);
+.   420    010003B04H        09803H    ldr      r0,[sp,#12]
+.   422    010003B06H        06840H    ldr      r0,[r0,#4]
+.   424    010003B08H    0F7FCFCECH    bl.w     StartUp.AwaitReleaseDone
+.   428    010003B0CH        0E000H    b        0 -> 432
+.   430    010003B0EH   <LineNo: 161>
+
+    (* disable *)
+    SYSTEM.PUT(dev.CR, {});
+.   432    010003B10H        09803H    ldr      r0,[sp,#12]
+.   434    010003B12H        068C0H    ldr      r0,[r0,#12]
+.   436    010003B14H        02100H    movs     r1,#0
+.   438    010003B16H        06001H    str      r1,[r0]
+
+    (* baudrate *)
+    x := (MCU.PeriClkFreq * 8) DIV baudrate;
+.   440    010003B18H        04840H    ldr      r0,[pc,#256] -> 700 ; Const: 016E36000H 384000000
+.   442    010003B1AH        09906H    ldr      r1,[sp,#24]
+.   444    010003B1CH        02900H    cmp      r1,#0
+.   446    010003B1EH        0DC01H    bgt.n    2 -> 452
+.   448    010003B20H        0DF07H    svc      7
+.   450    010003B22H   <LineNo: 167>
+.   452    010003B24H        02401H    movs     r4,#1
+.   454    010003B26H         07E4H    lsls     r4,r4,#31
+.   456    010003B28H        02200H    movs     r2,#0
+.   458    010003B2AH        02300H    movs     r3,#0
+.   460    010003B2CH          040H    lsls     r0,r0,#1
+.   462    010003B2EH        0415BH    adcs     r3,r3
+.   464    010003B30H        0428BH    cmp      r3,r1
+.   466    010003B32H        0D301H    bcc.n    2 -> 472
+.   468    010003B34H        01912H    adds     r2,r2,r4
+.   470    010003B36H        01A5BH    subs     r3,r3,r1
+.   472    010003B38H         0864H    lsrs     r4,r4,#1
+.   474    010003B3AH        0D1F7H    bne.n    -18 -> 460
+.   476    010003B3CH        04610H    mov      r0,r2
+.   478    010003B3EH        09000H    str      r0,[sp]
+    intDiv := LSR(x, 7);
+.   480    010003B40H        09800H    ldr      r0,[sp]
+.   482    010003B42H         09C0H    lsrs     r0,r0,#7
+.   484    010003B44H        09001H    str      r0,[sp,#4]
+    IF intDiv = 0 THEN
+.   486    010003B46H        09801H    ldr      r0,[sp,#4]
+.   488    010003B48H        02800H    cmp      r0,#0
+.   490    010003B4AH        0D001H    beq.n    2 -> 496
+.   492    010003B4CH        0E006H    b        12 -> 508
+.   494    010003B4EH        046C0H    nop
+      intDiv := 1; fracDiv := 0
+.   496    010003B50H        02001H    movs     r0,#1
+.   498    010003B52H        09001H    str      r0,[sp,#4]
+    ELSIF intDiv >= 65535 THEN
+.   500    010003B54H        02000H    movs     r0,#0
+.   502    010003B56H        09002H    str      r0,[sp,#8]
+.   504    010003B58H        0E012H    b        36 -> 544
+.   506    010003B5AH        046C0H    nop
+.   508    010003B5CH        09801H    ldr      r0,[sp,#4]
+.   510    010003B5EH        04930H    ldr      r1,[pc,#192] -> 704 ; Const: 0FFFFH 65535
+.   512    010003B60H        04288H    cmp      r0,r1
+.   514    010003B62H        0DA01H    bge.n    2 -> 520
+.   516    010003B64H        0E006H    b        12 -> 532
+.   518    010003B66H        046C0H    nop
+      intDiv := 65535; fracDiv := 0
+.   520    010003B68H        0482DH    ldr      r0,[pc,#180] -> 704 ; Const: 0FFFFH 65535
+.   522    010003B6AH        09001H    str      r0,[sp,#4]
+    ELSE
+.   524    010003B6CH        02000H    movs     r0,#0
+.   526    010003B6EH        09002H    str      r0,[sp,#8]
+      fracDiv := ((intDiv MOD 0100H) + 1) DIV 2
+.   528    010003B70H        0E006H    b        12 -> 544
+.   530    010003B72H        046C0H    nop
+.   532    010003B74H        09801H    ldr      r0,[sp,#4]
+.   534    010003B76H         0600H    lsls     r0,r0,#24
+.   536    010003B78H         0E00H    lsrs     r0,r0,#24
+.   538    010003B7AH        03001H    adds     r0,#1
+    END;
+.   540    010003B7CH        01040H    asrs     r0,r0,#1
+.   542    010003B7EH        09002H    str      r0,[sp,#8]
+    SYSTEM.PUT(dev.IBRD, intDiv);
+.   544    010003B80H        09803H    ldr      r0,[sp,#12]
+.   546    010003B82H        06900H    ldr      r0,[r0,#16]
+.   548    010003B84H        09901H    ldr      r1,[sp,#4]
+.   550    010003B86H        06001H    str      r1,[r0]
+    SYSTEM.PUT(dev.FBRD, fracDiv);
+.   552    010003B88H        09803H    ldr      r0,[sp,#12]
+.   554    010003B8AH        06940H    ldr      r0,[r0,#20]
+.   556    010003B8CH        09902H    ldr      r1,[sp,#8]
+.   558    010003B8EH        06001H    str      r1,[r0]
+
+    (* note: LCR_H cfg MUST appear after baudrate cfg, 4.2.7.1, p426 *)
+    x := 0;
+.   560    010003B90H        02000H    movs     r0,#0
+.   562    010003B92H        09000H    str      r0,[sp]
+    BFI(x, LCR_H_SPS, cfg.stickyParityEn);
+.   564    010003B94H        09804H    ldr      r0,[sp,#16]
+.   566    010003B96H        06800H    ldr      r0,[r0]
+.   568    010003B98H        04669H    mov      r1,sp
+.   570    010003B9AH        0680AH    ldr      r2,[r1]
+.   572    010003B9CH        04B21H    ldr      r3,[pc,#132] -> 708 ; Const: 0FFFFFF7FH -129
+.   574    010003B9EH        0401AH    ands     r2,r3
+.   576    010003BA0H         01C0H    lsls     r0,r0,#7
+.   578    010003BA2H        04302H    orrs     r2,r0
+.   580    010003BA4H        09200H    str      r2,[sp]
+    BFI(x, LCR_H_WLEN1, LCR_H_WLEN0, cfg.dataBits);
+.   582    010003BA6H        09804H    ldr      r0,[sp,#16]
+.   584    010003BA8H        06840H    ldr      r0,[r0,#4]
+.   586    010003BAAH        04669H    mov      r1,sp
+.   588    010003BACH        0680AH    ldr      r2,[r1]
+.   590    010003BAEH        04B1EH    ldr      r3,[pc,#120] -> 712 ; Const: 0FFFFFF9FH -97
+.   592    010003BB0H        0401AH    ands     r2,r3
+.   594    010003BB2H         0140H    lsls     r0,r0,#5
+.   596    010003BB4H        04302H    orrs     r2,r0
+.   598    010003BB6H        09200H    str      r2,[sp]
+    BFI(x, LCR_H_FEN, cfg.fifoEn);
+.   600    010003BB8H        09804H    ldr      r0,[sp,#16]
+.   602    010003BBAH        06880H    ldr      r0,[r0,#8]
+.   604    010003BBCH        04669H    mov      r1,sp
+.   606    010003BBEH        0680AH    ldr      r2,[r1]
+.   608    010003BC0H        04B1AH    ldr      r3,[pc,#104] -> 716 ; Const: 0FFFFFFEFH -17
+.   610    010003BC2H        0401AH    ands     r2,r3
+.   612    010003BC4H         0100H    lsls     r0,r0,#4
+.   614    010003BC6H        04302H    orrs     r2,r0
+.   616    010003BC8H        09200H    str      r2,[sp]
+    BFI(x, LCR_H_STP2, cfg.twoStopBitsEn);
+.   618    010003BCAH        09804H    ldr      r0,[sp,#16]
+.   620    010003BCCH        068C0H    ldr      r0,[r0,#12]
+.   622    010003BCEH        04669H    mov      r1,sp
+.   624    010003BD0H        0680AH    ldr      r2,[r1]
+.   626    010003BD2H        04B17H    ldr      r3,[pc,#92] -> 720 ; Const: 0FFFFFFF7H -9
+.   628    010003BD4H        0401AH    ands     r2,r3
+.   630    010003BD6H          0C0H    lsls     r0,r0,#3
+.   632    010003BD8H        04302H    orrs     r2,r0
+.   634    010003BDAH        09200H    str      r2,[sp]
+    BFI(x, LCR_H_EPS, cfg.evenParityEn);
+.   636    010003BDCH        09804H    ldr      r0,[sp,#16]
+.   638    010003BDEH        06900H    ldr      r0,[r0,#16]
+.   640    010003BE0H        04669H    mov      r1,sp
+.   642    010003BE2H        0680AH    ldr      r2,[r1]
+.   644    010003BE4H        04B13H    ldr      r3,[pc,#76] -> 724 ; Const: 0FFFFFFFBH -5
+.   646    010003BE6H        0401AH    ands     r2,r3
+.   648    010003BE8H          080H    lsls     r0,r0,#2
+.   650    010003BEAH        04302H    orrs     r2,r0
+.   652    010003BECH        09200H    str      r2,[sp]
+    BFI(x, LCR_H_PEN, cfg.parityEn);
+.   654    010003BEEH        09804H    ldr      r0,[sp,#16]
+.   656    010003BF0H        06940H    ldr      r0,[r0,#20]
+.   658    010003BF2H        04669H    mov      r1,sp
+.   660    010003BF4H        0680AH    ldr      r2,[r1]
+.   662    010003BF6H        04B10H    ldr      r3,[pc,#64] -> 728 ; Const: 0FFFFFFFDH -3
+.   664    010003BF8H        0401AH    ands     r2,r3
+.   666    010003BFAH          040H    lsls     r0,r0,#1
+.   668    010003BFCH        04302H    orrs     r2,r0
+.   670    010003BFEH        09200H    str      r2,[sp]
+    BFI(x, LCR_H_BRK, cfg.sendBreak);
+.   672    010003C00H        09804H    ldr      r0,[sp,#16]
+.   674    010003C02H        06980H    ldr      r0,[r0,#24]
+.   676    010003C04H        04669H    mov      r1,sp
+.   678    010003C06H        0680AH    ldr      r2,[r1]
+.   680    010003C08H        04B0CH    ldr      r3,[pc,#48] -> 732 ; Const: 0FFFFFFFEH -2
+.   682    010003C0AH        0401AH    ands     r2,r3
+.   684    010003C0CH        04302H    orrs     r2,r0
+.   686    010003C0EH        09200H    str      r2,[sp]
+    SYSTEM.PUT(dev.LCR_H, x)
+  END Configure;
+.   688    010003C10H        09803H    ldr      r0,[sp,#12]
+.   690    010003C12H        06980H    ldr      r0,[r0,#24]
+.   692    010003C14H        09900H    ldr      r1,[sp]
+.   694    010003C16H        06001H    str      r1,[r0]
+.   696    010003C18H        0B007H    add      sp,#28
+.   698    010003C1AH        0BD00H    pop      { pc }
+.   700    010003C1CH   <Const: 016E36000H 384000000>
+.   704    010003C20H   <Const: 0FFFFH 65535>
+.   708    010003C24H   <Const: 0FFFFFF7FH -129>
+.   712    010003C28H   <Const: 0FFFFFF9FH -97>
+.   716    010003C2CH   <Const: 0FFFFFFEFH -17>
+.   720    010003C30H   <Const: 0FFFFFFF7H -9>
+.   724    010003C34H   <Const: 0FFFFFFFBH -5>
+.   728    010003C38H   <Const: 0FFFFFFFDH -3>
+.   732    010003C3CH   <Const: 0FFFFFFFEH -2>
+
+
+  PROCEDURE Enable*(dev: Device);
+  BEGIN
+.   736    010003C40H        0B501H    push     { r0, lr }
+    ASSERT(dev # NIL, Errors.PreCond);
+.   738    010003C42H        09800H    ldr      r0,[sp]
+.   740    010003C44H        02800H    cmp      r0,#0
+.   742    010003C46H        0D101H    bne.n    2 -> 748
+.   744    010003C48H        0DF65H    svc      101
+.   746    010003C4AH   <LineNo: 194>
+    SYSTEM.PUT(dev.CR + MCU.ASET, {CR_UARTEN, CR_RXE, CR_TXE})
+.   748    010003C4CH        09800H    ldr      r0,[sp]
+.   750    010003C4EH        068C0H    ldr      r0,[r0,#12]
+.   752    010003C50H        02101H    movs     r1,#1
+.   754    010003C52H         0349H    lsls     r1,r1,#13
+.   756    010003C54H        01840H    adds     r0,r0,r1
+  END Enable;
+.   758    010003C56H        04902H    ldr      r1,[pc,#8] -> 768 ; Const: 0301H 769
+.   760    010003C58H        06001H    str      r1,[r0]
+.   762    010003C5AH        0B001H    add      sp,#4
+.   764    010003C5CH        0BD00H    pop      { pc }
+.   766    010003C5EH        046C0H    nop
+.   768    010003C60H   <Const: 0301H 769>
+
+
+  PROCEDURE Disable*(dev: Device);
+  BEGIN
+.   772    010003C64H        0B501H    push     { r0, lr }
+    ASSERT(dev # NIL, Errors.PreCond);
+.   774    010003C66H        09800H    ldr      r0,[sp]
+.   776    010003C68H        02800H    cmp      r0,#0
+.   778    010003C6AH        0D101H    bne.n    2 -> 784
+.   780    010003C6CH        0DF65H    svc      101
+.   782    010003C6EH   <LineNo: 201>
+    SYSTEM.PUT(dev.CR + MCU.ACLR, {CR_UARTEN, CR_RXE, CR_TXE})
+.   784    010003C70H        09800H    ldr      r0,[sp]
+.   786    010003C72H        068C0H    ldr      r0,[r0,#12]
+.   788    010003C74H        02103H    movs     r1,#3
+.   790    010003C76H         0309H    lsls     r1,r1,#12
+.   792    010003C78H        01840H    adds     r0,r0,r1
+  END Disable;
+.   794    010003C7AH        04902H    ldr      r1,[pc,#8] -> 804 ; Const: 0301H 769
+.   796    010003C7CH        06001H    str      r1,[r0]
+.   798    010003C7EH        0B001H    add      sp,#4
+.   800    010003C80H        0BD00H    pop      { pc }
+.   802    010003C82H        046C0H    nop
+.   804    010003C84H   <Const: 0301H 769>
+
+
+  PROCEDURE Flags*(dev: Device): SET;
+    VAR flags: SET;
+  BEGIN
+.   808    010003C88H        0B501H    push     { r0, lr }
+.   810    010003C8AH        0B081H    sub      sp,#4
+    SYSTEM.GET(dev.FR, flags)
+    RETURN flags
+.   812    010003C8CH        09801H    ldr      r0,[sp,#4]
+.   814    010003C8EH        06A40H    ldr      r0,[r0,#36]
+.   816    010003C90H        06801H    ldr      r1,[r0]
+.   818    010003C92H        09100H    str      r1,[sp]
+  END Flags;
+.   820    010003C94H        09800H    ldr      r0,[sp]
+.   822    010003C96H        0B002H    add      sp,#8
+.   824    010003C98H        0BD00H    pop      { pc }
+.   826    010003C9AH        046C0H    nop
+
+  (* configuration data *)
+
+  PROCEDURE GetBaseCfg*(VAR cfg: DeviceCfg);
+  (**
+    stickyParityEn = Disabled,   hardware reset value
+    dataBits       = WLENval_8,  hardware reset override
+    fifoEn         = Disabled,   hardware reset value
+    twoStopBitsEn  = Disabled,   hardware reset value
+    evenParityEn   = Disabled,   hardware reset value
+    parityEn       = Disabled,   hardware reset value
+    sendBreak      = Disabled,   hardware reset value
+    --
+    See ASSERTs in 'Configure' for valid values.
+  **)
+  BEGIN
+.   828    010003C9CH        0B503H    push     { r0, r1, lr }
+    CLEAR(cfg);
+.   830    010003C9EH        09800H    ldr      r0,[sp]
+.   832    010003CA0H        02100H    movs     r1,#0
+.   834    010003CA2H        02207H    movs     r2,#7
+.   836    010003CA4H        06001H    str      r1,[r0]
+.   838    010003CA6H        03004H    adds     r0,#4
+.   840    010003CA8H        03A01H    subs     r2,#1
+.   842    010003CAAH        0DCFBH    bgt.n    -10 -> 836
+    cfg.dataBits := WLEN_val_8
+  END GetBaseCfg;
+.   844    010003CACH        02003H    movs     r0,#3
+.   846    010003CAEH        09900H    ldr      r1,[sp]
+.   848    010003CB0H        06048H    str      r0,[r1,#4]
+.   850    010003CB2H        0B002H    add      sp,#8
+.   852    010003CB4H        0BD00H    pop      { pc }
+.   854    010003CB6H        046C0H    nop
+
+
+  PROCEDURE GetCurrentCfg*(dev: Device; VAR cfg: DeviceCfg);
+    VAR x: INTEGER;
+  BEGIN
+.   856    010003CB8H        0B507H    push     { r0, r1, r2, lr }
+.   858    010003CBAH        0B081H    sub      sp,#4
+    SYSTEM.GET(dev.LCR_H, x);
+.   860    010003CBCH        09801H    ldr      r0,[sp,#4]
+.   862    010003CBEH        06980H    ldr      r0,[r0,#24]
+.   864    010003CC0H        06801H    ldr      r1,[r0]
+.   866    010003CC2H        09100H    str      r1,[sp]
+    cfg.stickyParityEn := BFX(x, LCR_H_SPS);
+.   868    010003CC4H        09800H    ldr      r0,[sp]
+.   870    010003CC6H         0600H    lsls     r0,r0,#24
+.   872    010003CC8H         0FC0H    lsrs     r0,r0,#31
+.   874    010003CCAH        09902H    ldr      r1,[sp,#8]
+.   876    010003CCCH        06008H    str      r0,[r1]
+    cfg.dataBits := BFX(x, LCR_H_WLEN1, LCR_H_WLEN0);
+.   878    010003CCEH        09800H    ldr      r0,[sp]
+.   880    010003CD0H         0640H    lsls     r0,r0,#25
+.   882    010003CD2H         0F80H    lsrs     r0,r0,#30
+.   884    010003CD4H        09902H    ldr      r1,[sp,#8]
+.   886    010003CD6H        06048H    str      r0,[r1,#4]
+    cfg.fifoEn := BFX(x, LCR_H_FEN);
+.   888    010003CD8H        09800H    ldr      r0,[sp]
+.   890    010003CDAH         06C0H    lsls     r0,r0,#27
+.   892    010003CDCH         0FC0H    lsrs     r0,r0,#31
+.   894    010003CDEH        09902H    ldr      r1,[sp,#8]
+.   896    010003CE0H        06088H    str      r0,[r1,#8]
+    cfg.twoStopBitsEn := BFX(x, LCR_H_STP2);
+.   898    010003CE2H        09800H    ldr      r0,[sp]
+.   900    010003CE4H         0700H    lsls     r0,r0,#28
+.   902    010003CE6H         0FC0H    lsrs     r0,r0,#31
+.   904    010003CE8H        09902H    ldr      r1,[sp,#8]
+.   906    010003CEAH        060C8H    str      r0,[r1,#12]
+    cfg.evenParityEn := BFX(x, LCR_H_EPS);
+.   908    010003CECH        09800H    ldr      r0,[sp]
+.   910    010003CEEH         0740H    lsls     r0,r0,#29
+.   912    010003CF0H         0FC0H    lsrs     r0,r0,#31
+.   914    010003CF2H        09902H    ldr      r1,[sp,#8]
+.   916    010003CF4H        06108H    str      r0,[r1,#16]
+    cfg.parityEn := BFX(x, LCR_H_PEN);
+.   918    010003CF6H        09800H    ldr      r0,[sp]
+.   920    010003CF8H         0780H    lsls     r0,r0,#30
+.   922    010003CFAH         0FC0H    lsrs     r0,r0,#31
+.   924    010003CFCH        09902H    ldr      r1,[sp,#8]
+.   926    010003CFEH        06148H    str      r0,[r1,#20]
+    cfg.sendBreak := BFX(x, LCR_H_BRK)
+  END GetCurrentCfg;
+.   928    010003D00H        09800H    ldr      r0,[sp]
+.   930    010003D02H         07C0H    lsls     r0,r0,#31
+.   932    010003D04H         0FC0H    lsrs     r0,r0,#31
+.   934    010003D06H        09902H    ldr      r1,[sp,#8]
+.   936    010003D08H        06188H    str      r0,[r1,#24]
+.   938    010003D0AH        0B004H    add      sp,#16
+.   940    010003D0CH        0BD00H    pop      { pc }
+.   942    010003D0EH        046C0H    nop
+
+  (* interrupts *)
+
+  PROCEDURE SetFifoLvl*(dev: Device; txFifoLvl, rxFifoLvl: INTEGER);
+    VAR x: INTEGER;
+  BEGIN
+.   944    010003D10H        0B507H    push     { r0, r1, r2, lr }
+.   946    010003D12H        0B081H    sub      sp,#4
+    ASSERT(txFifoLvl IN {TXIFLSEL_val_18 .. TXIFLSEL_val_78});
+.   948    010003D14H        0201FH    movs     r0,#31
+.   950    010003D16H        09902H    ldr      r1,[sp,#8]
+.   952    010003D18H        02201H    movs     r2,#1
+.   954    010003D1AH        0408AH    lsls     r2,r1
+.   956    010003D1CH        04210H    tst      r0,r2
+.   958    010003D1EH        0D101H    bne.n    2 -> 964
+.   960    010003D20H        0DF00H    svc      0
+.   962    010003D22H   <LineNo: 251>
+    ASSERT(rxFifoLvl IN {RXIFLSEL_val_18 .. RXIFLSEL_val_78});
+.   964    010003D24H        0201FH    movs     r0,#31
+.   966    010003D26H        09903H    ldr      r1,[sp,#12]
+.   968    010003D28H        02201H    movs     r2,#1
+.   970    010003D2AH        0408AH    lsls     r2,r1
+.   972    010003D2CH        04210H    tst      r0,r2
+.   974    010003D2EH        0D101H    bne.n    2 -> 980
+.   976    010003D30H        0DF00H    svc      0
+.   978    010003D32H   <LineNo: 252>
+    x := txFifoLvl;
+.   980    010003D34H        09802H    ldr      r0,[sp,#8]
+.   982    010003D36H        09000H    str      r0,[sp]
+    x := x + LSL(rxFifoLvl, IFLS_RXIFLSEL0);
+.   984    010003D38H        09803H    ldr      r0,[sp,#12]
+.   986    010003D3AH          0C0H    lsls     r0,r0,#3
+.   988    010003D3CH        09900H    ldr      r1,[sp]
+.   990    010003D3EH        01808H    adds     r0,r1,r0
+.   992    010003D40H        09000H    str      r0,[sp]
+    SYSTEM.PUT(dev.IFLS, x)
+  END SetFifoLvl;
+.   994    010003D42H        09801H    ldr      r0,[sp,#4]
+.   996    010003D44H        06B00H    ldr      r0,[r0,#48]
+.   998    010003D46H        09900H    ldr      r1,[sp]
+.  1000    010003D48H        06001H    str      r1,[r0]
+.  1002    010003D4AH        0B004H    add      sp,#16
+.  1004    010003D4CH        0BD00H    pop      { pc }
+.  1006    010003D4EH        046C0H    nop
+
+
+  PROCEDURE EnableInt*(dev: Device; intMask: SET);
+  BEGIN
+.  1008    010003D50H        0B503H    push     { r0, r1, lr }
+    SYSTEM.PUT(dev.IMSC + MCU.ASET, intMask)
+.  1010    010003D52H        09800H    ldr      r0,[sp]
+.  1012    010003D54H        06B40H    ldr      r0,[r0,#52]
+.  1014    010003D56H        02101H    movs     r1,#1
+.  1016    010003D58H         0349H    lsls     r1,r1,#13
+.  1018    010003D5AH        01840H    adds     r0,r0,r1
+  END EnableInt;
+.  1020    010003D5CH        09901H    ldr      r1,[sp,#4]
+.  1022    010003D5EH        06001H    str      r1,[r0]
+.  1024    010003D60H        0B002H    add      sp,#8
+.  1026    010003D62H        0BD00H    pop      { pc }
+
+
+  PROCEDURE DisableInt*(dev: Device; intMask: SET);
+  BEGIN
+.  1028    010003D64H        0B503H    push     { r0, r1, lr }
+    SYSTEM.PUT(dev.IMSC + MCU.ACLR, intMask)
+.  1030    010003D66H        09800H    ldr      r0,[sp]
+.  1032    010003D68H        06B40H    ldr      r0,[r0,#52]
+.  1034    010003D6AH        02103H    movs     r1,#3
+.  1036    010003D6CH         0309H    lsls     r1,r1,#12
+.  1038    010003D6EH        01840H    adds     r0,r0,r1
+  END DisableInt;
+.  1040    010003D70H        09901H    ldr      r1,[sp,#4]
+.  1042    010003D72H        06001H    str      r1,[r0]
+.  1044    010003D74H        0B002H    add      sp,#8
+.  1046    010003D76H        0BD00H    pop      { pc }
+
+
+  PROCEDURE GetEnabledInt*(dev: Device; VAR enabled: SET);
+  BEGIN
+.  1048    010003D78H        0B503H    push     { r0, r1, lr }
+    SYSTEM.GET(dev.IMSC, enabled)
+  END GetEnabledInt;
+.  1050    010003D7AH        09800H    ldr      r0,[sp]
+.  1052    010003D7CH        06B40H    ldr      r0,[r0,#52]
+.  1054    010003D7EH        06801H    ldr      r1,[r0]
+.  1056    010003D80H        09A01H    ldr      r2,[sp,#4]
+.  1058    010003D82H        06011H    str      r1,[r2]
+.  1060    010003D84H        0B002H    add      sp,#8
+.  1062    010003D86H        0BD00H    pop      { pc }
+
+
+  PROCEDURE GetIntStatus*(dev: Device; VAR status: SET);
+  BEGIN
+.  1064    010003D88H        0B503H    push     { r0, r1, lr }
+    SYSTEM.GET(dev.MIS, status)
+  END GetIntStatus;
+.  1066    010003D8AH        09800H    ldr      r0,[sp]
+.  1068    010003D8CH        06B80H    ldr      r0,[r0,#56]
+.  1070    010003D8EH        06801H    ldr      r1,[r0]
+.  1072    010003D90H        09A01H    ldr      r2,[sp,#4]
+.  1074    010003D92H        06011H    str      r1,[r2]
+.  1076    010003D94H        0B002H    add      sp,#8
+.  1078    010003D96H        0BD00H    pop      { pc }
+
+
+  PROCEDURE ClearInt*(dev: Device; intMask: SET);
+  BEGIN
+.  1080    010003D98H        0B503H    push     { r0, r1, lr }
+    SYSTEM.PUT(dev.ICR + MCU.ASET, intMask)
+.  1082    010003D9AH        09800H    ldr      r0,[sp]
+.  1084    010003D9CH        06BC0H    ldr      r0,[r0,#60]
+.  1086    010003D9EH        02101H    movs     r1,#1
+.  1088    010003DA0H         0349H    lsls     r1,r1,#13
+.  1090    010003DA2H        01840H    adds     r0,r0,r1
+  END ClearInt;
+.  1092    010003DA4H        09901H    ldr      r1,[sp,#4]
+.  1094    010003DA6H        06001H    str      r1,[r0]
+.  1096    010003DA8H        0B002H    add      sp,#8
+.  1098    010003DAAH        0BD00H    pop      { pc }
+
+END UARTdev.
+.  1100    010003DACH        0B500H    push     { lr }
+.  1102    010003DAEH        0BD00H    pop      { pc }

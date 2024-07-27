@@ -1,0 +1,274 @@
+.     0  <Pad: 0>
+MODULE Out;
+(**
+  Oberon RTK Framework
+  --
+  Output via two TextIO.Writer.
+  --
+  Copyright (c) 2020-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2, Errors, TextIO, Texts;
+
+  CONST
+    NumTerminals = 2;
+
+  VAR
+    W: ARRAY NumTerminals OF TextIO.Writer; (* module var ok: read only *)
+
+
+  PROCEDURE Open*(W0, W1: TextIO.Writer);
+  BEGIN
+.     4     04H  0B503H          push     { r0, r1, lr }
+    ASSERT(W0 # NIL, Errors.PreCond);
+.     6     06H  09800H          ldr      r0,[sp]
+.     8     08H  02800H          cmp      r0,#0
+.    10     0AH  0D101H          bne.n    2 -> 16
+.    12     0CH  0DF65H          svc      101
+.    14  <LineNo: 22>
+    ASSERT(W1 # NIL, Errors.PreCond);
+.    16    010H  09801H          ldr      r0,[sp,#4]
+.    18    012H  02800H          cmp      r0,#0
+.    20    014H  0D101H          bne.n    2 -> 26
+.    22    016H  0DF65H          svc      101
+.    24  <LineNo: 23>
+    W[0] := W0;
+.    26    01AH  04804H          ldr      r0,[pc,#16] -> 44
+.    28    01CH  09900H          ldr      r1,[sp]
+.    30    01EH  06001H          str      r1,[r0]
+    W[1] := W1
+.    32    020H  04802H          ldr      r0,[pc,#8] -> 44
+  END Open;
+.    34    022H  09901H          ldr      r1,[sp,#4]
+.    36    024H  06041H          str      r1,[r0,#4]
+.    38    026H  0B002H          add      sp,#8
+.    40    028H  0BD00H          pop      { pc }
+.    42    02AH  046C0H          nop
+.    44  <Global: 000080000H  080000H>
+
+
+  PROCEDURE Char*(ch: CHAR);
+    VAR cid: INTEGER;
+  BEGIN
+.    48    030H  0B501H          push     { r0, lr }
+.    50    032H  0B081H          sub      sp,#4
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+.    52    034H  04809H          ldr      r0,[pc,#36] -> 92
+.    54    036H  06801H          ldr      r1,[r0]
+.    56    038H  09100H          str      r1,[sp]
+    Texts.Write(W[cid], ch)
+.    58    03AH  09800H          ldr      r0,[sp]
+.    60    03CH  02802H          cmp      r0,#2
+.    62    03EH  0D301H          bcc.n    2 -> 68
+.    64    040H  0DF01H          svc      1
+.    66  <LineNo: 33>
+.    68    044H  04906H          ldr      r1,[pc,#24] -> 96
+.    70    046H  00080H          lsls     r0,r0,#2
+.    72    048H  01808H          adds     r0,r1,r0
+.    74    04AH  06800H          ldr      r0,[r0]
+.    76    04CH  0A901H          add      r1,sp,#4
+.    78    04EH  07809H          ldrb     r1,[r1]
+  END Char;
+.    80    050H  004040000H      bl.w     Ext Proc #4
+.    84    054H  0E000H          b        0 -> 88
+.    86  <LineNo: 33>
+.    88    058H  0B002H          add      sp,#8
+.    90    05AH  0BD00H          pop      { pc }
+.    92  <Const: 0D0000000H  -805306368>
+.    96  <Global: 000080016H  080016H>
+
+
+  PROCEDURE String*(s: ARRAY OF CHAR);
+    VAR cid: INTEGER;
+  BEGIN
+.   100    064H  0B503H          push     { r0, r1, lr }
+.   102    066H  0B081H          sub      sp,#4
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+.   104    068H  04809H          ldr      r0,[pc,#36] -> 144
+.   106    06AH  06801H          ldr      r1,[r0]
+.   108    06CH  09100H          str      r1,[sp]
+    Texts.WriteString(W[cid], s)
+.   110    06EH  09800H          ldr      r0,[sp]
+.   112    070H  02802H          cmp      r0,#2
+.   114    072H  0D301H          bcc.n    2 -> 120
+.   116    074H  0DF01H          svc      1
+.   118  <LineNo: 41>
+.   120    078H  04906H          ldr      r1,[pc,#24] -> 148
+.   122    07AH  00080H          lsls     r0,r0,#2
+.   124    07CH  01808H          adds     r0,r1,r0
+.   126    07EH  06800H          ldr      r0,[r0]
+.   128    080H  09901H          ldr      r1,[sp,#4]
+.   130    082H  09A02H          ldr      r2,[sp,#8]
+  END String;
+.   132    084H  004050028H      bl.w     Ext Proc #5
+.   136    088H  0E000H          b        0 -> 140
+.   138  <LineNo: 41>
+.   140    08CH  0B003H          add      sp,#12
+.   142    08EH  0BD00H          pop      { pc }
+.   144  <Const: 0D0000000H  -805306368>
+.   148  <Global: 000080030H  080030H>
+
+
+  PROCEDURE Ln*;
+    VAR cid: INTEGER;
+  BEGIN
+.   152    098H  0B500H          push     { lr }
+.   154    09AH  0B081H          sub      sp,#4
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+.   156    09CH  04808H          ldr      r0,[pc,#32] -> 192
+.   158    09EH  06801H          ldr      r1,[r0]
+.   160    0A0H  09100H          str      r1,[sp]
+    Texts.WriteLn(W[cid])
+.   162    0A2H  09800H          ldr      r0,[sp]
+.   164    0A4H  02802H          cmp      r0,#2
+.   166    0A6H  0D301H          bcc.n    2 -> 172
+.   168    0A8H  0DF01H          svc      1
+.   170  <LineNo: 49>
+.   172    0ACH  04905H          ldr      r1,[pc,#20] -> 196
+.   174    0AEH  00080H          lsls     r0,r0,#2
+.   176    0B0H  01808H          adds     r0,r1,r0
+.   178    0B2H  06800H          ldr      r0,[r0]
+  END Ln;
+.   180    0B4H  004060042H      bl.w     Ext Proc #6
+.   184    0B8H  0E000H          b        0 -> 188
+.   186  <LineNo: 49>
+.   188    0BCH  0B001H          add      sp,#4
+.   190    0BEH  0BD00H          pop      { pc }
+.   192  <Const: 0D0000000H  -805306368>
+.   196  <Global: 00008004AH  08004AH>
+
+
+  PROCEDURE Int*(n, width: INTEGER);
+    VAR cid: INTEGER;
+  BEGIN
+.   200    0C8H  0B503H          push     { r0, r1, lr }
+.   202    0CAH  0B081H          sub      sp,#4
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+.   204    0CCH  04809H          ldr      r0,[pc,#36] -> 244
+.   206    0CEH  06801H          ldr      r1,[r0]
+.   208    0D0H  09100H          str      r1,[sp]
+    Texts.WriteInt(W[cid], n, width)
+.   210    0D2H  09800H          ldr      r0,[sp]
+.   212    0D4H  02802H          cmp      r0,#2
+.   214    0D6H  0D301H          bcc.n    2 -> 220
+.   216    0D8H  0DF01H          svc      1
+.   218  <LineNo: 57>
+.   220    0DCH  04906H          ldr      r1,[pc,#24] -> 248
+.   222    0DEH  00080H          lsls     r0,r0,#2
+.   224    0E0H  01808H          adds     r0,r1,r0
+.   226    0E2H  06800H          ldr      r0,[r0]
+.   228    0E4H  09901H          ldr      r1,[sp,#4]
+.   230    0E6H  09A02H          ldr      r2,[sp,#8]
+  END Int;
+.   232    0E8H  00407005AH      bl.w     Ext Proc #7
+.   236    0ECH  0E000H          b        0 -> 240
+.   238  <LineNo: 57>
+.   240    0F0H  0B003H          add      sp,#12
+.   242    0F2H  0BD00H          pop      { pc }
+.   244  <Const: 0D0000000H  -805306368>
+.   248  <Global: 000080062H  080062H>
+
+
+  PROCEDURE Hex*(n, width: INTEGER);
+   VAR cid: INTEGER;
+  BEGIN
+.   252    0FCH  0B503H          push     { r0, r1, lr }
+.   254    0FEH  0B081H          sub      sp,#4
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+.   256   0100H  04809H          ldr      r0,[pc,#36] -> 296
+.   258   0102H  06801H          ldr      r1,[r0]
+.   260   0104H  09100H          str      r1,[sp]
+    Texts.WriteHex(W[cid], n, width)
+.   262   0106H  09800H          ldr      r0,[sp]
+.   264   0108H  02802H          cmp      r0,#2
+.   266   010AH  0D301H          bcc.n    2 -> 272
+.   268   010CH  0DF01H          svc      1
+.   270  <LineNo: 65>
+.   272   0110H  04906H          ldr      r1,[pc,#24] -> 300
+.   274   0112H  00080H          lsls     r0,r0,#2
+.   276   0114H  01808H          adds     r0,r1,r0
+.   278   0116H  06800H          ldr      r0,[r0]
+.   280   0118H  09901H          ldr      r1,[sp,#4]
+.   282   011AH  09A02H          ldr      r2,[sp,#8]
+  END Hex;
+.   284   011CH  004080074H      bl.w     Ext Proc #8
+.   288   0120H  0E000H          b        0 -> 292
+.   290  <LineNo: 65>
+.   292   0124H  0B003H          add      sp,#12
+.   294   0126H  0BD00H          pop      { pc }
+.   296  <Const: 0D0000000H  -805306368>
+.   300  <Global: 00008007CH  08007CH>
+
+
+  PROCEDURE Bin*(n, width: INTEGER);
+    VAR cid: INTEGER;
+  BEGIN
+.   304   0130H  0B503H          push     { r0, r1, lr }
+.   306   0132H  0B081H          sub      sp,#4
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+.   308   0134H  04809H          ldr      r0,[pc,#36] -> 348
+.   310   0136H  06801H          ldr      r1,[r0]
+.   312   0138H  09100H          str      r1,[sp]
+    Texts.WriteBin(W[cid], n, width)
+.   314   013AH  09800H          ldr      r0,[sp]
+.   316   013CH  02802H          cmp      r0,#2
+.   318   013EH  0D301H          bcc.n    2 -> 324
+.   320   0140H  0DF01H          svc      1
+.   322  <LineNo: 73>
+.   324   0144H  04906H          ldr      r1,[pc,#24] -> 352
+.   326   0146H  00080H          lsls     r0,r0,#2
+.   328   0148H  01808H          adds     r0,r1,r0
+.   330   014AH  06800H          ldr      r0,[r0]
+.   332   014CH  09901H          ldr      r1,[sp,#4]
+.   334   014EH  09A02H          ldr      r2,[sp,#8]
+  END Bin;
+.   336   0150H  00409008EH      bl.w     Ext Proc #9
+.   340   0154H  0E000H          b        0 -> 344
+.   342  <LineNo: 73>
+.   344   0158H  0B003H          add      sp,#12
+.   346   015AH  0BD00H          pop      { pc }
+.   348  <Const: 0D0000000H  -805306368>
+.   352  <Global: 000080096H  080096H>
+
+
+  PROCEDURE Flush*;
+    VAR cid: INTEGER;
+  BEGIN
+.   356   0164H  0B500H          push     { lr }
+.   358   0166H  0B081H          sub      sp,#4
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+.   360   0168H  04808H          ldr      r0,[pc,#32] -> 396
+.   362   016AH  06801H          ldr      r1,[r0]
+.   364   016CH  09100H          str      r1,[sp]
+    Texts.FlushOut(W[cid])
+.   366   016EH  09800H          ldr      r0,[sp]
+.   368   0170H  02802H          cmp      r0,#2
+.   370   0172H  0D301H          bcc.n    2 -> 376
+.   372   0174H  0DF01H          svc      1
+.   374  <LineNo: 81>
+.   376   0178H  04905H          ldr      r1,[pc,#20] -> 400
+.   378   017AH  00080H          lsls     r0,r0,#2
+.   380   017CH  01808H          adds     r0,r1,r0
+.   382   017EH  06800H          ldr      r0,[r0]
+  END Flush;
+.   384   0180H  0040D00A8H      bl.w     Ext Proc #13
+.   388   0184H  0E000H          b        0 -> 392
+.   390  <LineNo: 81>
+.   392   0188H  0B001H          add      sp,#4
+.   394   018AH  0BD00H          pop      { pc }
+.   396  <Const: 0D0000000H  -805306368>
+.   400  <Global: 0000800B0H  0800B0H>
+
+BEGIN
+.   404   0194H  0B500H          push     { lr }
+  W[0] := NIL; W[1] := NIL
+.   406   0196H  04803H          ldr      r0,[pc,#12] -> 420
+.   408   0198H  02100H          movs     r1,#0
+.   410   019AH  06001H          str      r1,[r0]
+.   412   019CH  04801H          ldr      r0,[pc,#4] -> 420
+END Out.
+.   414   019EH  02100H          movs     r1,#0
+.   416   01A0H  06041H          str      r1,[r0,#4]
+.   418   01A2H  0BD00H          pop      { pc }
+.   420  <Global: 0000800C8H  0800C8H>

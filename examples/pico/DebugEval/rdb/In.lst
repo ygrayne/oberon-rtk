@@ -1,0 +1,132 @@
+.     0  <Pad: 0>
+MODULE In;
+(**
+  Oberon RTK Framework
+  Input vua two TextIO.Reader.
+  --
+  Copyright (c) 2020-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2, Errors, TextIO, Texts;
+
+  CONST
+    NumTerminals = 2;
+
+    (* error codes, from TextIO *)
+    NoError* = TextIO.NoError;
+    BufferOverflow* = TextIO.BufferOverflow;
+    SyntaxError* = TextIO.SyntaxError;
+    OutOfLimits* = TextIO.OutOfLimits;
+    NoInput* = TextIO.NoInput;
+    FifoOverrun* = TextIO.FifoOverrun;
+
+
+  VAR
+    R: ARRAY NumTerminals OF TextIO.Reader;
+
+  PROCEDURE Open*(R0, R1: TextIO.Reader);
+  BEGIN
+.     4     04H  0B503H          push     { r0, r1, lr }
+    ASSERT(R0 # NIL, Errors.PreCond);
+.     6     06H  09800H          ldr      r0,[sp]
+.     8     08H  02800H          cmp      r0,#0
+.    10     0AH  0D101H          bne.n    2 -> 16
+.    12     0CH  0DF65H          svc      101
+.    14  <LineNo: 29>
+    ASSERT(R1 # NIL, Errors.PreCond);
+.    16    010H  09801H          ldr      r0,[sp,#4]
+.    18    012H  02800H          cmp      r0,#0
+.    20    014H  0D101H          bne.n    2 -> 26
+.    22    016H  0DF65H          svc      101
+.    24  <LineNo: 30>
+    R[0] := R0;
+.    26    01AH  04804H          ldr      r0,[pc,#16] -> 44
+.    28    01CH  09900H          ldr      r1,[sp]
+.    30    01EH  06001H          str      r1,[r0]
+    R[1] := R1
+.    32    020H  04802H          ldr      r0,[pc,#8] -> 44
+  END Open;
+.    34    022H  09901H          ldr      r1,[sp,#4]
+.    36    024H  06041H          str      r1,[r0,#4]
+.    38    026H  0B002H          add      sp,#8
+.    40    028H  0BD00H          pop      { pc }
+.    42    02AH  046C0H          nop
+.    44  <Global: 000080000H  080000H>
+
+
+  PROCEDURE String*(VAR str: ARRAY OF CHAR; VAR res: INTEGER);
+    VAR cid: INTEGER;
+  BEGIN
+.    48    030H  0B507H          push     { r0, r1, r2, lr }
+.    50    032H  0B081H          sub      sp,#4
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+.    52    034H  0480AH          ldr      r0,[pc,#40] -> 96
+.    54    036H  06801H          ldr      r1,[r0]
+.    56    038H  09100H          str      r1,[sp]
+    Texts.ReadString(R[cid], str, res)
+.    58    03AH  09800H          ldr      r0,[sp]
+.    60    03CH  02802H          cmp      r0,#2
+.    62    03EH  0D301H          bcc.n    2 -> 68
+.    64    040H  0DF01H          svc      1
+.    66  <LineNo: 40>
+.    68    044H  04907H          ldr      r1,[pc,#28] -> 100
+.    70    046H  00080H          lsls     r0,r0,#2
+.    72    048H  01808H          adds     r0,r1,r0
+.    74    04AH  06800H          ldr      r0,[r0]
+.    76    04CH  09901H          ldr      r1,[sp,#4]
+.    78    04EH  09A02H          ldr      r2,[sp,#8]
+.    80    050H  09B03H          ldr      r3,[sp,#12]
+  END String;
+.    82    052H  0040B0000H      bl.w     Ext Proc #11
+.    86    056H  0E000H          b        0 -> 90
+.    88  <LineNo: 40>
+.    90    05AH  0B004H          add      sp,#16
+.    92    05CH  0BD00H          pop      { pc }
+.    94    05EH  046C0H          nop
+.    96  <Const: 0D0000000H  -805306368>
+.   100  <Global: 000080016H  080016H>
+
+
+  PROCEDURE Int*(VAR int, res: INTEGER);
+    VAR cid: INTEGER;
+  BEGIN
+.   104    068H  0B503H          push     { r0, r1, lr }
+.   106    06AH  0B081H          sub      sp,#4
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+.   108    06CH  04809H          ldr      r0,[pc,#36] -> 148
+.   110    06EH  06801H          ldr      r1,[r0]
+.   112    070H  09100H          str      r1,[sp]
+    Texts.ReadInt(R[cid], int, res)
+.   114    072H  09800H          ldr      r0,[sp]
+.   116    074H  02802H          cmp      r0,#2
+.   118    076H  0D301H          bcc.n    2 -> 124
+.   120    078H  0DF01H          svc      1
+.   122  <LineNo: 48>
+.   124    07CH  04906H          ldr      r1,[pc,#24] -> 152
+.   126    07EH  00080H          lsls     r0,r0,#2
+.   128    080H  01808H          adds     r0,r1,r0
+.   130    082H  06800H          ldr      r0,[r0]
+.   132    084H  09901H          ldr      r1,[sp,#4]
+.   134    086H  09A02H          ldr      r2,[sp,#8]
+  END Int;
+.   136    088H  0040C0029H      bl.w     Ext Proc #12
+.   140    08CH  0E000H          b        0 -> 144
+.   142  <LineNo: 48>
+.   144    090H  0B003H          add      sp,#12
+.   146    092H  0BD00H          pop      { pc }
+.   148  <Const: 0D0000000H  -805306368>
+.   152  <Global: 000080032H  080032H>
+
+BEGIN
+.   156    09CH  0B500H          push     { lr }
+  R[0] := NIL; R[1] := NIL
+.   158    09EH  04803H          ldr      r0,[pc,#12] -> 172
+.   160    0A0H  02100H          movs     r1,#0
+.   162    0A2H  06001H          str      r1,[r0]
+.   164    0A4H  04801H          ldr      r0,[pc,#4] -> 172
+END In.
+.   166    0A6H  02100H          movs     r1,#0
+.   168    0A8H  06041H          str      r1,[r0,#4]
+.   170    0AAH  0BD00H          pop      { pc }
+.   172  <Global: 00008004CH  08004CH>

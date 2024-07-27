@@ -24,7 +24,7 @@ MODULE AlarmTest;
     Runs1 = Runs0 + 4;
     NumRuns = Runs1 + 1;
 
-    PreCacheProcs = TRUE;
+    PreCacheProcs = FALSE;
 
   TYPE
     Run = POINTER TO RunDesc;

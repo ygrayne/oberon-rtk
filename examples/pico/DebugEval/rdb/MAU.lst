@@ -1,0 +1,261 @@
+.     0  <Pad: 0>
+MODULE MAU;
+  (* Memory Allocation Unit; NW 15.12.2007 *)
+  (* The first two procedures must remain in that order!*)
+
+  (* =========================================================================
+   Astrobe Library Functions for Memory Usage
+
+   Target:
+     All supported systems
+
+   Tested on:
+     All supported development boards
+
+  (c) 2012-2024 CFB Software
+  https://www.astrobe.com
+
+  ========================================================================= *)
+
+  IMPORT LinkOptions, SYSTEM;
+
+  TYPE
+    Proc* = PROCEDURE (VAR p: INTEGER; T: INTEGER);
+
+  VAR
+    allocate, deallocate: Proc;
+    heapTop, heapLimit: INTEGER;
+
+  (* Must be 1st procedure *)
+  PROCEDURE New*(VAR p: INTEGER; T: INTEGER);
+  BEGIN
+.     4     04H  0B503H          push     { r0, r1, lr }
+    allocate(p, T)
+.     6     06H  09800H          ldr      r0,[sp]
+.     8     08H  09901H          ldr      r1,[sp,#4]
+  END New;
+.    10     0AH  04A06H          ldr      r2,[pc,#24] -> 36
+.    12     0CH  06812H          ldr      r2,[r2]
+.    14     0EH  02A00H          cmp      r2,#0
+.    16    010H  0D101H          bne.n    2 -> 22
+.    18    012H  0DF05H          svc      5
+.    20  <LineNo: 31>
+.    22    016H  03201H          adds     r2,#1
+.    24    018H  04790H          blx      r2
+.    26    01AH  0E000H          b        0 -> 30
+.    28  <LineNo: 31>
+.    30    01EH  0B002H          add      sp,#8
+.    32    020H  0BD00H          pop      { pc }
+.    34    022H  046C0H          nop
+.    36  <Global: 000040000H  040000H>
+
+  (* Must be 2nd procedure *)
+  PROCEDURE Dispose*(VAR p: INTEGER; T: INTEGER);
+  BEGIN
+.    40    028H  0B503H          push     { r0, r1, lr }
+    deallocate(p, T)
+.    42    02AH  09800H          ldr      r0,[sp]
+.    44    02CH  09901H          ldr      r1,[sp,#4]
+  END Dispose;
+.    46    02EH  04A06H          ldr      r2,[pc,#24] -> 72
+.    48    030H  06812H          ldr      r2,[r2]
+.    50    032H  02A00H          cmp      r2,#0
+.    52    034H  0D101H          bne.n    2 -> 58
+.    54    036H  0DF05H          svc      5
+.    56  <LineNo: 37>
+.    58    03AH  03201H          adds     r2,#1
+.    60    03CH  04790H          blx      r2
+.    62    03EH  0E000H          b        0 -> 66
+.    64  <LineNo: 37>
+.    66    042H  0B002H          add      sp,#8
+.    68    044H  0BD00H          pop      { pc }
+.    70    046H  046C0H          nop
+.    72  <Global: 000080012H  080012H>
+
+
+  PROCEDURE SetNew*(p: Proc);
+  BEGIN
+.    76    04CH  0B501H          push     { r0, lr }
+    allocate := p
+  END SetNew;
+.    78    04EH  09800H          ldr      r0,[sp]
+.    80    050H  04901H          ldr      r1,[pc,#4] -> 88
+.    82    052H  06008H          str      r0,[r1]
+.    84    054H  0B001H          add      sp,#4
+.    86    056H  0BD00H          pop      { pc }
+.    88  <Global: 000040024H  040024H>
+
+
+  PROCEDURE SetDispose*(p: Proc);
+  BEGIN
+.    92    05CH  0B501H          push     { r0, lr }
+    deallocate := p
+  END SetDispose;
+.    94    05EH  09800H          ldr      r0,[sp]
+.    96    060H  04901H          ldr      r1,[pc,#4] -> 104
+.    98    062H  06008H          str      r0,[r1]
+.   100    064H  0B001H          add      sp,#4
+.   102    066H  0BD00H          pop      { pc }
+.   104  <Global: 00008002CH  08002CH>
+
+
+  PROCEDURE Allocate*(VAR p: INTEGER; typeDesc: INTEGER);
+  (* Allocate record, prefix with typeDesc field of 1 word with offset -4 *)
+  CONST 
+    SP = 13;
+  VAR
+    h, size, limit: INTEGER;
+  BEGIN
+.   108    06CH  0B503H          push     { r0, r1, lr }
+.   110    06EH  0B083H          sub      sp,#12
+    IF heapLimit = 0 THEN
+.   112    070H  04817H          ldr      r0,[pc,#92] -> 208
+.   114    072H  06800H          ldr      r0,[r0]
+.   116    074H  02800H          cmp      r0,#0
+.   118    076H  0D001H          beq.n    2 -> 124
+.   120    078H  0E004H          b        8 -> 132
+.   122    07AH  046C0H          nop
+      limit := SYSTEM.REG(SP)
+    ELSE
+.   124    07CH  04668H          mov      r0,sp
+.   126    07EH  09002H          str      r0,[sp,#8]
+      limit := heapLimit
+.   128    080H  0E003H          b        6 -> 138
+.   130    082H  046C0H          nop
+    END;
+.   132    084H  04812H          ldr      r0,[pc,#72] -> 208
+.   134    086H  06800H          ldr      r0,[r0]
+.   136    088H  09002H          str      r0,[sp,#8]
+    (*obtain record size from type descriptor*)
+    SYSTEM.GET(typeDesc, size);
+.   138    08AH  09804H          ldr      r0,[sp,#16]
+.   140    08CH  06801H          ldr      r1,[r0]
+.   142    08EH  09101H          str      r1,[sp,#4]
+    h := heapTop + 4 + size;
+.   144    090H  04810H          ldr      r0,[pc,#64] -> 212
+.   146    092H  06800H          ldr      r0,[r0]
+.   148    094H  03004H          adds     r0,#4
+.   150    096H  09901H          ldr      r1,[sp,#4]
+.   152    098H  01840H          adds     r0,r0,r1
+.   154    09AH  09000H          str      r0,[sp]
+    IF h > limit THEN
+.   156    09CH  09800H          ldr      r0,[sp]
+.   158    09EH  09902H          ldr      r1,[sp,#8]
+.   160    0A0H  04288H          cmp      r0,r1
+.   162    0A2H  0DC01H          bgt.n    2 -> 168
+.   164    0A4H  0E005H          b        10 -> 178
+.   166    0A6H  046C0H          nop
+      p := 0
+    ELSE
+.   168    0A8H  02000H          movs     r0,#0
+.   170    0AAH  09903H          ldr      r1,[sp,#12]
+.   172    0ACH  06008H          str      r0,[r1]
+      p := heapTop + 4;
+.   174    0AEH  0E00CH          b        24 -> 202
+.   176    0B0H  046C0H          nop
+.   178    0B2H  04808H          ldr      r0,[pc,#32] -> 212
+.   180    0B4H  06800H          ldr      r0,[r0]
+.   182    0B6H  03004H          adds     r0,#4
+.   184    0B8H  09903H          ldr      r1,[sp,#12]
+.   186    0BAH  06008H          str      r0,[r1]
+      (* Address of type descriptor to tagfield of new record *)
+      SYSTEM.PUT(heapTop, typeDesc);
+.   188    0BCH  04805H          ldr      r0,[pc,#20] -> 212
+.   190    0BEH  06800H          ldr      r0,[r0]
+.   192    0C0H  09904H          ldr      r1,[sp,#16]
+.   194    0C2H  06001H          str      r1,[r0]
+      heapTop := h
+    END
+.   196    0C4H  09800H          ldr      r0,[sp]
+.   198    0C6H  04903H          ldr      r1,[pc,#12] -> 212
+.   200    0C8H  06008H          str      r0,[r1]
+  END Allocate;
+.   202    0CAH  0B005H          add      sp,#20
+.   204    0CCH  0BD00H          pop      { pc }
+.   206    0CEH  046C0H          nop
+.   208  <Global: 000100034H  0100034H>
+.   212  <Global: 0000C0068H  0C0068H>
+
+
+  PROCEDURE Deallocate*(VAR p: INTEGER; typeDesc: INTEGER);
+  (* Assign NIL to the pointer. Reclaim the space if this was the most
+     recent allocation otherwise do nothing. *)
+  VAR
+    h, size: INTEGER;
+  BEGIN
+.   216    0D8H  0B503H          push     { r0, r1, lr }
+.   218    0DAH  0B082H          sub      sp,#8
+    ASSERT(p # 0, 12);
+.   220    0DCH  09802H          ldr      r0,[sp,#8]
+.   222    0DEH  06800H          ldr      r0,[r0]
+.   224    0E0H  02800H          cmp      r0,#0
+.   226    0E2H  0D101H          bne.n    2 -> 232
+.   228    0E4H  0DF0CH          svc      12
+.   230  <LineNo: 85>
+    (*obtain record size from type descriptor*)
+    SYSTEM.GET(typeDesc, size);
+.   232    0E8H  09803H          ldr      r0,[sp,#12]
+.   234    0EAH  06801H          ldr      r1,[r0]
+.   236    0ECH  09101H          str      r1,[sp,#4]
+    h := heapTop - size;
+.   238    0EEH  0480AH          ldr      r0,[pc,#40] -> 280
+.   240    0F0H  06800H          ldr      r0,[r0]
+.   242    0F2H  09901H          ldr      r1,[sp,#4]
+.   244    0F4H  01A40H          subs     r0,r0,r1
+.   246    0F6H  09000H          str      r0,[sp]
+    IF h = p THEN heapTop := h - 4 END;
+.   248    0F8H  09800H          ldr      r0,[sp]
+.   250    0FAH  09902H          ldr      r1,[sp,#8]
+.   252    0FCH  06809H          ldr      r1,[r1]
+.   254    0FEH  04288H          cmp      r0,r1
+.   256   0100H  0D001H          beq.n    2 -> 262
+.   258   0102H  0E004H          b        8 -> 270
+.   260   0104H  046C0H          nop
+.   262   0106H  09800H          ldr      r0,[sp]
+.   264   0108H  03804H          subs     r0,#4
+.   266   010AH  04903H          ldr      r1,[pc,#12] -> 280
+.   268   010CH  06008H          str      r0,[r1]
+    p := 0
+  END Deallocate;
+.   270   010EH  02000H          movs     r0,#0
+.   272   0110H  09902H          ldr      r1,[sp,#8]
+.   274   0112H  06008H          str      r0,[r1]
+.   276   0114H  0B004H          add      sp,#16
+.   278   0116H  0BD00H          pop      { pc }
+.   280  <Global: 0000C006AH  0C006AH>
+
+
+BEGIN
+.   284   011CH  0B500H          push     { lr }
+  SetNew(Allocate);
+.   286   011EH  046C0H          nop
+.   288   0120H  0480AH          ldr      r0,[pc,#40] -> 332
+.   290   0122H  04478H          add      r0,pc
+.   292   0124H  0F7FFFF92H      bl.w     -220 -> 76
+.   296   0128H  0E000H          b        0 -> 300
+.   298  <LineNo: 95>
+  SetDispose(Deallocate);
+.   300   012CH  04808H          ldr      r0,[pc,#32] -> 336
+.   302   012EH  04478H          add      r0,pc
+.   304   0130H  0F7FFFF94H      bl.w     -216 -> 92
+.   308   0134H  0E000H          b        0 -> 312
+.   310  <LineNo: 96>
+  heapTop := LinkOptions.HeapStart;
+.   312   0138H  04806H          ldr      r0,[pc,#24] -> 340
+.   314   013AH  06800H          ldr      r0,[r0]
+.   316   013CH  04907H          ldr      r1,[pc,#28] -> 348
+.   318   013EH  06008H          str      r0,[r1]
+  heapLimit := LinkOptions.HeapLimit
+END MAU.
+.   320   0140H  04805H          ldr      r0,[pc,#20] -> 344
+.   322   0142H  06800H          ldr      r0,[r0]
+.   324   0144H  04906H          ldr      r1,[pc,#24] -> 352
+.   326   0146H  06008H          str      r0,[r1]
+.   328   0148H  0BD00H          pop      { pc }
+.   330   014AH  046C0H          nop
+.   332  <Const: 0FFFFFF46H  -186>
+.   336  <Const: 0FFFFFFA6H  -90>
+.   340  <Global: 000020000H  020000H>
+.   344  <Global: 0000300AAH  0300AAH>
+.   348  <Global: 0000C008CH  0C008CH>
+.   352  <Global: 0001000AEH  01000AEH>

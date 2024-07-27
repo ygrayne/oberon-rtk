@@ -1,0 +1,588 @@
+.     0    010000E2CH   <Pad: 0>
+MODULE GPIO;
+(**
+  Oberon RTK Framework
+  --
+  General Purpose IO (GPIO)
+  --
+  MCU: Cortex-M0+ RP2040, tested on Pico
+  Datasheet:
+  * 2.19.6.1, p243 (GPIO)
+  * 2.19.6.3, p298 (banks and pads)
+  * 2.3.1.17, p42 (SIO)
+  --
+  Pin mumbers 0 .. 29, on "lo bank" (IO_BANK0)
+  The "hi bank" for QPSI is not handled here.
+  --
+  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2, StartUp, Errors;
+
+  CONST
+    (* generic values *)
+    Enabled* = 1;
+    Disabled* = 0;
+
+
+    (* BANK0_GPIO bits and values *)
+    BANK0_GPIO_OD*          = 7;
+    BANK0_GPIO_IE*          = 6;
+    BANK0_GPIO_DRIVE1*      = 5; (* [5:4], drive stringth *)
+    BANK0_GPIO_DRIVE0*      = 4;
+      DRIVE_val_2mA*  = 0;
+      DRIVE_val_4mA*  = 1;  (* reset *)
+      DRIVE_val_8mA*  = 2;
+      DRIVE_val_12mA* = 3;
+    BANK0_GPIO_PUE*         = 3;
+    BANK0_GPIO_PDE*         = 2;
+    BANK0_GPIO_SCHMITT*     = 1;
+    BANK0_GPIO_SLEWFAST*    = 0;
+      SLEWFAST_val_slow* = 0;
+      SLEWFAST_val_fast* = 1;
+
+    (* value aliases *)
+    Drive2mA*  = DRIVE_val_2mA;
+    Drive4mA*  = DRIVE_val_4mA;  (* reset *)
+    Drive8mA*  = DRIVE_val_8mA;
+    Drive12mA* = DRIVE_val_12mA;
+    SlewSlow*  = SLEWFAST_val_slow;  (* reset *)
+    SlewFast*  = SLEWFAST_val_fast;
+
+    OD = 7; (* output disable *)
+    IE = 6; (* input enable *)
+
+    (* GPIO functions *)
+    F1* = 1;   F2* = 2;   F3* = 3;   F4* = 4;
+    F5* = 5;   F6* = 6;   F7* = 7;   F8* = 8;   F9* = 9;
+
+    Fspi* = F1;
+    Fuart* = F2;
+    Fi2c* = F3;
+    Fpwm* = F4;
+    Fsio* = F5;
+    Fpio0* = F6;
+    Fpio1* = F7;
+    Fclk* = F8;
+    Fusb* = F9;
+
+
+  TYPE
+    PadCfg* = RECORD (* see ASSERTs in 'ConfigurePad' for valid values *)
+      outputDe*: INTEGER;       (* reset: Disabled *)
+      inputEn*: INTEGER;        (* reset: Enabled *)
+      driveStrength*: INTEGER;  (* reset: Drive4mA *)
+      pullupEn*: INTEGER;       (* reset: Disabled *)
+      pulldownEn*: INTEGER;     (* reset: Enabled *)
+      schmittTrigEn*: INTEGER;  (* reset: Enabled *)
+      slewRate*: INTEGER        (* reset: SlewSlow *)
+    END;
+.     4    010000E30H   <Type: 28>
+.     8    010000E34H   <Type: 0>
+.    12    010000E38H   <Type: 0>
+.    16    010000E3CH   <Type: 0>
+.    20    010000E40H   <Type: 0>
+
+  (* --- GPIO device --- *)
+
+  PROCEDURE SetFunction*(pinNo, functionNo: INTEGER);
+    VAR addr, x: INTEGER;
+  BEGIN
+.    24    010000E44H        0B503H    push     { r0, r1, lr }
+.    26    010000E46H        0B082H    sub      sp,#8
+    ASSERT(functionNo IN {F1 .. F9}, Errors. PreCond);
+.    28    010000E48H        0480DH    ldr      r0,[pc,#52] -> 84 ; Const: 03FEH 1022
+.    30    010000E4AH        09903H    ldr      r1,[sp,#12]
+.    32    010000E4CH        02201H    movs     r2,#1
+.    34    010000E4EH        0408AH    lsls     r2,r1
+.    36    010000E50H        04210H    tst      r0,r2
+.    38    010000E52H        0D101H    bne.n    2 -> 44
+.    40    010000E54H        0DF65H    svc      101
+.    42    010000E56H   <LineNo: 86>
+    addr := MCU.IO_BANK0_GPIO_CTRL + (pinNo * MCU.IO_BANK0_GPIO_Offset);
+.    44    010000E58H        09802H    ldr      r0,[sp,#8]
+.    46    010000E5AH          0C0H    lsls     r0,r0,#3
+.    48    010000E5CH        04909H    ldr      r1,[pc,#36] -> 88 ; Const: 040014004H 1073823748
+.    50    010000E5EH        01840H    adds     r0,r0,r1
+.    52    010000E60H        09000H    str      r0,[sp]
+    SYSTEM.GET(addr, x);
+.    54    010000E62H        09800H    ldr      r0,[sp]
+.    56    010000E64H        06801H    ldr      r1,[r0]
+.    58    010000E66H        09101H    str      r1,[sp,#4]
+    BFI(x, 4, 0, functionNo);
+.    60    010000E68H        09803H    ldr      r0,[sp,#12]
+.    62    010000E6AH        04669H    mov      r1,sp
+.    64    010000E6CH        0684AH    ldr      r2,[r1,#4]
+.    66    010000E6EH        04B06H    ldr      r3,[pc,#24] -> 92 ; Const: 0FFFFFFE0H -32
+.    68    010000E70H        0401AH    ands     r2,r3
+.    70    010000E72H        04302H    orrs     r2,r0
+.    72    010000E74H        09201H    str      r2,[sp,#4]
+    SYSTEM.PUT(addr, x)
+  END SetFunction;
+.    74    010000E76H        09800H    ldr      r0,[sp]
+.    76    010000E78H        09901H    ldr      r1,[sp,#4]
+.    78    010000E7AH        06001H    str      r1,[r0]
+.    80    010000E7CH        0B004H    add      sp,#16
+.    82    010000E7EH        0BD00H    pop      { pc }
+.    84    010000E80H   <Const: 03FEH 1022>
+.    88    010000E84H   <Const: 040014004H 1073823748>
+.    92    010000E88H   <Const: 0FFFFFFE0H -32>
+
+  PROCEDURE SetInverters*(pinNo: INTEGER; mask: SET);
+    VAR addr, x: INTEGER;
+  BEGIN
+.    96    010000E8CH        0B503H    push     { r0, r1, lr }
+.    98    010000E8EH        0B082H    sub      sp,#8
+    addr := MCU.IO_BANK0_GPIO_CTRL + (pinNo * MCU.IO_BANK0_GPIO_Offset);
+.   100    010000E90H        09802H    ldr      r0,[sp,#8]
+.   102    010000E92H          0C0H    lsls     r0,r0,#3
+.   104    010000E94H        04909H    ldr      r1,[pc,#36] -> 144 ; Const: 040014004H 1073823748
+.   106    010000E96H        01840H    adds     r0,r0,r1
+.   108    010000E98H        09000H    str      r0,[sp]
+    SYSTEM.GET(addr, x);
+.   110    010000E9AH        09800H    ldr      r0,[sp]
+.   112    010000E9CH        06801H    ldr      r1,[r0]
+.   114    010000E9EH        09101H    str      r1,[sp,#4]
+    BFI(x, 31, 5, ORD(mask));
+.   116    010000EA0H        09803H    ldr      r0,[sp,#12]
+.   118    010000EA2H        04669H    mov      r1,sp
+.   120    010000EA4H        0684AH    ldr      r2,[r1,#4]
+.   122    010000EA6H        0231FH    movs     r3,#31
+.   124    010000EA8H        0401AH    ands     r2,r3
+.   126    010000EAAH         0140H    lsls     r0,r0,#5
+.   128    010000EACH        04302H    orrs     r2,r0
+.   130    010000EAEH        09201H    str      r2,[sp,#4]
+    SYSTEM.PUT(addr, x)
+  END SetInverters;
+.   132    010000EB0H        09800H    ldr      r0,[sp]
+.   134    010000EB2H        09901H    ldr      r1,[sp,#4]
+.   136    010000EB4H        06001H    str      r1,[r0]
+.   138    010000EB6H        0B004H    add      sp,#16
+.   140    010000EB8H        0BD00H    pop      { pc }
+.   142    010000EBAH        046C0H    nop
+.   144    010000EBCH   <Const: 040014004H 1073823748>
+
+  (* define interrupts functions here *)
+  (* ... *)
+
+  (* --- pads --- *)
+
+  PROCEDURE ConfigurePad*(pinNo: INTEGER; cfg: PadCfg);
+    VAR addr, x: INTEGER;
+  BEGIN
+.   148    010000EC0H        0B507H    push     { r0, r1, r2, lr }
+.   150    010000EC2H        0B082H    sub      sp,#8
+    ASSERT(cfg.outputDe IN {Disabled, Enabled}, Errors.PreCond);
+.   152    010000EC4H        02003H    movs     r0,#3
+.   154    010000EC6H        09903H    ldr      r1,[sp,#12]
+.   156    010000EC8H        06809H    ldr      r1,[r1]
+.   158    010000ECAH        02201H    movs     r2,#1
+.   160    010000ECCH        0408AH    lsls     r2,r1
+.   162    010000ECEH        04210H    tst      r0,r2
+.   164    010000ED0H        0D101H    bne.n    2 -> 170
+.   166    010000ED2H        0DF65H    svc      101
+.   168    010000ED4H   <LineNo: 110>
+    ASSERT(cfg.inputEn IN {Disabled, Enabled}, Errors.PreCond);
+.   170    010000ED6H        02003H    movs     r0,#3
+.   172    010000ED8H        09903H    ldr      r1,[sp,#12]
+.   174    010000EDAH        06849H    ldr      r1,[r1,#4]
+.   176    010000EDCH        02201H    movs     r2,#1
+.   178    010000EDEH        0408AH    lsls     r2,r1
+.   180    010000EE0H        04210H    tst      r0,r2
+.   182    010000EE2H        0D101H    bne.n    2 -> 188
+.   184    010000EE4H        0DF65H    svc      101
+.   186    010000EE6H   <LineNo: 111>
+    ASSERT(cfg.driveStrength IN {DRIVE_val_2mA .. DRIVE_val_12mA}, Errors.PreCond);
+.   188    010000EE8H        0200FH    movs     r0,#15
+.   190    010000EEAH        09903H    ldr      r1,[sp,#12]
+.   192    010000EECH        06889H    ldr      r1,[r1,#8]
+.   194    010000EEEH        02201H    movs     r2,#1
+.   196    010000EF0H        0408AH    lsls     r2,r1
+.   198    010000EF2H        04210H    tst      r0,r2
+.   200    010000EF4H        0D101H    bne.n    2 -> 206
+.   202    010000EF6H        0DF65H    svc      101
+.   204    010000EF8H   <LineNo: 112>
+    ASSERT(cfg.pullupEn IN {Disabled, Enabled}, Errors.PreCond);
+.   206    010000EFAH        02003H    movs     r0,#3
+.   208    010000EFCH        09903H    ldr      r1,[sp,#12]
+.   210    010000EFEH        068C9H    ldr      r1,[r1,#12]
+.   212    010000F00H        02201H    movs     r2,#1
+.   214    010000F02H        0408AH    lsls     r2,r1
+.   216    010000F04H        04210H    tst      r0,r2
+.   218    010000F06H        0D101H    bne.n    2 -> 224
+.   220    010000F08H        0DF65H    svc      101
+.   222    010000F0AH   <LineNo: 113>
+    ASSERT(cfg.pulldownEn IN {Disabled, Enabled}, Errors.PreCond);
+.   224    010000F0CH        02003H    movs     r0,#3
+.   226    010000F0EH        09903H    ldr      r1,[sp,#12]
+.   228    010000F10H        06909H    ldr      r1,[r1,#16]
+.   230    010000F12H        02201H    movs     r2,#1
+.   232    010000F14H        0408AH    lsls     r2,r1
+.   234    010000F16H        04210H    tst      r0,r2
+.   236    010000F18H        0D101H    bne.n    2 -> 242
+.   238    010000F1AH        0DF65H    svc      101
+.   240    010000F1CH   <LineNo: 114>
+    ASSERT(cfg.schmittTrigEn IN {Disabled, Enabled}, Errors.PreCond);
+.   242    010000F1EH        02003H    movs     r0,#3
+.   244    010000F20H        09903H    ldr      r1,[sp,#12]
+.   246    010000F22H        06949H    ldr      r1,[r1,#20]
+.   248    010000F24H        02201H    movs     r2,#1
+.   250    010000F26H        0408AH    lsls     r2,r1
+.   252    010000F28H        04210H    tst      r0,r2
+.   254    010000F2AH        0D101H    bne.n    2 -> 260
+.   256    010000F2CH        0DF65H    svc      101
+.   258    010000F2EH   <LineNo: 115>
+    ASSERT(cfg.slewRate IN {SLEWFAST_val_slow, SLEWFAST_val_fast}, Errors.PreCond);
+.   260    010000F30H        02003H    movs     r0,#3
+.   262    010000F32H        09903H    ldr      r1,[sp,#12]
+.   264    010000F34H        06989H    ldr      r1,[r1,#24]
+.   266    010000F36H        02201H    movs     r2,#1
+.   268    010000F38H        0408AH    lsls     r2,r1
+.   270    010000F3AH        04210H    tst      r0,r2
+.   272    010000F3CH        0D101H    bne.n    2 -> 278
+.   274    010000F3EH        0DF65H    svc      101
+.   276    010000F40H   <LineNo: 116>
+
+    addr := MCU.PADS_BANK0_GPIO + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
+.   278    010000F42H        09802H    ldr      r0,[sp,#8]
+.   280    010000F44H          080H    lsls     r0,r0,#2
+.   282    010000F46H        04917H    ldr      r1,[pc,#92] -> 376 ; Const: 04001C004H 1073856516
+.   284    010000F48H        01840H    adds     r0,r0,r1
+.   286    010000F4AH        09000H    str      r0,[sp]
+    x := cfg.slewRate;
+.   288    010000F4CH        09803H    ldr      r0,[sp,#12]
+.   290    010000F4EH        06980H    ldr      r0,[r0,#24]
+.   292    010000F50H        09001H    str      r0,[sp,#4]
+    x := x + LSL(cfg.schmittTrigEn, BANK0_GPIO_SCHMITT);
+.   294    010000F52H        09803H    ldr      r0,[sp,#12]
+.   296    010000F54H        06940H    ldr      r0,[r0,#20]
+.   298    010000F56H          040H    lsls     r0,r0,#1
+.   300    010000F58H        09901H    ldr      r1,[sp,#4]
+.   302    010000F5AH        01808H    adds     r0,r1,r0
+.   304    010000F5CH        09001H    str      r0,[sp,#4]
+    x := x + LSL(cfg.pulldownEn, BANK0_GPIO_PDE);
+.   306    010000F5EH        09803H    ldr      r0,[sp,#12]
+.   308    010000F60H        06900H    ldr      r0,[r0,#16]
+.   310    010000F62H          080H    lsls     r0,r0,#2
+.   312    010000F64H        09901H    ldr      r1,[sp,#4]
+.   314    010000F66H        01808H    adds     r0,r1,r0
+.   316    010000F68H        09001H    str      r0,[sp,#4]
+    x := x + LSL(cfg.pullupEn, BANK0_GPIO_PUE);
+.   318    010000F6AH        09803H    ldr      r0,[sp,#12]
+.   320    010000F6CH        068C0H    ldr      r0,[r0,#12]
+.   322    010000F6EH          0C0H    lsls     r0,r0,#3
+.   324    010000F70H        09901H    ldr      r1,[sp,#4]
+.   326    010000F72H        01808H    adds     r0,r1,r0
+.   328    010000F74H        09001H    str      r0,[sp,#4]
+    x := x + LSL(cfg.driveStrength, BANK0_GPIO_DRIVE0);
+.   330    010000F76H        09803H    ldr      r0,[sp,#12]
+.   332    010000F78H        06880H    ldr      r0,[r0,#8]
+.   334    010000F7AH         0100H    lsls     r0,r0,#4
+.   336    010000F7CH        09901H    ldr      r1,[sp,#4]
+.   338    010000F7EH        01808H    adds     r0,r1,r0
+.   340    010000F80H        09001H    str      r0,[sp,#4]
+    x := x + LSL(cfg.inputEn, BANK0_GPIO_IE);
+.   342    010000F82H        09803H    ldr      r0,[sp,#12]
+.   344    010000F84H        06840H    ldr      r0,[r0,#4]
+.   346    010000F86H         0180H    lsls     r0,r0,#6
+.   348    010000F88H        09901H    ldr      r1,[sp,#4]
+.   350    010000F8AH        01808H    adds     r0,r1,r0
+.   352    010000F8CH        09001H    str      r0,[sp,#4]
+    x := x + LSL(cfg.outputDe, BANK0_GPIO_OD);
+.   354    010000F8EH        09803H    ldr      r0,[sp,#12]
+.   356    010000F90H        06800H    ldr      r0,[r0]
+.   358    010000F92H         01C0H    lsls     r0,r0,#7
+.   360    010000F94H        09901H    ldr      r1,[sp,#4]
+.   362    010000F96H        01808H    adds     r0,r1,r0
+.   364    010000F98H        09001H    str      r0,[sp,#4]
+    SYSTEM.PUT(addr, x)
+  END ConfigurePad;
+.   366    010000F9AH        09800H    ldr      r0,[sp]
+.   368    010000F9CH        09901H    ldr      r1,[sp,#4]
+.   370    010000F9EH        06001H    str      r1,[r0]
+.   372    010000FA0H        0B005H    add      sp,#20
+.   374    010000FA2H        0BD00H    pop      { pc }
+.   376    010000FA4H   <Const: 04001C004H 1073856516>
+
+
+  PROCEDURE GetPadBaseCfg*(VAR cfg: PadCfg);
+  (**
+    outputDe        = Disabled,           hardware reset value, ie. output is enabled
+    inputEn         = Enabled,            hardware reset value
+    driveStrength   = DRIVE_val_4mA,      hardware reset value
+    pullupEn        = Disabled,           hardware reset value
+    pulldownEn      = Enabled,            hardware reset value
+    schmittTrigEn   = Enabled,            hardware reset value
+    slewRate        = SLEWFAST_val_slow,  hardware reset value
+    --
+    See ASSERTs in 'ConfigurePad' for valid values.
+  **)
+  BEGIN
+.   380    010000FA8H        0B503H    push     { r0, r1, lr }
+    CLEAR(cfg);
+.   382    010000FAAH        09800H    ldr      r0,[sp]
+.   384    010000FACH        02100H    movs     r1,#0
+.   386    010000FAEH        02207H    movs     r2,#7
+.   388    010000FB0H        06001H    str      r1,[r0]
+.   390    010000FB2H        03004H    adds     r0,#4
+.   392    010000FB4H        03A01H    subs     r2,#1
+.   394    010000FB6H        0DCFBH    bgt.n    -10 -> 388
+    cfg.inputEn := Enabled;
+.   396    010000FB8H        02001H    movs     r0,#1
+.   398    010000FBAH        09900H    ldr      r1,[sp]
+.   400    010000FBCH        06048H    str      r0,[r1,#4]
+    cfg.driveStrength := DRIVE_val_4mA;
+.   402    010000FBEH        02001H    movs     r0,#1
+.   404    010000FC0H        09900H    ldr      r1,[sp]
+.   406    010000FC2H        06088H    str      r0,[r1,#8]
+    cfg.pulldownEn := Enabled;
+.   408    010000FC4H        02001H    movs     r0,#1
+.   410    010000FC6H        09900H    ldr      r1,[sp]
+.   412    010000FC8H        06108H    str      r0,[r1,#16]
+    cfg.schmittTrigEn := Enabled
+  END GetPadBaseCfg;
+.   414    010000FCAH        02001H    movs     r0,#1
+.   416    010000FCCH        09900H    ldr      r1,[sp]
+.   418    010000FCEH        06148H    str      r0,[r1,#20]
+.   420    010000FD0H        0B002H    add      sp,#8
+.   422    010000FD2H        0BD00H    pop      { pc }
+
+
+  PROCEDURE DisableOutput*(pinNo: INTEGER);
+  (* reset: output enabled *)
+    VAR addr: INTEGER;
+  BEGIN
+.   424    010000FD4H        0B501H    push     { r0, lr }
+.   426    010000FD6H        0B081H    sub      sp,#4
+    addr := MCU.PADS_BANK0_GPIO + MCU.ASET + (pinNo * MCU.PADS_BANK0_GPIO_Offset); (* set DISABLE bit *)
+.   428    010000FD8H        09801H    ldr      r0,[sp,#4]
+.   430    010000FDAH          080H    lsls     r0,r0,#2
+.   432    010000FDCH        04903H    ldr      r1,[pc,#12] -> 448 ; Const: 04001E004H 1073864708
+.   434    010000FDEH        01840H    adds     r0,r0,r1
+.   436    010000FE0H        09000H    str      r0,[sp]
+    SYSTEM.PUT(addr, {OD})
+  END DisableOutput;
+.   438    010000FE2H        09800H    ldr      r0,[sp]
+.   440    010000FE4H        02180H    movs     r1,#128
+.   442    010000FE6H        06001H    str      r1,[r0]
+.   444    010000FE8H        0B002H    add      sp,#8
+.   446    010000FEAH        0BD00H    pop      { pc }
+.   448    010000FECH   <Const: 04001E004H 1073864708>
+
+
+  PROCEDURE DisableInput*(pinNo: INTEGER);
+  (* reset: enabled *)
+    VAR addr: INTEGER;
+  BEGIN
+.   452    010000FF0H        0B501H    push     { r0, lr }
+.   454    010000FF2H        0B081H    sub      sp,#4
+    addr := MCU.PADS_BANK0_GPIO + MCU.ACLR + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
+.   456    010000FF4H        09801H    ldr      r0,[sp,#4]
+.   458    010000FF6H          080H    lsls     r0,r0,#2
+.   460    010000FF8H        04903H    ldr      r1,[pc,#12] -> 476 ; Const: 04001F004H 1073868804
+.   462    010000FFAH        01840H    adds     r0,r0,r1
+.   464    010000FFCH        09000H    str      r0,[sp]
+    SYSTEM.PUT(addr, {IE})
+  END DisableInput;
+.   466    010000FFEH        09800H    ldr      r0,[sp]
+.   468    010001000H        02140H    movs     r1,#64
+.   470    010001002H        06001H    str      r1,[r0]
+.   472    010001004H        0B002H    add      sp,#8
+.   474    010001006H        0BD00H    pop      { pc }
+.   476    010001008H   <Const: 04001F004H 1073868804>
+
+
+  (* GPIO control via SIO *)
+  (* Need to select function 'Fsio' *)
+
+  PROCEDURE Set*(mask: SET);
+  (* atomic *)
+  BEGIN
+.   480    01000100CH        0B501H    push     { r0, lr }
+    SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, mask)
+  END Set;
+.   482    01000100EH        04802H    ldr      r0,[pc,#8] -> 492 ; Const: 0D0000014H -805306348
+.   484    010001010H        09900H    ldr      r1,[sp]
+.   486    010001012H        06001H    str      r1,[r0]
+.   488    010001014H        0B001H    add      sp,#4
+.   490    010001016H        0BD00H    pop      { pc }
+.   492    010001018H   <Const: 0D0000014H -805306348>
+
+  PROCEDURE Clear*(mask: SET);
+  (* atomic *)
+  BEGIN
+.   496    01000101CH        0B501H    push     { r0, lr }
+    SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, mask)
+  END Clear;
+.   498    01000101EH        04802H    ldr      r0,[pc,#8] -> 508 ; Const: 0D0000018H -805306344
+.   500    010001020H        09900H    ldr      r1,[sp]
+.   502    010001022H        06001H    str      r1,[r0]
+.   504    010001024H        0B001H    add      sp,#4
+.   506    010001026H        0BD00H    pop      { pc }
+.   508    010001028H   <Const: 0D0000018H -805306344>
+
+  PROCEDURE Toggle*(mask: SET);
+  (* atomic *)
+  BEGIN
+.   512    01000102CH        0B501H    push     { r0, lr }
+    SYSTEM.PUT(MCU.SIO_GPIO_OUT_XOR, mask)
+  END Toggle;
+.   514    01000102EH        04802H    ldr      r0,[pc,#8] -> 524 ; Const: 0D000001CH -805306340
+.   516    010001030H        09900H    ldr      r1,[sp]
+.   518    010001032H        06001H    str      r1,[r0]
+.   520    010001034H        0B001H    add      sp,#4
+.   522    010001036H        0BD00H    pop      { pc }
+.   524    010001038H   <Const: 0D000001CH -805306340>
+
+  PROCEDURE Get*(VAR value: SET);
+  BEGIN
+.   528    01000103CH        0B501H    push     { r0, lr }
+    SYSTEM.GET(MCU.SIO_GPIO_IN, value)
+  END Get;
+.   530    01000103EH        04803H    ldr      r0,[pc,#12] -> 544 ; Const: 0D0000004H -805306364
+.   532    010001040H        06801H    ldr      r1,[r0]
+.   534    010001042H        09A00H    ldr      r2,[sp]
+.   536    010001044H        06011H    str      r1,[r2]
+.   538    010001046H        0B001H    add      sp,#4
+.   540    010001048H        0BD00H    pop      { pc }
+.   542    01000104AH        046C0H    nop
+.   544    01000104CH   <Const: 0D0000004H -805306364>
+
+  PROCEDURE Put*(value: SET);
+  BEGIN
+.   548    010001050H        0B501H    push     { r0, lr }
+    SYSTEM.PUT(MCU.SIO_GPIO_OUT, value)
+  END Put;
+.   550    010001052H        04802H    ldr      r0,[pc,#8] -> 560 ; Const: 0D0000010H -805306352
+.   552    010001054H        09900H    ldr      r1,[sp]
+.   554    010001056H        06001H    str      r1,[r0]
+.   556    010001058H        0B001H    add      sp,#4
+.   558    01000105AH        0BD00H    pop      { pc }
+.   560    01000105CH   <Const: 0D0000010H -805306352>
+
+  PROCEDURE GetBack*(VAR value: INTEGER);
+  BEGIN
+.   564    010001060H        0B501H    push     { r0, lr }
+    SYSTEM.GET(MCU.SIO_GPIO_OUT, value)
+  END GetBack;
+.   566    010001062H        04803H    ldr      r0,[pc,#12] -> 580 ; Const: 0D0000010H -805306352
+.   568    010001064H        06801H    ldr      r1,[r0]
+.   570    010001066H        09A00H    ldr      r2,[sp]
+.   572    010001068H        06011H    str      r1,[r2]
+.   574    01000106AH        0B001H    add      sp,#4
+.   576    01000106CH        0BD00H    pop      { pc }
+.   578    01000106EH        046C0H    nop
+.   580    010001070H   <Const: 0D0000010H -805306352>
+
+  PROCEDURE Check*(mask: SET): BOOLEAN;
+    VAR value: SET;
+  BEGIN
+.   584    010001074H        0B501H    push     { r0, lr }
+.   586    010001076H        0B081H    sub      sp,#4
+    SYSTEM.GET(MCU.SIO_GPIO_IN, value);
+.   588    010001078H        04806H    ldr      r0,[pc,#24] -> 616 ; Const: 0D0000004H -805306364
+.   590    01000107AH        06801H    ldr      r1,[r0]
+.   592    01000107CH        09100H    str      r1,[sp]
+    RETURN value * mask # {}
+.   594    01000107EH        09800H    ldr      r0,[sp]
+.   596    010001080H        09901H    ldr      r1,[sp,#4]
+.   598    010001082H        04008H    ands     r0,r1
+  END Check;
+.   600    010001084H        02100H    movs     r1,#0
+.   602    010001086H        04288H    cmp      r0,r1
+.   604    010001088H        0D101H    bne.n    2 -> 610
+.   606    01000108AH        02000H    movs     r0,#0
+.   608    01000108CH        0E000H    b        0 -> 612
+.   610    01000108EH        02001H    movs     r0,#1
+.   612    010001090H        0B002H    add      sp,#8
+.   614    010001092H        0BD00H    pop      { pc }
+.   616    010001094H   <Const: 0D0000004H -805306364>
+
+  PROCEDURE OutputEnable*(mask: SET);
+  (* atomic *)
+  BEGIN
+.   620    010001098H        0B501H    push     { r0, lr }
+    SYSTEM.PUT(MCU.SIO_GPIO_OE_SET, mask)
+  END OutputEnable;
+.   622    01000109AH        04802H    ldr      r0,[pc,#8] -> 632 ; Const: 0D0000024H -805306332
+.   624    01000109CH        09900H    ldr      r1,[sp]
+.   626    01000109EH        06001H    str      r1,[r0]
+.   628    0100010A0H        0B001H    add      sp,#4
+.   630    0100010A2H        0BD00H    pop      { pc }
+.   632    0100010A4H   <Const: 0D0000024H -805306332>
+
+  PROCEDURE OutputDisable*(mask: SET);
+  (* atomic *)
+  BEGIN
+.   636    0100010A8H        0B501H    push     { r0, lr }
+    SYSTEM.PUT(MCU.SIO_GPIO_OE_CLR, mask)
+  END OutputDisable;
+.   638    0100010AAH        04802H    ldr      r0,[pc,#8] -> 648 ; Const: 0D0000028H -805306328
+.   640    0100010ACH        09900H    ldr      r1,[sp]
+.   642    0100010AEH        06001H    str      r1,[r0]
+.   644    0100010B0H        0B001H    add      sp,#4
+.   646    0100010B2H        0BD00H    pop      { pc }
+.   648    0100010B4H   <Const: 0D0000028H -805306328>
+
+  PROCEDURE OutputEnToggle*(mask: SET);
+  (* atomic *)
+  BEGIN
+.   652    0100010B8H        0B501H    push     { r0, lr }
+    SYSTEM.PUT(MCU.SIO_GPIO_OE_XOR, mask)
+  END OutputEnToggle;
+.   654    0100010BAH        04802H    ldr      r0,[pc,#8] -> 664 ; Const: 0D000002CH -805306324
+.   656    0100010BCH        09900H    ldr      r1,[sp]
+.   658    0100010BEH        06001H    str      r1,[r0]
+.   660    0100010C0H        0B001H    add      sp,#4
+.   662    0100010C2H        0BD00H    pop      { pc }
+.   664    0100010C4H   <Const: 0D000002CH -805306324>
+
+  PROCEDURE GetOutputEnable*(VAR value: SET);
+  BEGIN
+.   668    0100010C8H        0B501H    push     { r0, lr }
+    SYSTEM.GET(MCU.SIO_GPIO_OE, value)
+  END GetOutputEnable;
+.   670    0100010CAH        04803H    ldr      r0,[pc,#12] -> 684 ; Const: 0D0000020H -805306336
+.   672    0100010CCH        06801H    ldr      r1,[r0]
+.   674    0100010CEH        09A00H    ldr      r2,[sp]
+.   676    0100010D0H        06011H    str      r1,[r2]
+.   678    0100010D2H        0B001H    add      sp,#4
+.   680    0100010D4H        0BD00H    pop      { pc }
+.   682    0100010D6H        046C0H    nop
+.   684    0100010D8H   <Const: 0D0000020H -805306336>
+
+  PROCEDURE init;
+  BEGIN
+.   688    0100010DCH        0B500H    push     { lr }
+    StartUp.ReleaseReset(MCU.RESETS_IO_BANK0);
+.   690    0100010DEH        02005H    movs     r0,#5
+.   692    0100010E0H    0F7FFF9E6H    bl.w     StartUp.ReleaseReset
+.   696    0100010E4H        0E000H    b        0 -> 700
+.   698    0100010E6H   <LineNo: 237>
+    StartUp.AwaitReleaseDone(MCU.RESETS_IO_BANK0);
+.   700    0100010E8H        02005H    movs     r0,#5
+.   702    0100010EAH    0F7FFF9FBH    bl.w     StartUp.AwaitReleaseDone
+.   706    0100010EEH        0E000H    b        0 -> 710
+.   708    0100010F0H   <LineNo: 238>
+    StartUp.ReleaseReset(MCU.RESETS_PADS_BANK0);
+.   710    0100010F2H        02008H    movs     r0,#8
+.   712    0100010F4H    0F7FFF9DCH    bl.w     StartUp.ReleaseReset
+.   716    0100010F8H        0E000H    b        0 -> 720
+.   718    0100010FAH   <LineNo: 239>
+    StartUp.AwaitReleaseDone(MCU.RESETS_PADS_BANK0)
+.   720    0100010FCH        02008H    movs     r0,#8
+  END init;
+.   722    0100010FEH    0F7FFF9F1H    bl.w     StartUp.AwaitReleaseDone
+.   726    010001102H        0E000H    b        0 -> 730
+.   728    010001104H   <LineNo: 240>
+.   730    010001106H        0BD00H    pop      { pc }
+
+BEGIN
+.   732    010001108H        0B500H    push     { lr }
+  init
+END GPIO.
+.   734    01000110AH    0F7FFFFE7H    bl.w     GPIO.init
+.   738    01000110EH        0E000H    b        0 -> 742
+.   740    010001110H   <LineNo: 244>
+.   742    010001112H        0BD00H    pop      { pc }

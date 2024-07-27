@@ -1,0 +1,133 @@
+.     0    0100024FCH   <Pad: 0>
+MODULE TextIO;
+(**
+  Oberon RTK Framework
+  --
+  Text IO channels using writers and readers
+  --
+  * Device as abstraction for hardware IO peripheral devices.
+  * Writer to use in output modules, eg. Texts
+  * Reader to use in input modules, eg. Texts
+  --
+  Copyright (c) 2020-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT Errors;
+
+  CONST
+    (* status/error codes *)
+    NoError* = 0;
+    BufferOverflow* = 1;
+    SyntaxError* = 2;
+    OutOfLimits* = 3;
+    NoInput* = 4;
+    FifoOverrun* = 5;
+
+  TYPE
+    Device* = POINTER TO DeviceDesc;
+    DeviceDesc* = RECORD END;
+.     4    010002500H   <Type: 0>
+.     8    010002504H   <Type: 0>
+.    12    010002508H   <Type: 0>
+.    16    01000250CH   <Type: 0>
+.    20    010002510H   <Type: 0>
+
+    PutStringProc* = PROCEDURE(dev: Device; string: ARRAY OF CHAR; numChar: INTEGER);
+    GetStringProc* = PROCEDURE(dev: Device; VAR string: ARRAY OF CHAR; VAR numChar, res: INTEGER);
+    FlushOutProc* = PROCEDURE(dev: Device);
+
+    Writer* = POINTER TO WriterDesc;
+    WriterDesc* = RECORD
+      dev*: Device;
+      putString*: PutStringProc;
+      flush*: FlushOutProc
+    END;
+.    24    010002514H   <Type: 12>
+.    28    010002518H   <Type: 0>
+.    32    01000251CH   <Type: 0>
+.    36    010002520H   <Type: 0>
+.    40    010002524H   <Type: 0>
+
+    Reader* = POINTER TO ReaderDesc;
+    ReaderDesc* = RECORD
+      dev*: Device;
+      getString*: GetStringProc
+    END;
+.    44    010002528H   <Type: 8>
+.    48    01000252CH   <Type: 0>
+.    52    010002530H   <Type: 0>
+.    56    010002534H   <Type: 0>
+.    60    010002538H   <Type: 0>
+
+
+  PROCEDURE OpenWriter*(w: Writer; dev: Device; psp: PutStringProc);
+  BEGIN
+.    64    01000253CH        0B507H    push     { r0, r1, r2, lr }
+    ASSERT(w # NIL, Errors.PreCond);
+.    66    01000253EH        09800H    ldr      r0,[sp]
+.    68    010002540H        02800H    cmp      r0,#0
+.    70    010002542H        0D101H    bne.n    2 -> 76
+.    72    010002544H        0DF65H    svc      101
+.    74    010002546H   <LineNo: 50>
+    w.dev := dev;
+.    76    010002548H        09801H    ldr      r0,[sp,#4]
+.    78    01000254AH        09900H    ldr      r1,[sp]
+.    80    01000254CH        06008H    str      r0,[r1]
+    w.putString := psp;
+.    82    01000254EH        09802H    ldr      r0,[sp,#8]
+.    84    010002550H        09900H    ldr      r1,[sp]
+.    86    010002552H        06048H    str      r0,[r1,#4]
+    w.flush := NIL
+  END OpenWriter;
+.    88    010002554H        02000H    movs     r0,#0
+.    90    010002556H        09900H    ldr      r1,[sp]
+.    92    010002558H        06088H    str      r0,[r1,#8]
+.    94    01000255AH        0B003H    add      sp,#12
+.    96    01000255CH        0BD00H    pop      { pc }
+.    98    01000255EH        046C0H    nop
+
+
+  PROCEDURE InstallFlushOutProc*(w: Writer; fp: FlushOutProc);
+  BEGIN
+.   100    010002560H        0B503H    push     { r0, r1, lr }
+    ASSERT(w # NIL, Errors.PreCond);
+.   102    010002562H        09800H    ldr      r0,[sp]
+.   104    010002564H        02800H    cmp      r0,#0
+.   106    010002566H        0D101H    bne.n    2 -> 112
+.   108    010002568H        0DF65H    svc      101
+.   110    01000256AH   <LineNo: 59>
+    w.flush := fp
+  END InstallFlushOutProc;
+.   112    01000256CH        09801H    ldr      r0,[sp,#4]
+.   114    01000256EH        09900H    ldr      r1,[sp]
+.   116    010002570H        06088H    str      r0,[r1,#8]
+.   118    010002572H        0B002H    add      sp,#8
+.   120    010002574H        0BD00H    pop      { pc }
+.   122    010002576H        046C0H    nop
+
+
+  PROCEDURE OpenReader*(r: Reader; dev: Device; gsp: GetStringProc);
+  BEGIN
+.   124    010002578H        0B507H    push     { r0, r1, r2, lr }
+    ASSERT(r # NIL, Errors.PreCond);
+.   126    01000257AH        09800H    ldr      r0,[sp]
+.   128    01000257CH        02800H    cmp      r0,#0
+.   130    01000257EH        0D101H    bne.n    2 -> 136
+.   132    010002580H        0DF65H    svc      101
+.   134    010002582H   <LineNo: 66>
+    r.dev := dev;
+.   136    010002584H        09801H    ldr      r0,[sp,#4]
+.   138    010002586H        09900H    ldr      r1,[sp]
+.   140    010002588H        06008H    str      r0,[r1]
+    r.getString := gsp
+  END OpenReader;
+.   142    01000258AH        09802H    ldr      r0,[sp,#8]
+.   144    01000258CH        09900H    ldr      r1,[sp]
+.   146    01000258EH        06048H    str      r0,[r1,#4]
+.   148    010002590H        0B003H    add      sp,#12
+.   150    010002592H        0BD00H    pop      { pc }
+
+END TextIO.
+.   152    010002594H        0B500H    push     { lr }
+.   154    010002596H        0BD00H    pop      { pc }

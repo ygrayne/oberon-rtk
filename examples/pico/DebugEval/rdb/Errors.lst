@@ -1,0 +1,724 @@
+.     0  <Pad: 0>
+MODULE Errors;
+(**
+  Oberon RTK Framework
+  Definition of fault and error codes and corresponding message strings.
+  --
+  Copyright (c) 2019-2024 Gray, gray@grayraven.org
+**)
+
+  IMPORT Error;
+
+  CONST
+    MaxMsgLength = 64;
+    OK* = 0;
+    NoError* = 0;
+    NotOK* = 1;
+
+    (* MCU fault codes *)
+    (* all *)
+    NMI* = -2;
+    HardFault* = -3;
+    (* M3 only *)
+    MemMgmtFault* = -4;
+    BusFault* = -5;
+    UsageFault* = -6;
+
+    (* Astrobe error codes, see Error.mod *)
+    FirstAstrobeCode = 1;
+    AstrobeUnused = {13..19};
+    LastAstrobeCode  = 25;
+
+    (* RTK error/assert codes *)
+    FirstRTKcode = 100;
+    Trace* = 100;
+    PreCond* = 101;
+    PostCond* = 102;
+    ConsCheck* = 103;
+    ProgError* = 104;
+    BufferOverflow* = 105;
+    BufferEmpty* = 106;
+    Timing* = 107;
+    HeapOverflow* = 108;
+    StackOverflow* = 109;
+    StorageOverflow* = 110;
+    StorageError* = 111;
+    UsageError* = 112;
+    DeviceError* = 113;
+    ResourceMissing* = 114;
+    NotSupported* = 115;
+    NotImplemented* = 116;
+    NumThreads* = 117;
+    LastRTKcode = 117;
+
+    Config* = ProgError; (* legacy *)
+
+  TYPE
+    String* = ARRAY MaxMsgLength OF CHAR;
+
+
+  PROCEDURE faultMessage(code: INTEGER; VAR msg: String);
+  BEGIN
+.     4     04H  0B503H          push     { r0, r1, lr }
+    IF code = NMI THEN
+.     6     06H  09800H          ldr      r0,[sp]
+.     8     08H  02102H          movs     r1,#2
+.    10     0AH  042C8H          cmn      r0,r1
+.    12     0CH  0D001H          beq.n    2 -> 18
+.    14     0EH  0E009H          b        18 -> 36
+.    16    010H  046C0H          nop
+      msg := "NMI"
+    ELSIF code = HardFault THEN
+.    18    012H  09801H          ldr      r0,[sp,#4]
+.    20    014H  0A100H          adr      r1,pc,#0 -> 24
+.    22    016H  0E001H          b        2 -> 28
+.    24  <String: "NMI.">
+.    28    01CH  0680AH          ldr      r2,[r1]
+.    30    01EH  06002H          str      r2,[r0]
+.    32    020H  0E07FH          b        254 -> 290
+.    34    022H  046C0H          nop
+.    36    024H  09800H          ldr      r0,[sp]
+.    38    026H  02103H          movs     r1,#3
+.    40    028H  042C8H          cmn      r0,r1
+.    42    02AH  0D001H          beq.n    2 -> 48
+.    44    02CH  0E013H          b        38 -> 86
+.    46    02EH  046C0H          nop
+      msg := "hard fault"
+    ELSIF code = MemMgmtFault THEN
+.    48    030H  09801H          ldr      r0,[sp,#4]
+.    50    032H  046C0H          nop
+.    52    034H  0A100H          adr      r1,pc,#0 -> 56
+.    54    036H  0E005H          b        10 -> 68
+.    56  <String: "hard">
+.    60  <String: " fau">
+.    64  <String: "lt..">
+.    68    044H  04B38H          ldr      r3,[pc,#224] -> 296
+.    70    046H  0680AH          ldr      r2,[r1]
+.    72    048H  03104H          adds     r1,#4
+.    74    04AH  06002H          str      r2,[r0]
+.    76    04CH  03004H          adds     r0,#4
+.    78    04EH  0401AH          ands     r2,r3
+.    80    050H  0D1F9H          bne.n    -14 -> 70
+.    82    052H  0E066H          b        204 -> 290
+.    84    054H  046C0H          nop
+.    86    056H  09800H          ldr      r0,[sp]
+.    88    058H  02104H          movs     r1,#4
+.    90    05AH  042C8H          cmn      r0,r1
+.    92    05CH  0D001H          beq.n    2 -> 98
+.    94    05EH  0E018H          b        48 -> 146
+.    96    060H  046C0H          nop
+      msg := "memory management fault"
+    ELSIF code = BusFault THEN
+.    98    062H  09801H          ldr      r0,[sp,#4]
+.   100    064H  0A100H          adr      r1,pc,#0 -> 104
+.   102    066H  0E00BH          b        22 -> 128
+.   104  <String: "memo">
+.   108  <String: "ry m">
+.   112  <String: "anag">
+.   116  <String: "emen">
+.   120  <String: "t fa">
+.   124  <String: "ult.">
+.   128    080H  04B29H          ldr      r3,[pc,#164] -> 296
+.   130    082H  0680AH          ldr      r2,[r1]
+.   132    084H  03104H          adds     r1,#4
+.   134    086H  06002H          str      r2,[r0]
+.   136    088H  03004H          adds     r0,#4
+.   138    08AH  0401AH          ands     r2,r3
+.   140    08CH  0D1F9H          bne.n    -14 -> 130
+.   142    08EH  0E048H          b        144 -> 290
+.   144    090H  046C0H          nop
+.   146    092H  09800H          ldr      r0,[sp]
+.   148    094H  02105H          movs     r1,#5
+.   150    096H  042C8H          cmn      r0,r1
+.   152    098H  0D001H          beq.n    2 -> 158
+.   154    09AH  0E012H          b        36 -> 194
+.   156    09CH  046C0H          nop
+      msg := "bus fault"
+    ELSIF code = UsageFault THEN
+.   158    09EH  09801H          ldr      r0,[sp,#4]
+.   160    0A0H  0A100H          adr      r1,pc,#0 -> 164
+.   162    0A2H  0E005H          b        10 -> 176
+.   164  <String: "bus ">
+.   168  <String: "faul">
+.   172  <String: "t...">
+.   176    0B0H  04B1DH          ldr      r3,[pc,#116] -> 296
+.   178    0B2H  0680AH          ldr      r2,[r1]
+.   180    0B4H  03104H          adds     r1,#4
+.   182    0B6H  06002H          str      r2,[r0]
+.   184    0B8H  03004H          adds     r0,#4
+.   186    0BAH  0401AH          ands     r2,r3
+.   188    0BCH  0D1F9H          bne.n    -14 -> 178
+.   190    0BEH  0E030H          b        96 -> 290
+.   192    0C0H  046C0H          nop
+.   194    0C2H  09800H          ldr      r0,[sp]
+.   196    0C4H  02106H          movs     r1,#6
+.   198    0C6H  042C8H          cmn      r0,r1
+.   200    0C8H  0D001H          beq.n    2 -> 206
+.   202    0CAH  0E012H          b        36 -> 242
+.   204    0CCH  046C0H          nop
+      msg := "usage fault"
+    ELSE
+.   206    0CEH  09801H          ldr      r0,[sp,#4]
+.   208    0D0H  0A100H          adr      r1,pc,#0 -> 212
+.   210    0D2H  0E005H          b        10 -> 224
+.   212  <String: "usag">
+.   216  <String: "e fa">
+.   220  <String: "ult.">
+.   224    0E0H  04B11H          ldr      r3,[pc,#68] -> 296
+.   226    0E2H  0680AH          ldr      r2,[r1]
+.   228    0E4H  03104H          adds     r1,#4
+.   230    0E6H  06002H          str      r2,[r0]
+.   232    0E8H  03004H          adds     r0,#4
+.   234    0EAH  0401AH          ands     r2,r3
+.   236    0ECH  0D1F9H          bne.n    -14 -> 226
+      msg := "missing exception handler"
+.   238    0EEH  0E018H          b        48 -> 290
+.   240    0F0H  046C0H          nop
+    END
+.   242    0F2H  09801H          ldr      r0,[sp,#4]
+.   244    0F4H  0A100H          adr      r1,pc,#0 -> 248
+.   246    0F6H  0E00DH          b        26 -> 276
+.   248  <String: "miss">
+.   252  <String: "ing ">
+.   256  <String: "exce">
+.   260  <String: "ptio">
+.   264  <String: "n ha">
+.   268  <String: "ndle">
+.   272  <String: "r...">
+.   276   0114H  04B04H          ldr      r3,[pc,#16] -> 296
+.   278   0116H  0680AH          ldr      r2,[r1]
+.   280   0118H  03104H          adds     r1,#4
+.   282   011AH  06002H          str      r2,[r0]
+.   284   011CH  03004H          adds     r0,#4
+.   286   011EH  0401AH          ands     r2,r3
+.   288   0120H  0D1F9H          bne.n    -14 -> 278
+  END faultMessage;
+.   290   0122H  0B002H          add      sp,#8
+.   292   0124H  0BD00H          pop      { pc }
+.   294   0126H  046C0H          nop
+.   296  <Const: 0FF000000H  -16777216>
+
+
+  PROCEDURE errorMessage(code: INTEGER; VAR msg: String);
+  BEGIN
+.   300   012CH  0B503H          push     { r0, r1, lr }
+    IF (code >= FirstRTKcode) & (code <= LastRTKcode) THEN
+.   302   012EH  09800H          ldr      r0,[sp]
+.   304   0130H  02864H          cmp      r0,#100
+.   306   0132H  0DA01H          bge.n    2 -> 312
+.   308   0134H  0E1ACH          b        856 -> 1168
+.   310   0136H  046C0H          nop
+.   312   0138H  09800H          ldr      r0,[sp]
+.   314   013AH  02875H          cmp      r0,#117
+.   316   013CH  0DD01H          ble.n    2 -> 322
+.   318   013EH  0E1A7H          b        846 -> 1168
+.   320   0140H  046C0H          nop
+      CASE code OF
+        Trace:
+.   322   0142H  09800H          ldr      r0,[sp]
+.   324   0144H  04601H          mov      r1,r0
+.   326   0146H  03964H          subs     r1,#100
+.   328   0148H  02912H          cmp      r1,#18
+.   330   014AH  0DD01H          ble.n    2 -> 336
+.   332   014CH  0DF04H          svc      4
+.   334  <LineNo: 80>
+.   336   0150H  00049H          lsls     r1,r1,#1
+.   338   0152H  046C0H          nop
+.   340   0154H  04A01H          ldr      r2,[pc,#4] -> 348
+.   342   0156H  01852H          adds     r2,r2,r1
+.   344   0158H  0447AH          add      r2,pc
+.   346   015AH  04710H          bx       r2
+.   348  <Const: 00000030BH  779>
+          msg := "stack trace"
+      | PreCond:
+.   352   0160H  09801H          ldr      r0,[sp,#4]
+.   354   0162H  046C0H          nop
+.   356   0164H  0A100H          adr      r1,pc,#0 -> 360
+.   358   0166H  0E005H          b        10 -> 372
+.   360  <String: "stac">
+.   364  <String: "k tr">
+.   368  <String: "ace.">
+.   372   0174H  04B72H          ldr      r3,[pc,#456] -> 832
+.   374   0176H  0680AH          ldr      r2,[r1]
+.   376   0178H  03104H          adds     r1,#4
+.   378   017AH  06002H          str      r2,[r0]
+.   380   017CH  03004H          adds     r0,#4
+.   382   017EH  0401AH          ands     r2,r3
+.   384   0180H  0D1F9H          bne.n    -14 -> 374
+.   386   0182H  0E183H          b        774 -> 1164
+.   388   0184H  046C0H          nop
+          msg := "precondition violation"
+      | PostCond:
+.   390   0186H  09801H          ldr      r0,[sp,#4]
+.   392   0188H  0A100H          adr      r1,pc,#0 -> 396
+.   394   018AH  0E00BH          b        22 -> 420
+.   396  <String: "prec">
+.   400  <String: "ondi">
+.   404  <String: "tion">
+.   408  <String: " vio">
+.   412  <String: "lati">
+.   416  <String: "on..">
+.   420   01A4H  04B66H          ldr      r3,[pc,#408] -> 832
+.   422   01A6H  0680AH          ldr      r2,[r1]
+.   424   01A8H  03104H          adds     r1,#4
+.   426   01AAH  06002H          str      r2,[r0]
+.   428   01ACH  03004H          adds     r0,#4
+.   430   01AEH  0401AH          ands     r2,r3
+.   432   01B0H  0D1F9H          bne.n    -14 -> 422
+.   434   01B2H  0E16BH          b        726 -> 1164
+.   436   01B4H  046C0H          nop
+          msg := "postcondition violation"
+      | ConsCheck:
+.   438   01B6H  09801H          ldr      r0,[sp,#4]
+.   440   01B8H  0A100H          adr      r1,pc,#0 -> 444
+.   442   01BAH  0E00BH          b        22 -> 468
+.   444  <String: "post">
+.   448  <String: "cond">
+.   452  <String: "itio">
+.   456  <String: "n vi">
+.   460  <String: "olat">
+.   464  <String: "ion.">
+.   468   01D4H  04B5AH          ldr      r3,[pc,#360] -> 832
+.   470   01D6H  0680AH          ldr      r2,[r1]
+.   472   01D8H  03104H          adds     r1,#4
+.   474   01DAH  06002H          str      r2,[r0]
+.   476   01DCH  03004H          adds     r0,#4
+.   478   01DEH  0401AH          ands     r2,r3
+.   480   01E0H  0D1F9H          bne.n    -14 -> 470
+.   482   01E2H  0E153H          b        678 -> 1164
+.   484   01E4H  046C0H          nop
+          msg := "consistency check violation"
+      | ProgError:
+.   486   01E6H  09801H          ldr      r0,[sp,#4]
+.   488   01E8H  0A100H          adr      r1,pc,#0 -> 492
+.   490   01EAH  0E00DH          b        26 -> 520
+.   492  <String: "cons">
+.   496  <String: "iste">
+.   500  <String: "ncy ">
+.   504  <String: "chec">
+.   508  <String: "k vi">
+.   512  <String: "olat">
+.   516  <String: "ion.">
+.   520   0208H  04B4DH          ldr      r3,[pc,#308] -> 832
+.   522   020AH  0680AH          ldr      r2,[r1]
+.   524   020CH  03104H          adds     r1,#4
+.   526   020EH  06002H          str      r2,[r0]
+.   528   0210H  03004H          adds     r0,#4
+.   530   0212H  0401AH          ands     r2,r3
+.   532   0214H  0D1F9H          bne.n    -14 -> 522
+.   534   0216H  0E139H          b        626 -> 1164
+.   536   0218H  046C0H          nop
+          msg := "program design error"
+      | BufferOverflow:
+.   538   021AH  09801H          ldr      r0,[sp,#4]
+.   540   021CH  0A100H          adr      r1,pc,#0 -> 544
+.   542   021EH  0E00BH          b        22 -> 568
+.   544  <String: "prog">
+.   548  <String: "ram ">
+.   552  <String: "desi">
+.   556  <String: "gn e">
+.   560  <String: "rror">
+.   564  <String: "....">
+.   568   0238H  04B41H          ldr      r3,[pc,#260] -> 832
+.   570   023AH  0680AH          ldr      r2,[r1]
+.   572   023CH  03104H          adds     r1,#4
+.   574   023EH  06002H          str      r2,[r0]
+.   576   0240H  03004H          adds     r0,#4
+.   578   0242H  0401AH          ands     r2,r3
+.   580   0244H  0D1F9H          bne.n    -14 -> 570
+.   582   0246H  0E121H          b        578 -> 1164
+.   584   0248H  046C0H          nop
+          msg := "buffer overflow"
+      | BufferEmpty:
+.   586   024AH  09801H          ldr      r0,[sp,#4]
+.   588   024CH  0A100H          adr      r1,pc,#0 -> 592
+.   590   024EH  0E007H          b        14 -> 608
+.   592  <String: "buff">
+.   596  <String: "er o">
+.   600  <String: "verf">
+.   604  <String: "low.">
+.   608   0260H  04B37H          ldr      r3,[pc,#220] -> 832
+.   610   0262H  0680AH          ldr      r2,[r1]
+.   612   0264H  03104H          adds     r1,#4
+.   614   0266H  06002H          str      r2,[r0]
+.   616   0268H  03004H          adds     r0,#4
+.   618   026AH  0401AH          ands     r2,r3
+.   620   026CH  0D1F9H          bne.n    -14 -> 610
+.   622   026EH  0E10DH          b        538 -> 1164
+.   624   0270H  046C0H          nop
+          msg := "buffer empty"
+      | Timing:
+.   626   0272H  09801H          ldr      r0,[sp,#4]
+.   628   0274H  0A100H          adr      r1,pc,#0 -> 632
+.   630   0276H  0E007H          b        14 -> 648
+.   632  <String: "buff">
+.   636  <String: "er e">
+.   640  <String: "mpty">
+.   644  <String: "....">
+.   648   0288H  04B2DH          ldr      r3,[pc,#180] -> 832
+.   650   028AH  0680AH          ldr      r2,[r1]
+.   652   028CH  03104H          adds     r1,#4
+.   654   028EH  06002H          str      r2,[r0]
+.   656   0290H  03004H          adds     r0,#4
+.   658   0292H  0401AH          ands     r2,r3
+.   660   0294H  0D1F9H          bne.n    -14 -> 650
+.   662   0296H  0E0F9H          b        498 -> 1164
+.   664   0298H  046C0H          nop
+          msg := "timing error"
+      | HeapOverflow:
+.   666   029AH  09801H          ldr      r0,[sp,#4]
+.   668   029CH  0A100H          adr      r1,pc,#0 -> 672
+.   670   029EH  0E007H          b        14 -> 688
+.   672  <String: "timi">
+.   676  <String: "ng e">
+.   680  <String: "rror">
+.   684  <String: "....">
+.   688   02B0H  04B23H          ldr      r3,[pc,#140] -> 832
+.   690   02B2H  0680AH          ldr      r2,[r1]
+.   692   02B4H  03104H          adds     r1,#4
+.   694   02B6H  06002H          str      r2,[r0]
+.   696   02B8H  03004H          adds     r0,#4
+.   698   02BAH  0401AH          ands     r2,r3
+.   700   02BCH  0D1F9H          bne.n    -14 -> 690
+.   702   02BEH  0E0E5H          b        458 -> 1164
+.   704   02C0H  046C0H          nop
+          msg := "heap overflow"
+      | StackOverflow:
+.   706   02C2H  09801H          ldr      r0,[sp,#4]
+.   708   02C4H  0A100H          adr      r1,pc,#0 -> 712
+.   710   02C6H  0E007H          b        14 -> 728
+.   712  <String: "heap">
+.   716  <String: " ove">
+.   720  <String: "rflo">
+.   724  <String: "w...">
+.   728   02D8H  04B19H          ldr      r3,[pc,#100] -> 832
+.   730   02DAH  0680AH          ldr      r2,[r1]
+.   732   02DCH  03104H          adds     r1,#4
+.   734   02DEH  06002H          str      r2,[r0]
+.   736   02E0H  03004H          adds     r0,#4
+.   738   02E2H  0401AH          ands     r2,r3
+.   740   02E4H  0D1F9H          bne.n    -14 -> 730
+.   742   02E6H  0E0D1H          b        418 -> 1164
+.   744   02E8H  046C0H          nop
+          msg := "stack overflow"
+      | StorageOverflow:
+.   746   02EAH  09801H          ldr      r0,[sp,#4]
+.   748   02ECH  0A100H          adr      r1,pc,#0 -> 752
+.   750   02EEH  0E007H          b        14 -> 768
+.   752  <String: "stac">
+.   756  <String: "k ov">
+.   760  <String: "erfl">
+.   764  <String: "ow..">
+.   768   0300H  04B0FH          ldr      r3,[pc,#60] -> 832
+.   770   0302H  0680AH          ldr      r2,[r1]
+.   772   0304H  03104H          adds     r1,#4
+.   774   0306H  06002H          str      r2,[r0]
+.   776   0308H  03004H          adds     r0,#4
+.   778   030AH  0401AH          ands     r2,r3
+.   780   030CH  0D1F9H          bne.n    -14 -> 770
+.   782   030EH  0E0BDH          b        378 -> 1164
+.   784   0310H  046C0H          nop
+          msg := "storage overflow"
+      | StorageError:
+.   786   0312H  09801H          ldr      r0,[sp,#4]
+.   788   0314H  0A100H          adr      r1,pc,#0 -> 792
+.   790   0316H  0E009H          b        18 -> 812
+.   792  <String: "stor">
+.   796  <String: "age ">
+.   800  <String: "over">
+.   804  <String: "flow">
+.   808  <String: "....">
+.   812   032CH  04B04H          ldr      r3,[pc,#16] -> 832
+.   814   032EH  0680AH          ldr      r2,[r1]
+.   816   0330H  03104H          adds     r1,#4
+.   818   0332H  06002H          str      r2,[r0]
+.   820   0334H  03004H          adds     r0,#4
+.   822   0336H  0401AH          ands     r2,r3
+.   824   0338H  0D1F9H          bne.n    -14 -> 814
+.   826   033AH  046C0H          nop
+.   828   033CH  0F000F802H      bl.w     4 -> 836
+.   832  <Const: 0FF000000H  -16777216>
+.   836   0344H  0E0A2H          b        324 -> 1164
+.   838   0346H  046C0H          nop
+          msg := "storage error"
+      | UsageError:
+.   840   0348H  09801H          ldr      r0,[sp,#4]
+.   842   034AH  046C0H          nop
+.   844   034CH  0A100H          adr      r1,pc,#0 -> 848
+.   846   034EH  0E007H          b        14 -> 864
+.   848  <String: "stor">
+.   852  <String: "age ">
+.   856  <String: "erro">
+.   860  <String: "r...">
+.   864   0360H  04B66H          ldr      r3,[pc,#408] -> 1276
+.   866   0362H  0680AH          ldr      r2,[r1]
+.   868   0364H  03104H          adds     r1,#4
+.   870   0366H  06002H          str      r2,[r0]
+.   872   0368H  03004H          adds     r0,#4
+.   874   036AH  0401AH          ands     r2,r3
+.   876   036CH  0D1F9H          bne.n    -14 -> 866
+.   878   036EH  0E08DH          b        282 -> 1164
+.   880   0370H  046C0H          nop
+          msg := "usage error"
+      | ResourceMissing:
+.   882   0372H  09801H          ldr      r0,[sp,#4]
+.   884   0374H  0A100H          adr      r1,pc,#0 -> 888
+.   886   0376H  0E005H          b        10 -> 900
+.   888  <String: "usag">
+.   892  <String: "e er">
+.   896  <String: "ror.">
+.   900   0384H  04B5DH          ldr      r3,[pc,#372] -> 1276
+.   902   0386H  0680AH          ldr      r2,[r1]
+.   904   0388H  03104H          adds     r1,#4
+.   906   038AH  06002H          str      r2,[r0]
+.   908   038CH  03004H          adds     r0,#4
+.   910   038EH  0401AH          ands     r2,r3
+.   912   0390H  0D1F9H          bne.n    -14 -> 902
+.   914   0392H  0E07BH          b        246 -> 1164
+.   916   0394H  046C0H          nop
+          msg := "resource missing or faulty"
+      | NotSupported:
+.   918   0396H  09801H          ldr      r0,[sp,#4]
+.   920   0398H  0A100H          adr      r1,pc,#0 -> 924
+.   922   039AH  0E00DH          b        26 -> 952
+.   924  <String: "reso">
+.   928  <String: "urce">
+.   932  <String: " mis">
+.   936  <String: "sing">
+.   940  <String: " or ">
+.   944  <String: "faul">
+.   948  <String: "ty..">
+.   952   03B8H  04B50H          ldr      r3,[pc,#320] -> 1276
+.   954   03BAH  0680AH          ldr      r2,[r1]
+.   956   03BCH  03104H          adds     r1,#4
+.   958   03BEH  06002H          str      r2,[r0]
+.   960   03C0H  03004H          adds     r0,#4
+.   962   03C2H  0401AH          ands     r2,r3
+.   964   03C4H  0D1F9H          bne.n    -14 -> 954
+.   966   03C6H  0E061H          b        194 -> 1164
+.   968   03C8H  046C0H          nop
+          msg := "functionality not supported"
+      | NotImplemented:
+.   970   03CAH  09801H          ldr      r0,[sp,#4]
+.   972   03CCH  0A100H          adr      r1,pc,#0 -> 976
+.   974   03CEH  0E00DH          b        26 -> 1004
+.   976  <String: "func">
+.   980  <String: "tion">
+.   984  <String: "alit">
+.   988  <String: "y no">
+.   992  <String: "t su">
+.   996  <String: "ppor">
+.  1000  <String: "ted.">
+.  1004   03ECH  04B43H          ldr      r3,[pc,#268] -> 1276
+.  1006   03EEH  0680AH          ldr      r2,[r1]
+.  1008   03F0H  03104H          adds     r1,#4
+.  1010   03F2H  06002H          str      r2,[r0]
+.  1012   03F4H  03004H          adds     r0,#4
+.  1014   03F6H  0401AH          ands     r2,r3
+.  1016   03F8H  0D1F9H          bne.n    -14 -> 1006
+.  1018   03FAH  0E047H          b        142 -> 1164
+.  1020   03FCH  046C0H          nop
+          msg := "functionality not (yet) implemented"
+      | NumThreads:
+.  1022   03FEH  09801H          ldr      r0,[sp,#4]
+.  1024   0400H  0A100H          adr      r1,pc,#0 -> 1028
+.  1026   0402H  0E011H          b        34 -> 1064
+.  1028  <String: "func">
+.  1032  <String: "tion">
+.  1036  <String: "alit">
+.  1040  <String: "y no">
+.  1044  <String: "t (y">
+.  1048  <String: "et) ">
+.  1052  <String: "impl">
+.  1056  <String: "emen">
+.  1060  <String: "ted.">
+.  1064   0428H  04B34H          ldr      r3,[pc,#208] -> 1276
+.  1066   042AH  0680AH          ldr      r2,[r1]
+.  1068   042CH  03104H          adds     r1,#4
+.  1070   042EH  06002H          str      r2,[r0]
+.  1072   0430H  03004H          adds     r0,#4
+.  1074   0432H  0401AH          ands     r2,r3
+.  1076   0434H  0D1F9H          bne.n    -14 -> 1066
+.  1078   0436H  0E029H          b        82 -> 1164
+.  1080   0438H  046C0H          nop
+          msg := "too many threads"
+      END
+.  1082   043AH  09801H          ldr      r0,[sp,#4]
+.  1084   043CH  0A100H          adr      r1,pc,#0 -> 1088
+.  1086   043EH  0E009H          b        18 -> 1108
+.  1088  <String: "too ">
+.  1092  <String: "many">
+.  1096  <String: " thr">
+.  1100  <String: "eads">
+.  1104  <String: "....">
+.  1108   0454H  04B29H          ldr      r3,[pc,#164] -> 1276
+.  1110   0456H  0680AH          ldr      r2,[r1]
+.  1112   0458H  03104H          adds     r1,#4
+.  1114   045AH  06002H          str      r2,[r0]
+.  1116   045CH  03004H          adds     r0,#4
+.  1118   045EH  0401AH          ands     r2,r3
+.  1120   0460H  0D1F9H          bne.n    -14 -> 1110
+.  1122   0462H  0E013H          b        38 -> 1164
+.  1124   0464H  046C0H          nop
+    ELSIF (code >= FirstAstrobeCode) & (code <= LastAstrobeCode) & ~(code IN AstrobeUnused) THEN
+.  1126   0466H  0E67BH          b        -778 -> 352
+.  1128   0468H  0E68DH          b        -742 -> 390
+.  1130   046AH  0E6A4H          b        -696 -> 438
+.  1132   046CH  0E6BBH          b        -650 -> 486
+.  1134   046EH  0E6D4H          b        -600 -> 538
+.  1136   0470H  0E6EBH          b        -554 -> 586
+.  1138   0472H  0E6FEH          b        -516 -> 626
+.  1140   0474H  0E711H          b        -478 -> 666
+.  1142   0476H  0E724H          b        -440 -> 706
+.  1144   0478H  0E737H          b        -402 -> 746
+.  1146   047AH  0E74AH          b        -364 -> 786
+.  1148   047CH  0E764H          b        -312 -> 840
+.  1150   047EH  0E778H          b        -272 -> 882
+.  1152   0480H  0E663H          b        -826 -> 330
+.  1154   0482H  0E788H          b        -240 -> 918
+.  1156   0484H  0E7A1H          b        -190 -> 970
+.  1158   0486H  0E7BAH          b        -140 -> 1022
+.  1160   0488H  0E7D7H          b        -82 -> 1082
+.  1162   048AH  046C0H          nop
+.  1164   048CH  0E033H          b        102 -> 1270
+.  1166   048EH  046C0H          nop
+.  1168   0490H  09800H          ldr      r0,[sp]
+.  1170   0492H  02801H          cmp      r0,#1
+.  1172   0494H  0DA01H          bge.n    2 -> 1178
+.  1174   0496H  0E01CH          b        56 -> 1234
+.  1176   0498H  046C0H          nop
+.  1178   049AH  09800H          ldr      r0,[sp]
+.  1180   049CH  02819H          cmp      r0,#25
+.  1182   049EH  0DD01H          ble.n    2 -> 1188
+.  1184   04A0H  0E017H          b        46 -> 1234
+.  1186   04A2H  046C0H          nop
+.  1188   04A4H  0207FH          movs     r0,#127
+.  1190   04A6H  00340H          lsls     r0,r0,#13
+.  1192   04A8H  09900H          ldr      r1,[sp]
+.  1194   04AAH  02201H          movs     r2,#1
+.  1196   04ACH  0408AH          lsls     r2,r1
+.  1198   04AEH  04210H          tst      r0,r2
+.  1200   04B0H  0D001H          beq.n    2 -> 1206
+.  1202   04B2H  0E00EH          b        28 -> 1234
+.  1204   04B4H  046C0H          nop
+      Error.Msg(code, msg)
+.  1206   04B6H  09800H          ldr      r0,[sp]
+.  1208   04B8H  09901H          ldr      r1,[sp,#4]
+    ELSE
+.  1210   04BAH  04A11H          ldr      r2,[pc,#68] -> 1280
+.  1212   04BCH  06812H          ldr      r2,[r2]
+.  1214   04BEH  02A00H          cmp      r2,#0
+.  1216   04C0H  0D101H          bne.n    2 -> 1222
+.  1218   04C2H  0DF05H          svc      5
+.  1220  <LineNo: 117>
+.  1222   04C6H  03201H          adds     r2,#1
+.  1224   04C8H  04790H          blx      r2
+.  1226   04CAH  0E000H          b        0 -> 1230
+.  1228  <LineNo: 117>
+      msg := "unknown error"
+.  1230   04CEH  0E012H          b        36 -> 1270
+.  1232   04D0H  046C0H          nop
+    END
+.  1234   04D2H  09801H          ldr      r0,[sp,#4]
+.  1236   04D4H  0A100H          adr      r1,pc,#0 -> 1240
+.  1238   04D6H  0E007H          b        14 -> 1256
+.  1240  <String: "unkn">
+.  1244  <String: "own ">
+.  1248  <String: "erro">
+.  1252  <String: "r...">
+.  1256   04E8H  04B04H          ldr      r3,[pc,#16] -> 1276
+.  1258   04EAH  0680AH          ldr      r2,[r1]
+.  1260   04ECH  03104H          adds     r1,#4
+.  1262   04EEH  06002H          str      r2,[r0]
+.  1264   04F0H  03004H          adds     r0,#4
+.  1266   04F2H  0401AH          ands     r2,r3
+.  1268   04F4H  0D1F9H          bne.n    -14 -> 1258
+  END errorMessage;
+.  1270   04F6H  0B002H          add      sp,#8
+.  1272   04F8H  0BD00H          pop      { pc }
+.  1274   04FAH  046C0H          nop
+.  1276  <Const: 0FF000000H  -16777216>
+.  1280  <Global: 000010000H  010000H>
+
+
+  PROCEDURE Msg*(code: INTEGER; VAR msg: String);
+  BEGIN
+.  1284   0504H  0B503H          push     { r0, r1, lr }
+    IF code < 0 THEN
+.  1286   0506H  09800H          ldr      r0,[sp]
+.  1288   0508H  02800H          cmp      r0,#0
+.  1290   050AH  0DB01H          blt.n    2 -> 1296
+.  1292   050CH  0E008H          b        16 -> 1312
+.  1294   050EH  046C0H          nop
+      faultMessage(code, msg)
+.  1296   0510H  09800H          ldr      r0,[sp]
+.  1298   0512H  09901H          ldr      r1,[sp,#4]
+    ELSE
+.  1300   0514H  0F7FFFD76H      bl.w     -1300 -> 4
+.  1304   0518H  0E000H          b        0 -> 1308
+.  1306  <LineNo: 127>
+      errorMessage(code, msg)
+.  1308   051CH  0E006H          b        12 -> 1324
+.  1310   051EH  046C0H          nop
+.  1312   0520H  09800H          ldr      r0,[sp]
+.  1314   0522H  09901H          ldr      r1,[sp,#4]
+    END
+.  1316   0524H  0F7FFFE02H      bl.w     -1020 -> 300
+.  1320   0528H  0E000H          b        0 -> 1324
+.  1322  <LineNo: 129>
+  END Msg;
+.  1324   052CH  0B002H          add      sp,#8
+.  1326   052EH  0BD00H          pop      { pc }
+
+  PROCEDURE GetExceptionType*(code: INTEGER; VAR msg: String);
+  BEGIN
+.  1328   0530H  0B503H          push     { r0, r1, lr }
+    IF code < 0 THEN
+.  1330   0532H  09800H          ldr      r0,[sp]
+.  1332   0534H  02800H          cmp      r0,#0
+.  1334   0536H  0DB01H          blt.n    2 -> 1340
+.  1336   0538H  0E013H          b        38 -> 1378
+.  1338   053AH  046C0H          nop
+      msg := "mcu fault"
+    ELSE
+.  1340   053CH  09801H          ldr      r0,[sp,#4]
+.  1342   053EH  046C0H          nop
+.  1344   0540H  0A100H          adr      r1,pc,#0 -> 1348
+.  1346   0542H  0E005H          b        10 -> 1360
+.  1348  <String: "mcu ">
+.  1352  <String: "faul">
+.  1356  <String: "t...">
+.  1360   0550H  04B0EH          ldr      r3,[pc,#56] -> 1420
+.  1362   0552H  0680AH          ldr      r2,[r1]
+.  1364   0554H  03104H          adds     r1,#4
+.  1366   0556H  06002H          str      r2,[r0]
+.  1368   0558H  03004H          adds     r0,#4
+.  1370   055AH  0401AH          ands     r2,r3
+.  1372   055CH  0D1F9H          bne.n    -14 -> 1362
+      msg := "run-time error"
+.  1374   055EH  0E012H          b        36 -> 1414
+.  1376   0560H  046C0H          nop
+    END
+.  1378   0562H  09801H          ldr      r0,[sp,#4]
+.  1380   0564H  0A100H          adr      r1,pc,#0 -> 1384
+.  1382   0566H  0E007H          b        14 -> 1400
+.  1384  <String: "run-">
+.  1388  <String: "time">
+.  1392  <String: " err">
+.  1396  <String: "or..">
+.  1400   0578H  04B04H          ldr      r3,[pc,#16] -> 1420
+.  1402   057AH  0680AH          ldr      r2,[r1]
+.  1404   057CH  03104H          adds     r1,#4
+.  1406   057EH  06002H          str      r2,[r0]
+.  1408   0580H  03004H          adds     r0,#4
+.  1410   0582H  0401AH          ands     r2,r3
+.  1412   0584H  0D1F9H          bne.n    -14 -> 1402
+  END GetExceptionType;
+.  1414   0586H  0B002H          add      sp,#8
+.  1416   0588H  0BD00H          pop      { pc }
+.  1418   058AH  046C0H          nop
+.  1420  <Const: 0FF000000H  -16777216>
+
+END Errors.
+.  1424   0590H  0B500H          push     { lr }
+.  1426   0592H  0BD00H          pop      { pc }

@@ -1,0 +1,448 @@
+.     0    010000508H   <Pad: 0>
+MODULE Error;
+(* =========================================================================
+   Error - General library module assertion error codes
+
+   (c) 2019-2021 CFB Software
+   https://www.astrobe.com
+
+  Permission to use, copy, modify, and/or distribute this software and its
+  accompanying documentation (the "Software") for any purpose with or
+  without fee is hereby granted, provided that the above copyright notice
+  and this permission notice appear in all copies.
+
+  THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+  WITH REGARD TO THE SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+  MERCHANTABILITY, FITNESS AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+  AUTHORS BE LIABLE FOR ANY CLAIM, SPECIAL, DIRECT, INDIRECT, OR
+  CONSEQUENTIAL DAMAGES OR ANY DAMAGES OR LIABILITY WHATSOEVER, WHETHER IN
+  AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE DEALINGS IN OR USE OR PERFORMANCE OF THE SOFTWARE.
+  ========================================================================= *)
+
+CONST
+
+  maxMsgLen   = 64;
+  first       = 1;
+
+  (* Runtime codes *)
+  rtIndex     = 1;
+  typeTest    = 2;
+  arrayLen    = 3;
+  case        = 4;
+  nilProc     = 5;
+  strLen      = 6;
+  intDiv      = 7;
+  fpuExp      = 8;
+  fpuOverflow = 9;
+  fpuNull     = 10;
+  heap        = 11;
+  nilPtr      = 12;
+  unused      = {13..19};
+
+  (* Library codes *)
+  input*    = 20; (* Input parameter has an unexpected value *)
+  data*     = 21; (* Data has an unexpected value *)
+  index*    = 22; (* Index out of bounds *)
+  version*  = 23; (* Version check failed *)
+  timeout*  = 24; (* Timeout value exceeded *)
+  undefinedProc* = 25; (* Procedure variable not yet defined *)
+  last           = 25;
+
+TYPE
+  String* = ARRAY maxMsgLen OF CHAR;
+  ErrorMsgProc* = PROCEDURE (error: INTEGER; VAR msg: String);
+
+VAR
+  Msg*: ErrorMsgProc;
+
+PROCEDURE* StdMsg(error: INTEGER; VAR msg: String);
+BEGIN
+.     4    01000050CH        0B503H    push     { r0, r1, lr }
+  IF (error < first) OR (error > last) OR (error IN unused) THEN
+.     6    01000050EH        09800H    ldr      r0,[sp]
+.     8    010000510H        02801H    cmp      r0,#1
+.    10    010000512H        0DA01H    bge.n    2 -> 16
+.    12    010000514H        0E00EH    b        28 -> 44
+.    14    010000516H        046C0H    nop
+.    16    010000518H        09800H    ldr      r0,[sp]
+.    18    01000051AH        02819H    cmp      r0,#25
+.    20    01000051CH        0DD01H    ble.n    2 -> 26
+.    22    01000051EH        0E009H    b        18 -> 44
+.    24    010000520H        046C0H    nop
+.    26    010000522H        0207FH    movs     r0,#127
+.    28    010000524H         0340H    lsls     r0,r0,#13
+.    30    010000526H        09900H    ldr      r1,[sp]
+.    32    010000528H        02201H    movs     r2,#1
+.    34    01000052AH        0408AH    lsls     r2,r1
+.    36    01000052CH        04210H    tst      r0,r2
+.    38    01000052EH        0D101H    bne.n    2 -> 44
+.    40    010000530H        0E005H    b        10 -> 54
+.    42    010000532H        046C0H    nop
+    msg := ""
+  ELSE
+.    44    010000534H        02000H    movs     r0,#0
+.    46    010000536H        09901H    ldr      r1,[sp,#4]
+.    48    010000538H        06008H    str      r0,[r1]
+    CASE error OF
+.    50    01000053AH        0E19DH    b        826 -> 880
+.    52    01000053CH        046C0H    nop
+    | typeTest:
+.    54    01000053EH        09800H    ldr      r0,[sp]
+.    56    010000540H        04601H    mov      r1,r0
+.    58    010000542H        03901H    subs     r1,#1
+.    60    010000544H        02919H    cmp      r1,#25
+.    62    010000546H        0DD01H    ble.n    2 -> 68
+.    64    010000548H        0DF04H    svc      4
+.    66    01000054AH   <LineNo: 63>
+.    68    01000054CH          049H    lsls     r1,r1,#1
+.    70    01000054EH        046C0H    nop
+.    72    010000550H        04A01H    ldr      r2,[pc,#4] -> 80 ; Const: 02EFH 751
+.    74    010000552H        01852H    adds     r2,r2,r1
+.    76    010000554H        0447AH    add      r2,pc
+.    78    010000556H        04710H    bx       r2
+.    80    010000558H   <Const: 02EFH 751>
+        msg := "type test failure"
+    | arrayLen:
+.    84    01000055CH        09801H    ldr      r0,[sp,#4]
+.    86    01000055EH        046C0H    nop
+.    88    010000560H        0A100H    adr      r1,pc,#0 -> 92
+.    90    010000562H        0E009H    b        18 -> 112
+.    92    010000564H   <String: "type">
+.    96    010000568H   <String: " tes">
+.   100    01000056CH   <String: "t fa">
+.   104    010000570H   <String: "ilur">
+.   108    010000574H   <String: "e...">
+.   112    010000578H        04B71H    ldr      r3,[pc,#452] -> 568 ; Const: 0FF000000H -16777216
+.   114    01000057AH        0680AH    ldr      r2,[r1]
+.   116    01000057CH        03104H    adds     r1,#4
+.   118    01000057EH        06002H    str      r2,[r0]
+.   120    010000580H        03004H    adds     r0,#4
+.   122    010000582H        0401AH    ands     r2,r3
+.   124    010000584H        0D1F9H    bne.n    -14 -> 114
+.   126    010000586H        0E177H    b        750 -> 880
+.   128    010000588H        046C0H    nop
+        msg := "arrays are not the same length"
+    | strLen:
+.   130    01000058AH        09801H    ldr      r0,[sp,#4]
+.   132    01000058CH        0A100H    adr      r1,pc,#0 -> 136
+.   134    01000058EH        0E00FH    b        30 -> 168
+.   136    010000590H   <String: "arra">
+.   140    010000594H   <String: "ys a">
+.   144    010000598H   <String: "re n">
+.   148    01000059CH   <String: "ot t">
+.   152    0100005A0H   <String: "he s">
+.   156    0100005A4H   <String: "ame ">
+.   160    0100005A8H   <String: "leng">
+.   164    0100005ACH   <String: "th..">
+.   168    0100005B0H        04B63H    ldr      r3,[pc,#396] -> 568 ; Const: 0FF000000H -16777216
+.   170    0100005B2H        0680AH    ldr      r2,[r1]
+.   172    0100005B4H        03104H    adds     r1,#4
+.   174    0100005B6H        06002H    str      r2,[r0]
+.   176    0100005B8H        03004H    adds     r0,#4
+.   178    0100005BAH        0401AH    ands     r2,r3
+.   180    0100005BCH        0D1F9H    bne.n    -14 -> 170
+.   182    0100005BEH        0E15BH    b        694 -> 880
+.   184    0100005C0H        046C0H    nop
+        msg := "strings are not the same length"
+    | intDiv:
+.   186    0100005C2H        09801H    ldr      r0,[sp,#4]
+.   188    0100005C4H        0A100H    adr      r1,pc,#0 -> 192
+.   190    0100005C6H        0E00FH    b        30 -> 224
+.   192    0100005C8H   <String: "stri">
+.   196    0100005CCH   <String: "ngs ">
+.   200    0100005D0H   <String: "are ">
+.   204    0100005D4H   <String: "not ">
+.   208    0100005D8H   <String: "the ">
+.   212    0100005DCH   <String: "same">
+.   216    0100005E0H   <String: " len">
+.   220    0100005E4H   <String: "gth.">
+.   224    0100005E8H        04B55H    ldr      r3,[pc,#340] -> 568 ; Const: 0FF000000H -16777216
+.   226    0100005EAH        0680AH    ldr      r2,[r1]
+.   228    0100005ECH        03104H    adds     r1,#4
+.   230    0100005EEH        06002H    str      r2,[r0]
+.   232    0100005F0H        03004H    adds     r0,#4
+.   234    0100005F2H        0401AH    ands     r2,r3
+.   236    0100005F4H        0D1F9H    bne.n    -14 -> 226
+.   238    0100005F6H        0E13FH    b        638 -> 880
+.   240    0100005F8H        046C0H    nop
+        msg := "integer divided by zero or negative divisor"
+    | fpuExp, fpuOverflow, fpuNull:
+.   242    0100005FAH        09801H    ldr      r0,[sp,#4]
+.   244    0100005FCH        0A100H    adr      r1,pc,#0 -> 248
+.   246    0100005FEH        0E015H    b        42 -> 292
+.   248    010000600H   <String: "inte">
+.   252    010000604H   <String: "ger ">
+.   256    010000608H   <String: "divi">
+.   260    01000060CH   <String: "ded ">
+.   264    010000610H   <String: "by z">
+.   268    010000614H   <String: "ero ">
+.   272    010000618H   <String: "or n">
+.   276    01000061CH   <String: "egat">
+.   280    010000620H   <String: "ive ">
+.   284    010000624H   <String: "divi">
+.   288    010000628H   <String: "sor.">
+.   292    01000062CH        04B44H    ldr      r3,[pc,#272] -> 568 ; Const: 0FF000000H -16777216
+.   294    01000062EH        0680AH    ldr      r2,[r1]
+.   296    010000630H        03104H    adds     r1,#4
+.   298    010000632H        06002H    str      r2,[r0]
+.   300    010000634H        03004H    adds     r0,#4
+.   302    010000636H        0401AH    ands     r2,r3
+.   304    010000638H        0D1F9H    bne.n    -14 -> 294
+.   306    01000063AH        0E11DH    b        570 -> 880
+.   308    01000063CH        046C0H    nop
+        msg := "FPU error"
+    | heap:
+.   310    01000063EH        09801H    ldr      r0,[sp,#4]
+.   312    010000640H        0A100H    adr      r1,pc,#0 -> 316
+.   314    010000642H        0E005H    b        10 -> 328
+.   316    010000644H   <String: "FPU ">
+.   320    010000648H   <String: "erro">
+.   324    01000064CH   <String: "r...">
+.   328    010000650H        04B3BH    ldr      r3,[pc,#236] -> 568 ; Const: 0FF000000H -16777216
+.   330    010000652H        0680AH    ldr      r2,[r1]
+.   332    010000654H        03104H    adds     r1,#4
+.   334    010000656H        06002H    str      r2,[r0]
+.   336    010000658H        03004H    adds     r0,#4
+.   338    01000065AH        0401AH    ands     r2,r3
+.   340    01000065CH        0D1F9H    bne.n    -14 -> 330
+.   342    01000065EH        0E10BH    b        534 -> 880
+.   344    010000660H        046C0H    nop
+        msg := "heap overflow"
+    | nilPtr:
+.   346    010000662H        09801H    ldr      r0,[sp,#4]
+.   348    010000664H        0A100H    adr      r1,pc,#0 -> 352
+.   350    010000666H        0E007H    b        14 -> 368
+.   352    010000668H   <String: "heap">
+.   356    01000066CH   <String: " ove">
+.   360    010000670H   <String: "rflo">
+.   364    010000674H   <String: "w...">
+.   368    010000678H        04B31H    ldr      r3,[pc,#196] -> 568 ; Const: 0FF000000H -16777216
+.   370    01000067AH        0680AH    ldr      r2,[r1]
+.   372    01000067CH        03104H    adds     r1,#4
+.   374    01000067EH        06002H    str      r2,[r0]
+.   376    010000680H        03004H    adds     r0,#4
+.   378    010000682H        0401AH    ands     r2,r3
+.   380    010000684H        0D1F9H    bne.n    -14 -> 370
+.   382    010000686H        0E0F7H    b        494 -> 880
+.   384    010000688H        046C0H    nop
+        msg := "attempt to dispose a NIL pointer"
+    | case:
+.   386    01000068AH        09801H    ldr      r0,[sp,#4]
+.   388    01000068CH        0A100H    adr      r1,pc,#0 -> 392
+.   390    01000068EH        0E011H    b        34 -> 428
+.   392    010000690H   <String: "atte">
+.   396    010000694H   <String: "mpt ">
+.   400    010000698H   <String: "to d">
+.   404    01000069CH   <String: "ispo">
+.   408    0100006A0H   <String: "se a">
+.   412    0100006A4H   <String: " NIL">
+.   416    0100006A8H   <String: " poi">
+.   420    0100006ACH   <String: "nter">
+.   424    0100006B0H   <String: "....">
+.   428    0100006B4H        04B22H    ldr      r3,[pc,#136] -> 568 ; Const: 0FF000000H -16777216
+.   430    0100006B6H        0680AH    ldr      r2,[r1]
+.   432    0100006B8H        03104H    adds     r1,#4
+.   434    0100006BAH        06002H    str      r2,[r0]
+.   436    0100006BCH        03004H    adds     r0,#4
+.   438    0100006BEH        0401AH    ands     r2,r3
+.   440    0100006C0H        0D1F9H    bne.n    -14 -> 430
+.   442    0100006C2H        0E0D9H    b        434 -> 880
+.   444    0100006C4H        046C0H    nop
+        msg := "invalid value in case statement"
+    | input:
+.   446    0100006C6H        09801H    ldr      r0,[sp,#4]
+.   448    0100006C8H        0A100H    adr      r1,pc,#0 -> 452
+.   450    0100006CAH        0E00FH    b        30 -> 484
+.   452    0100006CCH   <String: "inva">
+.   456    0100006D0H   <String: "lid ">
+.   460    0100006D4H   <String: "valu">
+.   464    0100006D8H   <String: "e in">
+.   468    0100006DCH   <String: " cas">
+.   472    0100006E0H   <String: "e st">
+.   476    0100006E4H   <String: "atem">
+.   480    0100006E8H   <String: "ent.">
+.   484    0100006ECH        04B14H    ldr      r3,[pc,#80] -> 568 ; Const: 0FF000000H -16777216
+.   486    0100006EEH        0680AH    ldr      r2,[r1]
+.   488    0100006F0H        03104H    adds     r1,#4
+.   490    0100006F2H        06002H    str      r2,[r0]
+.   492    0100006F4H        03004H    adds     r0,#4
+.   494    0100006F6H        0401AH    ands     r2,r3
+.   496    0100006F8H        0D1F9H    bne.n    -14 -> 486
+.   498    0100006FAH        0E0BDH    b        378 -> 880
+.   500    0100006FCH        046C0H    nop
+        msg := "input parameter has an unexpected value"
+    | data:
+.   502    0100006FEH        09801H    ldr      r0,[sp,#4]
+.   504    010000700H        0A100H    adr      r1,pc,#0 -> 508
+.   506    010000702H        0E013H    b        38 -> 548
+.   508    010000704H   <String: "inpu">
+.   512    010000708H   <String: "t pa">
+.   516    01000070CH   <String: "rame">
+.   520    010000710H   <String: "ter ">
+.   524    010000714H   <String: "has ">
+.   528    010000718H   <String: "an u">
+.   532    01000071CH   <String: "nexp">
+.   536    010000720H   <String: "ecte">
+.   540    010000724H   <String: "d va">
+.   544    010000728H   <String: "lue.">
+.   548    01000072CH        04B04H    ldr      r3,[pc,#16] -> 568 ; Const: 0FF000000H -16777216
+.   550    01000072EH        0680AH    ldr      r2,[r1]
+.   552    010000730H        03104H    adds     r1,#4
+.   554    010000732H        06002H    str      r2,[r0]
+.   556    010000734H        03004H    adds     r0,#4
+.   558    010000736H        0401AH    ands     r2,r3
+.   560    010000738H        0D1F9H    bne.n    -14 -> 550
+.   562    01000073AH        046C0H    nop
+.   564    01000073CH    0F000F802H    bl.w     Error.StdMsg + 568
+.   568    010000740H   <Const: 0FF000000H -16777216>
+.   572    010000744H        0E098H    b        304 -> 880
+.   574    010000746H        046C0H    nop
+        msg := "data has an unexpected value"
+    | rtIndex, index:
+.   576    010000748H        09801H    ldr      r0,[sp,#4]
+.   578    01000074AH        046C0H    nop
+.   580    01000074CH        0A100H    adr      r1,pc,#0 -> 584
+.   582    01000074EH        0E00FH    b        30 -> 616
+.   584    010000750H   <String: "data">
+.   588    010000754H   <String: " has">
+.   592    010000758H   <String: " an ">
+.   596    01000075CH   <String: "unex">
+.   600    010000760H   <String: "pect">
+.   604    010000764H   <String: "ed v">
+.   608    010000768H   <String: "alue">
+.   612    01000076CH   <String: "....">
+.   616    010000770H        04B42H    ldr      r3,[pc,#264] -> 884 ; Const: 0FF000000H -16777216
+.   618    010000772H        0680AH    ldr      r2,[r1]
+.   620    010000774H        03104H    adds     r1,#4
+.   622    010000776H        06002H    str      r2,[r0]
+.   624    010000778H        03004H    adds     r0,#4
+.   626    01000077AH        0401AH    ands     r2,r3
+.   628    01000077CH        0D1F9H    bne.n    -14 -> 618
+.   630    01000077EH        0E07BH    b        246 -> 880
+.   632    010000780H        046C0H    nop
+        msg := "index out of bounds"
+    | version:
+.   634    010000782H        09801H    ldr      r0,[sp,#4]
+.   636    010000784H        0A100H    adr      r1,pc,#0 -> 640
+.   638    010000786H        0E009H    b        18 -> 660
+.   640    010000788H   <String: "inde">
+.   644    01000078CH   <String: "x ou">
+.   648    010000790H   <String: "t of">
+.   652    010000794H   <String: " bou">
+.   656    010000798H   <String: "nds.">
+.   660    01000079CH        04B37H    ldr      r3,[pc,#220] -> 884 ; Const: 0FF000000H -16777216
+.   662    01000079EH        0680AH    ldr      r2,[r1]
+.   664    0100007A0H        03104H    adds     r1,#4
+.   666    0100007A2H        06002H    str      r2,[r0]
+.   668    0100007A4H        03004H    adds     r0,#4
+.   670    0100007A6H        0401AH    ands     r2,r3
+.   672    0100007A8H        0D1F9H    bne.n    -14 -> 662
+.   674    0100007AAH        0E065H    b        202 -> 880
+.   676    0100007ACH        046C0H    nop
+        msg := "version check failed"
+    | timeout:
+.   678    0100007AEH        09801H    ldr      r0,[sp,#4]
+.   680    0100007B0H        0A100H    adr      r1,pc,#0 -> 684
+.   682    0100007B2H        0E00BH    b        22 -> 708
+.   684    0100007B4H   <String: "vers">
+.   688    0100007B8H   <String: "ion ">
+.   692    0100007BCH   <String: "chec">
+.   696    0100007C0H   <String: "k fa">
+.   700    0100007C4H   <String: "iled">
+.   704    0100007C8H   <String: "....">
+.   708    0100007CCH        04B2BH    ldr      r3,[pc,#172] -> 884 ; Const: 0FF000000H -16777216
+.   710    0100007CEH        0680AH    ldr      r2,[r1]
+.   712    0100007D0H        03104H    adds     r1,#4
+.   714    0100007D2H        06002H    str      r2,[r0]
+.   716    0100007D4H        03004H    adds     r0,#4
+.   718    0100007D6H        0401AH    ands     r2,r3
+.   720    0100007D8H        0D1F9H    bne.n    -14 -> 710
+.   722    0100007DAH        0E04DH    b        154 -> 880
+.   724    0100007DCH        046C0H    nop
+        msg := "timeout value exceeded"
+    | nilProc, undefinedProc:
+.   726    0100007DEH        09801H    ldr      r0,[sp,#4]
+.   728    0100007E0H        0A100H    adr      r1,pc,#0 -> 732
+.   730    0100007E2H        0E00BH    b        22 -> 756
+.   732    0100007E4H   <String: "time">
+.   736    0100007E8H   <String: "out ">
+.   740    0100007ECH   <String: "valu">
+.   744    0100007F0H   <String: "e ex">
+.   748    0100007F4H   <String: "ceed">
+.   752    0100007F8H   <String: "ed..">
+.   756    0100007FCH        04B1FH    ldr      r3,[pc,#124] -> 884 ; Const: 0FF000000H -16777216
+.   758    0100007FEH        0680AH    ldr      r2,[r1]
+.   760    010000800H        03104H    adds     r1,#4
+.   762    010000802H        06002H    str      r2,[r0]
+.   764    010000804H        03004H    adds     r0,#4
+.   766    010000806H        0401AH    ands     r2,r3
+.   768    010000808H        0D1F9H    bne.n    -14 -> 758
+.   770    01000080AH        0E035H    b        106 -> 880
+.   772    01000080CH        046C0H    nop
+        msg := "undefined procedure variable"
+    END
+.   774    01000080EH        09801H    ldr      r0,[sp,#4]
+.   776    010000810H        0A100H    adr      r1,pc,#0 -> 780
+.   778    010000812H        0E00FH    b        30 -> 812
+.   780    010000814H   <String: "unde">
+.   784    010000818H   <String: "fine">
+.   788    01000081CH   <String: "d pr">
+.   792    010000820H   <String: "oced">
+.   796    010000824H   <String: "ure ">
+.   800    010000828H   <String: "vari">
+.   804    01000082CH   <String: "able">
+.   808    010000830H   <String: "....">
+.   812    010000834H        04B11H    ldr      r3,[pc,#68] -> 884 ; Const: 0FF000000H -16777216
+.   814    010000836H        0680AH    ldr      r2,[r1]
+.   816    010000838H        03104H    adds     r1,#4
+.   818    01000083AH        06002H    str      r2,[r0]
+.   820    01000083CH        03004H    adds     r0,#4
+.   822    01000083EH        0401AH    ands     r2,r3
+.   824    010000840H        0D1F9H    bne.n    -14 -> 814
+.   826    010000842H        0E019H    b        50 -> 880
+.   828    010000844H        046C0H    nop
+  END
+.   830    010000846H        0E79CH    b        -200 -> 634
+.   832    010000848H        0E688H    b        -752 -> 84
+.   834    01000084AH        0E69EH    b        -708 -> 130
+.   836    01000084CH        0E73BH    b        -394 -> 446
+.   838    01000084EH        0E7DEH    b        -68 -> 774
+.   840    010000850H        0E6B7H    b        -658 -> 186
+.   842    010000852H        0E6D2H    b        -604 -> 242
+.   844    010000854H        0E6F3H    b        -538 -> 310
+.   846    010000856H        0E6F2H    b        -540 -> 310
+.   848    010000858H        0E6F1H    b        -542 -> 310
+.   850    01000085AH        0E702H    b        -508 -> 346
+.   852    01000085CH        0E715H    b        -470 -> 386
+.   854    01000085EH        0E672H    b        -796 -> 62
+.   856    010000860H        0E671H    b        -798 -> 62
+.   858    010000862H        0E670H    b        -800 -> 62
+.   860    010000864H        0E66FH    b        -802 -> 62
+.   862    010000866H        0E66EH    b        -804 -> 62
+.   864    010000868H        0E66DH    b        -806 -> 62
+.   866    01000086AH        0E66CH    b        -808 -> 62
+.   868    01000086CH        0E747H    b        -370 -> 502
+.   870    01000086EH        0E76BH    b        -298 -> 576
+.   872    010000870H        0E787H    b        -242 -> 634
+.   874    010000872H        0E79CH    b        -200 -> 678
+.   876    010000874H        0E7B3H    b        -154 -> 726
+.   878    010000876H        0E7CAH    b        -108 -> 774
+END StdMsg;
+.   880    010000878H        0B002H    add      sp,#8
+.   882    01000087AH        0BD00H    pop      { pc }
+.   884    01000087CH   <Const: 0FF000000H -16777216>
+
+BEGIN
+.   888    010000880H        0B500H    push     { lr }
+  Msg := StdMsg
+END Error.
+.   890    010000882H        046C0H    nop
+.   892    010000884H        04802H    ldr      r0,[pc,#8] -> 904 ; Const: 0FFFFFC82H -894
+.   894    010000886H        04478H    add      r0,pc
+.   896    010000888H        04902H    ldr      r1,[pc,#8] -> 908 ; Global: 02002FFB8H
+.   898    01000088AH        06008H    str      r0,[r1]
+.   900    01000088CH        0BD00H    pop      { pc }
+.   902    01000088EH        046C0H    nop
+.   904    010000890H   <Const: 0FFFFFC82H -894>
+.   908    010000894H   <Global: 02002FFB8H>

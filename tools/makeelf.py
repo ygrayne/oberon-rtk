@@ -5,7 +5,7 @@
 # Run with option -h for help.
 # --
 # Put into a directory on $PYTHONPATH, and run as
-# 'python -m  pio2o ...'
+# 'python -m  makeelf ...'
 # No idea if that's the right way, but it works.
 # --
 # Copyright (c) 2024 Gray, gray@graraven.org
@@ -23,28 +23,43 @@ class Elf:
     self._fh = FileHeader()
     self._sh_tab = SectionHeaderTable()
     self._ph_tab = ProgramHeaderTable()
-    self._sections = list()
+    self.sections = dict()
 
-    # create section header string table section (sic)
+    # create section header string table section (sic) .shstrtab
     self._shstr_tab = StringTable()
-    self.add_section(self._shstr_tab)
+    self.add_section(self._shstr_tab, '.shstrtab')
     self._shstr_tab.add_string('.shstrtab')
 
-    # register section in section header table
+    # register section .shstrtab in section header table
     shstr_tab_hd = SectionHeader()
     shstr_tab_hd.set_data_field('sh_name', self._shstr_tab.index_of('.shstrtab'))
     shstr_tab_hd.set_data_field('sh_type', 3) # SHT_STRTAB
     self._shstr_tab.set_section_header(shstr_tab_hd)
-    self._sh_tab.add_header(shstr_tab_hd, '.shstrtab')
+    self._shstr_tab_hd = shstr_tab_hd
+    #self._sh_tab.add_entry(shstr_tab_hd, '.shstrtab')
 
-  def add_section(self, section):
-    self._sections.append(section)
+    # # create string table .strtab
+    # self._str_tab = StringTable()
+    # self.add_section(self._str_tab, '.strtab')
+    # self._shstr_tab.add_string('.strtab')
+
+    # # register section .strtab in section header table
+    # str_tab_hd = SectionHeader()
+    # str_tab_hd.set_data_field('sh_name', self._shstr_tab.index_of('.strtab'))
+    # str_tab_hd.set_data_field('sh_type', 3) # SHT_STRTAB
+    # self._str_tab.set_section_header(str_tab_hd)
+    # self._sh_tab.add_entry(str_tab_hd, '.strtab')
+
+  def add_section(self, section, section_name):
+    assert section_name not in self.sections
+    self.sections[section_name] = section
 
   def set_code_addr(self, entry_addr, prog_addr):
     self._entry_addr = entry_addr
     self._prog_addr = prog_addr
 
   def make(self, boot_data, prog_data):
+    # define file header
     self._fh.set_data_field('e_ident_magic', self._fh.magic)
     self._fh.set_data_field('e_ident_class', 1)
     self._fh.set_data_field('e_ident_data', 1)
@@ -55,18 +70,21 @@ class Elf:
     self._fh.set_data_field('e_version', 1)
     self._fh.set_data_field('e_entry', self._entry_addr)
     self._fh.set_data_field('e_flags', 0x5000200) # from SDK example progs
-    self._fh.set_data_field('e_ehsize', 0x34)
-    self._fh.set_data_field('e_phentsize', 0x20)
-    self._fh.set_data_field('e_shentsize', 0x28)
+    self._fh.set_data_field('e_ehsize', FileHeader.entry_size)
+    self._fh.set_data_field('e_phentsize', ProgramHeader.entry_size)
+    self._fh.set_data_field('e_shentsize', SectionHeader.entry_size)
 
-    self._fh.append_to_buf(self._buf, len(self._buf))
+    # write file header
+    self._fh.append_to_buf(self._buf)
     #print("end of file header: {}".format(hex(len(self._buf))))
 
+    # create code section .boot2
     boot2 = Section()
     boot2.put_data(boot_data)
-    self.add_section(boot2)
+    self.add_section(boot2, '.boot2')
     self._shstr_tab.add_string('.boot2')
 
+    # create entry for .boot2 in section header table
     boot2_hd = SectionHeader()
     boot2_hd.set_data_field('sh_name', self._shstr_tab.index_of('.boot2'))
     boot2_hd.set_data_field('sh_type', 1) # SHT_PROGBITS
@@ -74,9 +92,10 @@ class Elf:
     boot2_hd.set_data_field('sh_addr', self._entry_addr) # rp2040 boot load address
     boot2_hd.set_data_field('sh_size', boot2.size())
     boot2_hd.set_data_field('sh_addralign', 4)
-    self._sh_tab.add_header(boot2_hd, '.boot2')
+    self._sh_tab.add_entry(boot2_hd, '.boot2')
     boot2.set_section_header(boot2_hd)
 
+    # create entry for .boot2 in program header table
     boot2_ph = ProgramHeader()
     boot2_ph.set_data_field('p_type', 1)  # PT_LOAD
     boot2_ph.set_data_field('p_vaddr', self._entry_addr)  # rp2040 boot load address
@@ -84,14 +103,16 @@ class Elf:
     boot2_ph.set_data_field('p_filesz', boot2.size())
     boot2_ph.set_data_field('p_memsz', boot2.size())
     boot2_ph.set_data_field('p_flags', 0x04 | 0x01) # PF_R | PF_X
-    self._ph_tab.add_header(boot2_ph, '.boot2')
+    self._ph_tab.add_entry(boot2_ph, '.boot2')
     boot2.set_program_header(boot2_ph)
 
+    # create code section for .text
     text = Section()
     text.put_data(prog_data)
-    self.add_section(text)
+    self.add_section(text, '.text')
     self._shstr_tab.add_string('.text')
 
+    # create entry for .text in section header table
     text_hd = SectionHeader()
     text_hd.set_data_field('sh_name', self._shstr_tab.index_of('.text'))
     text_hd.set_data_field('sh_type', 1) # SHT_PROGBITS
@@ -99,9 +120,10 @@ class Elf:
     text_hd.set_data_field('sh_addr', self._prog_addr) # rp2040 prog load address
     text_hd.set_data_field('sh_size', text.size())
     text_hd.set_data_field('sh_addralign', 4)
-    self._sh_tab.add_header(text_hd, '.text')
+    self._sh_tab.add_entry(text_hd, '.text')
     text.set_section_header(text_hd)
 
+    # create entry for .text in program header table
     text_ph = ProgramHeader()
     text_ph.set_data_field('p_type', 1)  # PT_LOAD
     text_ph.set_data_field('p_vaddr', self._prog_addr)  # rp2040 prog load address
@@ -109,30 +131,93 @@ class Elf:
     text_ph.set_data_field('p_filesz', text.size())
     text_ph.set_data_field('p_memsz', text.size())
     text_ph.set_data_field('p_flags', 0x04 | 0x01) # PF_R | PF_X
-    self._ph_tab.add_header(text_ph, '.text')
+    self._ph_tab.add_entry(text_ph, '.text')
     text.set_program_header(text_ph)
 
-    self._sh_tab.append_to_buf(self._buf, len(self._buf))
-    #print("end of sh_tab: {}".format(hex(len(self._buf))))
+    # create string table .strtab
+    self._str_tab = StringTable()
+    self.add_section(self._str_tab, '.strtab')
+    self._shstr_tab.add_string('.strtab')
 
+    # create entry for .strtab in section header table
+    str_tab_hd = SectionHeader()
+    str_tab_hd.set_data_field('sh_name', self._shstr_tab.index_of('.strtab'))
+    str_tab_hd.set_data_field('sh_type', 3) # SHT_STRTAB
+    self._str_tab.set_section_header(str_tab_hd)
+    self._sh_tab.add_entry(str_tab_hd, '.strtab')
+
+    # create symbol table .symtab
+    symtab = SymbolTable()
+    self.add_section(symtab, '.symtab')
+    self._shstr_tab.add_string('.symtab')
+
+    # create entry for .symtab in section header table
+    symtab_hd = SectionHeader()
+    symtab_hd.set_data_field('sh_name', self._shstr_tab.index_of('.symtab'))
+    symtab_hd.set_data_field('sh_type', 2) # SHT_SYMTAB
+    symtab_hd.set_data_field('sh_link', self._sh_tab.index_of('.strtab')) # link to .strtab
+    symtab_hd.set_data_field('sh_entsize', SymbolTableEntry.entry_size)
+    self._sh_tab.add_entry(symtab_hd, '.symtab')
+    symtab.set_section_header(symtab_hd)
+
+    # create 3 dummy symbols for testing
+    sym0 = SymbolTableEntry()
+    self._str_tab.add_string('test0')
+    sym0.set_data_field('st_name', self._str_tab.index_of('test0'))
+    symtab.add_entry(sym0, 'test0')
+
+    sym1 = SymbolTableEntry()
+    self._str_tab.add_string('test1')
+    sym1.set_data_field('st_name', self._str_tab.index_of('test1'))
+    symtab.add_entry(sym1, 'test1')
+
+    sym2 = SymbolTableEntry()
+    self._str_tab.add_string('test2')
+    sym2.set_data_field('st_name', self._str_tab.index_of('test2'))
+    symtab.add_entry(sym2, 'test2')
+
+    # write program header table
     self._ph_tab.append_to_buf(self._buf, len(self._buf))
-    #print("end of ph_tab: {}".format(hex(len(self._buf))))
 
+    # add .shstrtab to section header table
+    self._sh_tab.add_entry(self._shstr_tab_hd, '.shstrtab')
+
+    # write section header table
+    self._sh_tab.append_to_buf(self._buf, len(self._buf))
+
+    # write code section .boot2
     boot2.append_to_buf(self._buf, len(self._buf))
-    #print("end of .boot: {}".format(hex(len(self._buf))))
+    # fix-up section and program header entries
     boot2.section_header().set_buf_field("sh_offset", boot2.offset())
     boot2.program_header().set_buf_field("p_offset", boot2.offset())
 
+    # write code section .text
     text.append_to_buf(self._buf, len(self._buf))
-    #print("end of .text: {}".format(hex(len(self._buf))))
+    # fix-up section and program header entries
     text.section_header().set_buf_field("sh_offset", text.offset())
     text.program_header().set_buf_field("p_offset", text.offset())
 
+    # write section header string table section
     self._shstr_tab.append_to_buf(self._buf, len(self._buf))
-    #print("end of _shstr_tab: {}".format(hex(len(self._buf))))
+    # fix-up section header
     self._shstr_tab.section_header().set_buf_field('sh_offset', self._shstr_tab.offset())
     self._shstr_tab.section_header().set_buf_field('sh_size', self._shstr_tab.size())
 
+    # write string table section
+    self._str_tab.append_to_buf(self._buf, len(self._buf))
+    # fix-up section header
+    self._str_tab.section_header().set_buf_field('sh_offset', self._str_tab.offset())
+    self._str_tab.section_header().set_buf_field('sh_size', self._str_tab.size())
+
+    # write symbol table section
+    symtab.append_to_buf(self._buf, len(self._buf))
+    # fix-up section header
+    # 'sh_info' contains the index of the first global symbol for symbol tables
+    symtab.section_header().set_buf_field('sh_offset', symtab.offset())
+    symtab.section_header().set_buf_field('sh_size', symtab.size())
+    symtab.section_header().set_buf_field('sh_info', symtab.index_of_first_global())
+
+    # fix-up file header entries
     self._fh.set_buf_field('e_shnum', self._sh_tab.num_entries())
     self._fh.set_buf_field('e_phnum', self._ph_tab.num_entries())
     self._fh.set_buf_field('e_shoff', self._sh_tab.offset())
@@ -140,38 +225,73 @@ class Elf:
     self._fh.set_buf_field('e_shstrndx', self._sh_tab.index_of('.shstrtab'))
 
 
-class Header:
-  # abstract class for all headers
-
+class TableEntry:
   fields = {}
+  entry_size: int
 
   def __init__(self):
-    self.offset = 0
-    self.data = dict()
+    self._offset: int
+    self._data = dict()
     for k in self.fields:
-      self.data[k] = 0
+      self._data[k] = 0
 
   def set_data_field(self, name, val):
-    assert(name in self.data)
-    self.data[name] = val
+    assert(name in self._data)
+    self._data[name] = val
 
   def set_buf_field(self, name, val):
     size, offset = self.fields[name]
-    offset = offset + self.offset
+    offset = offset + self._offset
     fmt = {1: '<B', 2: '<H', 4: '<I', 8: '<Q'}[size]
     self._buf[offset:offset+size] = struct.pack(fmt, val)
 
   def append_to_buf(self, buf, offset):
     self._buf = buf
-    self.offset = offset
+    self._offset = offset
     for _, val in self.fields.items():
       size, _ = val
       buf.extend(b'\0' * size)
-    for name, val in self.data.items():
+    for name, val in self._data.items():
       self.set_buf_field(name, val)
 
 
-class FileHeader(Header):
+class Table:
+  def __init__(self):
+    self._offset: int
+    self._entries = list()
+    self._entry_names = dict()
+
+  def add_entry(self, entry, entry_name):
+    ix = len(self._entries)
+    self._entries.append(entry)
+    self._entry_names[entry_name] = ix
+
+  def get_entry(self, id) -> TableEntry:
+    if type(id) == str:
+      id = self._entry_names[id]
+    return self._entries[id]
+
+  def index_of(self, entry_name) -> int:
+    return self._entry_names[entry_name]
+
+  def num_entries(self) -> int:
+    return len(self._entries)
+
+  def offset(self) -> int:
+    return self._offset
+
+  def size(self) -> int:
+    return self._size
+
+  def append_to_buf(self, buf, offset):
+    self._offset = offset
+    for en in self._entries:
+      en.append_to_buf(buf, offset)
+      offset = len(buf)
+    self._size = len(buf) - self._offset
+
+
+class FileHeader(TableEntry):
   magic = 0x464C457F  # '7F 45 4C 46'
   fields = {
     'e_ident_magic':      (4, 0x00),
@@ -196,18 +316,20 @@ class FileHeader(Header):
     'e_shstrndx':         (2, 0x32)
   }
 
-  def append_to_buf(self, buf, offset):
+  entry_size = 0x34
+
+  def append_to_buf(self, buf):
     self._buf = buf
-    self.offset = offset
+    self._offset = 0 # always at beginning of buffer/file
     for _, val in self.fields.items():
       size, _ = val
       buf.extend(b'\0' * size)
-    for name, val in self.data.items():
+    for name, val in self._data.items():
       if name != 'e_pad':
         self.set_buf_field(name, val)
 
 
-class SectionHeader(Header):
+class SectionHeader(TableEntry):
   fields = {
     'sh_name':      (4, 0x00),
     'sh_type':      (4, 0x04),
@@ -221,8 +343,9 @@ class SectionHeader(Header):
     'sh_entsize':   (4, 0x24)
   }
 
+  entry_size = 0x28
 
-class ProgramHeader(Header):
+class ProgramHeader(TableEntry):
   fields = {
     'p_type':   (4, 0x00),
     'p_offset': (4, 0x04),
@@ -234,50 +357,23 @@ class ProgramHeader(Header):
     'p_align':  (4, 0x1C)
   }
 
-class HeaderTable:
+  entry_size = 0x20
+
+
+class SectionHeaderTable(Table):
   def __init__(self):
-    self._headers = list()
-    self._header_names = dict()
-
-  def add_header(self, header, header_name):
-    ix = len(self._headers)
-    self._headers.append(header)
-    self._header_names[header_name] = ix
-
-  def get_header(self, id) -> Header:
-    if type(id) == str:
-      id = self._header_names[id]
-    return self._headers[id]
-
-  def index_of(self, header_name) -> int:
-    return self._header_names[header_name]
-
-  def num_entries(self) -> int:
-    return len(self._headers)
-
-  def offset(self) -> int:
-    return self._offset
-
-  def append_to_buf(self, buf, offset):
-    self._offset = offset
-    for hd in self._headers:
-      hd.append_to_buf(buf, offset)
-      offset = len(buf)
+    super().__init__()
+    self.add_entry(SectionHeader(), 'zero')
 
 
-class SectionHeaderTable(HeaderTable):
-  def __init__(self):
-    self._headers = list()
-    self._header_names = dict()
-    self.add_header(SectionHeader(), 'zero')
-
-
-class ProgramHeaderTable(HeaderTable):
+class ProgramHeaderTable(Table):
   pass
 
 
 class StringTable: # a section
   def __init__(self):
+    self._size: int
+    self._offset: int
     self._strings = dict()
     self._cix = 0
     self.add_string('\0')
@@ -308,12 +404,14 @@ class StringTable: # a section
     for s in self._strings:
       buf.extend(s.encode('ascii'))
       buf.extend(b'\0')
-    self._size = len(buf) - offset
+    self._size = len(buf) - self._offset
 
 
 class Section:
   def __init__(self):
-    pass
+    self._section_header: SectionHeader
+    self._program_header: ProgramHeader
+    self._offset: int
 
   def put_data(self, data):
     self._data = data
@@ -341,35 +439,68 @@ class Section:
     buf.extend(self._data)
 
 
-class SymbolTable:
-  pass
+class SymbolTableEntry(TableEntry):
+  fields = {
+    'st_name':    (4, 0x00),
+    'st_value':   (4, 0x04),
+    'st_size':    (4, 0x08),
+    'st_info':    (1, 0x09),
+    'st_other':   (1, 0x0A),
+    'st_shndx':   (2, 0x0B)
+  }
+
+  entry_size = 0x10
+
+
+class SymbolTable(Table): # a section
+  def __init__(self):
+    self._section_header: SectionHeader
+    super().__init__()
+    self._first_global = 1
+    self.add_entry(SymbolTableEntry(), 'zero') # empty/zeroed entry as per specs
+
+  def add_entry(self, entry, entry_name):
+    super().add_entry(entry, entry_name)
+    self._first_global += 1
+
+  def set_section_header(self, section_header):
+    self._section_header = section_header
+
+  def section_header(self) -> SectionHeader:
+    return self._section_header
+
+  def index_of_first_global(self) -> int:
+    return self._first_global
 
 
 def main():
   import argparse, os
-  from pathlib import PurePath
+  from pathlib import Path
 
   parser = argparse.ArgumentParser(
     prog = 'makeelf',
     description = '',
     epilog = ''
   )
-  parser.add_argument("prog_file", type=str, help="input file (.bin)")
-  parser.add_argument("-v", action="store_true", dest="verbose", help="print feedback")
-  parser.add_argument("-o", type=str, dest='out_file', help="output file (.elf), default: in_file.elf")
-  parser.add_argument("-l", type=str, dest='boot_file',
+  parser.add_argument('prog_file', type=str, help="input file (.bin)")
+  parser.add_argument('-v', action='store_true', dest='verbose', help="print feedback")
+  parser.add_argument('-o', type=str, dest='out_file', help="output file (.elf), default: in_file.elf")
+  parser.add_argument('-l', type=str, dest='boot_file',
                       help="bootstage 2 file (.bin), default: 'boot2.bin' in installation directory")
-  parser.add_argument("-e", dest='entry_addr', default='0x10000000',
+  parser.add_argument('-e', dest='entry_addr', default='0x10000000',
                       help="entry address in hexadecimal, default: 0x10000000")
-  parser.add_argument("-p", dest='prog_addr', default='0x10000100',
+  parser.add_argument('-p', dest='prog_addr', default='0x10000100',
                       help="program address in hexadecimal, default: 0x10000100")
   args = parser.parse_args()
 
-  outf_base = PurePath(args.prog_file)
-  if args.out_file == None: args.out_file = outf_base.with_suffix(".elf")
+  args.prog_file = Path(args.prog_file)
+  #outf_base = Path(args.prog_file)
+  if args.out_file == None: args.out_file = args.prog_file.with_suffix('.elf')
 
-  run_dir = os.path.dirname(os.path.realpath(sys.argv[0])) + "/"
-  if args.boot_file == None: args.boot_file = run_dir + "boot2.bin"
+  if args.boot_file == None:
+    args.boot_file = Path(__file__).parent.joinpath('boot2.bin')
+  else:
+    args.boot_file = Path(args.boot_file)
 
   try:
     args.entry_addr = int(args.entry_addr, base = 16)
@@ -378,11 +509,15 @@ def main():
     print("Enter addresses in hexadecimal format (with or without '0x' prefix).")
     sys.exit()
 
+  if not args.boot_file.exists():
+    print("Could not find bootstage2 file '{}'".format(args.boot_file))
+    sys.exit()
+
   try:
-    with open(args.boot_file, "rb") as boot_file:
+    with open(args.boot_file, 'rb') as boot_file:
       boot_data = boot_file.read()
   except:
-    print("Could not open and read bootstage 2 file '{}'".format(args.boot_file))
+    print("Could not read bootstage 2 file '{}'".format(args.boot_file))
     sys.exit()
 
   try:
@@ -404,6 +539,11 @@ def main():
     print("Creating ELF data: {}...".format(args.out_file))
 
   elf.make(boot_data, prog_data)
+
+  if args.verbose:
+    print("sections:")
+    for section in elf.sections:
+      print("  " + section)
 
   if args.verbose:
     print("Writing ELF file: {}...".format(args.out_file))

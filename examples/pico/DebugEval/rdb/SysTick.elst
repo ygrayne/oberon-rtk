@@ -1,0 +1,84 @@
+.     0    010004678H   <Pad: 0>
+MODULE SysTick;
+(**
+  Oberon RTK Framework
+  System tick
+  For Kernel v1: poll sys tick count flag
+  --
+  Each core has its own sys tick, ie. registers
+  are not shared.
+  --
+  MCU: Cortex-M0+ RP2040, tested on Pico
+  --
+  Copyright (c) 2020-2024 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2;
+
+  CONST
+    (* bits *)
+    SYST_CSR_COUNTFLAG = 16;
+    SYST_CSR_ENABLE = 0;
+
+    CountPerMillisecond = MCU.SysTickFreq DIV 1000;
+
+
+  PROCEDURE Tick*(): BOOLEAN;
+    RETURN SYSTEM.BIT(MCU.SYST_CSR, SYST_CSR_COUNTFLAG)
+.     4    01000467CH        0B500H    push     { lr }
+  END Tick;
+.     6    01000467EH        04804H    ldr      r0,[pc,#16] -> 24 ; Const: 0E000E010H -536813552
+.     8    010004680H        06801H    ldr      r1,[r0]
+.    10    010004682H         03C9H    lsls     r1,r1,#15
+.    12    010004684H        0D401H    bmi.n    2 -> 18
+.    14    010004686H        02000H    movs     r0,#0
+.    16    010004688H        0E000H    b        0 -> 20
+.    18    01000468AH        02001H    movs     r0,#1
+.    20    01000468CH        0BD00H    pop      { pc }
+.    22    01000468EH        046C0H    nop
+.    24    010004690H   <Const: 0E000E010H -536813552>
+
+
+  PROCEDURE Enable*;
+  BEGIN
+.    28    010004694H        0B500H    push     { lr }
+    SYSTEM.PUT(MCU.SYST_CSR, {SYST_CSR_ENABLE})
+  END Enable;
+.    30    010004696H        04802H    ldr      r0,[pc,#8] -> 40 ; Const: 0E000E010H -536813552
+.    32    010004698H        02101H    movs     r1,#1
+.    34    01000469AH        06001H    str      r1,[r0]
+.    36    01000469CH        0BD00H    pop      { pc }
+.    38    01000469EH        046C0H    nop
+.    40    0100046A0H   <Const: 0E000E010H -536813552>
+
+
+  PROCEDURE Init*(millisecondsPerTick: INTEGER);
+    VAR cntReload: INTEGER;
+  BEGIN
+.    44    0100046A4H        0B501H    push     { r0, lr }
+.    46    0100046A6H        0B081H    sub      sp,#4
+    cntReload := millisecondsPerTick * CountPerMillisecond - 1;
+.    48    0100046A8H        09801H    ldr      r0,[sp,#4]
+.    50    0100046AAH        0217DH    movs     r1,#125
+.    52    0100046ACH          0C9H    lsls     r1,r1,#3
+.    54    0100046AEH        04348H    muls     r0,r1
+.    56    0100046B0H        03801H    subs     r0,#1
+.    58    0100046B2H        09000H    str      r0,[sp]
+    SYSTEM.PUT(MCU.SYST_RVR, cntReload);
+.    60    0100046B4H        04803H    ldr      r0,[pc,#12] -> 76 ; Const: 0E000E014H -536813548
+.    62    0100046B6H        09900H    ldr      r1,[sp]
+.    64    0100046B8H        06001H    str      r1,[r0]
+    SYSTEM.PUT(MCU.SYST_CVR, 0) (* clear counter *)
+  END Init;
+.    66    0100046BAH        04803H    ldr      r0,[pc,#12] -> 80 ; Const: 0E000E018H -536813544
+.    68    0100046BCH        02100H    movs     r1,#0
+.    70    0100046BEH        06001H    str      r1,[r0]
+.    72    0100046C0H        0B002H    add      sp,#8
+.    74    0100046C2H        0BD00H    pop      { pc }
+.    76    0100046C4H   <Const: 0E000E014H -536813548>
+.    80    0100046C8H   <Const: 0E000E018H -536813544>
+
+END SysTick.
+.    84    0100046CCH        0B500H    push     { lr }
+.    86    0100046CEH        0BD00H    pop      { pc }

@@ -25,7 +25,6 @@ MODULE GPIO;
     Disabled* = 0;
 
 
-
     (* BANK0_GPIO bits and values *)
     BANK0_GPIO_OD*          = 7;
     BANK0_GPIO_IE*          = 6;

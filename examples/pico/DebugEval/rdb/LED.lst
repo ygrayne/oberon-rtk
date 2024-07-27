@@ -1,0 +1,59 @@
+.     0  <Pad: 0>
+MODULE LED;
+(**
+  Oberon RTK Framework
+  Green LED on Pico
+  --
+  MCU: RP2040
+  Board: Pico
+  --
+  Usage:
+  * Via SIO:
+    GPIO.Set({LED.Pico}),
+    GPIO.Clear({LED.Pico},
+    GPIO.Toggle({LED.Pico})
+  * Direct, avoiding procedure calls, eg. for leaf procedures:
+    SYSTEM.PUT(LED.SET, {LED.Pico}),
+    SYSTEM.PUT(LED.CLR, {LED.Pico}),
+    SYSTEM.PUT(LED.XOR, {LED.Pico})
+  --
+  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT GPIO, MCU := MCU2;
+
+  CONST
+    LEDpinNo = 25;
+    Green* = LEDpinNo; (* deprecated *)
+    Pico* = LEDpinNo;
+    SET* = MCU.SIO_GPIO_OUT_SET;
+    CLR* = MCU.SIO_GPIO_OUT_CLR;
+    XOR* = MCU.SIO_GPIO_OUT_XOR;
+
+  PROCEDURE init;
+  BEGIN
+.     4     04H  0B500H          push     { lr }
+    GPIO.SetFunction(LEDpinNo, GPIO.Fsio);
+.     6     06H  02019H          movs     r0,#25
+.     8     08H  02105H          movs     r1,#5
+.    10     0AH  004020000H      bl.w     Ext Proc #2
+.    14     0EH  0E000H          b        0 -> 18
+.    16  <LineNo: 35>
+    GPIO.OutputEnable({LEDpinNo})
+.    18    012H  02001H          movs     r0,#1
+.    20    014H  00640H          lsls     r0,r0,#25
+  END init;
+.    22    016H  0040F0005H      bl.w     Ext Proc #15
+.    26    01AH  0E000H          b        0 -> 30
+.    28  <LineNo: 36>
+.    30    01EH  0BD00H          pop      { pc }
+
+BEGIN
+.    32    020H  0B500H          push     { lr }
+  init
+END LED.
+.    34    022H  0F7FFFFEFH      bl.w     -34 -> 4
+.    38    026H  0E000H          b        0 -> 42
+.    40  <LineNo: 40>
+.    42    02AH  0BD00H          pop      { pc }

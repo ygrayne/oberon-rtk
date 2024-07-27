@@ -1,0 +1,109 @@
+.     0    01000048CH   <Pad: 0>
+MODULE StartUp;
+(**
+  Oberon RTK Framework
+  Start-up control
+  * power-on state machine (hardware controlled part)
+  * reset controller (software controlled part)
+  Note: watchdog resets selecyion in 'Watchdog.mod'
+  --
+  MCU: Cortex-M0+ RP2040
+  --
+  See
+  * 'PSM-*' values in MCU2.mod for blocks to reset
+  * 'RESETS_*' values in MCU2.mod for subsytems to reset
+  --
+  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2;
+
+  (* power on state machine *)
+
+  PROCEDURE AwaitPowerOnResetDone*(which: INTEGER);
+    VAR x: SET;
+  BEGIN
+.     4    010000490H        0B501H    push     { r0, lr }
+.     6    010000492H        0B081H    sub      sp,#4
+    REPEAT
+      SYSTEM.GET(MCU.PSM_DONE, x)
+    UNTIL which IN x
+.     8    010000494H        04805H    ldr      r0,[pc,#20] -> 32 ; Const: 04001000CH 1073807372
+.    10    010000496H        06801H    ldr      r1,[r0]
+.    12    010000498H        09100H    str      r1,[sp]
+  END AwaitPowerOnResetDone;
+.    14    01000049AH        09800H    ldr      r0,[sp]
+.    16    01000049CH        09901H    ldr      r1,[sp,#4]
+.    18    01000049EH        02201H    movs     r2,#1
+.    20    0100004A0H        0408AH    lsls     r2,r1
+.    22    0100004A2H        04210H    tst      r0,r2
+.    24    0100004A4H        0D0F6H    beq.n    -20 -> 8
+.    26    0100004A6H        0B002H    add      sp,#8
+.    28    0100004A8H        0BD00H    pop      { pc }
+.    30    0100004AAH        046C0H    nop
+.    32    0100004ACH   <Const: 04001000CH 1073807372>
+
+  (* reset controller *)
+
+  PROCEDURE ReleaseReset*(devNo: INTEGER);
+  (* release the reset out of start-up *)
+    VAR x: SET;
+  BEGIN
+.    36    0100004B0H        0B501H    push     { r0, lr }
+.    38    0100004B2H        0B081H    sub      sp,#4
+    SYSTEM.GET(MCU.RESETS_DONE, x);
+.    40    0100004B4H        04809H    ldr      r0,[pc,#36] -> 80 ; Const: 04000C008H 1073790984
+.    42    0100004B6H        06801H    ldr      r1,[r0]
+.    44    0100004B8H        09100H    str      r1,[sp]
+    IF ~(devNo IN x) THEN
+.    46    0100004BAH        09800H    ldr      r0,[sp]
+.    48    0100004BCH        09901H    ldr      r1,[sp,#4]
+.    50    0100004BEH        02201H    movs     r2,#1
+.    52    0100004C0H        0408AH    lsls     r2,r1
+.    54    0100004C2H        04210H    tst      r0,r2
+.    56    0100004C4H        0D001H    beq.n    2 -> 62
+.    58    0100004C6H        0E006H    b        12 -> 74
+.    60    0100004C8H        046C0H    nop
+      SYSTEM.PUT(MCU.RESETS_RESET + MCU.ACLR, {devNo})
+.    62    0100004CAH        09801H    ldr      r0,[sp,#4]
+.    64    0100004CCH        02101H    movs     r1,#1
+.    66    0100004CEH        04081H    lsls     r1,r0
+.    68    0100004D0H        04608H    mov      r0,r1
+    END
+.    70    0100004D2H        04903H    ldr      r1,[pc,#12] -> 84 ; Const: 04000F000H 1073803264
+.    72    0100004D4H        06008H    str      r0,[r1]
+  END ReleaseReset;
+.    74    0100004D6H        0B002H    add      sp,#8
+.    76    0100004D8H        0BD00H    pop      { pc }
+.    78    0100004DAH        046C0H    nop
+.    80    0100004DCH   <Const: 04000C008H 1073790984>
+.    84    0100004E0H   <Const: 04000F000H 1073803264>
+
+
+  PROCEDURE AwaitReleaseDone*(devNo: INTEGER);
+    VAR x: SET;
+  BEGIN
+.    88    0100004E4H        0B501H    push     { r0, lr }
+.    90    0100004E6H        0B081H    sub      sp,#4
+    REPEAT
+      SYSTEM.GET(MCU.RESETS_DONE, x);
+.    92    0100004E8H        04805H    ldr      r0,[pc,#20] -> 116 ; Const: 04000C008H 1073790984
+.    94    0100004EAH        06801H    ldr      r1,[r0]
+.    96    0100004ECH        09100H    str      r1,[sp]
+    UNTIL (devNo IN x)
+.    98    0100004EEH        09800H    ldr      r0,[sp]
+.   100    0100004F0H        09901H    ldr      r1,[sp,#4]
+.   102    0100004F2H        02201H    movs     r2,#1
+.   104    0100004F4H        0408AH    lsls     r2,r1
+.   106    0100004F6H        04210H    tst      r0,r2
+  END AwaitReleaseDone;
+.   108    0100004F8H        0D0F6H    beq.n    -20 -> 92
+.   110    0100004FAH        0B002H    add      sp,#8
+.   112    0100004FCH        0BD00H    pop      { pc }
+.   114    0100004FEH        046C0H    nop
+.   116    010000500H   <Const: 04000C008H 1073790984>
+
+END StartUp.
+.   120    010000504H        0B500H    push     { lr }
+.   122    010000506H        0BD00H    pop      { pc }

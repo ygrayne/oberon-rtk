@@ -94,8 +94,7 @@ MODULE LEDext;
     i := 0;
     WHILE i < NumLeds DO
       GPIO.SetFunction(LED[i], GPIO.Fsio);
-      en := ORD({LED[i]}); (* workaround v9.1 and 9.2 *)
-      GPIO.OutputEnable(BITS(en));
+      GPIO.OutputEnable(BITS(ORD({LED[i]})));
       INC(i)
     END
   END init;

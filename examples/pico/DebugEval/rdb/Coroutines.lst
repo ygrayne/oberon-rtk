@@ -1,0 +1,195 @@
+.     0  <Pad: 0>
+MODULE Coroutines;
+(**
+  Oberon RTK Framework
+  Simple coroutines
+  For Kernel v1
+  --
+  MCU: Cortex-M0+ RP2040, tested on Pico
+  --
+  Copyright (c) 2020-2024 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, Errors;
+
+  TYPE
+    PROC* = PROCEDURE;
+    Coroutine* = POINTER TO CoroutineDesc;
+    CoroutineDesc* = RECORD
+      sp: INTEGER; (* stored stack pointer when transferring *)
+      proc: PROC; (* the courtine's code *)
+      stAddr: INTEGER; (* stack address *)
+      stSize: INTEGER; (* stack size *)
+      id: INTEGER; (* useful for debugging *)
+    END;
+.     4  <Type: 20>
+.     8  <Type: 0>
+.    12  <Type: 0>
+.    16  <Type: 0>
+.    20  <Type: 0>
+
+  PROCEDURE Reset*(cor: Coroutine);
+    VAR addr: SET;
+  BEGIN
+.    24    018H  0B501H          push     { r0, lr }
+.    26    01AH  0B081H          sub      sp,#4
+    ASSERT(cor # NIL, Errors.PreCond);
+.    28    01CH  09801H          ldr      r0,[sp,#4]
+.    30    01EH  02800H          cmp      r0,#0
+.    32    020H  0D101H          bne.n    2 -> 38
+.    34    022H  0DF65H          svc      101
+.    36  <LineNo: 29>
+    (* set up the stack memory for the initial 'Transfer' to 'cor' *)
+    cor.sp := cor.stAddr + cor.stSize;
+.    38    026H  09801H          ldr      r0,[sp,#4]
+.    40    028H  06880H          ldr      r0,[r0,#8]
+.    42    02AH  09901H          ldr      r1,[sp,#4]
+.    44    02CH  068C9H          ldr      r1,[r1,#12]
+.    46    02EH  01840H          adds     r0,r0,r1
+.    48    030H  09901H          ldr      r1,[sp,#4]
+.    50    032H  06008H          str      r0,[r1]
+    (* put own address to mark top of stack for stack trace *)
+    DEC(cor.sp, 4);
+.    52    034H  09801H          ldr      r0,[sp,#4]
+.    54    036H  06801H          ldr      r1,[r0]
+.    56    038H  03904H          subs     r1,#4
+.    58    03AH  06001H          str      r1,[r0]
+    SYSTEM.PUT(cor.sp, cor.sp);
+.    60    03CH  09801H          ldr      r0,[sp,#4]
+.    62    03EH  06800H          ldr      r0,[r0]
+.    64    040H  09901H          ldr      r1,[sp,#4]
+.    66    042H  06809H          ldr      r1,[r1]
+.    68    044H  06001H          str      r1,[r0]
+    (* put 'lr' *)
+    DEC(cor.sp, 4);
+.    70    046H  09801H          ldr      r0,[sp,#4]
+.    72    048H  06801H          ldr      r1,[r0]
+.    74    04AH  03904H          subs     r1,#4
+.    76    04CH  06001H          str      r1,[r0]
+    SYSTEM.PUT(cor.sp, cor.proc);
+.    78    04EH  09801H          ldr      r0,[sp,#4]
+.    80    050H  06800H          ldr      r0,[r0]
+.    82    052H  09901H          ldr      r1,[sp,#4]
+.    84    054H  06849H          ldr      r1,[r1,#4]
+.    86    056H  06001H          str      r1,[r0]
+    SYSTEM.GET(cor.sp, addr);
+.    88    058H  09801H          ldr      r0,[sp,#4]
+.    90    05AH  06800H          ldr      r0,[r0]
+.    92    05CH  06801H          ldr      r1,[r0]
+.    94    05EH  09100H          str      r1,[sp]
+    INCL(addr, 0); (* thumb bit *)
+.    96    060H  09800H          ldr      r0,[sp]
+.    98    062H  02101H          movs     r1,#1
+.   100    064H  04308H          orrs     r0,r1
+.   102    066H  09000H          str      r0,[sp]
+    SYSTEM.PUT(cor.sp, addr);
+.   104    068H  09801H          ldr      r0,[sp,#4]
+.   106    06AH  06800H          ldr      r0,[r0]
+.   108    06CH  09900H          ldr      r1,[sp]
+.   110    06EH  06001H          str      r1,[r0]
+    (* keep slot for 't' *)
+    DEC(cor.sp, 4);
+.   112    070H  09801H          ldr      r0,[sp,#4]
+.   114    072H  06801H          ldr      r1,[r0]
+.   116    074H  03904H          subs     r1,#4
+.   118    076H  06001H          str      r1,[r0]
+    (* put 'f' *)
+    DEC(cor.sp, 4);
+.   120    078H  09801H          ldr      r0,[sp,#4]
+.   122    07AH  06801H          ldr      r1,[r0]
+.   124    07CH  03904H          subs     r1,#4
+.   126    07EH  06001H          str      r1,[r0]
+    (* the following is only needed if 'cor' data is needed in the FIRST Transfer
+    SYSTEM.PUT(cor.sp, SYSTEM.VAL(INTEGER, cor)); *)
+    (* initialised stack: with SP = 0: 'f' = 'cor', +4: don't care, +8: 'lr' *)
+  END Reset;
+.   128    080H  0B002H          add      sp,#8
+.   130    082H  0BD00H          pop      { pc }
+
+
+  PROCEDURE Allocate*(cor: Coroutine; p: PROC);
+  BEGIN
+.   132    084H  0B503H          push     { r0, r1, lr }
+    ASSERT(cor # NIL, Errors.PreCond);
+.   134    086H  09800H          ldr      r0,[sp]
+.   136    088H  02800H          cmp      r0,#0
+.   138    08AH  0D101H          bne.n    2 -> 144
+.   140    08CH  0DF65H          svc      101
+.   142  <LineNo: 53>
+    cor.proc := p;
+.   144    090H  09801H          ldr      r0,[sp,#4]
+.   146    092H  09900H          ldr      r1,[sp]
+.   148    094H  06048H          str      r0,[r1,#4]
+    Reset(cor)
+.   150    096H  09800H          ldr      r0,[sp]
+  END Allocate;
+.   152    098H  0F7FFFFBEH      bl.w     -132 -> 24
+.   156    09CH  0E000H          b        0 -> 160
+.   158  <LineNo: 55>
+.   160    0A0H  0B002H          add      sp,#8
+.   162    0A2H  0BD00H          pop      { pc }
+
+
+  PROCEDURE Init*(cor: Coroutine; stAddr, stSize, id: INTEGER);
+  BEGIN
+.   164    0A4H  0B50FH          push     { r0, r1, r2, r3, lr }
+    ASSERT(cor # NIL, Errors.PreCond);
+.   166    0A6H  09800H          ldr      r0,[sp]
+.   168    0A8H  02800H          cmp      r0,#0
+.   170    0AAH  0D101H          bne.n    2 -> 176
+.   172    0ACH  0DF65H          svc      101
+.   174  <LineNo: 61>
+    cor.stAddr := stAddr;
+.   176    0B0H  09801H          ldr      r0,[sp,#4]
+.   178    0B2H  09900H          ldr      r1,[sp]
+.   180    0B4H  06088H          str      r0,[r1,#8]
+    cor.stSize := stSize;
+.   182    0B6H  09802H          ldr      r0,[sp,#8]
+.   184    0B8H  09900H          ldr      r1,[sp]
+.   186    0BAH  060C8H          str      r0,[r1,#12]
+    cor.id := id
+  END Init;
+.   188    0BCH  09803H          ldr      r0,[sp,#12]
+.   190    0BEH  09900H          ldr      r1,[sp]
+.   192    0C0H  06108H          str      r0,[r1,#16]
+.   194    0C2H  0B004H          add      sp,#16
+.   196    0C4H  0BD00H          pop      { pc }
+.   198    0C6H  046C0H          nop
+
+
+  PROCEDURE Transfer*(f, t: Coroutine);
+    CONST SP = 13;
+  BEGIN
+.   200    0C8H  0B503H          push     { r0, r1, lr }
+    (* enter "as" f, f's stack in use *)
+    (* prologue: push caller's 'lr' and parameters 'f' and 't' onto f's stack *)
+    (* stack: 0: 'f', +4: 't', +8: 'lr' *)
+
+    (* stack switching *)
+    (* save f's SP *)
+    f.sp := SYSTEM.REG(SP);
+.   202    0CAH  04668H          mov      r0,sp
+.   204    0CCH  09900H          ldr      r1,[sp]
+.   206    0CEH  06008H          str      r0,[r1]
+    (* switch stack: load t's SP *)
+    (* 't' is still accessible on f's stack here *)
+    SYSTEM.LDREG(SP, t.sp);
+.   208    0D0H  09801H          ldr      r0,[sp,#4]
+.   210    0D2H  06800H          ldr      r0,[r0]
+.   212    0D4H  04685H          mov      sp,r0
+    (* now t's stack in use *)
+    (* stack: 0: 'f', +4: 't', +8: 'lr' *)
+    (* note: meaning of 'f' and 't' as per the procedure call when transferring AWAY from 't' *)
+
+    (* epilogue: adjust stack by +8, pop 'lr' from stack into 'pc' *)
+    (* continue "as" t with 'lr' as 'pc' value *)
+    (* Se sa. Voila. *)
+  END Transfer;
+.   214    0D6H  0B002H          add      sp,#8
+.   216    0D8H  0BD00H          pop      { pc }
+.   218    0DAH  046C0H          nop
+
+END Coroutines.
+.   220    0DCH  0B500H          push     { lr }
+.   222    0DEH  0BD00H          pop      { pc }

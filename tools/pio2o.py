@@ -155,15 +155,15 @@ def main():
     # arguments
     import argparse
     parser = argparse.ArgumentParser(
-        prog = "pio2o",
-        description = "Create an Oberon module for PIO assembly code. 'pioasm' is used to assemble the \
-            PIO code, which then can be accessed from the Oberon module." ,
-        epilog = "PIO source code can be extracted from an Oberon module (.mod), \
-            or read from a separate file (.pio). In the Oberon module, place \
-            the code inside a comment and keywords {} and {}.".format(PIOBEGIN, PIOEND))
-    parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="print feedback")
-    parser.add_argument("-o", dest="module", help="output module name (Oberon)")
-    parser.add_argument("ifn", help="input file (.mod or .pio)")
+        prog = 'pio2o',
+        description = """Create an Oberon module for PIO assembly code. 'pioasm' is used to assemble the
+            PIO code, which then can be accessed from the Oberon module.""" ,
+        epilog = """PIO source code can be extracted from an Oberon module (.mod),
+            or read from a separate file (.pio). In the Oberon module, place
+            the code inside a comment and keywords {} and {}.""".format(PIOBEGIN, PIOEND))
+    parser.add_argument('-v', '--verbose', action='store_true', dest='verbose', help="print feedback")
+    parser.add_argument('-o', dest='module', help="output module name (Oberon)")
+    parser.add_argument('ifn', help="input file (.mod or .pio)")
 
     args = parser.parse_args()
     if args.module == None:
@@ -222,8 +222,9 @@ def main():
         print("Running 'pioasm' assembler...")
 
     ext_prog = "pioasm -o c-sdk".split() + [pio_file] + [c_file]
-    popen = subprocess.Popen(ext_prog)
-    popen.wait()
+    done = subprocess.run(ext_prog)
+    if done.returncode != 0:
+        print("Error: 'pioasm' found problems"); sys.exit()
 
     # read piasm output (c-sdk format)
     c_lines = read_file_lines(c_file)

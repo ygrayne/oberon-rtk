@@ -1,0 +1,148 @@
+.     0    010000418H   <Pad: 0>
+MODULE Config;
+(**
+  Oberon RTK Framework
+  Configurations and options
+  Extending LinkOptions for two cores
+  --
+  MCU: Cortex-M0+ RP2040, tested on Pico
+  --
+  Copyright (c) 2023-2024 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+  --
+  Settings for Astrobe:
+  * Data Range: 020000000H, 020030000H
+  * Code Range: 010000100H, 010200000H
+  * Heap Start: 020000200H
+  * Heap Limit: 000000000H
+  These values are collected from LinkOptions.
+  --
+  Memory map SRAM:
+  +---------------------------+
+  |    core 1 stack           | 020040000H - 04H = CoreOneStackStart
+  |                           |
+ ~~~                         ~~~
+  |                           |
+  |    core 1 heap            | 020030200H = CoreOneHeapStart
+  +---------------------------+
+  |                           |
+  |    core 1 vector table    | 020030000H = CoreOneDataStart = LinkOptions.DataEnd
+  +---------------------------+
+  |    module data (shared)   | shared as per MODULE separation/encapsulation
+  |                           |
+  +---------------------------+
+  |    core 0 stack           | LinkOptions.StackStart
+  |                           |
+  |                           |
+ ~~~                         ~~~
+  |                           |
+  |                           |
+  |    core 0 heap            | 020000200H = LinkOptions.HeapStart
+  +---------------------------+
+  |                           |
+  |    core 0 vector table    | 020000000H = LinkOptions.DataStart
+  +---------------------------+
+
+  Memory map FLASH:
+                                010200000H = LinkOptions.CodeEnd
+  +---------------------------+
+  |                           |
+  |                           |
+ ~~~   code (shared)         ~~~
+  |                           |
+  |                           | 010000100H = LinkOptions.CodeStart
+  +---------------------------+
+  |    boot code phase 2      | 010000000H
+  +---------------------------+
+**)
+
+  IMPORT LinkOptions, MCU := MCU2; (* LinkOptions must be first in list *)
+
+  CONST
+    MaxNumThreads* = 16;
+    MaxNumProcs* = MaxNumThreads; (* legacy support *)
+    NumCores* = MCU.NumCores;
+
+    (* in and out buffer for messaging across cores *)
+    MessagesMaxNumSndRcv* = 4;
+    MessagesBufferSize* = 4;
+
+    (* core one base storage parameters *)
+    CoreOneDataStart* = 020030000H;
+    CoreOneStackStart* = 020040000H - 04H; (* use same semantics as Astrobe *)
+    CoreOneHeapStart*  = 020030200H;
+    CoreOneHeapLimit* = 0;
+
+    CoreZeroMainStackSize* = 1024;
+    CoreOneMainStackSize* = 1024;
+
+    CoreZeroRamExtStart* = 020040000H;
+    CoreZeroRamExtEnd* = CoreZeroRamExtStart + 01000H;
+    CoreOneRamExtStart* = 020041000H;
+    CoreOneRamExtEnd* = CoreOneRamExtStart + 01000H;
+
+  VAR
+    CoreZeroDataStart*: INTEGER;
+    CoreZeroStackStart*: INTEGER;
+    CoreZeroHeapStart*: INTEGER;
+    CoreZeroHeapLimit*: INTEGER;
+
+    CodeStart*: INTEGER;
+    CodeEnd*: INTEGER;
+
+  PROCEDURE init;
+  BEGIN
+.     4    01000041CH        0B500H    push     { lr }
+    CoreZeroDataStart := LinkOptions.DataStart;
+.     6    01000041EH        0480CH    ldr      r0,[pc,#48] -> 56 ; Global: 02002FFE4H
+.     8    010000420H        06800H    ldr      r0,[r0]
+.    10    010000422H        04911H    ldr      r1,[pc,#68] -> 80 ; Global: 02002FFD0H
+.    12    010000424H        06008H    str      r0,[r1]
+    CoreZeroStackStart := LinkOptions.StackStart;
+.    14    010000426H        0480BH    ldr      r0,[pc,#44] -> 60 ; Global: 02002FFECH
+.    16    010000428H        06800H    ldr      r0,[r0]
+.    18    01000042AH        04910H    ldr      r1,[pc,#64] -> 84 ; Global: 02002FFCCH
+.    20    01000042CH        06008H    str      r0,[r1]
+    CoreZeroHeapStart := LinkOptions.HeapStart;
+.    22    01000042EH        0480AH    ldr      r0,[pc,#40] -> 64 ; Global: 02002FFF4H
+.    24    010000430H        06800H    ldr      r0,[r0]
+.    26    010000432H        0490FH    ldr      r1,[pc,#60] -> 88 ; Global: 02002FFC8H
+.    28    010000434H        06008H    str      r0,[r1]
+    CoreZeroHeapLimit := LinkOptions.HeapLimit;
+.    30    010000436H        04809H    ldr      r0,[pc,#36] -> 68 ; Global: 02002FFF0H
+.    32    010000438H        06800H    ldr      r0,[r0]
+.    34    01000043AH        0490EH    ldr      r1,[pc,#56] -> 92 ; Global: 02002FFC4H
+.    36    01000043CH        06008H    str      r0,[r1]
+    CodeStart := LinkOptions.CodeStart;
+.    38    01000043EH        04808H    ldr      r0,[pc,#32] -> 72 ; Global: 02002FFD8H
+.    40    010000440H        06800H    ldr      r0,[r0]
+.    42    010000442H        0490DH    ldr      r1,[pc,#52] -> 96 ; Global: 02002FFC0H
+.    44    010000444H        06008H    str      r0,[r1]
+    CodeEnd := LinkOptions.CodeEnd
+  END init;
+.    46    010000446H        04807H    ldr      r0,[pc,#28] -> 76 ; Global: 02002FFD4H
+.    48    010000448H        06800H    ldr      r0,[r0]
+.    50    01000044AH        0490CH    ldr      r1,[pc,#48] -> 100 ; Global: 02002FFBCH
+.    52    01000044CH        06008H    str      r0,[r1]
+.    54    01000044EH        0BD00H    pop      { pc }
+.    56    010000450H   <Global: 02002FFE4H>
+.    60    010000454H   <Global: 02002FFECH>
+.    64    010000458H   <Global: 02002FFF4H>
+.    68    01000045CH   <Global: 02002FFF0H>
+.    72    010000460H   <Global: 02002FFD8H>
+.    76    010000464H   <Global: 02002FFD4H>
+.    80    010000468H   <Global: 02002FFD0H>
+.    84    01000046CH   <Global: 02002FFCCH>
+.    88    010000470H   <Global: 02002FFC8H>
+.    92    010000474H   <Global: 02002FFC4H>
+.    96    010000478H   <Global: 02002FFC0H>
+.   100    01000047CH   <Global: 02002FFBCH>
+
+BEGIN
+.   104    010000480H        0B500H    push     { lr }
+  init
+END Config.
+.   106    010000482H    0F7FFFFCBH    bl.w     Config.init
+.   110    010000486H        0E000H    b        0 -> 114
+.   112    010000488H   <LineNo: 103>
+.   114    01000048AH        0BD00H    pop      { pc }

@@ -41,6 +41,7 @@ MODULE PIOsquare;
     SM0 = PIO.SM0;
     SM1 = PIO.SM1;
 
+
   PROCEDURE run;
     VAR
       pioDev: PIO.Device;

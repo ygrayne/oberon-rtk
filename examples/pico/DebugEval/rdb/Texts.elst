@@ -1,0 +1,1264 @@
+.     0    010002598H   <Pad: 0>
+MODULE Texts;
+(**
+  Oberon RTK Framework
+  --
+  Formatted output to a "channel", using a 'TextIO.Writer'
+  Formatted input from a "channel", using a 'TextIO.Reader'
+  --
+  The behaviour of the procedures depends on the write string and read
+  procedures allocated to 'W' and 'R' parameters:
+  * blocking
+  * non-blocking (using the kernel)
+  --
+  Copyright (c) 2020 - 2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT TextIO, Errors;
+
+  CONST
+    CR = 0DX;
+    LF = 0AX;
+    Blanks = "                                "; (* 32 blanks *)
+.     4    01000259CH   <String: "    ">
+.     8    0100025A0H   <String: "    ">
+.    12    0100025A4H   <String: "    ">
+.    16    0100025A8H   <String: "    ">
+.    20    0100025ACH   <String: "    ">
+.    24    0100025B0H   <String: "    ">
+.    28    0100025B4H   <String: "    ">
+.    32    0100025B8H   <String: "    ">
+.    36    0100025BCH   <String: "....">
+    MaxBlanks = 32;
+
+    (* conversion constants *)
+    MaxInt* = 07FFFFFFFH; (*  2,147,483,647 *)
+    MinInt* = 080000000H; (* -2,147,483,648 *)
+    MaxIntDigits* = 10;   (* sans sign, sans leading zeros *)
+
+    (* read results *)
+    NoError* = TextIO.NoError;
+    BufferOverflow* = TextIO.BufferOverflow; (* a tool small buffer was provided or used *)
+    SyntaxError* = TextIO.SyntaxError;      (* zero length or non-numerical chars *)
+    OutOfLimits* = TextIO.OutOfLimits;    (* bigger than MaxInt, smaller than MinInt *)
+    NoInput* = TextIO.NoInput;
+    FifoOverrun* = TextIO.FifoOverrun;
+
+  VAR eol: ARRAY 2 OF CHAR;
+
+  (* write conversions *)
+
+  PROCEDURE IntToString*(int: INTEGER; VAR str: ARRAY OF CHAR; VAR slen: INTEGER);
+    VAR spos, dpos: INTEGER; digits: ARRAY 10 OF CHAR;
+  BEGIN
+.    40    0100025C0H        0B50FH    push     { r0, r1, r2, r3, lr }
+.    42    0100025C2H        0B085H    sub      sp,#20
+    ASSERT(LEN(str) >= 12, Errors.PreCond); (* 10 digits, minus sign, 0X *)
+.    44    0100025C4H        09807H    ldr      r0,[sp,#28]
+.    46    0100025C6H        0280CH    cmp      r0,#12
+.    48    0100025C8H        0DA01H    bge.n    2 -> 54
+.    50    0100025CAH        0DF65H    svc      101
+.    52    0100025CCH   <LineNo: 45>
+    IF int = 080000000H THEN
+.    54    0100025CEH        09805H    ldr      r0,[sp,#20]
+.    56    0100025D0H        0494FH    ldr      r1,[pc,#316] -> 376 ; Const: 080000000H -2147483648
+.    58    0100025D2H        042C8H    cmn      r0,r1
+.    60    0100025D4H        0D001H    beq.n    2 -> 66
+.    62    0100025D6H        0E025H    b        74 -> 140
+.    64    0100025D8H        046C0H    nop
+      str := "-2147483648";
+.    66    0100025DAH        0200CH    movs     r0,#12
+.    68    0100025DCH        09907H    ldr      r1,[sp,#28]
+.    70    0100025DEH        04281H    cmp      r1,r0
+.    72    0100025E0H        0DA01H    bge.n    2 -> 78
+.    74    0100025E2H        0DF06H    svc      6
+.    76    0100025E4H   <LineNo: 47>
+.    78    0100025E6H        09806H    ldr      r0,[sp,#24]
+.    80    0100025E8H        0A100H    adr      r1,pc,#0 -> 84
+.    82    0100025EAH        0E005H    b        10 -> 96
+.    84    0100025ECH   <String: "-214">
+.    88    0100025F0H   <String: "7483">
+.    92    0100025F4H   <String: "648.">
+.    96    0100025F8H        04B46H    ldr      r3,[pc,#280] -> 380 ; Const: 0FF000000H -16777216
+.    98    0100025FAH        0680AH    ldr      r2,[r1]
+.   100    0100025FCH        03104H    adds     r1,#4
+.   102    0100025FEH        06002H    str      r2,[r0]
+.   104    010002600H        03004H    adds     r0,#4
+.   106    010002602H        0401AH    ands     r2,r3
+.   108    010002604H        0D1F9H    bne.n    -14 -> 98
+      str[11] := 0X;
+.   110    010002606H        0200BH    movs     r0,#11
+.   112    010002608H        09907H    ldr      r1,[sp,#28]
+.   114    01000260AH        04288H    cmp      r0,r1
+.   116    01000260CH        0D301H    bcc.n    2 -> 122
+.   118    01000260EH        0DF01H    svc      1
+.   120    010002610H   <LineNo: 48>
+.   122    010002612H        09906H    ldr      r1,[sp,#24]
+.   124    010002614H        01808H    adds     r0,r1,r0
+.   126    010002616H        02100H    movs     r1,#0
+.   128    010002618H        07001H    strb     r1,[r0]
+      slen := 11
+    ELSE
+.   130    01000261AH        0200BH    movs     r0,#11
+.   132    01000261CH        09908H    ldr      r1,[sp,#32]
+.   134    01000261EH        06008H    str      r0,[r1]
+      spos := 0;
+.   136    010002620H        0E074H    b        232 -> 372
+.   138    010002622H        046C0H    nop
+.   140    010002624H        02000H    movs     r0,#0
+.   142    010002626H        09000H    str      r0,[sp]
+      IF int < 0 THEN
+.   144    010002628H        09805H    ldr      r0,[sp,#20]
+.   146    01000262AH        02800H    cmp      r0,#0
+.   148    01000262CH        0DB01H    blt.n    2 -> 154
+.   150    01000262EH        0E010H    b        32 -> 186
+.   152    010002630H        046C0H    nop
+        int := -int;
+.   154    010002632H        09805H    ldr      r0,[sp,#20]
+.   156    010002634H        04240H    rsbs     r0,r0,#0
+.   158    010002636H        09005H    str      r0,[sp,#20]
+        str[spos] := "-";
+.   160    010002638H        09800H    ldr      r0,[sp]
+.   162    01000263AH        09907H    ldr      r1,[sp,#28]
+.   164    01000263CH        04288H    cmp      r0,r1
+.   166    01000263EH        0D301H    bcc.n    2 -> 172
+.   168    010002640H        0DF01H    svc      1
+.   170    010002642H   <LineNo: 54>
+.   172    010002644H        09906H    ldr      r1,[sp,#24]
+.   174    010002646H        01808H    adds     r0,r1,r0
+.   176    010002648H        0212DH    movs     r1,#45
+.   178    01000264AH        07001H    strb     r1,[r0]
+        INC(spos)
+      END;
+.   180    01000264CH        09800H    ldr      r0,[sp]
+.   182    01000264EH        03001H    adds     r0,#1
+.   184    010002650H        09000H    str      r0,[sp]
+      dpos := 0;
+.   186    010002652H        02000H    movs     r0,#0
+.   188    010002654H        09001H    str      r0,[sp,#4]
+      REPEAT
+        digits[dpos] := CHR(int MOD 10 + ORD("0"));
+.   190    010002656H        09801H    ldr      r0,[sp,#4]
+.   192    010002658H        0280AH    cmp      r0,#10
+.   194    01000265AH        0D301H    bcc.n    2 -> 200
+.   196    01000265CH        0DF01H    svc      1
+.   198    01000265EH   <LineNo: 59>
+.   200    010002660H        04669H    mov      r1,sp
+.   202    010002662H        01808H    adds     r0,r1,r0
+.   204    010002664H        09905H    ldr      r1,[sp,#20]
+.   206    010002666H        0220AH    movs     r2,#10
+.   208    010002668H        02501H    movs     r5,#1
+.   210    01000266AH         07EDH    lsls     r5,r5,#31
+.   212    01000266CH        02300H    movs     r3,#0
+.   214    01000266EH        02400H    movs     r4,#0
+.   216    010002670H          049H    lsls     r1,r1,#1
+.   218    010002672H        04164H    adcs     r4,r4
+.   220    010002674H        04294H    cmp      r4,r2
+.   222    010002676H        0D301H    bcc.n    2 -> 228
+.   224    010002678H        0195BH    adds     r3,r3,r5
+.   226    01000267AH        01AA4H    subs     r4,r4,r2
+.   228    01000267CH         086DH    lsrs     r5,r5,#1
+.   230    01000267EH        0D1F7H    bne.n    -18 -> 216
+.   232    010002680H        04621H    mov      r1,r4
+.   234    010002682H        03130H    adds     r1,#48
+.   236    010002684H        07201H    strb     r1,[r0,#8]
+        int := int DIV 10;
+.   238    010002686H        09805H    ldr      r0,[sp,#20]
+.   240    010002688H        0210AH    movs     r1,#10
+.   242    01000268AH        02401H    movs     r4,#1
+.   244    01000268CH         07E4H    lsls     r4,r4,#31
+.   246    01000268EH        02200H    movs     r2,#0
+.   248    010002690H        02300H    movs     r3,#0
+.   250    010002692H          040H    lsls     r0,r0,#1
+.   252    010002694H        0415BH    adcs     r3,r3
+.   254    010002696H        0428BH    cmp      r3,r1
+.   256    010002698H        0D301H    bcc.n    2 -> 262
+.   258    01000269AH        01912H    adds     r2,r2,r4
+.   260    01000269CH        01A5BH    subs     r3,r3,r1
+.   262    01000269EH         0864H    lsrs     r4,r4,#1
+.   264    0100026A0H        0D1F7H    bne.n    -18 -> 250
+.   266    0100026A2H        04610H    mov      r0,r2
+.   268    0100026A4H        09005H    str      r0,[sp,#20]
+        INC(dpos)
+      UNTIL int = 0;
+.   270    0100026A6H        09801H    ldr      r0,[sp,#4]
+.   272    0100026A8H        03001H    adds     r0,#1
+.   274    0100026AAH        09001H    str      r0,[sp,#4]
+.   276    0100026ACH        09805H    ldr      r0,[sp,#20]
+.   278    0100026AEH        02800H    cmp      r0,#0
+.   280    0100026B0H        0D1D1H    bne.n    -94 -> 190
+      DEC(dpos);
+.   282    0100026B2H        09801H    ldr      r0,[sp,#4]
+.   284    0100026B4H        03801H    subs     r0,#1
+.   286    0100026B6H        09001H    str      r0,[sp,#4]
+      WHILE dpos >= 0 DO
+.   288    0100026B8H        09801H    ldr      r0,[sp,#4]
+.   290    0100026BAH        02800H    cmp      r0,#0
+.   292    0100026BCH        0DA01H    bge.n    2 -> 298
+.   294    0100026BEH        0E018H    b        48 -> 346
+.   296    0100026C0H        046C0H    nop
+        str[spos] := digits[dpos];
+.   298    0100026C2H        09800H    ldr      r0,[sp]
+.   300    0100026C4H        09907H    ldr      r1,[sp,#28]
+.   302    0100026C6H        04288H    cmp      r0,r1
+.   304    0100026C8H        0D301H    bcc.n    2 -> 310
+.   306    0100026CAH        0DF01H    svc      1
+.   308    0100026CCH   <LineNo: 65>
+.   310    0100026CEH        09906H    ldr      r1,[sp,#24]
+.   312    0100026D0H        01808H    adds     r0,r1,r0
+.   314    0100026D2H        09901H    ldr      r1,[sp,#4]
+.   316    0100026D4H        0290AH    cmp      r1,#10
+.   318    0100026D6H        0D301H    bcc.n    2 -> 324
+.   320    0100026D8H        0DF01H    svc      1
+.   322    0100026DAH   <LineNo: 65>
+.   324    0100026DCH        0466AH    mov      r2,sp
+.   326    0100026DEH        01851H    adds     r1,r2,r1
+.   328    0100026E0H        07A09H    ldrb     r1,[r1,#8]
+.   330    0100026E2H        07001H    strb     r1,[r0]
+        DEC(dpos); INC(spos)
+.   332    0100026E4H        09801H    ldr      r0,[sp,#4]
+.   334    0100026E6H        03801H    subs     r0,#1
+.   336    0100026E8H        09001H    str      r0,[sp,#4]
+      END;
+.   338    0100026EAH        09800H    ldr      r0,[sp]
+.   340    0100026ECH        03001H    adds     r0,#1
+.   342    0100026EEH        09000H    str      r0,[sp]
+.   344    0100026F0H        0E7E2H    b        -60 -> 288
+      str[spos] := 0X;
+.   346    0100026F2H        09800H    ldr      r0,[sp]
+.   348    0100026F4H        09907H    ldr      r1,[sp,#28]
+.   350    0100026F6H        04288H    cmp      r0,r1
+.   352    0100026F8H        0D301H    bcc.n    2 -> 358
+.   354    0100026FAH        0DF01H    svc      1
+.   356    0100026FCH   <LineNo: 68>
+.   358    0100026FEH        09906H    ldr      r1,[sp,#24]
+.   360    010002700H        01808H    adds     r0,r1,r0
+.   362    010002702H        02100H    movs     r1,#0
+.   364    010002704H        07001H    strb     r1,[r0]
+      slen := spos
+    END
+.   366    010002706H        09800H    ldr      r0,[sp]
+.   368    010002708H        09908H    ldr      r1,[sp,#32]
+.   370    01000270AH        06008H    str      r0,[r1]
+  END IntToString;
+.   372    01000270CH        0B009H    add      sp,#36
+.   374    01000270EH        0BD00H    pop      { pc }
+.   376    010002710H   <Const: 080000000H -2147483648>
+.   380    010002714H   <Const: 0FF000000H -16777216>
+
+
+  PROCEDURE IntToHexString*(int: INTEGER; VAR str: ARRAY OF CHAR; VAR slen: INTEGER);
+    VAR dpos, spos, d: INTEGER; digits: ARRAY 10 OF CHAR;
+  BEGIN
+.   384    010002718H        0B50FH    push     { r0, r1, r2, r3, lr }
+.   386    01000271AH        0B086H    sub      sp,#24
+    ASSERT(LEN(str) >= 10, Errors.PreCond);
+.   388    01000271CH        09808H    ldr      r0,[sp,#32]
+.   390    01000271EH        0280AH    cmp      r0,#10
+.   392    010002720H        0DA01H    bge.n    2 -> 398
+.   394    010002722H        0DF65H    svc      101
+.   396    010002724H   <LineNo: 77>
+    dpos := 0;
+.   398    010002726H        02000H    movs     r0,#0
+.   400    010002728H        09000H    str      r0,[sp]
+    REPEAT
+      d := int MOD 010H;
+.   402    01000272AH        09806H    ldr      r0,[sp,#24]
+.   404    01000272CH         0700H    lsls     r0,r0,#28
+.   406    01000272EH         0F00H    lsrs     r0,r0,#28
+.   408    010002730H        09002H    str      r0,[sp,#8]
+      IF d < 10 THEN
+.   410    010002732H        09802H    ldr      r0,[sp,#8]
+.   412    010002734H        0280AH    cmp      r0,#10
+.   414    010002736H        0DB01H    blt.n    2 -> 420
+.   416    010002738H        0E00CH    b        24 -> 444
+.   418    01000273AH        046C0H    nop
+        digits[dpos] := CHR(d + ORD("0"))
+.   420    01000273CH        09800H    ldr      r0,[sp]
+.   422    01000273EH        0280AH    cmp      r0,#10
+.   424    010002740H        0D301H    bcc.n    2 -> 430
+.   426    010002742H        0DF01H    svc      1
+.   428    010002744H   <LineNo: 82>
+.   430    010002746H        04669H    mov      r1,sp
+.   432    010002748H        01808H    adds     r0,r1,r0
+.   434    01000274AH        09902H    ldr      r1,[sp,#8]
+.   436    01000274CH        03130H    adds     r1,#48
+      ELSE
+.   438    01000274EH        07301H    strb     r1,[r0,#12]
+        digits[dpos] := CHR(d - 10 + ORD("A"))
+.   440    010002750H        0E00BH    b        22 -> 466
+.   442    010002752H        046C0H    nop
+.   444    010002754H        09800H    ldr      r0,[sp]
+.   446    010002756H        0280AH    cmp      r0,#10
+.   448    010002758H        0D301H    bcc.n    2 -> 454
+.   450    01000275AH        0DF01H    svc      1
+.   452    01000275CH   <LineNo: 84>
+.   454    01000275EH        04669H    mov      r1,sp
+.   456    010002760H        01808H    adds     r0,r1,r0
+.   458    010002762H        09902H    ldr      r1,[sp,#8]
+.   460    010002764H        0390AH    subs     r1,#10
+.   462    010002766H        03141H    adds     r1,#65
+      END;
+.   464    010002768H        07301H    strb     r1,[r0,#12]
+      int := int DIV 010H;
+.   466    01000276AH        09806H    ldr      r0,[sp,#24]
+.   468    01000276CH        01100H    asrs     r0,r0,#4
+.   470    01000276EH        09006H    str      r0,[sp,#24]
+      INC(dpos)
+    UNTIL dpos = 8;
+.   472    010002770H        09800H    ldr      r0,[sp]
+.   474    010002772H        03001H    adds     r0,#1
+.   476    010002774H        09000H    str      r0,[sp]
+.   478    010002776H        09800H    ldr      r0,[sp]
+.   480    010002778H        02808H    cmp      r0,#8
+.   482    01000277AH        0D1D6H    bne.n    -84 -> 402
+    DEC(dpos); spos := 0;
+.   484    01000277CH        09800H    ldr      r0,[sp]
+.   486    01000277EH        03801H    subs     r0,#1
+.   488    010002780H        09000H    str      r0,[sp]
+.   490    010002782H        02000H    movs     r0,#0
+.   492    010002784H        09001H    str      r0,[sp,#4]
+    WHILE dpos >= 0 DO
+.   494    010002786H        09800H    ldr      r0,[sp]
+.   496    010002788H        02800H    cmp      r0,#0
+.   498    01000278AH        0DA01H    bge.n    2 -> 504
+.   500    01000278CH        0E018H    b        48 -> 552
+.   502    01000278EH        046C0H    nop
+      str[spos] := digits[dpos];
+.   504    010002790H        09801H    ldr      r0,[sp,#4]
+.   506    010002792H        09908H    ldr      r1,[sp,#32]
+.   508    010002794H        04288H    cmp      r0,r1
+.   510    010002796H        0D301H    bcc.n    2 -> 516
+.   512    010002798H        0DF01H    svc      1
+.   514    01000279AH   <LineNo: 91>
+.   516    01000279CH        09907H    ldr      r1,[sp,#28]
+.   518    01000279EH        01808H    adds     r0,r1,r0
+.   520    0100027A0H        09900H    ldr      r1,[sp]
+.   522    0100027A2H        0290AH    cmp      r1,#10
+.   524    0100027A4H        0D301H    bcc.n    2 -> 530
+.   526    0100027A6H        0DF01H    svc      1
+.   528    0100027A8H   <LineNo: 91>
+.   530    0100027AAH        0466AH    mov      r2,sp
+.   532    0100027ACH        01851H    adds     r1,r2,r1
+.   534    0100027AEH        07B09H    ldrb     r1,[r1,#12]
+.   536    0100027B0H        07001H    strb     r1,[r0]
+      DEC(dpos); INC(spos)
+.   538    0100027B2H        09800H    ldr      r0,[sp]
+.   540    0100027B4H        03801H    subs     r0,#1
+.   542    0100027B6H        09000H    str      r0,[sp]
+    END;
+.   544    0100027B8H        09801H    ldr      r0,[sp,#4]
+.   546    0100027BAH        03001H    adds     r0,#1
+.   548    0100027BCH        09001H    str      r0,[sp,#4]
+.   550    0100027BEH        0E7E2H    b        -60 -> 494
+    str[8] := "H";
+.   552    0100027C0H        02008H    movs     r0,#8
+.   554    0100027C2H        09908H    ldr      r1,[sp,#32]
+.   556    0100027C4H        04288H    cmp      r0,r1
+.   558    0100027C6H        0D301H    bcc.n    2 -> 564
+.   560    0100027C8H        0DF01H    svc      1
+.   562    0100027CAH   <LineNo: 94>
+.   564    0100027CCH        09907H    ldr      r1,[sp,#28]
+.   566    0100027CEH        01808H    adds     r0,r1,r0
+.   568    0100027D0H        02148H    movs     r1,#72
+.   570    0100027D2H        07001H    strb     r1,[r0]
+    str[9] := 0X;
+.   572    0100027D4H        02009H    movs     r0,#9
+.   574    0100027D6H        09908H    ldr      r1,[sp,#32]
+.   576    0100027D8H        04288H    cmp      r0,r1
+.   578    0100027DAH        0D301H    bcc.n    2 -> 584
+.   580    0100027DCH        0DF01H    svc      1
+.   582    0100027DEH   <LineNo: 95>
+.   584    0100027E0H        09907H    ldr      r1,[sp,#28]
+.   586    0100027E2H        01808H    adds     r0,r1,r0
+.   588    0100027E4H        02100H    movs     r1,#0
+.   590    0100027E6H        07001H    strb     r1,[r0]
+    slen := 9
+  END IntToHexString;
+.   592    0100027E8H        02009H    movs     r0,#9
+.   594    0100027EAH        09909H    ldr      r1,[sp,#36]
+.   596    0100027ECH        06008H    str      r0,[r1]
+.   598    0100027EEH        0B00AH    add      sp,#40
+.   600    0100027F0H        0BD00H    pop      { pc }
+.   602    0100027F2H        046C0H    nop
+
+
+  PROCEDURE IntToBinString*(int: INTEGER; VAR str: ARRAY OF CHAR; VAR slen: INTEGER);
+    VAR
+      i, j, k: INTEGER;
+      bits: SET;
+  BEGIN
+.   604    0100027F4H        0B50FH    push     { r0, r1, r2, r3, lr }
+.   606    0100027F6H        0B084H    sub      sp,#16
+    ASSERT(LEN(str) >= 36, Errors.PreCond);
+.   608    0100027F8H        09806H    ldr      r0,[sp,#24]
+.   610    0100027FAH        02824H    cmp      r0,#36
+.   612    0100027FCH        0DA01H    bge.n    2 -> 618
+.   614    0100027FEH        0DF65H    svc      101
+.   616    010002800H   <LineNo: 105>
+    k := 0;
+.   618    010002802H        02000H    movs     r0,#0
+.   620    010002804H        09002H    str      r0,[sp,#8]
+    FOR i := 0 TO 3 DO
+.   622    010002806H        02000H    movs     r0,#0
+.   624    010002808H        09000H    str      r0,[sp]
+      bits := BITS(BFX(int, 31, 24));
+.   626    01000280AH        09800H    ldr      r0,[sp]
+.   628    01000280CH        02803H    cmp      r0,#3
+.   630    01000280EH        0DD01H    ble.n    2 -> 636
+.   632    010002810H        0E043H    b        134 -> 770
+.   634    010002812H        046C0H    nop
+.   636    010002814H        09804H    ldr      r0,[sp,#16]
+.   638    010002816H         0E00H    lsrs     r0,r0,#24
+.   640    010002818H        09003H    str      r0,[sp,#12]
+      int := LSL(int, 8);
+.   642    01000281AH        09804H    ldr      r0,[sp,#16]
+.   644    01000281CH         0200H    lsls     r0,r0,#8
+.   646    01000281EH        09004H    str      r0,[sp,#16]
+      FOR j := 7 TO 0 BY -1 DO
+.   648    010002820H        02007H    movs     r0,#7
+.   650    010002822H        09001H    str      r0,[sp,#4]
+        IF j IN bits THEN str[k] := "1" ELSE str[k] := "0" END;
+.   652    010002824H        09801H    ldr      r0,[sp,#4]
+.   654    010002826H        02800H    cmp      r0,#0
+.   656    010002828H        0DA01H    bge.n    2 -> 662
+.   658    01000282AH        0E025H    b        74 -> 736
+.   660    01000282CH        046C0H    nop
+.   662    01000282EH        09803H    ldr      r0,[sp,#12]
+.   664    010002830H        09901H    ldr      r1,[sp,#4]
+.   666    010002832H        02201H    movs     r2,#1
+.   668    010002834H        0408AH    lsls     r2,r1
+.   670    010002836H        04210H    tst      r0,r2
+.   672    010002838H        0D101H    bne.n    2 -> 678
+.   674    01000283AH        0E00CH    b        24 -> 702
+.   676    01000283CH        046C0H    nop
+.   678    01000283EH        09802H    ldr      r0,[sp,#8]
+.   680    010002840H        09906H    ldr      r1,[sp,#24]
+.   682    010002842H        04288H    cmp      r0,r1
+.   684    010002844H        0D301H    bcc.n    2 -> 690
+.   686    010002846H        0DF01H    svc      1
+.   688    010002848H   <LineNo: 111>
+.   690    01000284AH        09905H    ldr      r1,[sp,#20]
+.   692    01000284CH        01808H    adds     r0,r1,r0
+.   694    01000284EH        02131H    movs     r1,#49
+.   696    010002850H        07001H    strb     r1,[r0]
+.   698    010002852H        0E00AH    b        20 -> 722
+.   700    010002854H        046C0H    nop
+.   702    010002856H        09802H    ldr      r0,[sp,#8]
+.   704    010002858H        09906H    ldr      r1,[sp,#24]
+.   706    01000285AH        04288H    cmp      r0,r1
+.   708    01000285CH        0D301H    bcc.n    2 -> 714
+.   710    01000285EH        0DF01H    svc      1
+.   712    010002860H   <LineNo: 111>
+.   714    010002862H        09905H    ldr      r1,[sp,#20]
+.   716    010002864H        01808H    adds     r0,r1,r0
+.   718    010002866H        02130H    movs     r1,#48
+.   720    010002868H        07001H    strb     r1,[r0]
+        INC(k)
+      END;
+.   722    01000286AH        09802H    ldr      r0,[sp,#8]
+.   724    01000286CH        03001H    adds     r0,#1
+.   726    01000286EH        09002H    str      r0,[sp,#8]
+.   728    010002870H        09801H    ldr      r0,[sp,#4]
+.   730    010002872H        03801H    subs     r0,#1
+.   732    010002874H        09001H    str      r0,[sp,#4]
+.   734    010002876H        0E7D5H    b        -86 -> 652
+      str[k] := " ";
+.   736    010002878H        09802H    ldr      r0,[sp,#8]
+.   738    01000287AH        09906H    ldr      r1,[sp,#24]
+.   740    01000287CH        04288H    cmp      r0,r1
+.   742    01000287EH        0D301H    bcc.n    2 -> 748
+.   744    010002880H        0DF01H    svc      1
+.   746    010002882H   <LineNo: 114>
+.   748    010002884H        09905H    ldr      r1,[sp,#20]
+.   750    010002886H        01808H    adds     r0,r1,r0
+.   752    010002888H        02120H    movs     r1,#32
+.   754    01000288AH        07001H    strb     r1,[r0]
+      INC(k)
+    END;
+.   756    01000288CH        09802H    ldr      r0,[sp,#8]
+.   758    01000288EH        03001H    adds     r0,#1
+.   760    010002890H        09002H    str      r0,[sp,#8]
+.   762    010002892H        09800H    ldr      r0,[sp]
+.   764    010002894H        03001H    adds     r0,#1
+.   766    010002896H        09000H    str      r0,[sp]
+.   768    010002898H        0E7B7H    b        -146 -> 626
+    str[35] := 0X;
+.   770    01000289AH        02023H    movs     r0,#35
+.   772    01000289CH        09906H    ldr      r1,[sp,#24]
+.   774    01000289EH        04288H    cmp      r0,r1
+.   776    0100028A0H        0D301H    bcc.n    2 -> 782
+.   778    0100028A2H        0DF01H    svc      1
+.   780    0100028A4H   <LineNo: 117>
+.   782    0100028A6H        09905H    ldr      r1,[sp,#20]
+.   784    0100028A8H        01808H    adds     r0,r1,r0
+.   786    0100028AAH        02100H    movs     r1,#0
+.   788    0100028ACH        07001H    strb     r1,[r0]
+    slen := 35
+  END IntToBinString;
+.   790    0100028AEH        02023H    movs     r0,#35
+.   792    0100028B0H        09907H    ldr      r1,[sp,#28]
+.   794    0100028B2H        06008H    str      r0,[r1]
+.   796    0100028B4H        0B008H    add      sp,#32
+.   798    0100028B6H        0BD00H    pop      { pc }
+
+  (* write *)
+
+  PROCEDURE Write*(W: TextIO.Writer; ch: CHAR);
+    VAR s: ARRAY 1 OF CHAR;
+  BEGIN
+.   800    0100028B8H        0B503H    push     { r0, r1, lr }
+.   802    0100028BAH        0B081H    sub      sp,#4
+    s[0] := ch;
+.   804    0100028BCH        0A802H    add      r0,sp,#8
+.   806    0100028BEH        07800H    ldrb     r0,[r0]
+.   808    0100028C0H        0A900H    add      r1,sp,#0
+.   810    0100028C2H        07008H    strb     r0,[r1]
+    W.putString(W.dev, s, 1)
+.   812    0100028C4H        09801H    ldr      r0,[sp,#4]
+.   814    0100028C6H        06800H    ldr      r0,[r0]
+.   816    0100028C8H        04669H    mov      r1,sp
+.   818    0100028CAH        02201H    movs     r2,#1
+.   820    0100028CCH        02301H    movs     r3,#1
+  END Write;
+.   822    0100028CEH        09C01H    ldr      r4,[sp,#4]
+.   824    0100028D0H        06864H    ldr      r4,[r4,#4]
+.   826    0100028D2H        02C00H    cmp      r4,#0
+.   828    0100028D4H        0D101H    bne.n    2 -> 834
+.   830    0100028D6H        0DF05H    svc      5
+.   832    0100028D8H   <LineNo: 127>
+.   834    0100028DAH        03401H    adds     r4,#1
+.   836    0100028DCH        047A0H    blx      r4
+.   838    0100028DEH        0E000H    b        0 -> 842
+.   840    0100028E0H   <LineNo: 127>
+.   842    0100028E2H        0B003H    add      sp,#12
+.   844    0100028E4H        0BD00H    pop      { pc }
+.   846    0100028E6H        046C0H    nop
+
+
+  PROCEDURE WriteString*(W: TextIO.Writer; str: ARRAY OF CHAR);
+    VAR i: INTEGER;
+  BEGIN
+.   848    0100028E8H        0B507H    push     { r0, r1, r2, lr }
+.   850    0100028EAH        0B081H    sub      sp,#4
+    i := 0;
+.   852    0100028ECH        02000H    movs     r0,#0
+.   854    0100028EEH        09000H    str      r0,[sp]
+    WHILE (i < LEN(str)) & (str[i] # 0X) DO INC(i) END;
+.   856    0100028F0H        09800H    ldr      r0,[sp]
+.   858    0100028F2H        09903H    ldr      r1,[sp,#12]
+.   860    0100028F4H        04288H    cmp      r0,r1
+.   862    0100028F6H        0DB01H    blt.n    2 -> 868
+.   864    0100028F8H        0E011H    b        34 -> 902
+.   866    0100028FAH        046C0H    nop
+.   868    0100028FCH        09800H    ldr      r0,[sp]
+.   870    0100028FEH        09903H    ldr      r1,[sp,#12]
+.   872    010002900H        04288H    cmp      r0,r1
+.   874    010002902H        0D301H    bcc.n    2 -> 880
+.   876    010002904H        0DF01H    svc      1
+.   878    010002906H   <LineNo: 135>
+.   880    010002908H        09902H    ldr      r1,[sp,#8]
+.   882    01000290AH        01808H    adds     r0,r1,r0
+.   884    01000290CH        07800H    ldrb     r0,[r0]
+.   886    01000290EH        02800H    cmp      r0,#0
+.   888    010002910H        0D101H    bne.n    2 -> 894
+.   890    010002912H        0E004H    b        8 -> 902
+.   892    010002914H        046C0H    nop
+.   894    010002916H        09800H    ldr      r0,[sp]
+.   896    010002918H        03001H    adds     r0,#1
+.   898    01000291AH        09000H    str      r0,[sp]
+.   900    01000291CH        0E7E8H    b        -48 -> 856
+    W.putString(W.dev, str, i)
+.   902    01000291EH        09801H    ldr      r0,[sp,#4]
+.   904    010002920H        06800H    ldr      r0,[r0]
+.   906    010002922H        09902H    ldr      r1,[sp,#8]
+.   908    010002924H        09A03H    ldr      r2,[sp,#12]
+.   910    010002926H        09B00H    ldr      r3,[sp]
+  END WriteString;
+.   912    010002928H        09C01H    ldr      r4,[sp,#4]
+.   914    01000292AH        06864H    ldr      r4,[r4,#4]
+.   916    01000292CH        02C00H    cmp      r4,#0
+.   918    01000292EH        0D101H    bne.n    2 -> 924
+.   920    010002930H        0DF05H    svc      5
+.   922    010002932H   <LineNo: 136>
+.   924    010002934H        03401H    adds     r4,#1
+.   926    010002936H        047A0H    blx      r4
+.   928    010002938H        0E000H    b        0 -> 932
+.   930    01000293AH   <LineNo: 136>
+.   932    01000293CH        0B004H    add      sp,#16
+.   934    01000293EH        0BD00H    pop      { pc }
+
+
+  PROCEDURE WriteLn*(W: TextIO.Writer);
+  BEGIN
+.   936    010002940H        0B501H    push     { r0, lr }
+    W.putString(W.dev, eol, 2)
+.   938    010002942H        09800H    ldr      r0,[sp]
+.   940    010002944H        06800H    ldr      r0,[r0]
+.   942    010002946H        04907H    ldr      r1,[pc,#28] -> 972 ; Global: 02002FCCCH
+.   944    010002948H        02202H    movs     r2,#2
+.   946    01000294AH        02302H    movs     r3,#2
+  END WriteLn;
+.   948    01000294CH        09C00H    ldr      r4,[sp]
+.   950    01000294EH        06864H    ldr      r4,[r4,#4]
+.   952    010002950H        02C00H    cmp      r4,#0
+.   954    010002952H        0D101H    bne.n    2 -> 960
+.   956    010002954H        0DF05H    svc      5
+.   958    010002956H   <LineNo: 142>
+.   960    010002958H        03401H    adds     r4,#1
+.   962    01000295AH        047A0H    blx      r4
+.   964    01000295CH        0E000H    b        0 -> 968
+.   966    01000295EH   <LineNo: 142>
+.   968    010002960H        0B001H    add      sp,#4
+.   970    010002962H        0BD00H    pop      { pc }
+.   972    010002964H   <Global: 02002FCCCH>
+
+
+  PROCEDURE writeNumString(W: TextIO.Writer; str: ARRAY OF CHAR; numChars, leftPadding: INTEGER);
+  BEGIN
+.   976    010002968H        0B51FH    push     { r0, r1, r2, r3, r4, lr }
+    IF leftPadding > MaxBlanks THEN leftPadding := MaxBlanks END;
+.   978    01000296AH        09804H    ldr      r0,[sp,#16]
+.   980    01000296CH        02820H    cmp      r0,#32
+.   982    01000296EH        0DC01H    bgt.n    2 -> 988
+.   984    010002970H        0E002H    b        4 -> 992
+.   986    010002972H        046C0H    nop
+.   988    010002974H        02020H    movs     r0,#32
+.   990    010002976H        09004H    str      r0,[sp,#16]
+    IF leftPadding > 0 THEN
+.   992    010002978H        09804H    ldr      r0,[sp,#16]
+.   994    01000297AH        02800H    cmp      r0,#0
+.   996    01000297CH        0DC01H    bgt.n    2 -> 1002
+.   998    01000297EH        0E012H    b        36 -> 1038
+.  1000    010002980H        046C0H    nop
+      W.putString(W.dev, Blanks, leftPadding)
+.  1002    010002982H        09800H    ldr      r0,[sp]
+.  1004    010002984H        06800H    ldr      r0,[r0]
+.  1006    010002986H        046C0H    nop
+.  1008    010002988H        0490FH    ldr      r1,[pc,#60] -> 1072 ; Const: 0FFFFFC0EH -1010
+.  1010    01000298AH        0467AH    mov      r2,pc
+.  1012    01000298CH        01889H    adds     r1,r1,r2
+.  1014    01000298EH        02221H    movs     r2,#33
+.  1016    010002990H        09B04H    ldr      r3,[sp,#16]
+    END;
+.  1018    010002992H        09C00H    ldr      r4,[sp]
+.  1020    010002994H        06864H    ldr      r4,[r4,#4]
+.  1022    010002996H        02C00H    cmp      r4,#0
+.  1024    010002998H        0D101H    bne.n    2 -> 1030
+.  1026    01000299AH        0DF05H    svc      5
+.  1028    01000299CH   <LineNo: 150>
+.  1030    01000299EH        03401H    adds     r4,#1
+.  1032    0100029A0H        047A0H    blx      r4
+.  1034    0100029A2H        0E000H    b        0 -> 1038
+.  1036    0100029A4H   <LineNo: 150>
+    W.putString(W.dev, str, numChars)
+.  1038    0100029A6H        09800H    ldr      r0,[sp]
+.  1040    0100029A8H        06800H    ldr      r0,[r0]
+.  1042    0100029AAH        09901H    ldr      r1,[sp,#4]
+.  1044    0100029ACH        09A02H    ldr      r2,[sp,#8]
+.  1046    0100029AEH        09B03H    ldr      r3,[sp,#12]
+  END writeNumString;
+.  1048    0100029B0H        09C00H    ldr      r4,[sp]
+.  1050    0100029B2H        06864H    ldr      r4,[r4,#4]
+.  1052    0100029B4H        02C00H    cmp      r4,#0
+.  1054    0100029B6H        0D101H    bne.n    2 -> 1060
+.  1056    0100029B8H        0DF05H    svc      5
+.  1058    0100029BAH   <LineNo: 152>
+.  1060    0100029BCH        03401H    adds     r4,#1
+.  1062    0100029BEH        047A0H    blx      r4
+.  1064    0100029C0H        0E000H    b        0 -> 1068
+.  1066    0100029C2H   <LineNo: 152>
+.  1068    0100029C4H        0B005H    add      sp,#20
+.  1070    0100029C6H        0BD00H    pop      { pc }
+.  1072    0100029C8H   <Const: 0FFFFFC0EH -1010>
+
+
+  PROCEDURE WriteInt*(W: TextIO.Writer; int, width: INTEGER);
+  (**
+    Write an integer value in decimal form via 'W'.
+  **)
+    VAR buffer: ARRAY 12 OF CHAR; strLen: INTEGER;
+  BEGIN
+.  1076    0100029CCH        0B507H    push     { r0, r1, r2, lr }
+.  1078    0100029CEH        0B084H    sub      sp,#16
+    IntToString(int, buffer, strLen);
+.  1080    0100029D0H        09805H    ldr      r0,[sp,#20]
+.  1082    0100029D2H        04669H    mov      r1,sp
+.  1084    0100029D4H        0220CH    movs     r2,#12
+.  1086    0100029D6H        0AB03H    add      r3,sp,#12
+.  1088    0100029D8H    0F7FFFDF2H    bl.w     Texts.IntToString
+.  1092    0100029DCH        0E000H    b        0 -> 1096
+.  1094    0100029DEH   <LineNo: 162>
+    writeNumString(W, buffer, strLen, width - strLen)
+.  1096    0100029E0H        09804H    ldr      r0,[sp,#16]
+.  1098    0100029E2H        04669H    mov      r1,sp
+.  1100    0100029E4H        0220CH    movs     r2,#12
+.  1102    0100029E6H        09B03H    ldr      r3,[sp,#12]
+.  1104    0100029E8H        09C06H    ldr      r4,[sp,#24]
+.  1106    0100029EAH        09D03H    ldr      r5,[sp,#12]
+.  1108    0100029ECH        01B64H    subs     r4,r4,r5
+  END WriteInt;
+.  1110    0100029EEH    0F7FFFFBBH    bl.w     Texts.writeNumString
+.  1114    0100029F2H        0E000H    b        0 -> 1118
+.  1116    0100029F4H   <LineNo: 163>
+.  1118    0100029F6H        0B007H    add      sp,#28
+.  1120    0100029F8H        0BD00H    pop      { pc }
+.  1122    0100029FAH        046C0H    nop
+
+
+  PROCEDURE WriteHex*(W: TextIO.Writer; int, width: INTEGER);
+    VAR buffer: ARRAY 12 OF CHAR; strLen: INTEGER;
+  BEGIN
+.  1124    0100029FCH        0B507H    push     { r0, r1, r2, lr }
+.  1126    0100029FEH        0B084H    sub      sp,#16
+    IntToHexString(int, buffer, strLen);
+.  1128    010002A00H        09805H    ldr      r0,[sp,#20]
+.  1130    010002A02H        04669H    mov      r1,sp
+.  1132    010002A04H        0220CH    movs     r2,#12
+.  1134    010002A06H        0AB03H    add      r3,sp,#12
+.  1136    010002A08H    0F7FFFE86H    bl.w     Texts.IntToHexString
+.  1140    010002A0CH        0E000H    b        0 -> 1144
+.  1142    010002A0EH   <LineNo: 170>
+    writeNumString(W, buffer, strLen, width - strLen)
+.  1144    010002A10H        09804H    ldr      r0,[sp,#16]
+.  1146    010002A12H        04669H    mov      r1,sp
+.  1148    010002A14H        0220CH    movs     r2,#12
+.  1150    010002A16H        09B03H    ldr      r3,[sp,#12]
+.  1152    010002A18H        09C06H    ldr      r4,[sp,#24]
+.  1154    010002A1AH        09D03H    ldr      r5,[sp,#12]
+.  1156    010002A1CH        01B64H    subs     r4,r4,r5
+  END WriteHex;
+.  1158    010002A1EH    0F7FFFFA3H    bl.w     Texts.writeNumString
+.  1162    010002A22H        0E000H    b        0 -> 1166
+.  1164    010002A24H   <LineNo: 171>
+.  1166    010002A26H        0B007H    add      sp,#28
+.  1168    010002A28H        0BD00H    pop      { pc }
+.  1170    010002A2AH        046C0H    nop
+
+
+  PROCEDURE WriteBin*(W: TextIO.Writer; int, width: INTEGER);
+    VAR buffer: ARRAY 36 OF CHAR; strLen: INTEGER;
+  BEGIN
+.  1172    010002A2CH        0B507H    push     { r0, r1, r2, lr }
+.  1174    010002A2EH        0B08AH    sub      sp,#40
+    IntToBinString(int, buffer, strLen);
+.  1176    010002A30H        0980BH    ldr      r0,[sp,#44]
+.  1178    010002A32H        04669H    mov      r1,sp
+.  1180    010002A34H        02224H    movs     r2,#36
+.  1182    010002A36H        0AB09H    add      r3,sp,#36
+.  1184    010002A38H    0F7FFFEDCH    bl.w     Texts.IntToBinString
+.  1188    010002A3CH        0E000H    b        0 -> 1192
+.  1190    010002A3EH   <LineNo: 178>
+    writeNumString(W, buffer, strLen, width - strLen)
+.  1192    010002A40H        0980AH    ldr      r0,[sp,#40]
+.  1194    010002A42H        04669H    mov      r1,sp
+.  1196    010002A44H        02224H    movs     r2,#36
+.  1198    010002A46H        09B09H    ldr      r3,[sp,#36]
+.  1200    010002A48H        09C0CH    ldr      r4,[sp,#48]
+.  1202    010002A4AH        09D09H    ldr      r5,[sp,#36]
+.  1204    010002A4CH        01B64H    subs     r4,r4,r5
+  END WriteBin;
+.  1206    010002A4EH    0F7FFFF8BH    bl.w     Texts.writeNumString
+.  1210    010002A52H        0E000H    b        0 -> 1214
+.  1212    010002A54H   <LineNo: 179>
+.  1214    010002A56H        0B00DH    add      sp,#52
+.  1216    010002A58H        0BD00H    pop      { pc }
+.  1218    010002A5AH        046C0H    nop
+
+  (* read conversions *)
+
+  PROCEDURE cleanLeft(str: ARRAY OF CHAR; VAR first: INTEGER; VAR neg: BOOLEAN);
+    VAR ch: CHAR;
+  BEGIN
+.  1220    010002A5CH        0B50FH    push     { r0, r1, r2, r3, lr }
+.  1222    010002A5EH        0B081H    sub      sp,#4
+    first := 0;
+.  1224    010002A60H        02000H    movs     r0,#0
+.  1226    010002A62H        09903H    ldr      r1,[sp,#12]
+.  1228    010002A64H        06008H    str      r0,[r1]
+    WHILE str[first] = " " DO INC(first) END;
+.  1230    010002A66H        09803H    ldr      r0,[sp,#12]
+.  1232    010002A68H        06800H    ldr      r0,[r0]
+.  1234    010002A6AH        09902H    ldr      r1,[sp,#8]
+.  1236    010002A6CH        04288H    cmp      r0,r1
+.  1238    010002A6EH        0D301H    bcc.n    2 -> 1244
+.  1240    010002A70H        0DF01H    svc      1
+.  1242    010002A72H   <LineNo: 188>
+.  1244    010002A74H        09901H    ldr      r1,[sp,#4]
+.  1246    010002A76H        01808H    adds     r0,r1,r0
+.  1248    010002A78H        07800H    ldrb     r0,[r0]
+.  1250    010002A7AH        02820H    cmp      r0,#32
+.  1252    010002A7CH        0D001H    beq.n    2 -> 1258
+.  1254    010002A7EH        0E005H    b        10 -> 1268
+.  1256    010002A80H        046C0H    nop
+.  1258    010002A82H        09803H    ldr      r0,[sp,#12]
+.  1260    010002A84H        06801H    ldr      r1,[r0]
+.  1262    010002A86H        03101H    adds     r1,#1
+.  1264    010002A88H        06001H    str      r1,[r0]
+.  1266    010002A8AH        0E7ECH    b        -40 -> 1230
+    ch := str[first];
+.  1268    010002A8CH        09803H    ldr      r0,[sp,#12]
+.  1270    010002A8EH        06800H    ldr      r0,[r0]
+.  1272    010002A90H        09902H    ldr      r1,[sp,#8]
+.  1274    010002A92H        04288H    cmp      r0,r1
+.  1276    010002A94H        0D301H    bcc.n    2 -> 1282
+.  1278    010002A96H        0DF01H    svc      1
+.  1280    010002A98H   <LineNo: 189>
+.  1282    010002A9AH        09901H    ldr      r1,[sp,#4]
+.  1284    010002A9CH        01808H    adds     r0,r1,r0
+.  1286    010002A9EH        07800H    ldrb     r0,[r0]
+.  1288    010002AA0H        0A900H    add      r1,sp,#0
+.  1290    010002AA2H        07008H    strb     r0,[r1]
+    neg := ch = "-";
+.  1292    010002AA4H        0A800H    add      r0,sp,#0
+.  1294    010002AA6H        07800H    ldrb     r0,[r0]
+.  1296    010002AA8H        0282DH    cmp      r0,#45
+.  1298    010002AAAH        0D001H    beq.n    2 -> 1304
+.  1300    010002AACH        02000H    movs     r0,#0
+.  1302    010002AAEH        0E000H    b        0 -> 1306
+.  1304    010002AB0H        02001H    movs     r0,#1
+.  1306    010002AB2H        09904H    ldr      r1,[sp,#16]
+.  1308    010002AB4H        07008H    strb     r0,[r1]
+    IF (ch = "-") OR (ch = "+") THEN INC(first) END;
+.  1310    010002AB6H        0A800H    add      r0,sp,#0
+.  1312    010002AB8H        07800H    ldrb     r0,[r0]
+.  1314    010002ABAH        0282DH    cmp      r0,#45
+.  1316    010002ABCH        0D101H    bne.n    2 -> 1322
+.  1318    010002ABEH        0E006H    b        12 -> 1334
+.  1320    010002AC0H        046C0H    nop
+.  1322    010002AC2H        0A800H    add      r0,sp,#0
+.  1324    010002AC4H        07800H    ldrb     r0,[r0]
+.  1326    010002AC6H        0282BH    cmp      r0,#43
+.  1328    010002AC8H        0D001H    beq.n    2 -> 1334
+.  1330    010002ACAH        0E004H    b        8 -> 1342
+.  1332    010002ACCH        046C0H    nop
+.  1334    010002ACEH        09803H    ldr      r0,[sp,#12]
+.  1336    010002AD0H        06801H    ldr      r1,[r0]
+.  1338    010002AD2H        03101H    adds     r1,#1
+.  1340    010002AD4H        06001H    str      r1,[r0]
+    WHILE str[first] = " " DO INC(first) END;
+.  1342    010002AD6H        09803H    ldr      r0,[sp,#12]
+.  1344    010002AD8H        06800H    ldr      r0,[r0]
+.  1346    010002ADAH        09902H    ldr      r1,[sp,#8]
+.  1348    010002ADCH        04288H    cmp      r0,r1
+.  1350    010002ADEH        0D301H    bcc.n    2 -> 1356
+.  1352    010002AE0H        0DF01H    svc      1
+.  1354    010002AE2H   <LineNo: 192>
+.  1356    010002AE4H        09901H    ldr      r1,[sp,#4]
+.  1358    010002AE6H        01808H    adds     r0,r1,r0
+.  1360    010002AE8H        07800H    ldrb     r0,[r0]
+.  1362    010002AEAH        02820H    cmp      r0,#32
+.  1364    010002AECH        0D001H    beq.n    2 -> 1370
+.  1366    010002AEEH        0E005H    b        10 -> 1380
+.  1368    010002AF0H        046C0H    nop
+.  1370    010002AF2H        09803H    ldr      r0,[sp,#12]
+.  1372    010002AF4H        06801H    ldr      r1,[r0]
+.  1374    010002AF6H        03101H    adds     r1,#1
+.  1376    010002AF8H        06001H    str      r1,[r0]
+.  1378    010002AFAH        0E7ECH    b        -40 -> 1342
+    WHILE str[first] = "0" DO INC(first) END;
+.  1380    010002AFCH        09803H    ldr      r0,[sp,#12]
+.  1382    010002AFEH        06800H    ldr      r0,[r0]
+.  1384    010002B00H        09902H    ldr      r1,[sp,#8]
+.  1386    010002B02H        04288H    cmp      r0,r1
+.  1388    010002B04H        0D301H    bcc.n    2 -> 1394
+.  1390    010002B06H        0DF01H    svc      1
+.  1392    010002B08H   <LineNo: 193>
+.  1394    010002B0AH        09901H    ldr      r1,[sp,#4]
+.  1396    010002B0CH        01808H    adds     r0,r1,r0
+.  1398    010002B0EH        07800H    ldrb     r0,[r0]
+.  1400    010002B10H        02830H    cmp      r0,#48
+.  1402    010002B12H        0D001H    beq.n    2 -> 1408
+.  1404    010002B14H        0E005H    b        10 -> 1418
+.  1406    010002B16H        046C0H    nop
+.  1408    010002B18H        09803H    ldr      r0,[sp,#12]
+.  1410    010002B1AH        06801H    ldr      r1,[r0]
+.  1412    010002B1CH        03101H    adds     r1,#1
+.  1414    010002B1EH        06001H    str      r1,[r0]
+.  1416    010002B20H        0E7ECH    b        -40 -> 1380
+  END cleanLeft;
+.  1418    010002B22H        0B005H    add      sp,#20
+.  1420    010002B24H        0BD00H    pop      { pc }
+.  1422    010002B26H        046C0H    nop
+
+  PROCEDURE cleanRight(str: ARRAY OF CHAR; numCh: INTEGER; VAR last: INTEGER);
+  BEGIN
+.  1424    010002B28H        0B50FH    push     { r0, r1, r2, r3, lr }
+    last := numCh - 1;
+.  1426    010002B2AH        09802H    ldr      r0,[sp,#8]
+.  1428    010002B2CH        03801H    subs     r0,#1
+.  1430    010002B2EH        09903H    ldr      r1,[sp,#12]
+.  1432    010002B30H        06008H    str      r0,[r1]
+    WHILE str[last] = " " DO
+.  1434    010002B32H        09803H    ldr      r0,[sp,#12]
+.  1436    010002B34H        06800H    ldr      r0,[r0]
+.  1438    010002B36H        09901H    ldr      r1,[sp,#4]
+.  1440    010002B38H        04288H    cmp      r0,r1
+.  1442    010002B3AH        0D301H    bcc.n    2 -> 1448
+.  1444    010002B3CH        0DF01H    svc      1
+.  1446    010002B3EH   <LineNo: 199>
+.  1448    010002B40H        09900H    ldr      r1,[sp]
+.  1450    010002B42H        01808H    adds     r0,r1,r0
+.  1452    010002B44H        07800H    ldrb     r0,[r0]
+.  1454    010002B46H        02820H    cmp      r0,#32
+.  1456    010002B48H        0D001H    beq.n    2 -> 1462
+.  1458    010002B4AH        0E005H    b        10 -> 1472
+.  1460    010002B4CH        046C0H    nop
+      DEC(last)
+    END
+.  1462    010002B4EH        09803H    ldr      r0,[sp,#12]
+.  1464    010002B50H        06801H    ldr      r1,[r0]
+.  1466    010002B52H        03901H    subs     r1,#1
+.  1468    010002B54H        06001H    str      r1,[r0]
+.  1470    010002B56H        0E7ECH    b        -40 -> 1434
+  END cleanRight;
+.  1472    010002B58H        0B004H    add      sp,#16
+.  1474    010002B5AH        0BD00H    pop      { pc }
+
+
+  PROCEDURE StrToInt*(str: ARRAY OF CHAR; numCh: INTEGER; VAR int: INTEGER; VAR res: INTEGER);
+  (* rolls over at 0100000000H = 2^32 *)
+    VAR first, last, digit: INTEGER; neg: BOOLEAN; ch: CHAR;
+  BEGIN
+.  1476    010002B5CH        0B51FH    push     { r0, r1, r2, r3, r4, lr }
+.  1478    010002B5EH        0B084H    sub      sp,#16
+    res := NoError;
+.  1480    010002B60H        02000H    movs     r0,#0
+.  1482    010002B62H        09908H    ldr      r1,[sp,#32]
+.  1484    010002B64H        06008H    str      r0,[r1]
+    cleanLeft(str, first, neg);
+.  1486    010002B66H        09804H    ldr      r0,[sp,#16]
+.  1488    010002B68H        09905H    ldr      r1,[sp,#20]
+.  1490    010002B6AH        0466AH    mov      r2,sp
+.  1492    010002B6CH        0AB03H    add      r3,sp,#12
+.  1494    010002B6EH    0F7FFFF75H    bl.w     Texts.cleanLeft
+.  1498    010002B72H        0E000H    b        0 -> 1502
+.  1500    010002B74H   <LineNo: 210>
+    IF numCh - first > MaxIntDigits THEN
+.  1502    010002B76H        09806H    ldr      r0,[sp,#24]
+.  1504    010002B78H        09900H    ldr      r1,[sp]
+.  1506    010002B7AH        01A40H    subs     r0,r0,r1
+.  1508    010002B7CH        0280AH    cmp      r0,#10
+.  1510    010002B7EH        0DC01H    bgt.n    2 -> 1516
+.  1512    010002B80H        0E003H    b        6 -> 1522
+.  1514    010002B82H        046C0H    nop
+      res := OutOfLimits;
+.  1516    010002B84H        02003H    movs     r0,#3
+.  1518    010002B86H        09908H    ldr      r1,[sp,#32]
+.  1520    010002B88H        06008H    str      r0,[r1]
+    END;
+    IF res = NoError THEN
+.  1522    010002B8AH        09808H    ldr      r0,[sp,#32]
+.  1524    010002B8CH        06800H    ldr      r0,[r0]
+.  1526    010002B8EH        02800H    cmp      r0,#0
+.  1528    010002B90H        0D001H    beq.n    2 -> 1534
+.  1530    010002B92H        0E061H    b        194 -> 1728
+.  1532    010002B94H        046C0H    nop
+      cleanRight(str, numCh, last);
+.  1534    010002B96H        09804H    ldr      r0,[sp,#16]
+.  1536    010002B98H        09905H    ldr      r1,[sp,#20]
+.  1538    010002B9AH        09A06H    ldr      r2,[sp,#24]
+.  1540    010002B9CH        0AB01H    add      r3,sp,#4
+.  1542    010002B9EH    0F7FFFFC3H    bl.w     Texts.cleanRight
+.  1546    010002BA2H        0E000H    b        0 -> 1550
+.  1548    010002BA4H   <LineNo: 215>
+      int := 0;
+.  1550    010002BA6H        02000H    movs     r0,#0
+.  1552    010002BA8H        09907H    ldr      r1,[sp,#28]
+.  1554    010002BAAH        06008H    str      r0,[r1]
+      WHILE (first <= last) & (res = NoError) DO
+.  1556    010002BACH        09800H    ldr      r0,[sp]
+.  1558    010002BAEH        09901H    ldr      r1,[sp,#4]
+.  1560    010002BB0H        04288H    cmp      r0,r1
+.  1562    010002BB2H        0DD01H    ble.n    2 -> 1568
+.  1564    010002BB4H        0E050H    b        160 -> 1728
+.  1566    010002BB6H        046C0H    nop
+.  1568    010002BB8H        09808H    ldr      r0,[sp,#32]
+.  1570    010002BBAH        06800H    ldr      r0,[r0]
+.  1572    010002BBCH        02800H    cmp      r0,#0
+.  1574    010002BBEH        0D001H    beq.n    2 -> 1580
+.  1576    010002BC0H        0E04AH    b        148 -> 1728
+.  1578    010002BC2H        046C0H    nop
+        ch := str[first];
+.  1580    010002BC4H        09800H    ldr      r0,[sp]
+.  1582    010002BC6H        09905H    ldr      r1,[sp,#20]
+.  1584    010002BC8H        04288H    cmp      r0,r1
+.  1586    010002BCAH        0D301H    bcc.n    2 -> 1592
+.  1588    010002BCCH        0DF01H    svc      1
+.  1590    010002BCEH   <LineNo: 218>
+.  1592    010002BD0H        09904H    ldr      r1,[sp,#16]
+.  1594    010002BD2H        01808H    adds     r0,r1,r0
+.  1596    010002BD4H        07800H    ldrb     r0,[r0]
+.  1598    010002BD6H        0A903H    add      r1,sp,#12
+.  1600    010002BD8H        07048H    strb     r0,[r1,#1]
+        IF (ch < "0") OR (ch > "9") THEN
+.  1602    010002BDAH        0A803H    add      r0,sp,#12
+.  1604    010002BDCH        07840H    ldrb     r0,[r0,#1]
+.  1606    010002BDEH        02830H    cmp      r0,#48
+.  1608    010002BE0H        0DA01H    bge.n    2 -> 1614
+.  1610    010002BE2H        0E006H    b        12 -> 1626
+.  1612    010002BE4H        046C0H    nop
+.  1614    010002BE6H        0A803H    add      r0,sp,#12
+.  1616    010002BE8H        07840H    ldrb     r0,[r0,#1]
+.  1618    010002BEAH        02839H    cmp      r0,#57
+.  1620    010002BECH        0DC01H    bgt.n    2 -> 1626
+.  1622    010002BEEH        0E005H    b        10 -> 1636
+.  1624    010002BF0H        046C0H    nop
+          res := SyntaxError;
+.  1626    010002BF2H        02002H    movs     r0,#2
+.  1628    010002BF4H        09908H    ldr      r1,[sp,#32]
+.  1630    010002BF6H        06008H    str      r0,[r1]
+        ELSE
+          digit := ORD(ch) - ORD("0");
+.  1632    010002BF8H        0E02DH    b        90 -> 1726
+.  1634    010002BFAH        046C0H    nop
+.  1636    010002BFCH        0A803H    add      r0,sp,#12
+.  1638    010002BFEH        07840H    ldrb     r0,[r0,#1]
+.  1640    010002C00H        03830H    subs     r0,#48
+.  1642    010002C02H        09002H    str      r0,[sp,#8]
+          int := (int * 10) + digit;
+.  1644    010002C04H        09807H    ldr      r0,[sp,#28]
+.  1646    010002C06H        06800H    ldr      r0,[r0]
+.  1648    010002C08H        0210AH    movs     r1,#10
+.  1650    010002C0AH        04348H    muls     r0,r1
+.  1652    010002C0CH        09902H    ldr      r1,[sp,#8]
+.  1654    010002C0EH        01840H    adds     r0,r0,r1
+.  1656    010002C10H        09907H    ldr      r1,[sp,#28]
+.  1658    010002C12H        06008H    str      r0,[r1]
+          IF MaxInt - int < 0 THEN  (* works across overflow *)
+.  1660    010002C14H        09807H    ldr      r0,[sp,#28]
+.  1662    010002C16H        06800H    ldr      r0,[r0]
+.  1664    010002C18H        04919H    ldr      r1,[pc,#100] -> 1768 ; Const: 07FFFFFFFH 2147483647
+.  1666    010002C1AH        01A08H    subs     r0,r1,r0
+.  1668    010002C1CH        02800H    cmp      r0,#0
+.  1670    010002C1EH        0DB01H    blt.n    2 -> 1676
+.  1672    010002C20H        0E016H    b        44 -> 1720
+.  1674    010002C22H        046C0H    nop
+            IF neg & (int = MinInt) THEN
+.  1676    010002C24H        0A803H    add      r0,sp,#12
+.  1678    010002C26H        07800H    ldrb     r0,[r0]
+.  1680    010002C28H        02101H    movs     r1,#1
+.  1682    010002C2AH        04208H    tst      r0,r1
+.  1684    010002C2CH        0D101H    bne.n    2 -> 1690
+.  1686    010002C2EH        0E00CH    b        24 -> 1714
+.  1688    010002C30H        046C0H    nop
+.  1690    010002C32H        09807H    ldr      r0,[sp,#28]
+.  1692    010002C34H        06800H    ldr      r0,[r0]
+.  1694    010002C36H        04913H    ldr      r1,[pc,#76] -> 1772 ; Const: 080000000H -2147483648
+.  1696    010002C38H        042C8H    cmn      r0,r1
+.  1698    010002C3AH        0D001H    beq.n    2 -> 1704
+.  1700    010002C3CH        0E005H    b        10 -> 1714
+.  1702    010002C3EH        046C0H    nop
+              neg := FALSE
+            ELSE
+.  1704    010002C40H        02000H    movs     r0,#0
+.  1706    010002C42H        0A903H    add      r1,sp,#12
+.  1708    010002C44H        07008H    strb     r0,[r1]
+              res := OutOfLimits
+.  1710    010002C46H        0E003H    b        6 -> 1720
+.  1712    010002C48H        046C0H    nop
+            END
+.  1714    010002C4AH        02003H    movs     r0,#3
+.  1716    010002C4CH        09908H    ldr      r1,[sp,#32]
+.  1718    010002C4EH        06008H    str      r0,[r1]
+          END;
+          INC(first)
+        END
+.  1720    010002C50H        09800H    ldr      r0,[sp]
+.  1722    010002C52H        03001H    adds     r0,#1
+.  1724    010002C54H        09000H    str      r0,[sp]
+      END
+.  1726    010002C56H        0E7A9H    b        -174 -> 1556
+    END;
+    IF res = NoError THEN
+.  1728    010002C58H        09808H    ldr      r0,[sp,#32]
+.  1730    010002C5AH        06800H    ldr      r0,[r0]
+.  1732    010002C5CH        02800H    cmp      r0,#0
+.  1734    010002C5EH        0D001H    beq.n    2 -> 1740
+.  1736    010002C60H        0E00CH    b        24 -> 1764
+.  1738    010002C62H        046C0H    nop
+      IF neg THEN int := -int END
+.  1740    010002C64H        0A803H    add      r0,sp,#12
+.  1742    010002C66H        07800H    ldrb     r0,[r0]
+.  1744    010002C68H        02101H    movs     r1,#1
+.  1746    010002C6AH        04208H    tst      r0,r1
+.  1748    010002C6CH        0D101H    bne.n    2 -> 1754
+.  1750    010002C6EH        0E005H    b        10 -> 1764
+.  1752    010002C70H        046C0H    nop
+.  1754    010002C72H        09807H    ldr      r0,[sp,#28]
+.  1756    010002C74H        06800H    ldr      r0,[r0]
+.  1758    010002C76H        04240H    rsbs     r0,r0,#0
+.  1760    010002C78H        09907H    ldr      r1,[sp,#28]
+.  1762    010002C7AH        06008H    str      r0,[r1]
+    END
+  END StrToInt;
+.  1764    010002C7CH        0B009H    add      sp,#36
+.  1766    010002C7EH        0BD00H    pop      { pc }
+.  1768    010002C80H   <Const: 07FFFFFFFH 2147483647>
+.  1772    010002C84H   <Const: 080000000H -2147483648>
+
+  (* read *)
+
+  PROCEDURE ReadString*(R: TextIO.Reader; VAR s: ARRAY OF CHAR; VAR res: INTEGER);
+  (**
+    Read a string via 'R', terminated by any char < " ", usually a CR.
+    Flush the rest of the input in case of buffer overflow.
+    The string is truncated to the buffer length, terminated by 0X.
+  **)
+    VAR numCh: INTEGER;
+  BEGIN
+.  1776    010002C88H        0B50FH    push     { r0, r1, r2, r3, lr }
+.  1778    010002C8AH        0B081H    sub      sp,#4
+    R.getString(R.dev, s, numCh, res);
+.  1780    010002C8CH        09801H    ldr      r0,[sp,#4]
+.  1782    010002C8EH        06800H    ldr      r0,[r0]
+.  1784    010002C90H        09902H    ldr      r1,[sp,#8]
+.  1786    010002C92H        09A03H    ldr      r2,[sp,#12]
+.  1788    010002C94H        0466BH    mov      r3,sp
+.  1790    010002C96H        09C04H    ldr      r4,[sp,#16]
+.  1792    010002C98H        09D01H    ldr      r5,[sp,#4]
+.  1794    010002C9AH        0686DH    ldr      r5,[r5,#4]
+.  1796    010002C9CH        02D00H    cmp      r5,#0
+.  1798    010002C9EH        0D101H    bne.n    2 -> 1804
+.  1800    010002CA0H        0DF05H    svc      5
+.  1802    010002CA2H   <LineNo: 250>
+.  1804    010002CA4H        03501H    adds     r5,#1
+.  1806    010002CA6H        047A8H    blx      r5
+.  1808    010002CA8H        0E000H    b        0 -> 1812
+.  1810    010002CAAH   <LineNo: 249>
+    IF res = NoError THEN
+.  1812    010002CACH        09804H    ldr      r0,[sp,#16]
+.  1814    010002CAEH        06800H    ldr      r0,[r0]
+.  1816    010002CB0H        02800H    cmp      r0,#0
+.  1818    010002CB2H        0D001H    beq.n    2 -> 1824
+.  1820    010002CB4H        0E008H    b        16 -> 1840
+.  1822    010002CB6H        046C0H    nop
+      IF numCh = 0 THEN
+.  1824    010002CB8H        09800H    ldr      r0,[sp]
+.  1826    010002CBAH        02800H    cmp      r0,#0
+.  1828    010002CBCH        0D001H    beq.n    2 -> 1834
+.  1830    010002CBEH        0E003H    b        6 -> 1840
+.  1832    010002CC0H        046C0H    nop
+        res := NoInput
+      END
+.  1834    010002CC2H        02004H    movs     r0,#4
+.  1836    010002CC4H        09904H    ldr      r1,[sp,#16]
+.  1838    010002CC6H        06008H    str      r0,[r1]
+    END
+  END ReadString;
+.  1840    010002CC8H        0B005H    add      sp,#20
+.  1842    010002CCAH        0BD00H    pop      { pc }
+
+
+  PROCEDURE ReadInt*(R: TextIO.Reader; VAR int, res: INTEGER);
+  (**
+    Read an integer in decimal form via 'R', terminated by any char < " ", usually a CR.
+    Flush the rest of the input in case of buffer overflow or fifo overrun.
+    The number is not valid in case of any error.
+    As long as there's no buffer overflow or fifo overrrun, any number of leading
+    blanks, blanks after the sign, leading zeros, and trailing blanks are permitted.
+  **)
+    VAR numCh: INTEGER; buf: ARRAY 32 OF CHAR;
+  BEGIN
+.  1844    010002CCCH        0B507H    push     { r0, r1, r2, lr }
+.  1846    010002CCEH        0B089H    sub      sp,#36
+    R.getString(R.dev, buf, numCh, res);
+.  1848    010002CD0H        09809H    ldr      r0,[sp,#36]
+.  1850    010002CD2H        06800H    ldr      r0,[r0]
+.  1852    010002CD4H        0A901H    add      r1,sp,#4
+.  1854    010002CD6H        02220H    movs     r2,#32
+.  1856    010002CD8H        0466BH    mov      r3,sp
+.  1858    010002CDAH        09C0BH    ldr      r4,[sp,#44]
+.  1860    010002CDCH        09D09H    ldr      r5,[sp,#36]
+.  1862    010002CDEH        0686DH    ldr      r5,[r5,#4]
+.  1864    010002CE0H        02D00H    cmp      r5,#0
+.  1866    010002CE2H        0D101H    bne.n    2 -> 1872
+.  1868    010002CE4H        0DF05H    svc      5
+.  1870    010002CE6H   <LineNo: 269>
+.  1872    010002CE8H        03501H    adds     r5,#1
+.  1874    010002CEAH        047A8H    blx      r5
+.  1876    010002CECH        0E000H    b        0 -> 1880
+.  1878    010002CEEH   <LineNo: 268>
+    IF res = NoError THEN
+.  1880    010002CF0H        0980BH    ldr      r0,[sp,#44]
+.  1882    010002CF2H        06800H    ldr      r0,[r0]
+.  1884    010002CF4H        02800H    cmp      r0,#0
+.  1886    010002CF6H        0D001H    beq.n    2 -> 1892
+.  1888    010002CF8H        0E013H    b        38 -> 1930
+.  1890    010002CFAH        046C0H    nop
+      IF numCh > 0 THEN
+.  1892    010002CFCH        09800H    ldr      r0,[sp]
+.  1894    010002CFEH        02800H    cmp      r0,#0
+.  1896    010002D00H        0DC01H    bgt.n    2 -> 1902
+.  1898    010002D02H        0E00BH    b        22 -> 1924
+.  1900    010002D04H        046C0H    nop
+        StrToInt(buf, numCh, int, res)
+.  1902    010002D06H        0A801H    add      r0,sp,#4
+.  1904    010002D08H        02120H    movs     r1,#32
+.  1906    010002D0AH        09A00H    ldr      r2,[sp]
+.  1908    010002D0CH        09B0AH    ldr      r3,[sp,#40]
+.  1910    010002D0EH        09C0BH    ldr      r4,[sp,#44]
+      ELSE
+.  1912    010002D10H    0F7FFFF24H    bl.w     Texts.StrToInt
+.  1916    010002D14H        0E000H    b        0 -> 1920
+.  1918    010002D16H   <LineNo: 272>
+        res := NoInput
+.  1920    010002D18H        0E003H    b        6 -> 1930
+.  1922    010002D1AH        046C0H    nop
+      END
+.  1924    010002D1CH        02004H    movs     r0,#4
+.  1926    010002D1EH        0990BH    ldr      r1,[sp,#44]
+.  1928    010002D20H        06008H    str      r0,[r1]
+    END
+  END ReadInt;
+.  1930    010002D22H        0B00CH    add      sp,#48
+.  1932    010002D24H        0BD00H    pop      { pc }
+.  1934    010002D26H        046C0H    nop
+
+
+  PROCEDURE FlushOut*(W: TextIO.Writer);
+  (**
+    Allow flushing on writers that don't need it to keep
+    program code independent of output channel if needed.
+  **)
+  BEGIN
+.  1936    010002D28H        0B501H    push     { r0, lr }
+    IF W.flush # NIL THEN
+.  1938    010002D2AH        09800H    ldr      r0,[sp]
+.  1940    010002D2CH        06880H    ldr      r0,[r0,#8]
+.  1942    010002D2EH        02800H    cmp      r0,#0
+.  1944    010002D30H        0D101H    bne.n    2 -> 1950
+.  1946    010002D32H        0E00CH    b        24 -> 1974
+.  1948    010002D34H        046C0H    nop
+      W.flush(W.dev)
+.  1950    010002D36H        09800H    ldr      r0,[sp]
+.  1952    010002D38H        06800H    ldr      r0,[r0]
+    END
+.  1954    010002D3AH        09900H    ldr      r1,[sp]
+.  1956    010002D3CH        06889H    ldr      r1,[r1,#8]
+.  1958    010002D3EH        02900H    cmp      r1,#0
+.  1960    010002D40H        0D101H    bne.n    2 -> 1966
+.  1962    010002D42H        0DF05H    svc      5
+.  1964    010002D44H   <LineNo: 287>
+.  1966    010002D46H        03101H    adds     r1,#1
+.  1968    010002D48H        04788H    blx      r1
+.  1970    010002D4AH        0E000H    b        0 -> 1974
+.  1972    010002D4CH   <LineNo: 287>
+  END FlushOut;
+.  1974    010002D4EH        0B001H    add      sp,#4
+.  1976    010002D50H        0BD00H    pop      { pc }
+.  1978    010002D52H        046C0H    nop
+
+BEGIN
+.  1980    010002D54H        0B500H    push     { lr }
+  eol[0] := CR; eol[1] := LF
+.  1982    010002D56H        04803H    ldr      r0,[pc,#12] -> 1996 ; Global: 02002FCCCH
+.  1984    010002D58H        0210DH    movs     r1,#13
+.  1986    010002D5AH        07001H    strb     r1,[r0]
+.  1988    010002D5CH        04801H    ldr      r0,[pc,#4] -> 1996 ; Global: 02002FCCCH
+END Texts.
+.  1990    010002D5EH        0210AH    movs     r1,#10
+.  1992    010002D60H        07041H    strb     r1,[r0,#1]
+.  1994    010002D62H        0BD00H    pop      { pc }
+.  1996    010002D64H   <Global: 02002FCCCH>

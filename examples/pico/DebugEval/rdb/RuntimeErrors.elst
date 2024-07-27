@@ -1,0 +1,1522 @@
+.     0    010001B90H   <Pad: 0>
+MODULE RuntimeErrors;
+(**
+  Oberon RTK Framework
+  Exception handling: run-time errors and faults
+  Multi-core
+  --
+  Error: run-time errors, including ASSERT, triggered by SVC calls
+  Fault: hardware faults, triggered by MCU
+  --
+  MCU: Cortex-M0+ RP2040, tested on Pico
+  --
+  Note, no printing is done here, since we don't know if there's
+  even a terminal connected out in the wild, and if there's an
+  operator seeing the messages. All error and fault data is collected,
+  and passed to an installable handler, which then can print, or just log
+  (or both), or take autonomous corrective actions, such as a restart.
+
+  See module RuntimeErrorsOut for a corresponding handler and print
+  functions.
+  --
+  Copyright (c) 2020-2024 Gray, gray@grayraven.org
+  Portions copyright (c) 2008-2023 CFB Software, https://www.astrobe.com
+  Used with permission.
+  Please refer to the licensing conditions as defined at the end of this file.
+**)
+
+  IMPORT
+    SYSTEM, LED, MCU := MCU2, Config, Memory;
+
+  CONST
+    NumCores* = Config.NumCores;
+    NumStackedRegs* = 4;
+    TraceDepth* = 7;
+    MoreTracePoints* = -1;
+    StackTraceNotLR = 0;
+    StackTraceLineNo = 1;
+    StackTraceNoLineNo = 2;
+    ErrorLed = LED.Green;
+
+    (* stacked registers offsets from r0 *)
+    StartStacktraceOffset = 32;
+    PSRoffset = 28;
+    PCoffset = 24;
+
+    (* register numbers *)
+    SP = 13;
+    LR = 14;
+    PC = 15;
+
+  (*
+    offsets if handler is compiled as normal procedure:
+    +36 +48   lower end of stack frame of interrupted proc with stack alignment
+    +32 +44   lower end of stack frame of interrupted proc without stack alignment
+        from here down, stacked by hardware
+    +28 +40   xPSR
+    +24 +36   PC  = handler return address
+    +20 +32   LR  = interrupted procs's LR
+    +16 +28   R12
+    +12 +24   R3
+    +8  +20   R2
+    +4  +16   R1
+     0  +12   R0
+        from here down, pushed by handler prologue
+        +8    LR  = EXC_RETURN
+        +4    local var of handler
+        SP => local var of handler
+  *)
+
+
+  TYPE
+    TracePoint* = RECORD
+      address*: INTEGER;
+      lineNo*: INTEGER
+    END;
+.     4    010001B94H   <Type: 8>
+.     8    010001B98H   <Type: 0>
+.    12    010001B9CH   <Type: 0>
+.    16    010001BA0H   <Type: 0>
+.    20    010001BA4H   <Type: 0>
+
+    Trace* = RECORD
+      tp*: ARRAY TraceDepth + 1 OF TracePoint;
+      count*: INTEGER
+    END;
+.    24    010001BA8H   <Type: 68>
+.    28    010001BACH   <Type: 0>
+.    32    010001BB0H   <Type: 0>
+.    36    010001BB4H   <Type: 0>
+.    40    010001BB8H   <Type: 0>
+
+    StackedRegisters* = RECORD
+      r0*, r1*, r2*, r3*, r12*: INTEGER;
+      lr*, pc*, xpsr*, sp*: INTEGER
+    END;
+.    44    010001BBCH   <Type: 36>
+.    48    010001BC0H   <Type: 0>
+.    52    010001BC4H   <Type: 0>
+.    56    010001BC8H   <Type: 0>
+.    60    010001BCCH   <Type: 0>
+
+    CurrentRegisters* = RECORD
+      sp*, lr*, pc*, xpsr*: INTEGER
+    END;
+.    64    010001BD0H   <Type: 16>
+.    68    010001BD4H   <Type: 0>
+.    72    010001BD8H   <Type: 0>
+.    76    010001BDCH   <Type: 0>
+.    80    010001BE0H   <Type: 0>
+
+    (* note/todo: depending on the final design decision, 'StackedRegisters'
+    and 'CurrentRegisters' can be put into 'ExceptionRec' *)
+
+    ExceptionRec* = RECORD
+      code*: INTEGER;
+      core*: INTEGER;
+    END;
+.    84    010001BE4H   <Type: 8>
+.    88    010001BE8H   <Type: 0>
+.    92    010001BECH   <Type: 0>
+.    96    010001BF0H   <Type: 0>
+.   100    010001BF4H   <Type: 0>
+
+    FaultRec* = RECORD(ExceptionRec)
+      address*: INTEGER;
+      stackedRegs*: StackedRegisters;
+      currentRegs*: CurrentRegisters
+    END;
+.   104    010001BF8H   <Type: 64>
+.   108    010001BFCH   <Type: 010001BF8H>
+.   112    010001C00H   <Type: 0>
+.   116    010001C04H   <Type: 0>
+.   120    010001C08H   <Type: 0>
+
+    ErrorRec* = RECORD(ExceptionRec)
+      trace*: Trace;
+      stackedRegs*: StackedRegisters;
+      currentRegs*: CurrentRegisters
+    END;
+.   124    010001C0CH   <Type: 128>
+.   128    010001C10H   <Type: 010001C0CH>
+.   132    010001C14H   <Type: 0>
+.   136    010001C18H   <Type: 0>
+.   140    010001C1CH   <Type: 0>
+
+    Exception = RECORD
+      faultRec: FaultRec;
+      errorRec: ErrorRec;
+      handleException: PROCEDURE(cpuId: INTEGER; er: ExceptionRec);
+      haltOn, stackTraceOn, stackedRegsOn, currentRegsOn: BOOLEAN
+    END;
+.   144    010001C20H   <Type: 200>
+.   148    010001C24H   <Type: 0>
+.   152    010001C28H   <Type: 0>
+.   156    010001C2CH   <Type: 0>
+.   160    010001C30H   <Type: 0>
+
+
+  VAR
+    exc: ARRAY NumCores OF Exception;
+
+  (* IMPORTANT: if the error/fault handler does not HALT, 'handleException' has to set an
+  appropriate exception return address on the stack to continue in a reasonable way. *)
+
+  PROCEDURE* HALT(cid: INTEGER);
+  BEGIN
+.   164    010001C34H        0B501H    push     { r0, lr }
+    IF exc[cid].haltOn THEN
+.   166    010001C36H        09800H    ldr      r0,[sp]
+.   168    010001C38H        04907H    ldr      r1,[pc,#28] -> 200 ; Global: 02002FCD0H
+.   170    010001C3AH        022C8H    movs     r2,#200
+.   172    010001C3CH        04350H    muls     r0,r2
+.   174    010001C3EH        01808H    adds     r0,r1,r0
+.   176    010001C40H        021C4H    movs     r1,#196
+.   178    010001C42H        05C40H    ldrb     r0,[r0,r1]
+.   180    010001C44H        02101H    movs     r1,#1
+.   182    010001C46H        04208H    tst      r0,r1
+.   184    010001C48H        0D101H    bne.n    2 -> 190
+.   186    010001C4AH        0E002H    b        4 -> 194
+.   188    010001C4CH        046C0H    nop
+      REPEAT UNTIL FALSE
+    END
+.   190    010001C4EH        04280H    cmp      r0,r0
+.   192    010001C50H        0D0FDH    beq.n    -6 -> 190
+  END HALT;
+.   194    010001C52H        0B001H    add      sp,#4
+.   196    010001C54H        0BD00H    pop      { pc }
+.   198    010001C56H        046C0H    nop
+.   200    010001C58H   <Global: 02002FCD0H>
+
+  (* --- Astrobe code begin --- *)
+
+  PROCEDURE getHalfWord(addr: INTEGER; VAR value: INTEGER);
+  (* from Astrobe library, modified *)
+  (* get 16-bit data from an address that is possibly not word-aligned *)
+    VAR b1, b2: BYTE;
+  BEGIN
+.   204    010001C5CH        0B503H    push     { r0, r1, lr }
+.   206    010001C5EH        0B081H    sub      sp,#4
+    SYSTEM.GET(addr + 1, b1);
+.   208    010001C60H        09801H    ldr      r0,[sp,#4]
+.   210    010001C62H        03001H    adds     r0,#1
+.   212    010001C64H        07801H    ldrb     r1,[r0]
+.   214    010001C66H        0AA00H    add      r2,sp,#0
+.   216    010001C68H        07011H    strb     r1,[r2]
+    SYSTEM.GET(addr, b2);
+.   218    010001C6AH        09801H    ldr      r0,[sp,#4]
+.   220    010001C6CH        07801H    ldrb     r1,[r0]
+.   222    010001C6EH        0AA00H    add      r2,sp,#0
+.   224    010001C70H        07051H    strb     r1,[r2,#1]
+    value := LSL(b1, 8) + b2
+.   226    010001C72H        0A800H    add      r0,sp,#0
+.   228    010001C74H        07800H    ldrb     r0,[r0]
+.   230    010001C76H         0200H    lsls     r0,r0,#8
+  END getHalfWord;
+.   232    010001C78H        0A900H    add      r1,sp,#0
+.   234    010001C7AH        07849H    ldrb     r1,[r1,#1]
+.   236    010001C7CH        01840H    adds     r0,r0,r1
+.   238    010001C7EH        09902H    ldr      r1,[sp,#8]
+.   240    010001C80H        06008H    str      r0,[r1]
+.   242    010001C82H        0B003H    add      sp,#12
+.   244    010001C84H        0BD00H    pop      { pc }
+.   246    010001C86H        046C0H    nop
+
+  PROCEDURE isBL(codeAddr: INTEGER): BOOLEAN;
+  (* from Astrobe library *)
+  (* check if the instruction at 'codeAddr' is a BL instruction *)
+    VAR instr: INTEGER;
+  BEGIN
+.   248    010001C88H        0B501H    push     { r0, lr }
+.   250    010001C8AH        0B081H    sub      sp,#4
+    getHalfWord(codeAddr, instr);
+.   252    010001C8CH        09801H    ldr      r0,[sp,#4]
+.   254    010001C8EH        04669H    mov      r1,sp
+.   256    010001C90H    0F7FFFFE4H    bl.w     RuntimeErrors.getHalfWord
+.   260    010001C94H        0E000H    b        0 -> 264
+.   262    010001C96H   <LineNo: 148>
+    RETURN BFX(instr, 15, 11) = 01EH
+.   264    010001C98H        09800H    ldr      r0,[sp]
+.   266    010001C9AH         0400H    lsls     r0,r0,#16
+.   268    010001C9CH         0EC0H    lsrs     r0,r0,#27
+  END isBL;
+.   270    010001C9EH        0281EH    cmp      r0,#30
+.   272    010001CA0H        0D001H    beq.n    2 -> 278
+.   274    010001CA2H        02000H    movs     r0,#0
+.   276    010001CA4H        0E000H    b        0 -> 280
+.   278    010001CA6H        02001H    movs     r0,#1
+.   280    010001CA8H        0B002H    add      sp,#8
+.   282    010001CAAH        0BD00H    pop      { pc }
+
+  PROCEDURE isBLX(codeAddr: INTEGER): BOOLEAN;
+  (* from Astrobe library *)
+  (* check if the instruction at 'codeAddr' is a BLX instruction *)
+    VAR instr: INTEGER;
+  BEGIN
+.   284    010001CACH        0B501H    push     { r0, lr }
+.   286    010001CAEH        0B081H    sub      sp,#4
+    getHalfWord(codeAddr, instr);
+.   288    010001CB0H        09801H    ldr      r0,[sp,#4]
+.   290    010001CB2H        04669H    mov      r1,sp
+.   292    010001CB4H    0F7FFFFD2H    bl.w     RuntimeErrors.getHalfWord
+.   296    010001CB8H        0E000H    b        0 -> 300
+.   298    010001CBAH   <LineNo: 157>
+    RETURN (BFX(instr, 15, 7) = 08FH) & (BFX(instr, 2, 0) = 0)
+.   300    010001CBCH        09800H    ldr      r0,[sp]
+.   302    010001CBEH         0400H    lsls     r0,r0,#16
+.   304    010001CC0H         0DC0H    lsrs     r0,r0,#23
+.   306    010001CC2H        0288FH    cmp      r0,#143
+.   308    010001CC4H        0D001H    beq.n    2 -> 314
+.   310    010001CC6H        0E005H    b        10 -> 324
+.   312    010001CC8H        046C0H    nop
+.   314    010001CCAH        09800H    ldr      r0,[sp]
+.   316    010001CCCH         0740H    lsls     r0,r0,#29
+.   318    010001CCEH         0F40H    lsrs     r0,r0,#29
+.   320    010001CD0H        02800H    cmp      r0,#0
+  END isBLX;
+.   322    010001CD2H        0D001H    beq.n    2 -> 328
+.   324    010001CD4H        02000H    movs     r0,#0
+.   326    010001CD6H        0E000H    b        0 -> 330
+.   328    010001CD8H        02001H    movs     r0,#1
+.   330    010001CDAH        0B002H    add      sp,#8
+.   332    010001CDCH        0BD00H    pop      { pc }
+.   334    010001CDEH        046C0H    nop
+
+  PROCEDURE getNextLR(stackAddr: INTEGER; VAR lr, res: INTEGER);
+  (* from Astrobe library. modified *)
+  (* Check if the value at 'stackAddr' on the stack is a link register address.
+  If yes, it will point to a code address (+1 for thumb mode) which
+  is preceded by a BL or BLX instruction. *)
+    VAR nextInstr: INTEGER;
+  BEGIN
+.   336    010001CE0H        0B507H    push     { r0, r1, r2, lr }
+.   338    010001CE2H        0B081H    sub      sp,#4
+    res := StackTraceNotLR;
+.   340    010001CE4H        02000H    movs     r0,#0
+.   342    010001CE6H        09903H    ldr      r1,[sp,#12]
+.   344    010001CE8H        06008H    str      r0,[r1]
+    SYSTEM.GET(stackAddr, lr);
+.   346    010001CEAH        09801H    ldr      r0,[sp,#4]
+.   348    010001CECH        06801H    ldr      r1,[r0]
+.   350    010001CEEH        09A02H    ldr      r2,[sp,#8]
+.   352    010001CF0H        06011H    str      r1,[r2]
+    (* must be Thumb mode *)
+    IF ODD(lr) THEN
+.   354    010001CF2H        09802H    ldr      r0,[sp,#8]
+.   356    010001CF4H        06800H    ldr      r0,[r0]
+.   358    010001CF6H        02101H    movs     r1,#1
+.   360    010001CF8H        04208H    tst      r0,r1
+.   362    010001CFAH        0D101H    bne.n    2 -> 368
+.   364    010001CFCH        0E042H    b        132 -> 500
+.   366    010001CFEH        046C0H    nop
+      DEC(lr);
+.   368    010001D00H        09802H    ldr      r0,[sp,#8]
+.   370    010001D02H        06801H    ldr      r1,[r0]
+.   372    010001D04H        03901H    subs     r1,#1
+.   374    010001D06H        06001H    str      r1,[r0]
+      IF (lr >= Config.CodeStart) & (lr < Config.CodeEnd) THEN
+.   376    010001D08H        09802H    ldr      r0,[sp,#8]
+.   378    010001D0AH        06800H    ldr      r0,[r0]
+.   380    010001D0CH        0491EH    ldr      r1,[pc,#120] -> 504 ; Global: 02002FFC0H
+.   382    010001D0EH        06809H    ldr      r1,[r1]
+.   384    010001D10H        04288H    cmp      r0,r1
+.   386    010001D12H        0DA01H    bge.n    2 -> 392
+.   388    010001D14H        0E036H    b        108 -> 500
+.   390    010001D16H        046C0H    nop
+.   392    010001D18H        09802H    ldr      r0,[sp,#8]
+.   394    010001D1AH        06800H    ldr      r0,[r0]
+.   396    010001D1CH        0491BH    ldr      r1,[pc,#108] -> 508 ; Global: 02002FFBCH
+.   398    010001D1EH        06809H    ldr      r1,[r1]
+.   400    010001D20H        04288H    cmp      r0,r1
+.   402    010001D22H        0DB01H    blt.n    2 -> 408
+.   404    010001D24H        0E02EH    b        92 -> 500
+.   406    010001D26H        046C0H    nop
+        IF isBL(lr - 4) OR isBLX(lr - 2) THEN
+.   408    010001D28H        09802H    ldr      r0,[sp,#8]
+.   410    010001D2AH        06800H    ldr      r0,[r0]
+.   412    010001D2CH        03804H    subs     r0,#4
+.   414    010001D2EH    0F7FFFFABH    bl.w     RuntimeErrors.isBL
+.   418    010001D32H        0E000H    b        0 -> 422
+.   420    010001D34H   <LineNo: 174>
+.   422    010001D36H        02101H    movs     r1,#1
+.   424    010001D38H        04208H    tst      r0,r1
+.   426    010001D3AH        0D001H    beq.n    2 -> 432
+.   428    010001D3CH        0E00CH    b        24 -> 456
+.   430    010001D3EH        046C0H    nop
+.   432    010001D40H        09802H    ldr      r0,[sp,#8]
+.   434    010001D42H        06800H    ldr      r0,[r0]
+.   436    010001D44H        03802H    subs     r0,#2
+.   438    010001D46H    0F7FFFFB1H    bl.w     RuntimeErrors.isBLX
+.   442    010001D4AH        0E000H    b        0 -> 446
+.   444    010001D4CH   <LineNo: 174>
+.   446    010001D4EH        02101H    movs     r1,#1
+.   448    010001D50H        04208H    tst      r0,r1
+.   450    010001D52H        0D101H    bne.n    2 -> 456
+.   452    010001D54H        0E016H    b        44 -> 500
+.   454    010001D56H        046C0H    nop
+          getHalfWord(lr, nextInstr);
+.   456    010001D58H        09802H    ldr      r0,[sp,#8]
+.   458    010001D5AH        06800H    ldr      r0,[r0]
+.   460    010001D5CH        04669H    mov      r1,sp
+.   462    010001D5EH    0F7FFFF7DH    bl.w     RuntimeErrors.getHalfWord
+.   466    010001D62H        0E000H    b        0 -> 470
+.   468    010001D64H   <LineNo: 175>
+          (* if stack trace is enabled there should be a B,0 instruction (0E0000H)
+          that skips the line number after the BL instruction *)
+          IF nextInstr = 0E000H THEN
+.   470    010001D66H        09800H    ldr      r0,[sp]
+.   472    010001D68H        02107H    movs     r1,#7
+.   474    010001D6AH         0349H    lsls     r1,r1,#13
+.   476    010001D6CH        04288H    cmp      r0,r1
+.   478    010001D6EH        0D001H    beq.n    2 -> 484
+.   480    010001D70H        0E005H    b        10 -> 494
+.   482    010001D72H        046C0H    nop
+            res := StackTraceLineNo
+          ELSE
+.   484    010001D74H        02001H    movs     r0,#1
+.   486    010001D76H        09903H    ldr      r1,[sp,#12]
+.   488    010001D78H        06008H    str      r0,[r1]
+            res := StackTraceNoLineNo
+.   490    010001D7AH        0E003H    b        6 -> 500
+.   492    010001D7CH        046C0H    nop
+          END
+.   494    010001D7EH        02002H    movs     r0,#2
+.   496    010001D80H        09903H    ldr      r1,[sp,#12]
+.   498    010001D82H        06008H    str      r0,[r1]
+        END
+      END
+    END
+  END getNextLR;
+.   500    010001D84H        0B004H    add      sp,#16
+.   502    010001D86H        0BD00H    pop      { pc }
+.   504    010001D88H   <Global: 02002FFC0H>
+.   508    010001D8CH   <Global: 02002FFBCH>
+
+  (* --- Astrobe code end --- *)
+
+
+  PROCEDURE Stacktrace*(stackAddr: INTEGER; VAR trace: Trace);
+    VAR
+      lr, x, res: INTEGER;
+      tp: TracePoint;
+  BEGIN
+.   512    010001D90H        0B507H    push     { r0, r1, r2, lr }
+.   514    010001D92H        0B085H    sub      sp,#20
+    SYSTEM.GET(stackAddr, x);
+.   516    010001D94H        09805H    ldr      r0,[sp,#20]
+.   518    010001D96H        06801H    ldr      r1,[r0]
+.   520    010001D98H        09101H    str      r1,[sp,#4]
+    WHILE (stackAddr # x) & (trace.count < TraceDepth) DO
+.   522    010001D9AH        09805H    ldr      r0,[sp,#20]
+.   524    010001D9CH        09901H    ldr      r1,[sp,#4]
+.   526    010001D9EH        04288H    cmp      r0,r1
+.   528    010001DA0H        0D101H    bne.n    2 -> 534
+.   530    010001DA2H        0E041H    b        130 -> 664
+.   532    010001DA4H        046C0H    nop
+.   534    010001DA6H        09806H    ldr      r0,[sp,#24]
+.   536    010001DA8H        06C00H    ldr      r0,[r0,#64]
+.   538    010001DAAH        02807H    cmp      r0,#7
+.   540    010001DACH        0DB01H    blt.n    2 -> 546
+.   542    010001DAEH        0E03BH    b        118 -> 664
+.   544    010001DB0H        046C0H    nop
+      getNextLR(stackAddr, lr, res);
+.   546    010001DB2H        09805H    ldr      r0,[sp,#20]
+.   548    010001DB4H        04669H    mov      r1,sp
+.   550    010001DB6H        0AA02H    add      r2,sp,#8
+.   552    010001DB8H    0F7FFFF92H    bl.w     RuntimeErrors.getNextLR
+.   556    010001DBCH        0E000H    b        0 -> 560
+.   558    010001DBEH   <LineNo: 198>
+      IF res > StackTraceNotLR THEN
+.   560    010001DC0H        09802H    ldr      r0,[sp,#8]
+.   562    010001DC2H        02800H    cmp      r0,#0
+.   564    010001DC4H        0DC01H    bgt.n    2 -> 570
+.   566    010001DC6H        0E028H    b        80 -> 650
+.   568    010001DC8H        046C0H    nop
+        tp.address := lr - 4;
+.   570    010001DCAH        09800H    ldr      r0,[sp]
+.   572    010001DCCH        03804H    subs     r0,#4
+.   574    010001DCEH        09003H    str      r0,[sp,#12]
+        IF res = StackTraceLineNo THEN
+.   576    010001DD0H        09802H    ldr      r0,[sp,#8]
+.   578    010001DD2H        02801H    cmp      r0,#1
+.   580    010001DD4H        0D001H    beq.n    2 -> 586
+.   582    010001DD6H        0E009H    b        18 -> 604
+.   584    010001DD8H        046C0H    nop
+          getHalfWord(lr + 2, tp.lineNo)
+.   586    010001DDAH        09800H    ldr      r0,[sp]
+.   588    010001DDCH        03002H    adds     r0,#2
+.   590    010001DDEH        0A904H    add      r1,sp,#16
+        ELSE
+.   592    010001DE0H    0F7FFFF3CH    bl.w     RuntimeErrors.getHalfWord
+.   596    010001DE4H        0E000H    b        0 -> 600
+.   598    010001DE6H   <LineNo: 202>
+          tp.lineNo := 0
+.   600    010001DE8H        0E002H    b        4 -> 608
+.   602    010001DEAH        046C0H    nop
+        END;
+.   604    010001DECH        02000H    movs     r0,#0
+.   606    010001DEEH        09004H    str      r0,[sp,#16]
+        trace.tp[trace.count] := tp;
+.   608    010001DF0H        09806H    ldr      r0,[sp,#24]
+.   610    010001DF2H        06C00H    ldr      r0,[r0,#64]
+.   612    010001DF4H        02808H    cmp      r0,#8
+.   614    010001DF6H        0D301H    bcc.n    2 -> 620
+.   616    010001DF8H        0DF01H    svc      1
+.   618    010001DFAH   <LineNo: 206>
+.   620    010001DFCH        09906H    ldr      r1,[sp,#24]
+.   622    010001DFEH          0C0H    lsls     r0,r0,#3
+.   624    010001E00H        01808H    adds     r0,r1,r0
+.   626    010001E02H        02102H    movs     r1,#2
+.   628    010001E04H        0AA03H    add      r2,sp,#12
+.   630    010001E06H        06813H    ldr      r3,[r2]
+.   632    010001E08H        03204H    adds     r2,#4
+.   634    010001E0AH        06003H    str      r3,[r0]
+.   636    010001E0CH        03004H    adds     r0,#4
+.   638    010001E0EH        03901H    subs     r1,#1
+.   640    010001E10H        0D1F9H    bne.n    -14 -> 630
+        INC(trace.count)
+      END;
+.   642    010001E12H        09806H    ldr      r0,[sp,#24]
+.   644    010001E14H        06C01H    ldr      r1,[r0,#64]
+.   646    010001E16H        03101H    adds     r1,#1
+.   648    010001E18H        06401H    str      r1,[r0,#64]
+      INC(stackAddr, 4);
+.   650    010001E1AH        09805H    ldr      r0,[sp,#20]
+.   652    010001E1CH        03004H    adds     r0,#4
+.   654    010001E1EH        09005H    str      r0,[sp,#20]
+      SYSTEM.GET(stackAddr, x)
+    END;
+.   656    010001E20H        09805H    ldr      r0,[sp,#20]
+.   658    010001E22H        06801H    ldr      r1,[r0]
+.   660    010001E24H        09101H    str      r1,[sp,#4]
+.   662    010001E26H        0E7B8H    b        -144 -> 522
+    IF trace.count = TraceDepth THEN
+.   664    010001E28H        09806H    ldr      r0,[sp,#24]
+.   666    010001E2AH        06C00H    ldr      r0,[r0,#64]
+.   668    010001E2CH        02807H    cmp      r0,#7
+.   670    010001E2EH        0D001H    beq.n    2 -> 676
+.   672    010001E30H        0E003H    b        6 -> 682
+.   674    010001E32H        046C0H    nop
+      trace.tp[TraceDepth].address := MoreTracePoints
+    END
+.   676    010001E34H        04802H    ldr      r0,[pc,#8] -> 688 ; Const: 0FFFFFFFFH -1
+.   678    010001E36H        09906H    ldr      r1,[sp,#24]
+.   680    010001E38H        06388H    str      r0,[r1,#56]
+  END Stacktrace;
+.   682    010001E3AH        0B008H    add      sp,#32
+.   684    010001E3CH        0BD00H    pop      { pc }
+.   686    010001E3EH        046C0H    nop
+.   688    010001E40H   <Const: 0FFFFFFFFH -1>
+
+
+  PROCEDURE extractError(stackFrameBase: INTEGER; VAR errorRec: ErrorRec);
+  (* collect error data, fill in top trace point *)
+    VAR tp: TracePoint; addr: INTEGER;
+  BEGIN
+.   692    010001E44H        0B507H    push     { r0, r1, r2, lr }
+.   694    010001E46H        0B083H    sub      sp,#12
+    SYSTEM.GET(stackFrameBase + PCoffset, addr); (* return address for exc handler (PC on stack) *)
+.   696    010001E48H        09803H    ldr      r0,[sp,#12]
+.   698    010001E4AH        03018H    adds     r0,#24
+.   700    010001E4CH        06801H    ldr      r1,[r0]
+.   702    010001E4EH        09102H    str      r1,[sp,#8]
+    getHalfWord(addr, tp.lineNo); (* source code line number *)
+.   704    010001E50H        09802H    ldr      r0,[sp,#8]
+.   706    010001E52H        0A901H    add      r1,sp,#4
+.   708    010001E54H    0F7FFFF02H    bl.w     RuntimeErrors.getHalfWord
+.   712    010001E58H        0E000H    b        0 -> 716
+.   714    010001E5AH   <LineNo: 223>
+    DEC(addr, 2); (* address of SVC instruction *)
+.   716    010001E5CH        09802H    ldr      r0,[sp,#8]
+.   718    010001E5EH        03802H    subs     r0,#2
+.   720    010001E60H        09002H    str      r0,[sp,#8]
+    tp.address := addr; (* SCV instruction address = error address *)
+.   722    010001E62H        09802H    ldr      r0,[sp,#8]
+.   724    010001E64H        09000H    str      r0,[sp]
+    getHalfWord(addr, errorRec.code); (* SCV instruction *)
+.   726    010001E66H        09802H    ldr      r0,[sp,#8]
+.   728    010001E68H        09904H    ldr      r1,[sp,#16]
+.   730    010001E6AH    0F7FFFEF7H    bl.w     RuntimeErrors.getHalfWord
+.   734    010001E6EH        0E000H    b        0 -> 738
+.   736    010001E70H   <LineNo: 226>
+    errorRec.code := BFX(errorRec.code, 7, 0); (* error code *)
+.   738    010001E72H        09804H    ldr      r0,[sp,#16]
+.   740    010001E74H        06800H    ldr      r0,[r0]
+.   742    010001E76H        0B2C0H    uxtb     r0,r0
+.   744    010001E78H        09904H    ldr      r1,[sp,#16]
+.   746    010001E7AH        06008H    str      r0,[r1]
+    errorRec.trace.tp[0] := tp;
+.   748    010001E7CH        02002H    movs     r0,#2
+.   750    010001E7EH        09904H    ldr      r1,[sp,#16]
+.   752    010001E80H        03108H    adds     r1,#8
+.   754    010001E82H        0466AH    mov      r2,sp
+.   756    010001E84H        06813H    ldr      r3,[r2]
+.   758    010001E86H        03204H    adds     r2,#4
+.   760    010001E88H        0600BH    str      r3,[r1]
+.   762    010001E8AH        03104H    adds     r1,#4
+.   764    010001E8CH        03801H    subs     r0,#1
+.   766    010001E8EH        0D1F9H    bne.n    -14 -> 756
+    errorRec.trace.count := 1
+  END extractError;
+.   768    010001E90H        02001H    movs     r0,#1
+.   770    010001E92H        09904H    ldr      r1,[sp,#16]
+.   772    010001E94H        06488H    str      r0,[r1,#72]
+.   774    010001E96H        0B006H    add      sp,#24
+.   776    010001E98H        0BD00H    pop      { pc }
+.   778    010001E9AH        046C0H    nop
+
+
+  PROCEDURE extractFault(stackFrameBase: INTEGER; VAR faultRec: FaultRec);
+  BEGIN
+.   780    010001E9CH        0B507H    push     { r0, r1, r2, lr }
+    SYSTEM.GET(stackFrameBase + PCoffset, faultRec.address);
+.   782    010001E9EH        09800H    ldr      r0,[sp]
+.   784    010001EA0H        03018H    adds     r0,#24
+.   786    010001EA2H        06801H    ldr      r1,[r0]
+.   788    010001EA4H        09A01H    ldr      r2,[sp,#4]
+.   790    010001EA6H        06091H    str      r1,[r2,#8]
+    SYSTEM.EMIT(MCU.MRS_R11_IPSR);
+.   792    010001EA8H    0F3EF8B05H    .word 0x8B05F3EF /* EMIT */
+    faultRec.code := SYSTEM.REG(11);
+.   796    010001EACH        04658H    mov      r0,r11
+.   798    010001EAEH        09901H    ldr      r1,[sp,#4]
+.   800    010001EB0H        06008H    str      r0,[r1]
+  END extractFault;
+.   802    010001EB2H        0B003H    add      sp,#12
+.   804    010001EB4H        0BD00H    pop      { pc }
+.   806    010001EB6H        046C0H    nop
+
+
+  PROCEDURE readRegs(stackFrameBase: INTEGER; VAR stackedRegs: StackedRegisters);
+  BEGIN
+.   808    010001EB8H        0B507H    push     { r0, r1, r2, lr }
+    SYSTEM.GET(stackFrameBase, stackedRegs.r0);
+.   810    010001EBAH        09800H    ldr      r0,[sp]
+.   812    010001EBCH        06801H    ldr      r1,[r0]
+.   814    010001EBEH        09A01H    ldr      r2,[sp,#4]
+.   816    010001EC0H        06011H    str      r1,[r2]
+    SYSTEM.GET(stackFrameBase + 4, stackedRegs.r1);
+.   818    010001EC2H        09800H    ldr      r0,[sp]
+.   820    010001EC4H        03004H    adds     r0,#4
+.   822    010001EC6H        06801H    ldr      r1,[r0]
+.   824    010001EC8H        09A01H    ldr      r2,[sp,#4]
+.   826    010001ECAH        06051H    str      r1,[r2,#4]
+    SYSTEM.GET(stackFrameBase + 8, stackedRegs.r2);
+.   828    010001ECCH        09800H    ldr      r0,[sp]
+.   830    010001ECEH        03008H    adds     r0,#8
+.   832    010001ED0H        06801H    ldr      r1,[r0]
+.   834    010001ED2H        09A01H    ldr      r2,[sp,#4]
+.   836    010001ED4H        06091H    str      r1,[r2,#8]
+    SYSTEM.GET(stackFrameBase + 12, stackedRegs.r3);
+.   838    010001ED6H        09800H    ldr      r0,[sp]
+.   840    010001ED8H        0300CH    adds     r0,#12
+.   842    010001EDAH        06801H    ldr      r1,[r0]
+.   844    010001EDCH        09A01H    ldr      r2,[sp,#4]
+.   846    010001EDEH        060D1H    str      r1,[r2,#12]
+    SYSTEM.GET(stackFrameBase + 16, stackedRegs.r12);
+.   848    010001EE0H        09800H    ldr      r0,[sp]
+.   850    010001EE2H        03010H    adds     r0,#16
+.   852    010001EE4H        06801H    ldr      r1,[r0]
+.   854    010001EE6H        09A01H    ldr      r2,[sp,#4]
+.   856    010001EE8H        06111H    str      r1,[r2,#16]
+    SYSTEM.GET(stackFrameBase + 20, stackedRegs.lr);
+.   858    010001EEAH        09800H    ldr      r0,[sp]
+.   860    010001EECH        03014H    adds     r0,#20
+.   862    010001EEEH        06801H    ldr      r1,[r0]
+.   864    010001EF0H        09A01H    ldr      r2,[sp,#4]
+.   866    010001EF2H        06151H    str      r1,[r2,#20]
+    SYSTEM.GET(stackFrameBase + 24, stackedRegs.pc);
+.   868    010001EF4H        09800H    ldr      r0,[sp]
+.   870    010001EF6H        03018H    adds     r0,#24
+.   872    010001EF8H        06801H    ldr      r1,[r0]
+.   874    010001EFAH        09A01H    ldr      r2,[sp,#4]
+.   876    010001EFCH        06191H    str      r1,[r2,#24]
+    SYSTEM.GET(stackFrameBase + 28, stackedRegs.xpsr);
+.   878    010001EFEH        09800H    ldr      r0,[sp]
+.   880    010001F00H        0301CH    adds     r0,#28
+.   882    010001F02H        06801H    ldr      r1,[r0]
+.   884    010001F04H        09A01H    ldr      r2,[sp,#4]
+.   886    010001F06H        061D1H    str      r1,[r2,#28]
+    stackedRegs.sp := stackFrameBase
+  END readRegs;
+.   888    010001F08H        09800H    ldr      r0,[sp]
+.   890    010001F0AH        09901H    ldr      r1,[sp,#4]
+.   892    010001F0CH        06208H    str      r0,[r1,#32]
+.   894    010001F0EH        0B003H    add      sp,#12
+.   896    010001F10H        0BD00H    pop      { pc }
+.   898    010001F12H        046C0H    nop
+
+
+  PROCEDURE traceStart(stackFrameBase: INTEGER): INTEGER;
+    CONST StackAlignBit = 9; (* in stacked PSR *)
+    VAR addr: INTEGER;
+  BEGIN
+.   900    010001F14H        0B501H    push     { r0, lr }
+.   902    010001F16H        0B081H    sub      sp,#4
+    addr := stackFrameBase + StartStacktraceOffset;
+.   904    010001F18H        09801H    ldr      r0,[sp,#4]
+.   906    010001F1AH        03020H    adds     r0,#32
+.   908    010001F1CH        09000H    str      r0,[sp]
+    IF SYSTEM.BIT(stackFrameBase + PSRoffset, StackAlignBit) THEN
+.   910    010001F1EH        09801H    ldr      r0,[sp,#4]
+.   912    010001F20H        0301CH    adds     r0,#28
+.   914    010001F22H        06801H    ldr      r1,[r0]
+.   916    010001F24H         0589H    lsls     r1,r1,#22
+.   918    010001F26H        0D401H    bmi.n    2 -> 924
+.   920    010001F28H        0E003H    b        6 -> 930
+.   922    010001F2AH        046C0H    nop
+      INC(addr, 4)
+    END
+.   924    010001F2CH        09800H    ldr      r0,[sp]
+.   926    010001F2EH        03004H    adds     r0,#4
+.   928    010001F30H        09000H    str      r0,[sp]
+    RETURN addr
+  END traceStart;
+.   930    010001F32H        09800H    ldr      r0,[sp]
+.   932    010001F34H        0B002H    add      sp,#8
+.   934    010001F36H        0BD00H    pop      { pc }
+
+
+  PROCEDURE stackFrameBase(stackAddr, EXC_RETURN: INTEGER): INTEGER;
+    VAR addr: INTEGER;
+  BEGIN
+.   936    010001F38H        0B503H    push     { r0, r1, lr }
+.   938    010001F3AH        0B081H    sub      sp,#4
+    IF 2 IN BITS(EXC_RETURN) THEN (* PSP and MSP used *)
+.   940    010001F3CH        09802H    ldr      r0,[sp,#8]
+.   942    010001F3EH        02104H    movs     r1,#4
+.   944    010001F40H        04208H    tst      r0,r1
+.   946    010001F42H        0D101H    bne.n    2 -> 952
+.   948    010001F44H        0E006H    b        12 -> 964
+.   950    010001F46H        046C0H    nop
+      SYSTEM.EMIT(MCU.MRS_R11_PSP);
+.   952    010001F48H    0F3EF8B09H    .word 0x8B09F3EF /* EMIT */
+      addr := SYSTEM.REG(11)
+    ELSE (* only MSP used *)
+.   956    010001F4CH        04658H    mov      r0,r11
+.   958    010001F4EH        09000H    str      r0,[sp]
+      addr := stackAddr
+.   960    010001F50H        0E002H    b        4 -> 968
+.   962    010001F52H        046C0H    nop
+    END
+.   964    010001F54H        09801H    ldr      r0,[sp,#4]
+.   966    010001F56H        09000H    str      r0,[sp]
+    RETURN addr
+  END stackFrameBase;
+.   968    010001F58H        09800H    ldr      r0,[sp]
+.   970    010001F5AH        0B003H    add      sp,#12
+.   972    010001F5CH        0BD00H    pop      { pc }
+.   974    010001F5EH        046C0H    nop
+
+
+  PROCEDURE errorHandler;
+  (* via compiler-inserted SVC instruction *)
+  (* in main stack *)
+    VAR stackFrameAddr, cid: INTEGER;
+  BEGIN
+.   976    010001F60H        0B500H    push     { lr }
+.   978    010001F62H        0B082H    sub      sp,#8
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+.   980    010001F64H        0486DH    ldr      r0,[pc,#436] -> 1420 ; Const: 0D0000000H -805306368
+.   982    010001F66H        06801H    ldr      r1,[r0]
+.   984    010001F68H        09101H    str      r1,[sp,#4]
+    IF exc[cid].currentRegsOn THEN
+.   986    010001F6AH        09801H    ldr      r0,[sp,#4]
+.   988    010001F6CH        02802H    cmp      r0,#2
+.   990    010001F6EH        0D301H    bcc.n    2 -> 996
+.   992    010001F70H        0DF01H    svc      1
+.   994    010001F72H   <LineNo: 286>
+.   996    010001F74H        0496EH    ldr      r1,[pc,#440] -> 1440 ; Global: 02002FCD0H
+.   998    010001F76H        022C8H    movs     r2,#200
+.  1000    010001F78H        04350H    muls     r0,r2
+.  1002    010001F7AH        01808H    adds     r0,r1,r0
+.  1004    010001F7CH        021C7H    movs     r1,#199
+.  1006    010001F7EH        05C40H    ldrb     r0,[r0,r1]
+.  1008    010001F80H        02101H    movs     r1,#1
+.  1010    010001F82H        04208H    tst      r0,r1
+.  1012    010001F84H        0D101H    bne.n    2 -> 1018
+.  1014    010001F86H        0E032H    b        100 -> 1118
+.  1016    010001F88H        046C0H    nop
+      exc[cid].errorRec.currentRegs.pc := SYSTEM.REG(PC); (* pretty useless *)
+.  1018    010001F8AH        09801H    ldr      r0,[sp,#4]
+.  1020    010001F8CH        02802H    cmp      r0,#2
+.  1022    010001F8EH        0D301H    bcc.n    2 -> 1028
+.  1024    010001F90H        0DF01H    svc      1
+.  1026    010001F92H   <LineNo: 287>
+.  1028    010001F94H        04966H    ldr      r1,[pc,#408] -> 1440 ; Global: 02002FCD0H
+.  1030    010001F96H        022C8H    movs     r2,#200
+.  1032    010001F98H        04350H    muls     r0,r2
+.  1034    010001F9AH        01808H    adds     r0,r1,r0
+.  1036    010001F9CH        04679H    mov      r1,pc
+.  1038    010001F9EH        022B8H    movs     r2,#184
+.  1040    010001FA0H        05081H    str      r1,[r0,r2]
+      exc[cid].errorRec.currentRegs.sp := SYSTEM.REG(SP);
+.  1042    010001FA2H        09801H    ldr      r0,[sp,#4]
+.  1044    010001FA4H        02802H    cmp      r0,#2
+.  1046    010001FA6H        0D301H    bcc.n    2 -> 1052
+.  1048    010001FA8H        0DF01H    svc      1
+.  1050    010001FAAH   <LineNo: 288>
+.  1052    010001FACH        04960H    ldr      r1,[pc,#384] -> 1440 ; Global: 02002FCD0H
+.  1054    010001FAEH        022C8H    movs     r2,#200
+.  1056    010001FB0H        04350H    muls     r0,r2
+.  1058    010001FB2H        01808H    adds     r0,r1,r0
+.  1060    010001FB4H        04669H    mov      r1,sp
+.  1062    010001FB6H        022B0H    movs     r2,#176
+.  1064    010001FB8H        05081H    str      r1,[r0,r2]
+      exc[cid].errorRec.currentRegs.lr := SYSTEM.REG(LR);
+.  1066    010001FBAH        09801H    ldr      r0,[sp,#4]
+.  1068    010001FBCH        02802H    cmp      r0,#2
+.  1070    010001FBEH        0D301H    bcc.n    2 -> 1076
+.  1072    010001FC0H        0DF01H    svc      1
+.  1074    010001FC2H   <LineNo: 289>
+.  1076    010001FC4H        0495AH    ldr      r1,[pc,#360] -> 1440 ; Global: 02002FCD0H
+.  1078    010001FC6H        022C8H    movs     r2,#200
+.  1080    010001FC8H        04350H    muls     r0,r2
+.  1082    010001FCAH        01808H    adds     r0,r1,r0
+.  1084    010001FCCH        04671H    mov      r1,lr
+.  1086    010001FCEH        022B4H    movs     r2,#180
+.  1088    010001FD0H        05081H    str      r1,[r0,r2]
+      SYSTEM.EMIT(MCU.MRS_R11_XPSR);
+.  1090    010001FD2H    0F3EF8B03H    .word 0x8B03F3EF /* EMIT */
+      exc[cid].errorRec.currentRegs.xpsr := SYSTEM.REG(11);
+.  1094    010001FD6H        09801H    ldr      r0,[sp,#4]
+.  1096    010001FD8H        02802H    cmp      r0,#2
+.  1098    010001FDAH        0D301H    bcc.n    2 -> 1104
+.  1100    010001FDCH        0DF01H    svc      1
+.  1102    010001FDEH   <LineNo: 291>
+.  1104    010001FE0H        04953H    ldr      r1,[pc,#332] -> 1440 ; Global: 02002FCD0H
+.  1106    010001FE2H        022C8H    movs     r2,#200
+.  1108    010001FE4H        04350H    muls     r0,r2
+.  1110    010001FE6H        01808H    adds     r0,r1,r0
+.  1112    010001FE8H        04659H    mov      r1,r11
+.  1114    010001FEAH        022BCH    movs     r2,#188
+.  1116    010001FECH        05081H    str      r1,[r0,r2]
+    END;
+    exc[cid].errorRec.core := cid;
+.  1118    010001FEEH        09801H    ldr      r0,[sp,#4]
+.  1120    010001FF0H        02802H    cmp      r0,#2
+.  1122    010001FF2H        0D301H    bcc.n    2 -> 1128
+.  1124    010001FF4H        0DF01H    svc      1
+.  1126    010001FF6H   <LineNo: 293>
+.  1128    010001FF8H        0494DH    ldr      r1,[pc,#308] -> 1440 ; Global: 02002FCD0H
+.  1130    010001FFAH        022C8H    movs     r2,#200
+.  1132    010001FFCH        04350H    muls     r0,r2
+.  1134    010001FFEH        01808H    adds     r0,r1,r0
+.  1136    010002000H        09901H    ldr      r1,[sp,#4]
+.  1138    010002002H        06441H    str      r1,[r0,#68]
+    stackFrameAddr := stackFrameBase(SYSTEM.REG(SP) + 12, SYSTEM.REG(LR)); (* SP: + 12 for lr, stackFrameAddr, cid *)
+.  1140    010002004H        04668H    mov      r0,sp
+.  1142    010002006H        0300CH    adds     r0,#12
+.  1144    010002008H        04671H    mov      r1,lr
+.  1146    01000200AH    0F7FFFF95H    bl.w     RuntimeErrors.stackFrameBase
+.  1150    01000200EH        0E000H    b        0 -> 1154
+.  1152    010002010H   <LineNo: 294>
+.  1154    010002012H        09000H    str      r0,[sp]
+    IF exc[cid].stackedRegsOn THEN
+.  1156    010002014H        09801H    ldr      r0,[sp,#4]
+.  1158    010002016H        02802H    cmp      r0,#2
+.  1160    010002018H        0D301H    bcc.n    2 -> 1166
+.  1162    01000201AH        0DF01H    svc      1
+.  1164    01000201CH   <LineNo: 295>
+.  1166    01000201EH        04944H    ldr      r1,[pc,#272] -> 1440 ; Global: 02002FCD0H
+.  1168    010002020H        022C8H    movs     r2,#200
+.  1170    010002022H        04350H    muls     r0,r2
+.  1172    010002024H        01808H    adds     r0,r1,r0
+.  1174    010002026H        021C6H    movs     r1,#198
+.  1176    010002028H        05C40H    ldrb     r0,[r0,r1]
+.  1178    01000202AH        02101H    movs     r1,#1
+.  1180    01000202CH        04208H    tst      r0,r1
+.  1182    01000202EH        0D101H    bne.n    2 -> 1188
+.  1184    010002030H        0E012H    b        36 -> 1224
+.  1186    010002032H        046C0H    nop
+      readRegs(stackFrameAddr, exc[cid].errorRec.stackedRegs)
+.  1188    010002034H        09800H    ldr      r0,[sp]
+.  1190    010002036H        09901H    ldr      r1,[sp,#4]
+.  1192    010002038H        02902H    cmp      r1,#2
+.  1194    01000203AH        0D301H    bcc.n    2 -> 1200
+.  1196    01000203CH        0DF01H    svc      1
+.  1198    01000203EH   <LineNo: 296>
+.  1200    010002040H        04A3BH    ldr      r2,[pc,#236] -> 1440 ; Global: 02002FCD0H
+.  1202    010002042H        023C8H    movs     r3,#200
+.  1204    010002044H        04359H    muls     r1,r3
+.  1206    010002046H        01851H    adds     r1,r2,r1
+.  1208    010002048H        0318CH    adds     r1,#140
+.  1210    01000204AH        04A35H    ldr      r2,[pc,#212] -> 1424 ; Const: 0FFFFFB6CH -1172
+.  1212    01000204CH        0467BH    mov      r3,pc
+.  1214    01000204EH        018D2H    adds     r2,r2,r3
+    END;
+.  1216    010002050H    0F7FFFF32H    bl.w     RuntimeErrors.readRegs
+.  1220    010002054H        0E000H    b        0 -> 1224
+.  1222    010002056H   <LineNo: 296>
+    extractError(stackFrameAddr, exc[cid].errorRec);
+.  1224    010002058H        09800H    ldr      r0,[sp]
+.  1226    01000205AH        09901H    ldr      r1,[sp,#4]
+.  1228    01000205CH        02902H    cmp      r1,#2
+.  1230    01000205EH        0D301H    bcc.n    2 -> 1236
+.  1232    010002060H        0DF01H    svc      1
+.  1234    010002062H   <LineNo: 298>
+.  1236    010002064H        04A32H    ldr      r2,[pc,#200] -> 1440 ; Global: 02002FCD0H
+.  1238    010002066H        023C8H    movs     r3,#200
+.  1240    010002068H        04359H    muls     r1,r3
+.  1242    01000206AH        01851H    adds     r1,r2,r1
+.  1244    01000206CH        03140H    adds     r1,#64
+.  1246    01000206EH        04A2DH    ldr      r2,[pc,#180] -> 1428 ; Const: 0FFFFFB98H -1128
+.  1248    010002070H        0467BH    mov      r3,pc
+.  1250    010002072H        018D2H    adds     r2,r2,r3
+.  1252    010002074H    0F7FFFEE6H    bl.w     RuntimeErrors.extractError
+.  1256    010002078H        0E000H    b        0 -> 1260
+.  1258    01000207AH   <LineNo: 298>
+    IF exc[cid].stackTraceOn THEN
+.  1260    01000207CH        09801H    ldr      r0,[sp,#4]
+.  1262    01000207EH        02802H    cmp      r0,#2
+.  1264    010002080H        0D301H    bcc.n    2 -> 1270
+.  1266    010002082H        0DF01H    svc      1
+.  1268    010002084H   <LineNo: 299>
+.  1270    010002086H        0492AH    ldr      r1,[pc,#168] -> 1440 ; Global: 02002FCD0H
+.  1272    010002088H        022C8H    movs     r2,#200
+.  1274    01000208AH        04350H    muls     r0,r2
+.  1276    01000208CH        01808H    adds     r0,r1,r0
+.  1278    01000208EH        021C5H    movs     r1,#197
+.  1280    010002090H        05C40H    ldrb     r0,[r0,r1]
+.  1282    010002092H        02101H    movs     r1,#1
+.  1284    010002094H        04208H    tst      r0,r1
+.  1286    010002096H        0D101H    bne.n    2 -> 1292
+.  1288    010002098H        0E016H    b        44 -> 1336
+.  1290    01000209AH        046C0H    nop
+      Stacktrace(traceStart(stackFrameAddr), exc[cid].errorRec.trace)
+.  1292    01000209CH        09800H    ldr      r0,[sp]
+.  1294    01000209EH    0F7FFFF39H    bl.w     RuntimeErrors.traceStart
+.  1298    0100020A2H        0E000H    b        0 -> 1302
+.  1300    0100020A4H   <LineNo: 300>
+.  1302    0100020A6H        09901H    ldr      r1,[sp,#4]
+.  1304    0100020A8H        02902H    cmp      r1,#2
+.  1306    0100020AAH        0D301H    bcc.n    2 -> 1312
+.  1308    0100020ACH        0DF01H    svc      1
+.  1310    0100020AEH   <LineNo: 300>
+.  1312    0100020B0H        04A1FH    ldr      r2,[pc,#124] -> 1440 ; Global: 02002FCD0H
+.  1314    0100020B2H        023C8H    movs     r3,#200
+.  1316    0100020B4H        04359H    muls     r1,r3
+.  1318    0100020B6H        01851H    adds     r1,r2,r1
+.  1320    0100020B8H        03148H    adds     r1,#72
+.  1322    0100020BAH        04A1BH    ldr      r2,[pc,#108] -> 1432 ; Const: 0FFFFFAE8H -1304
+.  1324    0100020BCH        0467BH    mov      r3,pc
+.  1326    0100020BEH        018D2H    adds     r2,r2,r3
+    END;
+.  1328    0100020C0H    0F7FFFE66H    bl.w     RuntimeErrors.Stacktrace
+.  1332    0100020C4H        0E000H    b        0 -> 1336
+.  1334    0100020C6H   <LineNo: 300>
+    exc[cid].handleException(cid, exc[cid].errorRec);
+.  1336    0100020C8H        09801H    ldr      r0,[sp,#4]
+.  1338    0100020CAH        02802H    cmp      r0,#2
+.  1340    0100020CCH        0D301H    bcc.n    2 -> 1346
+.  1342    0100020CEH        0DF01H    svc      1
+.  1344    0100020D0H   <LineNo: 302>
+.  1346    0100020D2H        04917H    ldr      r1,[pc,#92] -> 1440 ; Global: 02002FCD0H
+.  1348    0100020D4H        022C8H    movs     r2,#200
+.  1350    0100020D6H        04350H    muls     r0,r2
+.  1352    0100020D8H        01808H    adds     r0,r1,r0
+.  1354    0100020DAH        021C0H    movs     r1,#192
+.  1356    0100020DCH        05840H    ldr      r0,[r0,r1]
+.  1358    0100020DEH        0B401H    push     { r0 }
+.  1360    0100020E0H        09802H    ldr      r0,[sp,#8]
+.  1362    0100020E2H        09902H    ldr      r1,[sp,#8]
+.  1364    0100020E4H        02902H    cmp      r1,#2
+.  1366    0100020E6H        0D301H    bcc.n    2 -> 1372
+.  1368    0100020E8H        0DF01H    svc      1
+.  1370    0100020EAH   <LineNo: 302>
+.  1372    0100020ECH        04A10H    ldr      r2,[pc,#64] -> 1440 ; Global: 02002FCD0H
+.  1374    0100020EEH        023C8H    movs     r3,#200
+.  1376    0100020F0H        04359H    muls     r1,r3
+.  1378    0100020F2H        01851H    adds     r1,r2,r1
+.  1380    0100020F4H        03140H    adds     r1,#64
+.  1382    0100020F6H        04A0DH    ldr      r2,[pc,#52] -> 1436 ; Const: 0FFFFFB10H -1264
+.  1384    0100020F8H        0467BH    mov      r3,pc
+.  1386    0100020FAH        018D2H    adds     r2,r2,r3
+.  1388    0100020FCH        0BC08H    pop      { r3 }
+.  1390    0100020FEH        02B00H    cmp      r3,#0
+.  1392    010002100H        0D101H    bne.n    2 -> 1398
+.  1394    010002102H        0DF05H    svc      5
+.  1396    010002104H   <LineNo: 302>
+.  1398    010002106H        03301H    adds     r3,#1
+.  1400    010002108H        04798H    blx      r3
+.  1402    01000210AH        0E000H    b        0 -> 1406
+.  1404    01000210CH   <LineNo: 301>
+    (*ASSERT(FALSE);*)  (* trigger hard fault for testing *)
+    HALT(cid)
+.  1406    01000210EH        09801H    ldr      r0,[sp,#4]
+  END errorHandler;
+.  1408    010002110H    0F7FFFD90H    bl.w     RuntimeErrors.HALT
+.  1412    010002114H        0E000H    b        0 -> 1416
+.  1414    010002116H   <LineNo: 304>
+.  1416    010002118H        0B002H    add      sp,#8
+.  1418    01000211AH        0BD00H    pop      { pc }
+.  1420    01000211CH   <Const: 0D0000000H -805306368>
+.  1424    010002120H   <Const: 0FFFFFB6CH -1172>
+.  1428    010002124H   <Const: 0FFFFFB98H -1128>
+.  1432    010002128H   <Const: 0FFFFFAE8H -1304>
+.  1436    01000212CH   <Const: 0FFFFFB10H -1264>
+.  1440    010002130H   <Global: 02002FCD0H>
+
+
+  PROCEDURE faultHandler;
+  (* via MCU hardware-generated exception *)
+  (* in main stack *)
+    VAR stackFrameAddr, cid: INTEGER;
+  BEGIN
+.  1444    010002134H        0B500H    push     { lr }
+.  1446    010002136H        0B082H    sub      sp,#8
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+.  1448    010002138H        04857H    ldr      r0,[pc,#348] -> 1800 ; Const: 0D0000000H -805306368
+.  1450    01000213AH        06801H    ldr      r1,[r0]
+.  1452    01000213CH        09101H    str      r1,[sp,#4]
+    IF exc[cid].currentRegsOn THEN
+.  1454    01000213EH        09801H    ldr      r0,[sp,#4]
+.  1456    010002140H        02802H    cmp      r0,#2
+.  1458    010002142H        0D301H    bcc.n    2 -> 1464
+.  1460    010002144H        0DF01H    svc      1
+.  1462    010002146H   <LineNo: 314>
+.  1464    010002148H        04957H    ldr      r1,[pc,#348] -> 1816 ; Global: 02002FCD0H
+.  1466    01000214AH        022C8H    movs     r2,#200
+.  1468    01000214CH        04350H    muls     r0,r2
+.  1470    01000214EH        01808H    adds     r0,r1,r0
+.  1472    010002150H        021C7H    movs     r1,#199
+.  1474    010002152H        05C40H    ldrb     r0,[r0,r1]
+.  1476    010002154H        02101H    movs     r1,#1
+.  1478    010002156H        04208H    tst      r0,r1
+.  1480    010002158H        0D101H    bne.n    2 -> 1486
+.  1482    01000215AH        0E02EH    b        92 -> 1578
+.  1484    01000215CH        046C0H    nop
+      exc[cid].faultRec.currentRegs.pc := SYSTEM.REG(PC);
+.  1486    01000215EH        09801H    ldr      r0,[sp,#4]
+.  1488    010002160H        02802H    cmp      r0,#2
+.  1490    010002162H        0D301H    bcc.n    2 -> 1496
+.  1492    010002164H        0DF01H    svc      1
+.  1494    010002166H   <LineNo: 315>
+.  1496    010002168H        0494FH    ldr      r1,[pc,#316] -> 1816 ; Global: 02002FCD0H
+.  1498    01000216AH        022C8H    movs     r2,#200
+.  1500    01000216CH        04350H    muls     r0,r2
+.  1502    01000216EH        01808H    adds     r0,r1,r0
+.  1504    010002170H        04679H    mov      r1,pc
+.  1506    010002172H        06381H    str      r1,[r0,#56]
+      exc[cid].faultRec.currentRegs.sp := SYSTEM.REG(SP);
+.  1508    010002174H        09801H    ldr      r0,[sp,#4]
+.  1510    010002176H        02802H    cmp      r0,#2
+.  1512    010002178H        0D301H    bcc.n    2 -> 1518
+.  1514    01000217AH        0DF01H    svc      1
+.  1516    01000217CH   <LineNo: 316>
+.  1518    01000217EH        0494AH    ldr      r1,[pc,#296] -> 1816 ; Global: 02002FCD0H
+.  1520    010002180H        022C8H    movs     r2,#200
+.  1522    010002182H        04350H    muls     r0,r2
+.  1524    010002184H        01808H    adds     r0,r1,r0
+.  1526    010002186H        04669H    mov      r1,sp
+.  1528    010002188H        06301H    str      r1,[r0,#48]
+      exc[cid].faultRec.currentRegs.lr := SYSTEM.REG(LR);
+.  1530    01000218AH        09801H    ldr      r0,[sp,#4]
+.  1532    01000218CH        02802H    cmp      r0,#2
+.  1534    01000218EH        0D301H    bcc.n    2 -> 1540
+.  1536    010002190H        0DF01H    svc      1
+.  1538    010002192H   <LineNo: 317>
+.  1540    010002194H        04944H    ldr      r1,[pc,#272] -> 1816 ; Global: 02002FCD0H
+.  1542    010002196H        022C8H    movs     r2,#200
+.  1544    010002198H        04350H    muls     r0,r2
+.  1546    01000219AH        01808H    adds     r0,r1,r0
+.  1548    01000219CH        04671H    mov      r1,lr
+.  1550    01000219EH        06341H    str      r1,[r0,#52]
+      SYSTEM.EMIT(MCU.MRS_R11_XPSR);
+.  1552    0100021A0H    0F3EF8B03H    .word 0x8B03F3EF /* EMIT */
+      exc[cid].faultRec.currentRegs.xpsr := SYSTEM.REG(11)
+.  1556    0100021A4H        09801H    ldr      r0,[sp,#4]
+.  1558    0100021A6H        02802H    cmp      r0,#2
+.  1560    0100021A8H        0D301H    bcc.n    2 -> 1566
+.  1562    0100021AAH        0DF01H    svc      1
+.  1564    0100021ACH   <LineNo: 319>
+.  1566    0100021AEH        0493EH    ldr      r1,[pc,#248] -> 1816 ; Global: 02002FCD0H
+.  1568    0100021B0H        022C8H    movs     r2,#200
+.  1570    0100021B2H        04350H    muls     r0,r2
+.  1572    0100021B4H        01808H    adds     r0,r1,r0
+    END;
+.  1574    0100021B6H        04659H    mov      r1,r11
+.  1576    0100021B8H        063C1H    str      r1,[r0,#60]
+    exc[cid].faultRec.core := cid;
+.  1578    0100021BAH        09801H    ldr      r0,[sp,#4]
+.  1580    0100021BCH        02802H    cmp      r0,#2
+.  1582    0100021BEH        0D301H    bcc.n    2 -> 1588
+.  1584    0100021C0H        0DF01H    svc      1
+.  1586    0100021C2H   <LineNo: 321>
+.  1588    0100021C4H        04938H    ldr      r1,[pc,#224] -> 1816 ; Global: 02002FCD0H
+.  1590    0100021C6H        022C8H    movs     r2,#200
+.  1592    0100021C8H        04350H    muls     r0,r2
+.  1594    0100021CAH        01808H    adds     r0,r1,r0
+.  1596    0100021CCH        09901H    ldr      r1,[sp,#4]
+.  1598    0100021CEH        06041H    str      r1,[r0,#4]
+    stackFrameAddr := stackFrameBase(SYSTEM.REG(SP) + 12, SYSTEM.REG(LR)); (* SP: + 12 for lr, stackFrameAddr, cid *)
+.  1600    0100021D0H        04668H    mov      r0,sp
+.  1602    0100021D2H        0300CH    adds     r0,#12
+.  1604    0100021D4H        04671H    mov      r1,lr
+.  1606    0100021D6H    0F7FFFEAFH    bl.w     RuntimeErrors.stackFrameBase
+.  1610    0100021DAH        0E000H    b        0 -> 1614
+.  1612    0100021DCH   <LineNo: 322>
+.  1614    0100021DEH        09000H    str      r0,[sp]
+    IF exc[cid].stackedRegsOn THEN
+.  1616    0100021E0H        09801H    ldr      r0,[sp,#4]
+.  1618    0100021E2H        02802H    cmp      r0,#2
+.  1620    0100021E4H        0D301H    bcc.n    2 -> 1626
+.  1622    0100021E6H        0DF01H    svc      1
+.  1624    0100021E8H   <LineNo: 323>
+.  1626    0100021EAH        0492FH    ldr      r1,[pc,#188] -> 1816 ; Global: 02002FCD0H
+.  1628    0100021ECH        022C8H    movs     r2,#200
+.  1630    0100021EEH        04350H    muls     r0,r2
+.  1632    0100021F0H        01808H    adds     r0,r1,r0
+.  1634    0100021F2H        021C6H    movs     r1,#198
+.  1636    0100021F4H        05C40H    ldrb     r0,[r0,r1]
+.  1638    0100021F6H        02101H    movs     r1,#1
+.  1640    0100021F8H        04208H    tst      r0,r1
+.  1642    0100021FAH        0D101H    bne.n    2 -> 1648
+.  1644    0100021FCH        0E012H    b        36 -> 1684
+.  1646    0100021FEH        046C0H    nop
+      readRegs(stackFrameAddr, exc[cid].faultRec.stackedRegs)
+.  1648    010002200H        09800H    ldr      r0,[sp]
+.  1650    010002202H        09901H    ldr      r1,[sp,#4]
+.  1652    010002204H        02902H    cmp      r1,#2
+.  1654    010002206H        0D301H    bcc.n    2 -> 1660
+.  1656    010002208H        0DF01H    svc      1
+.  1658    01000220AH   <LineNo: 324>
+.  1660    01000220CH        04A26H    ldr      r2,[pc,#152] -> 1816 ; Global: 02002FCD0H
+.  1662    01000220EH        023C8H    movs     r3,#200
+.  1664    010002210H        04359H    muls     r1,r3
+.  1666    010002212H        01851H    adds     r1,r2,r1
+.  1668    010002214H        0310CH    adds     r1,#12
+.  1670    010002216H        04A21H    ldr      r2,[pc,#132] -> 1804 ; Const: 0FFFFF9A0H -1632
+.  1672    010002218H        0467BH    mov      r3,pc
+.  1674    01000221AH        018D2H    adds     r2,r2,r3
+    END;
+.  1676    01000221CH    0F7FFFE4CH    bl.w     RuntimeErrors.readRegs
+.  1680    010002220H        0E000H    b        0 -> 1684
+.  1682    010002222H   <LineNo: 324>
+    extractFault(stackFrameAddr, exc[cid].faultRec);
+.  1684    010002224H        09800H    ldr      r0,[sp]
+.  1686    010002226H        09901H    ldr      r1,[sp,#4]
+.  1688    010002228H        02902H    cmp      r1,#2
+.  1690    01000222AH        0D301H    bcc.n    2 -> 1696
+.  1692    01000222CH        0DF01H    svc      1
+.  1694    01000222EH   <LineNo: 326>
+.  1696    010002230H        04A1DH    ldr      r2,[pc,#116] -> 1816 ; Global: 02002FCD0H
+.  1698    010002232H        023C8H    movs     r3,#200
+.  1700    010002234H        04359H    muls     r1,r3
+.  1702    010002236H        01851H    adds     r1,r2,r1
+.  1704    010002238H        04A19H    ldr      r2,[pc,#100] -> 1808 ; Const: 0FFFFF9BAH -1606
+.  1706    01000223AH        0467BH    mov      r3,pc
+.  1708    01000223CH        018D2H    adds     r2,r2,r3
+.  1710    01000223EH    0F7FFFE2DH    bl.w     RuntimeErrors.extractFault
+.  1714    010002242H        0E000H    b        0 -> 1718
+.  1716    010002244H   <LineNo: 326>
+    exc[cid].handleException(cid, exc[cid].faultRec);
+.  1718    010002246H        09801H    ldr      r0,[sp,#4]
+.  1720    010002248H        02802H    cmp      r0,#2
+.  1722    01000224AH        0D301H    bcc.n    2 -> 1728
+.  1724    01000224CH        0DF01H    svc      1
+.  1726    01000224EH   <LineNo: 327>
+.  1728    010002250H        04915H    ldr      r1,[pc,#84] -> 1816 ; Global: 02002FCD0H
+.  1730    010002252H        022C8H    movs     r2,#200
+.  1732    010002254H        04350H    muls     r0,r2
+.  1734    010002256H        01808H    adds     r0,r1,r0
+.  1736    010002258H        021C0H    movs     r1,#192
+.  1738    01000225AH        05840H    ldr      r0,[r0,r1]
+.  1740    01000225CH        0B401H    push     { r0 }
+.  1742    01000225EH        09802H    ldr      r0,[sp,#8]
+.  1744    010002260H        09902H    ldr      r1,[sp,#8]
+.  1746    010002262H        02902H    cmp      r1,#2
+.  1748    010002264H        0D301H    bcc.n    2 -> 1754
+.  1750    010002266H        0DF01H    svc      1
+.  1752    010002268H   <LineNo: 327>
+.  1754    01000226AH        04A0FH    ldr      r2,[pc,#60] -> 1816 ; Global: 02002FCD0H
+.  1756    01000226CH        023C8H    movs     r3,#200
+.  1758    01000226EH        04359H    muls     r1,r3
+.  1760    010002270H        01851H    adds     r1,r2,r1
+.  1762    010002272H        04A0CH    ldr      r2,[pc,#48] -> 1812 ; Const: 0FFFFF980H -1664
+.  1764    010002274H        0467BH    mov      r3,pc
+.  1766    010002276H        018D2H    adds     r2,r2,r3
+.  1768    010002278H        0BC08H    pop      { r3 }
+.  1770    01000227AH        02B00H    cmp      r3,#0
+.  1772    01000227CH        0D101H    bne.n    2 -> 1778
+.  1774    01000227EH        0DF05H    svc      5
+.  1776    010002280H   <LineNo: 327>
+.  1778    010002282H        03301H    adds     r3,#1
+.  1780    010002284H        04798H    blx      r3
+.  1782    010002286H        0E000H    b        0 -> 1786
+.  1784    010002288H   <LineNo: 326>
+    HALT(cid)
+.  1786    01000228AH        09801H    ldr      r0,[sp,#4]
+  END faultHandler;
+.  1788    01000228CH    0F7FFFCD2H    bl.w     RuntimeErrors.HALT
+.  1792    010002290H        0E000H    b        0 -> 1796
+.  1794    010002292H   <LineNo: 328>
+.  1796    010002294H        0B002H    add      sp,#8
+.  1798    010002296H        0BD00H    pop      { pc }
+.  1800    010002298H   <Const: 0D0000000H -805306368>
+.  1804    01000229CH   <Const: 0FFFFF9A0H -1632>
+.  1808    0100022A0H   <Const: 0FFFFF9BAH -1606>
+.  1812    0100022A4H   <Const: 0FFFFF980H -1664>
+.  1816    0100022A8H   <Global: 02002FCD0H>
+
+
+  PROCEDURE* SetHandler*(cpuId: INTEGER; eh: PROCEDURE(cpuId: INTEGER; er: ExceptionRec));
+  BEGIN
+.  1820    0100022ACH        0B503H    push     { r0, r1, lr }
+    exc[cpuId].handleException := eh
+.  1822    0100022AEH        09800H    ldr      r0,[sp]
+.  1824    0100022B0H        04904H    ldr      r1,[pc,#16] -> 1844 ; Global: 02002FCD0H
+.  1826    0100022B2H        022C8H    movs     r2,#200
+.  1828    0100022B4H        04350H    muls     r0,r2
+.  1830    0100022B6H        01808H    adds     r0,r1,r0
+  END SetHandler;
+.  1832    0100022B8H        09901H    ldr      r1,[sp,#4]
+.  1834    0100022BAH        022C0H    movs     r2,#192
+.  1836    0100022BCH        05081H    str      r1,[r0,r2]
+.  1838    0100022BEH        0B002H    add      sp,#8
+.  1840    0100022C0H        0BD00H    pop      { pc }
+.  1842    0100022C2H        046C0H    nop
+.  1844    0100022C4H   <Global: 02002FCD0H>
+
+  PROCEDURE* SetHalt*(cpuId: INTEGER; on: BOOLEAN);
+  BEGIN
+.  1848    0100022C8H        0B503H    push     { r0, r1, lr }
+    exc[cpuId].haltOn := on
+.  1850    0100022CAH        09800H    ldr      r0,[sp]
+.  1852    0100022CCH        04904H    ldr      r1,[pc,#16] -> 1872 ; Global: 02002FCD0H
+.  1854    0100022CEH        022C8H    movs     r2,#200
+.  1856    0100022D0H        04350H    muls     r0,r2
+.  1858    0100022D2H        01808H    adds     r0,r1,r0
+  END SetHalt;
+.  1860    0100022D4H        0A901H    add      r1,sp,#4
+.  1862    0100022D6H        07809H    ldrb     r1,[r1]
+.  1864    0100022D8H        022C4H    movs     r2,#196
+.  1866    0100022DAH        05481H    strb     r1,[r0,r2]
+.  1868    0100022DCH        0B002H    add      sp,#8
+.  1870    0100022DEH        0BD00H    pop      { pc }
+.  1872    0100022E0H   <Global: 02002FCD0H>
+
+  PROCEDURE SetStacktraceOn*(cpuId: INTEGER; on: BOOLEAN);
+  BEGIN
+.  1876    0100022E4H        0B503H    push     { r0, r1, lr }
+    exc[cpuId].stackTraceOn := on
+.  1878    0100022E6H        09800H    ldr      r0,[sp]
+.  1880    0100022E8H        02802H    cmp      r0,#2
+.  1882    0100022EAH        0D301H    bcc.n    2 -> 1888
+.  1884    0100022ECH        0DF01H    svc      1
+.  1886    0100022EEH   <LineNo: 344>
+.  1888    0100022F0H        04904H    ldr      r1,[pc,#16] -> 1908 ; Global: 02002FCD0H
+.  1890    0100022F2H        022C8H    movs     r2,#200
+.  1892    0100022F4H        04350H    muls     r0,r2
+.  1894    0100022F6H        01808H    adds     r0,r1,r0
+  END SetStacktraceOn;
+.  1896    0100022F8H        0A901H    add      r1,sp,#4
+.  1898    0100022FAH        07809H    ldrb     r1,[r1]
+.  1900    0100022FCH        022C5H    movs     r2,#197
+.  1902    0100022FEH        05481H    strb     r1,[r0,r2]
+.  1904    010002300H        0B002H    add      sp,#8
+.  1906    010002302H        0BD00H    pop      { pc }
+.  1908    010002304H   <Global: 02002FCD0H>
+
+  PROCEDURE SetStackedRegsOn*(cpuId: INTEGER; on: BOOLEAN);
+  BEGIN
+.  1912    010002308H        0B503H    push     { r0, r1, lr }
+    exc[cpuId].stackedRegsOn := on
+.  1914    01000230AH        09800H    ldr      r0,[sp]
+.  1916    01000230CH        02802H    cmp      r0,#2
+.  1918    01000230EH        0D301H    bcc.n    2 -> 1924
+.  1920    010002310H        0DF01H    svc      1
+.  1922    010002312H   <LineNo: 349>
+.  1924    010002314H        04904H    ldr      r1,[pc,#16] -> 1944 ; Global: 02002FCD0H
+.  1926    010002316H        022C8H    movs     r2,#200
+.  1928    010002318H        04350H    muls     r0,r2
+.  1930    01000231AH        01808H    adds     r0,r1,r0
+  END SetStackedRegsOn;
+.  1932    01000231CH        0A901H    add      r1,sp,#4
+.  1934    01000231EH        07809H    ldrb     r1,[r1]
+.  1936    010002320H        022C6H    movs     r2,#198
+.  1938    010002322H        05481H    strb     r1,[r0,r2]
+.  1940    010002324H        0B002H    add      sp,#8
+.  1942    010002326H        0BD00H    pop      { pc }
+.  1944    010002328H   <Global: 02002FCD0H>
+
+  PROCEDURE SetCurrentRegsOn*(cpuId: INTEGER; on: BOOLEAN);
+  BEGIN
+.  1948    01000232CH        0B503H    push     { r0, r1, lr }
+    exc[cpuId].currentRegsOn := on
+.  1950    01000232EH        09800H    ldr      r0,[sp]
+.  1952    010002330H        02802H    cmp      r0,#2
+.  1954    010002332H        0D301H    bcc.n    2 -> 1960
+.  1956    010002334H        0DF01H    svc      1
+.  1958    010002336H   <LineNo: 354>
+.  1960    010002338H        04904H    ldr      r1,[pc,#16] -> 1980 ; Global: 02002FCD0H
+.  1962    01000233AH        022C8H    movs     r2,#200
+.  1964    01000233CH        04350H    muls     r0,r2
+.  1966    01000233EH        01808H    adds     r0,r1,r0
+  END SetCurrentRegsOn;
+.  1968    010002340H        0A901H    add      r1,sp,#4
+.  1970    010002342H        07809H    ldrb     r1,[r1]
+.  1972    010002344H        022C7H    movs     r2,#199
+.  1974    010002346H        05481H    strb     r1,[r0,r2]
+.  1976    010002348H        0B002H    add      sp,#8
+.  1978    01000234AH        0BD00H    pop      { pc }
+.  1980    01000234CH   <Global: 02002FCD0H>
+
+
+  PROCEDURE* install(vectAddr: INTEGER; p: PROCEDURE);
+  BEGIN
+.  1984    010002350H        0B503H    push     { r0, r1, lr }
+    INCL(SYSTEM.VAL(SET, p), 0); (* thumb code *)
+.  1986    010002352H        09801H    ldr      r0,[sp,#4]
+.  1988    010002354H        02101H    movs     r1,#1
+.  1990    010002356H        04308H    orrs     r0,r1
+.  1992    010002358H        09001H    str      r0,[sp,#4]
+    SYSTEM.PUT(vectAddr, p)
+  END install;
+.  1994    01000235AH        09800H    ldr      r0,[sp]
+.  1996    01000235CH        09901H    ldr      r1,[sp,#4]
+.  1998    01000235EH        06001H    str      r1,[r0]
+.  2000    010002360H        0B002H    add      sp,#8
+.  2002    010002362H        0BD00H    pop      { pc }
+
+
+  PROCEDURE ledOnAndHalt(cid: INTEGER; er: ExceptionRec);
+  (* simplistic default handler *)
+  BEGIN
+.  2004    010002364H        0B507H    push     { r0, r1, r2, lr }
+    SYSTEM.PUT(LED.SET, ErrorLed);
+.  2006    010002366H        04803H    ldr      r0,[pc,#12] -> 2020 ; Const: 0D0000014H -805306348
+.  2008    010002368H        02119H    movs     r1,#25
+.  2010    01000236AH        06001H    str      r1,[r0]
+    REPEAT UNTIL FALSE (* HALT in any case *)
+  END ledOnAndHalt;
+.  2012    01000236CH        04280H    cmp      r0,r0
+.  2014    01000236EH        0D0FDH    beq.n    -6 -> 2012
+.  2016    010002370H        0B003H    add      sp,#12
+.  2018    010002372H        0BD00H    pop      { pc }
+.  2020    010002374H   <Const: 0D0000014H -805306348>
+
+
+  PROCEDURE init;
+    VAR i, addr, vectorTableBase, vectorTableTop: INTEGER;
+  BEGIN
+.  2024    010002378H        0B500H    push     { lr }
+.  2026    01000237AH        0B084H    sub      sp,#16
+    i := 0;
+.  2028    01000237CH        02000H    movs     r0,#0
+.  2030    01000237EH        09000H    str      r0,[sp]
+    WHILE i < NumCores DO
+.  2032    010002380H        09800H    ldr      r0,[sp]
+.  2034    010002382H        02802H    cmp      r0,#2
+.  2036    010002384H        0DB01H    blt.n    2 -> 2042
+.  2038    010002386H        0E059H    b        178 -> 2220
+.  2040    010002388H        046C0H    nop
+      (* mark top of main stack *)
+      SYSTEM.PUT(Memory.DataMem[i].stackStart, Memory.DataMem[i].stackStart);
+.  2042    01000238AH        09800H    ldr      r0,[sp]
+.  2044    01000238CH        02802H    cmp      r0,#2
+.  2046    01000238EH        0D301H    bcc.n    2 -> 2052
+.  2048    010002390H        0DF01H    svc      1
+.  2050    010002392H   <LineNo: 379>
+.  2052    010002394H        04954H    ldr      r1,[pc,#336] -> 2392 ; Global: 02002FF98H
+.  2054    010002396H          0C0H    lsls     r0,r0,#3
+.  2056    010002398H        01808H    adds     r0,r1,r0
+.  2058    01000239AH        09900H    ldr      r1,[sp]
+.  2060    01000239CH        02902H    cmp      r1,#2
+.  2062    01000239EH        0D301H    bcc.n    2 -> 2068
+.  2064    0100023A0H        0DF01H    svc      1
+.  2066    0100023A2H   <LineNo: 379>
+.  2068    0100023A4H        04A50H    ldr      r2,[pc,#320] -> 2392 ; Global: 02002FF98H
+.  2070    0100023A6H          0C9H    lsls     r1,r1,#3
+.  2072    0100023A8H        01851H    adds     r1,r2,r1
+.  2074    0100023AAH        06800H    ldr      r0,[r0]
+.  2076    0100023ACH        06809H    ldr      r1,[r1]
+.  2078    0100023AEH        06001H    str      r1,[r0]
+
+      (* set VTOR register to SRAM bottom *)
+      IF i = 0 THEN
+.  2080    0100023B0H        09800H    ldr      r0,[sp]
+.  2082    0100023B2H        02800H    cmp      r0,#0
+.  2084    0100023B4H        0D001H    beq.n    2 -> 2090
+.  2086    0100023B6H        0E004H    b        8 -> 2098
+.  2088    0100023B8H        046C0H    nop
+        (* VTOR of other cores will be set by core wake-up sequence *)
+        SYSTEM.PUT(MCU.SCB_VTOR, Memory.DataMem[0].dataStart)
+.  2090    0100023BAH        0484BH    ldr      r0,[pc,#300] -> 2392 ; Global: 02002FF98H
+      END;
+.  2092    0100023BCH        04944H    ldr      r1,[pc,#272] -> 2368 ; Const: 0E000ED08H -536810232
+.  2094    0100023BEH        06840H    ldr      r0,[r0,#4]
+.  2096    0100023C0H        06008H    str      r0,[r1]
+
+      (* populate vector table *)
+      vectorTableBase := Memory.DataMem[i].dataStart;
+.  2098    0100023C2H        09800H    ldr      r0,[sp]
+.  2100    0100023C4H        02802H    cmp      r0,#2
+.  2102    0100023C6H        0D301H    bcc.n    2 -> 2108
+.  2104    0100023C8H        0DF01H    svc      1
+.  2106    0100023CAH   <LineNo: 388>
+.  2108    0100023CCH        04946H    ldr      r1,[pc,#280] -> 2392 ; Global: 02002FF98H
+.  2110    0100023CEH          0C0H    lsls     r0,r0,#3
+.  2112    0100023D0H        01808H    adds     r0,r1,r0
+.  2114    0100023D2H        06840H    ldr      r0,[r0,#4]
+.  2116    0100023D4H        09002H    str      r0,[sp,#8]
+      vectorTableTop := vectorTableBase + MCU.VectorTableSize;
+.  2118    0100023D6H        09802H    ldr      r0,[sp,#8]
+.  2120    0100023D8H        030C0H    adds     r0,#192
+.  2122    0100023DAH        09003H    str      r0,[sp,#12]
+      install(vectorTableBase + MCU.NMIhandlerOffset, faultHandler);
+.  2124    0100023DCH        09802H    ldr      r0,[sp,#8]
+.  2126    0100023DEH        03008H    adds     r0,#8
+.  2128    0100023E0H        0493CH    ldr      r1,[pc,#240] -> 2372 ; Const: 0FFFFFD4EH -690
+.  2130    0100023E2H        04479H    add      r1,pc
+.  2132    0100023E4H    0F7FFFFB4H    bl.w     RuntimeErrors.install
+.  2136    0100023E8H        0E000H    b        0 -> 2140
+.  2138    0100023EAH   <LineNo: 390>
+      install(vectorTableBase + MCU.HardFaultHandlerOffset, faultHandler);
+.  2140    0100023ECH        09802H    ldr      r0,[sp,#8]
+.  2142    0100023EEH        0300CH    adds     r0,#12
+.  2144    0100023F0H        04939H    ldr      r1,[pc,#228] -> 2376 ; Const: 0FFFFFD3EH -706
+.  2146    0100023F2H        04479H    add      r1,pc
+.  2148    0100023F4H    0F7FFFFACH    bl.w     RuntimeErrors.install
+.  2152    0100023F8H        0E000H    b        0 -> 2156
+.  2154    0100023FAH   <LineNo: 391>
+      install(vectorTableBase + MCU.SVChandlerOffset, errorHandler);
+.  2156    0100023FCH        09802H    ldr      r0,[sp,#8]
+.  2158    0100023FEH        0302CH    adds     r0,#44
+.  2160    010002400H        04936H    ldr      r1,[pc,#216] -> 2380 ; Const: 0FFFFFB5AH -1190
+.  2162    010002402H        04479H    add      r1,pc
+.  2164    010002404H    0F7FFFFA4H    bl.w     RuntimeErrors.install
+.  2168    010002408H        0E000H    b        0 -> 2172
+.  2170    01000240AH   <LineNo: 392>
+      addr := vectorTableBase + MCU.MissingHandlerOffset;
+.  2172    01000240CH        09802H    ldr      r0,[sp,#8]
+.  2174    01000240EH        03038H    adds     r0,#56
+.  2176    010002410H        09001H    str      r0,[sp,#4]
+      WHILE addr < vectorTableTop DO
+.  2178    010002412H        09801H    ldr      r0,[sp,#4]
+.  2180    010002414H        09903H    ldr      r1,[sp,#12]
+.  2182    010002416H        04288H    cmp      r0,r1
+.  2184    010002418H        0DB01H    blt.n    2 -> 2190
+.  2186    01000241AH        0E00BH    b        22 -> 2212
+.  2188    01000241CH        046C0H    nop
+        install(addr, faultHandler); INC(addr, 4)
+.  2190    01000241EH        09801H    ldr      r0,[sp,#4]
+.  2192    010002420H        0492FH    ldr      r1,[pc,#188] -> 2384 ; Const: 0FFFFFD0EH -754
+.  2194    010002422H        04479H    add      r1,pc
+.  2196    010002424H    0F7FFFF94H    bl.w     RuntimeErrors.install
+.  2200    010002428H        0E000H    b        0 -> 2204
+.  2202    01000242AH   <LineNo: 395>
+      END;
+.  2204    01000242CH        09801H    ldr      r0,[sp,#4]
+.  2206    01000242EH        03004H    adds     r0,#4
+.  2208    010002430H        09001H    str      r0,[sp,#4]
+.  2210    010002432H        0E7EEH    b        -36 -> 2178
+      INC(i)
+    END;
+.  2212    010002434H        09800H    ldr      r0,[sp]
+.  2214    010002436H        03001H    adds     r0,#1
+.  2216    010002438H        09000H    str      r0,[sp]
+.  2218    01000243AH        0E7A1H    b        -190 -> 2032
+
+    (* default options *)
+    i := 0;
+.  2220    01000243CH        02000H    movs     r0,#0
+.  2222    01000243EH        09000H    str      r0,[sp]
+    WHILE i < NumCores DO
+.  2224    010002440H        09800H    ldr      r0,[sp]
+.  2226    010002442H        02802H    cmp      r0,#2
+.  2228    010002444H        0DB01H    blt.n    2 -> 2234
+.  2230    010002446H        0E041H    b        130 -> 2364
+.  2232    010002448H        046C0H    nop
+      exc[i].handleException := ledOnAndHalt;
+.  2234    01000244AH        09800H    ldr      r0,[sp]
+.  2236    01000244CH        02802H    cmp      r0,#2
+.  2238    01000244EH        0D301H    bcc.n    2 -> 2244
+.  2240    010002450H        0DF01H    svc      1
+.  2242    010002452H   <LineNo: 403>
+.  2244    010002454H        04925H    ldr      r1,[pc,#148] -> 2396 ; Global: 02002FCD0H
+.  2246    010002456H        022C8H    movs     r2,#200
+.  2248    010002458H        04350H    muls     r0,r2
+.  2250    01000245AH        01808H    adds     r0,r1,r0
+.  2252    01000245CH        04921H    ldr      r1,[pc,#132] -> 2388 ; Const: 0FFFFFF02H -254
+.  2254    01000245EH        04479H    add      r1,pc
+.  2256    010002460H        022C0H    movs     r2,#192
+.  2258    010002462H        05081H    str      r1,[r0,r2]
+      exc[i].haltOn := TRUE;
+.  2260    010002464H        09800H    ldr      r0,[sp]
+.  2262    010002466H        02802H    cmp      r0,#2
+.  2264    010002468H        0D301H    bcc.n    2 -> 2270
+.  2266    01000246AH        0DF01H    svc      1
+.  2268    01000246CH   <LineNo: 404>
+.  2270    01000246EH        0491FH    ldr      r1,[pc,#124] -> 2396 ; Global: 02002FCD0H
+.  2272    010002470H        022C8H    movs     r2,#200
+.  2274    010002472H        04350H    muls     r0,r2
+.  2276    010002474H        01808H    adds     r0,r1,r0
+.  2278    010002476H        02101H    movs     r1,#1
+.  2280    010002478H        022C4H    movs     r2,#196
+.  2282    01000247AH        05481H    strb     r1,[r0,r2]
+      exc[i].stackedRegsOn := TRUE;
+.  2284    01000247CH        09800H    ldr      r0,[sp]
+.  2286    01000247EH        02802H    cmp      r0,#2
+.  2288    010002480H        0D301H    bcc.n    2 -> 2294
+.  2290    010002482H        0DF01H    svc      1
+.  2292    010002484H   <LineNo: 405>
+.  2294    010002486H        04919H    ldr      r1,[pc,#100] -> 2396 ; Global: 02002FCD0H
+.  2296    010002488H        022C8H    movs     r2,#200
+.  2298    01000248AH        04350H    muls     r0,r2
+.  2300    01000248CH        01808H    adds     r0,r1,r0
+.  2302    01000248EH        02101H    movs     r1,#1
+.  2304    010002490H        022C6H    movs     r2,#198
+.  2306    010002492H        05481H    strb     r1,[r0,r2]
+      exc[i].currentRegsOn := TRUE;
+.  2308    010002494H        09800H    ldr      r0,[sp]
+.  2310    010002496H        02802H    cmp      r0,#2
+.  2312    010002498H        0D301H    bcc.n    2 -> 2318
+.  2314    01000249AH        0DF01H    svc      1
+.  2316    01000249CH   <LineNo: 406>
+.  2318    01000249EH        04913H    ldr      r1,[pc,#76] -> 2396 ; Global: 02002FCD0H
+.  2320    0100024A0H        022C8H    movs     r2,#200
+.  2322    0100024A2H        04350H    muls     r0,r2
+.  2324    0100024A4H        01808H    adds     r0,r1,r0
+.  2326    0100024A6H        02101H    movs     r1,#1
+.  2328    0100024A8H        022C7H    movs     r2,#199
+.  2330    0100024AAH        05481H    strb     r1,[r0,r2]
+      exc[i].stackTraceOn := TRUE;
+.  2332    0100024ACH        09800H    ldr      r0,[sp]
+.  2334    0100024AEH        02802H    cmp      r0,#2
+.  2336    0100024B0H        0D301H    bcc.n    2 -> 2342
+.  2338    0100024B2H        0DF01H    svc      1
+.  2340    0100024B4H   <LineNo: 407>
+.  2342    0100024B6H        0490DH    ldr      r1,[pc,#52] -> 2396 ; Global: 02002FCD0H
+.  2344    0100024B8H        022C8H    movs     r2,#200
+.  2346    0100024BAH        04350H    muls     r0,r2
+.  2348    0100024BCH        01808H    adds     r0,r1,r0
+.  2350    0100024BEH        02101H    movs     r1,#1
+.  2352    0100024C0H        022C5H    movs     r2,#197
+.  2354    0100024C2H        05481H    strb     r1,[r0,r2]
+      INC(i)
+    END;
+.  2356    0100024C4H        09800H    ldr      r0,[sp]
+.  2358    0100024C6H        03001H    adds     r0,#1
+.  2360    0100024C8H        09000H    str      r0,[sp]
+.  2362    0100024CAH        0E7B9H    b        -142 -> 2224
+  END init;
+.  2364    0100024CCH        0B004H    add      sp,#16
+.  2366    0100024CEH        0BD00H    pop      { pc }
+.  2368    0100024D0H   <Const: 0E000ED08H -536810232>
+.  2372    0100024D4H   <Const: 0FFFFFD4EH -690>
+.  2376    0100024D8H   <Const: 0FFFFFD3EH -706>
+.  2380    0100024DCH   <Const: 0FFFFFB5AH -1190>
+.  2384    0100024E0H   <Const: 0FFFFFD0EH -754>
+.  2388    0100024E4H   <Const: 0FFFFFF02H -254>
+.  2392    0100024E8H   <Global: 02002FF98H>
+.  2396    0100024ECH   <Global: 02002FCD0H>
+
+BEGIN
+.  2400    0100024F0H        0B500H    push     { lr }
+  init
+END RuntimeErrors.
+.  2402    0100024F2H    0F7FFFF41H    bl.w     RuntimeErrors.init
+.  2406    0100024F6H        0E000H    b        0 -> 2410
+.  2408    0100024F8H   <LineNo: 413>
+.  2410    0100024FAH        0BD00H    pop      { pc }

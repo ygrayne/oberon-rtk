@@ -1,0 +1,109 @@
+.     0  <Pad: 0>
+MODULE StartUp;
+(**
+  Oberon RTK Framework
+  Start-up control
+  * power-on state machine (hardware controlled part)
+  * reset controller (software controlled part)
+  Note: watchdog resets selecyion in 'Watchdog.mod'
+  --
+  MCU: Cortex-M0+ RP2040
+  --
+  See
+  * 'PSM-*' values in MCU2.mod for blocks to reset
+  * 'RESETS_*' values in MCU2.mod for subsytems to reset
+  --
+  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2;
+
+  (* power on state machine *)
+
+  PROCEDURE AwaitPowerOnResetDone*(which: INTEGER);
+    VAR x: SET;
+  BEGIN
+.     4     04H  0B501H          push     { r0, lr }
+.     6     06H  0B081H          sub      sp,#4
+    REPEAT
+      SYSTEM.GET(MCU.PSM_DONE, x)
+    UNTIL which IN x
+.     8     08H  04805H          ldr      r0,[pc,#20] -> 32
+.    10     0AH  06801H          ldr      r1,[r0]
+.    12     0CH  09100H          str      r1,[sp]
+  END AwaitPowerOnResetDone;
+.    14     0EH  09800H          ldr      r0,[sp]
+.    16    010H  09901H          ldr      r1,[sp,#4]
+.    18    012H  02201H          movs     r2,#1
+.    20    014H  0408AH          lsls     r2,r1
+.    22    016H  04210H          tst      r0,r2
+.    24    018H  0D0F6H          beq.n    -20 -> 8
+.    26    01AH  0B002H          add      sp,#8
+.    28    01CH  0BD00H          pop      { pc }
+.    30    01EH  046C0H          nop
+.    32  <Const: 04001000CH  04001000CH>
+
+  (* reset controller *)
+
+  PROCEDURE ReleaseReset*(devNo: INTEGER);
+  (* release the reset out of start-up *)
+    VAR x: SET;
+  BEGIN
+.    36    024H  0B501H          push     { r0, lr }
+.    38    026H  0B081H          sub      sp,#4
+    SYSTEM.GET(MCU.RESETS_DONE, x);
+.    40    028H  04809H          ldr      r0,[pc,#36] -> 80
+.    42    02AH  06801H          ldr      r1,[r0]
+.    44    02CH  09100H          str      r1,[sp]
+    IF ~(devNo IN x) THEN
+.    46    02EH  09800H          ldr      r0,[sp]
+.    48    030H  09901H          ldr      r1,[sp,#4]
+.    50    032H  02201H          movs     r2,#1
+.    52    034H  0408AH          lsls     r2,r1
+.    54    036H  04210H          tst      r0,r2
+.    56    038H  0D001H          beq.n    2 -> 62
+.    58    03AH  0E006H          b        12 -> 74
+.    60    03CH  046C0H          nop
+      SYSTEM.PUT(MCU.RESETS_RESET + MCU.ACLR, {devNo})
+.    62    03EH  09801H          ldr      r0,[sp,#4]
+.    64    040H  02101H          movs     r1,#1
+.    66    042H  04081H          lsls     r1,r0
+.    68    044H  04608H          mov      r0,r1
+    END
+.    70    046H  04903H          ldr      r1,[pc,#12] -> 84
+.    72    048H  06008H          str      r0,[r1]
+  END ReleaseReset;
+.    74    04AH  0B002H          add      sp,#8
+.    76    04CH  0BD00H          pop      { pc }
+.    78    04EH  046C0H          nop
+.    80  <Const: 04000C008H  04000C008H>
+.    84  <Const: 04000F000H  04000F000H>
+
+
+  PROCEDURE AwaitReleaseDone*(devNo: INTEGER);
+    VAR x: SET;
+  BEGIN
+.    88    058H  0B501H          push     { r0, lr }
+.    90    05AH  0B081H          sub      sp,#4
+    REPEAT
+      SYSTEM.GET(MCU.RESETS_DONE, x);
+.    92    05CH  04805H          ldr      r0,[pc,#20] -> 116
+.    94    05EH  06801H          ldr      r1,[r0]
+.    96    060H  09100H          str      r1,[sp]
+    UNTIL (devNo IN x)
+.    98    062H  09800H          ldr      r0,[sp]
+.   100    064H  09901H          ldr      r1,[sp,#4]
+.   102    066H  02201H          movs     r2,#1
+.   104    068H  0408AH          lsls     r2,r1
+.   106    06AH  04210H          tst      r0,r2
+  END AwaitReleaseDone;
+.   108    06CH  0D0F6H          beq.n    -20 -> 92
+.   110    06EH  0B002H          add      sp,#8
+.   112    070H  0BD00H          pop      { pc }
+.   114    072H  046C0H          nop
+.   116  <Const: 04000C008H  04000C008H>
+
+END StartUp.
+.   120    078H  0B500H          push     { lr }
+.   122    07AH  0BD00H          pop      { pc }

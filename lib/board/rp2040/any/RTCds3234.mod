@@ -15,7 +15,6 @@ MODULE RTCds3234;
 
   IMPORT SPIdev, SPI := SPIdata, GPIO, Errors;
 
-
   CONST
     (* peripheral register addresses *)
     TimeRegsAddr = 00H;
@@ -42,41 +41,23 @@ MODULE RTCds3234;
     RETURN (b DIV 10) * 16 + (b MOD 10)
   END encodeBCD;
 
-  (* workaround helpers for v9.1 *)
-  (* normally we could just use GPIO.Set({cs}) *)
-
-  PROCEDURE select(cs: INTEGER);
-    VAR mask: SET;
-  BEGIN
-    mask := {cs}; (* workaround v9.1 *)
-    GPIO.Clear(mask)
-  END select;
-
-
-  PROCEDURE deselect(cs: INTEGER);
-    VAR mask: SET;
-  BEGIN
-    mask := {cs}; (* workaround v9.1 *)
-    GPIO.Set(mask)
-  END deselect;
-
 
   PROCEDURE ReadRegisters*(addr: BYTE; VAR regValues: ARRAY OF BYTE; n: INTEGER);
   BEGIN
-    select(cs);
+    GPIO.Clear({cs});
     SPI.PutByte(spi, addr);
     SPI.GetBytes(spi, regValues, n);
-    deselect(cs)
+    GPIO.Set({cs})
   END ReadRegisters;
 
 
   PROCEDURE WriteRegisters*(addr: BYTE; regValues: ARRAY OF BYTE; n: INTEGER);
     CONST WriteEnable = 80H;
   BEGIN
-    select(cs);
+    GPIO.Clear({cs});
     SPI.PutByte(spi, addr + WriteEnable);
     SPI.PutBytes(spi, regValues, n);
-    deselect(cs)
+    GPIO.Set({cs})
   END WriteRegisters;
 
 

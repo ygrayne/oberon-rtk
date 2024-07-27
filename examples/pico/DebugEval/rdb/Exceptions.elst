@@ -1,0 +1,404 @@
+.     0    010005150H   <Pad: 0>
+MODULE Exceptions;
+(**
+  Oberon RTK Framework
+  Exception management
+  --
+  Interrupts (IRQ):
+  * IRQ 0 .. 26 are wired on the NVIC
+  * IRQ 27 .. 31 can be used for SW-triggered interrupts
+  * configure via NVIC
+  * IRQ0 = exception 16
+  --
+  System exceptions:
+  * SysTick: exception 15
+  * PendSV: exception 14
+  * SVC: exception 11
+  --
+  MCU: Cortex-M0+ RP2040, tested on Pico
+  --
+  Copyright (c) 2020-2024 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2, Errors;
+
+  CONST
+    (* IRQ numbers *)
+    TIMER_IRQ_0*    = MCU.NVIC_TIMER_IRQ_0;
+    TIMER_IRQ_1*    = MCU.NVIC_TIMER_IRQ_1;
+    TIMER_IRQ_2*    = MCU.NVIC_TIMER_IRQ_2;
+    TIMER_IRQ_3*    = MCU.NVIC_TIMER_IRQ_3;
+    PWM_IRQ_WRAP*   = MCU.NVIC_PWM_IRQ_WRAP;
+    USBCTRL_IRQ*    = MCU.NVIC_USBCTRL_IRQ;
+    XIP_IRQ*        = MCU.NVIC_XIP_IRQ;
+    PIO0_IRQ_0*     = MCU.NVIC_PIO0_IRQ_0;
+    PIO0_IRQ_1*     = MCU.NVIC_PIO0_IRQ_1;
+    PIO1_IRQ_0*     = MCU.NVIC_PIO1_IRQ_0;
+    PIO1_IRQ_1*     = MCU.NVIC_PIO1_IRQ_1;
+    DMA_IRQ_0*      = MCU.NVIC_DMA_IRQ_0; (* config via MCU.DMA_INTE0 *)
+    DMA_IRQ_1*      = MCU.NVIC_DMA_IRQ_1; (* config via MCU.DMA_INTE1 *)
+    IO_IRQ_BANK0*   = MCU.NVIC_IO_IRQ_BANK0;
+    IO_IRQ_QSPI*    = MCU.NVIC_IO_IRQ_QSPI;
+    SIO_IRQ_PROC0*  = MCU.NVIC_SIO_IRQ_PROC0;
+    SIO_IRQ_PROC1*  = MCU.NVIC_SIO_IRQ_PROC1;
+    CLOCKS_IRQ*     = MCU.NVIC_CLOCKS_IRQ;
+    SPI0_IRQ*       = MCU.NVIC_SPI0_IRQ;
+    SPI1_IRQ*       = MCU.NVIC_SPI1_IRQ;
+    UART0_IRQ*      = MCU.NVIC_UART0_IRQ;
+    UART1_IRQ*      = MCU.NVIC_UART1_IRQ;
+    ADC_IRQ_FIFO*   = MCU.NVIC_ADC_IRQ_FIFO;
+    I2C0_IRQ*       = MCU.NVIC_I2C0_IRQ;
+    I2C1_IRQ*       = MCU.NVIC_I2C1_IRQ;
+    RTC_IRQ*        = MCU.NVIC_RTC_IRQ;
+
+    WiredIrq* = {0 .. 25};
+    UnwiredIrq*= {26 .. 31};
+    AllIrq* = {0 .. 31};
+
+    SysExcNo* = {11, 14, 15};
+    SysExcSysTickNo* = 15;
+
+  (* IRQs, via NVIC *)
+
+  PROCEDURE EnableInt*(irqMask: SET);
+  BEGIN
+.     4    010005154H        0B501H    push     { r0, lr }
+    SYSTEM.PUT(MCU.M0PLUS_NVIC_ISER, irqMask)
+  END EnableInt;
+.     6    010005156H        04802H    ldr      r0,[pc,#8] -> 16 ; Const: 0E000E100H -536813312
+.     8    010005158H        09900H    ldr      r1,[sp]
+.    10    01000515AH        06001H    str      r1,[r0]
+.    12    01000515CH        0B001H    add      sp,#4
+.    14    01000515EH        0BD00H    pop      { pc }
+.    16    010005160H   <Const: 0E000E100H -536813312>
+
+
+  PROCEDURE GetEnabledInt*(VAR en: SET);
+  BEGIN
+.    20    010005164H        0B501H    push     { r0, lr }
+    SYSTEM.GET(MCU.M0PLUS_NVIC_ISER, en)
+  END GetEnabledInt;
+.    22    010005166H        04803H    ldr      r0,[pc,#12] -> 36 ; Const: 0E000E100H -536813312
+.    24    010005168H        06801H    ldr      r1,[r0]
+.    26    01000516AH        09A00H    ldr      r2,[sp]
+.    28    01000516CH        06011H    str      r1,[r2]
+.    30    01000516EH        0B001H    add      sp,#4
+.    32    010005170H        0BD00H    pop      { pc }
+.    34    010005172H        046C0H    nop
+.    36    010005174H   <Const: 0E000E100H -536813312>
+
+
+  PROCEDURE DisableInt*(irqMask: SET);
+  BEGIN
+.    40    010005178H        0B501H    push     { r0, lr }
+    SYSTEM.PUT(MCU.M0PLUS_NVIC_ICER, irqMask)
+  END DisableInt;
+.    42    01000517AH        04802H    ldr      r0,[pc,#8] -> 52 ; Const: 0E000E180H -536813184
+.    44    01000517CH        09900H    ldr      r1,[sp]
+.    46    01000517EH        06001H    str      r1,[r0]
+.    48    010005180H        0B001H    add      sp,#4
+.    50    010005182H        0BD00H    pop      { pc }
+.    52    010005184H   <Const: 0E000E180H -536813184>
+
+
+  PROCEDURE SetPendingInt*(irqMask: SET);
+  BEGIN
+.    56    010005188H        0B501H    push     { r0, lr }
+    SYSTEM.PUT(MCU.M0PLUS_NVIC_ISPR, irqMask)
+  END SetPendingInt;
+.    58    01000518AH        04802H    ldr      r0,[pc,#8] -> 68 ; Const: 0E000E200H -536813056
+.    60    01000518CH        09900H    ldr      r1,[sp]
+.    62    01000518EH        06001H    str      r1,[r0]
+.    64    010005190H        0B001H    add      sp,#4
+.    66    010005192H        0BD00H    pop      { pc }
+.    68    010005194H   <Const: 0E000E200H -536813056>
+
+
+  PROCEDURE GetPendingInt*(VAR pend: SET);
+  BEGIN
+.    72    010005198H        0B501H    push     { r0, lr }
+    SYSTEM.GET(MCU.M0PLUS_NVIC_ISPR, pend)
+  END GetPendingInt;
+.    74    01000519AH        04803H    ldr      r0,[pc,#12] -> 88 ; Const: 0E000E200H -536813056
+.    76    01000519CH        06801H    ldr      r1,[r0]
+.    78    01000519EH        09A00H    ldr      r2,[sp]
+.    80    0100051A0H        06011H    str      r1,[r2]
+.    82    0100051A2H        0B001H    add      sp,#4
+.    84    0100051A4H        0BD00H    pop      { pc }
+.    86    0100051A6H        046C0H    nop
+.    88    0100051A8H   <Const: 0E000E200H -536813056>
+
+
+  PROCEDURE ClearPendingInt*(irqMask: SET);
+  BEGIN
+.    92    0100051ACH        0B501H    push     { r0, lr }
+    SYSTEM.PUT(MCU.M0PLUS_NVIC_ICPR, irqMask)
+  END ClearPendingInt;
+.    94    0100051AEH        04802H    ldr      r0,[pc,#8] -> 104 ; Const: 0E000E280H -536812928
+.    96    0100051B0H        09900H    ldr      r1,[sp]
+.    98    0100051B2H        06001H    str      r1,[r0]
+.   100    0100051B4H        0B001H    add      sp,#4
+.   102    0100051B6H        0BD00H    pop      { pc }
+.   104    0100051B8H   <Const: 0E000E280H -536812928>
+
+
+  PROCEDURE SetIntPrio*(irqNo, prio: INTEGER);
+  (* prio: 0 to 3, 0 = highest *)
+    VAR addr, x: INTEGER;
+  BEGIN
+.   108    0100051BCH        0B503H    push     { r0, r1, lr }
+.   110    0100051BEH        0B082H    sub      sp,#8
+    addr := MCU.M0PLUS_NVIC_IPR + ((irqNo DIV 4) * 4);
+.   112    0100051C0H        09802H    ldr      r0,[sp,#8]
+.   114    0100051C2H        01080H    asrs     r0,r0,#2
+.   116    0100051C4H          080H    lsls     r0,r0,#2
+.   118    0100051C6H        0490AH    ldr      r1,[pc,#40] -> 160 ; Const: 0E000E400H -536812544
+.   120    0100051C8H        01840H    adds     r0,r0,r1
+.   122    0100051CAH        09000H    str      r0,[sp]
+    SYSTEM.GET(addr, x);
+.   124    0100051CCH        09800H    ldr      r0,[sp]
+.   126    0100051CEH        06801H    ldr      r1,[r0]
+.   128    0100051D0H        09101H    str      r1,[sp,#4]
+    x := x + LSL(LSL(prio, 6), (irqNo MOD 4) * 8);
+.   130    0100051D2H        09803H    ldr      r0,[sp,#12]
+.   132    0100051D4H         0180H    lsls     r0,r0,#6
+.   134    0100051D6H        09902H    ldr      r1,[sp,#8]
+.   136    0100051D8H         0789H    lsls     r1,r1,#30
+.   138    0100051DAH         0F89H    lsrs     r1,r1,#30
+.   140    0100051DCH          0C9H    lsls     r1,r1,#3
+.   142    0100051DEH        04088H    lsls     r0,r1
+.   144    0100051E0H        09901H    ldr      r1,[sp,#4]
+.   146    0100051E2H        01808H    adds     r0,r1,r0
+.   148    0100051E4H        09001H    str      r0,[sp,#4]
+    SYSTEM.PUT(addr, x)
+  END SetIntPrio;
+.   150    0100051E6H        09800H    ldr      r0,[sp]
+.   152    0100051E8H        09901H    ldr      r1,[sp,#4]
+.   154    0100051EAH        06001H    str      r1,[r0]
+.   156    0100051ECH        0B004H    add      sp,#16
+.   158    0100051EEH        0BD00H    pop      { pc }
+.   160    0100051F0H   <Const: 0E000E400H -536812544>
+
+
+  PROCEDURE GetIntPrio*(irqNo: INTEGER; VAR prio: INTEGER);
+  (* prio: 0 to 3, 0 - highest *)
+    VAR addr: INTEGER;
+  BEGIN
+.   164    0100051F4H        0B503H    push     { r0, r1, lr }
+.   166    0100051F6H        0B081H    sub      sp,#4
+    addr := MCU.M0PLUS_NVIC_IPR + ((irqNo DIV 4) * 4);
+.   168    0100051F8H        09801H    ldr      r0,[sp,#4]
+.   170    0100051FAH        01080H    asrs     r0,r0,#2
+.   172    0100051FCH          080H    lsls     r0,r0,#2
+.   174    0100051FEH        04904H    ldr      r1,[pc,#16] -> 192 ; Const: 0E000E400H -536812544
+.   176    010005200H        01840H    adds     r0,r0,r1
+.   178    010005202H        09000H    str      r0,[sp]
+    SYSTEM.GET(addr, prio)
+  END GetIntPrio;
+.   180    010005204H        09800H    ldr      r0,[sp]
+.   182    010005206H        06801H    ldr      r1,[r0]
+.   184    010005208H        09A02H    ldr      r2,[sp,#8]
+.   186    01000520AH        06011H    str      r1,[r2]
+.   188    01000520CH        0B003H    add      sp,#12
+.   190    01000520EH        0BD00H    pop      { pc }
+.   192    010005210H   <Const: 0E000E400H -536812544>
+
+
+  PROCEDURE InstallIntHandler*(irqNo: INTEGER; handler: PROCEDURE);
+    VAR vectAddr, vtor: INTEGER;
+  BEGIN
+.   196    010005214H        0B503H    push     { r0, r1, lr }
+.   198    010005216H        0B082H    sub      sp,#8
+    SYSTEM.GET(MCU.M0PLUS_VTOR, vtor);
+.   200    010005218H        04808H    ldr      r0,[pc,#32] -> 236 ; Const: 0E000ED08H -536810232
+.   202    01000521AH        06801H    ldr      r1,[r0]
+.   204    01000521CH        09101H    str      r1,[sp,#4]
+    vectAddr := vtor + MCU.IrqZeroHandlerOffset + (4 * irqNo);
+.   206    01000521EH        09801H    ldr      r0,[sp,#4]
+.   208    010005220H        03040H    adds     r0,#64
+.   210    010005222H        09902H    ldr      r1,[sp,#8]
+.   212    010005224H          089H    lsls     r1,r1,#2
+.   214    010005226H        01840H    adds     r0,r0,r1
+.   216    010005228H        09000H    str      r0,[sp]
+    INCL(SYSTEM.VAL(SET, handler), 0); (* thumb code *)
+.   218    01000522AH        09803H    ldr      r0,[sp,#12]
+.   220    01000522CH        02101H    movs     r1,#1
+.   222    01000522EH        04308H    orrs     r0,r1
+.   224    010005230H        09003H    str      r0,[sp,#12]
+    SYSTEM.PUT(vectAddr, handler)
+  END InstallIntHandler;
+.   226    010005232H        09800H    ldr      r0,[sp]
+.   228    010005234H        09903H    ldr      r1,[sp,#12]
+.   230    010005236H        06001H    str      r1,[r0]
+.   232    010005238H        0B004H    add      sp,#16
+.   234    01000523AH        0BD00H    pop      { pc }
+.   236    01000523CH   <Const: 0E000ED08H -536810232>
+
+  (* system handlers *)
+
+  PROCEDURE SetSysExcPrio*(excNo, prio: INTEGER);
+  (* prio: 0 to 3, 0 = highest *)
+    VAR addr, x: INTEGER;
+  BEGIN
+.   240    010005240H        0B503H    push     { r0, r1, lr }
+.   242    010005242H        0B082H    sub      sp,#8
+    ASSERT(excNo IN SysExcNo, Errors.PreCond);
+.   244    010005244H        02019H    movs     r0,#25
+.   246    010005246H         02C0H    lsls     r0,r0,#11
+.   248    010005248H        09902H    ldr      r1,[sp,#8]
+.   250    01000524AH        02201H    movs     r2,#1
+.   252    01000524CH        0408AH    lsls     r2,r1
+.   254    01000524EH        04210H    tst      r0,r2
+.   256    010005250H        0D101H    bne.n    2 -> 262
+.   258    010005252H        0DF65H    svc      101
+.   260    010005254H   <LineNo: 134>
+    addr := MCU.M0PLUS_SHPR - 04H + (excNo DIV 4) * 4;
+.   262    010005256H        09802H    ldr      r0,[sp,#8]
+.   264    010005258H        01080H    asrs     r0,r0,#2
+.   266    01000525AH          080H    lsls     r0,r0,#2
+.   268    01000525CH        0490AH    ldr      r1,[pc,#40] -> 312 ; Const: 0E000ED14H -536810220
+.   270    01000525EH        01840H    adds     r0,r0,r1
+.   272    010005260H        09000H    str      r0,[sp]
+    SYSTEM.GET(addr, x);
+.   274    010005262H        09800H    ldr      r0,[sp]
+.   276    010005264H        06801H    ldr      r1,[r0]
+.   278    010005266H        09101H    str      r1,[sp,#4]
+    x := x + LSL(LSL(prio, 6), (excNo MOD 4) * 8);
+.   280    010005268H        09803H    ldr      r0,[sp,#12]
+.   282    01000526AH         0180H    lsls     r0,r0,#6
+.   284    01000526CH        09902H    ldr      r1,[sp,#8]
+.   286    01000526EH         0789H    lsls     r1,r1,#30
+.   288    010005270H         0F89H    lsrs     r1,r1,#30
+.   290    010005272H          0C9H    lsls     r1,r1,#3
+.   292    010005274H        04088H    lsls     r0,r1
+.   294    010005276H        09901H    ldr      r1,[sp,#4]
+.   296    010005278H        01808H    adds     r0,r1,r0
+.   298    01000527AH        09001H    str      r0,[sp,#4]
+    SYSTEM.PUT(addr, x)
+  END SetSysExcPrio;
+.   300    01000527CH        09800H    ldr      r0,[sp]
+.   302    01000527EH        09901H    ldr      r1,[sp,#4]
+.   304    010005280H        06001H    str      r1,[r0]
+.   306    010005282H        0B004H    add      sp,#16
+.   308    010005284H        0BD00H    pop      { pc }
+.   310    010005286H        046C0H    nop
+.   312    010005288H   <Const: 0E000ED14H -536810220>
+
+
+  PROCEDURE GetSysExcPrio*(excNo: INTEGER; VAR prio: INTEGER);
+    VAR addr: INTEGER;
+  BEGIN
+.   316    01000528CH        0B503H    push     { r0, r1, lr }
+.   318    01000528EH        0B081H    sub      sp,#4
+    ASSERT(excNo IN SysExcNo, Errors.PreCond);
+.   320    010005290H        02019H    movs     r0,#25
+.   322    010005292H         02C0H    lsls     r0,r0,#11
+.   324    010005294H        09901H    ldr      r1,[sp,#4]
+.   326    010005296H        02201H    movs     r2,#1
+.   328    010005298H        0408AH    lsls     r2,r1
+.   330    01000529AH        04210H    tst      r0,r2
+.   332    01000529CH        0D101H    bne.n    2 -> 338
+.   334    01000529EH        0DF65H    svc      101
+.   336    0100052A0H   <LineNo: 145>
+    addr := MCU.M0PLUS_SHPR - 04H + (excNo DIV 4) * 4;
+.   338    0100052A2H        09801H    ldr      r0,[sp,#4]
+.   340    0100052A4H        01080H    asrs     r0,r0,#2
+.   342    0100052A6H          080H    lsls     r0,r0,#2
+.   344    0100052A8H        04904H    ldr      r1,[pc,#16] -> 364 ; Const: 0E000ED14H -536810220
+.   346    0100052AAH        01840H    adds     r0,r0,r1
+.   348    0100052ACH        09000H    str      r0,[sp]
+    SYSTEM.GET(addr, prio);
+.   350    0100052AEH        09800H    ldr      r0,[sp]
+.   352    0100052B0H        06801H    ldr      r1,[r0]
+.   354    0100052B2H        09A02H    ldr      r2,[sp,#8]
+.   356    0100052B4H        06011H    str      r1,[r2]
+  END GetSysExcPrio;
+.   358    0100052B6H        0B003H    add      sp,#12
+.   360    0100052B8H        0BD00H    pop      { pc }
+.   362    0100052BAH        046C0H    nop
+.   364    0100052BCH   <Const: 0E000ED14H -536810220>
+
+
+  PROCEDURE InstallExcHandler*(vectOffset: INTEGER; handler: PROCEDURE);
+    VAR vtor, vectAddr: INTEGER;
+  BEGIN
+.   368    0100052C0H        0B503H    push     { r0, r1, lr }
+.   370    0100052C2H        0B082H    sub      sp,#8
+    SYSTEM.GET(MCU.M0PLUS_VTOR, vtor);
+.   372    0100052C4H        04807H    ldr      r0,[pc,#28] -> 404 ; Const: 0E000ED08H -536810232
+.   374    0100052C6H        06801H    ldr      r1,[r0]
+.   376    0100052C8H        09100H    str      r1,[sp]
+    vectAddr := vtor + vectOffset;
+.   378    0100052CAH        09800H    ldr      r0,[sp]
+.   380    0100052CCH        09902H    ldr      r1,[sp,#8]
+.   382    0100052CEH        01840H    adds     r0,r0,r1
+.   384    0100052D0H        09001H    str      r0,[sp,#4]
+    INCL(SYSTEM.VAL(SET, handler), 0); (* thumb code *)
+.   386    0100052D2H        09803H    ldr      r0,[sp,#12]
+.   388    0100052D4H        02101H    movs     r1,#1
+.   390    0100052D6H        04308H    orrs     r0,r1
+.   392    0100052D8H        09003H    str      r0,[sp,#12]
+    SYSTEM.PUT(vectAddr, handler)
+  END InstallExcHandler;
+.   394    0100052DAH        09801H    ldr      r0,[sp,#4]
+.   396    0100052DCH        09903H    ldr      r1,[sp,#12]
+.   398    0100052DEH        06001H    str      r1,[r0]
+.   400    0100052E0H        0B004H    add      sp,#16
+.   402    0100052E2H        0BD00H    pop      { pc }
+.   404    0100052E4H   <Const: 0E000ED08H -536810232>
+
+
+  (* NMI *)
+
+  PROCEDURE SetNMI*(cid: INTEGER; irqMask: SET);
+  BEGIN
+.   408    0100052E8H        0B503H    push     { r0, r1, lr }
+    ASSERT(cid IN {0 .. 1}, Errors.PreCond);
+.   410    0100052EAH        02003H    movs     r0,#3
+.   412    0100052ECH        09900H    ldr      r1,[sp]
+.   414    0100052EEH        02201H    movs     r2,#1
+.   416    0100052F0H        0408AH    lsls     r2,r1
+.   418    0100052F2H        04210H    tst      r0,r2
+.   420    0100052F4H        0D101H    bne.n    2 -> 426
+.   422    0100052F6H        0DF65H    svc      101
+.   424    0100052F8H   <LineNo: 165>
+    CASE cid OF
+      0: SYSTEM.PUT(MCU.SYSCFG_PROC0_NMI_MASK, irqMask)
+.   426    0100052FAH        09800H    ldr      r0,[sp]
+.   428    0100052FCH        04601H    mov      r1,r0
+.   430    0100052FEH        046C0H    nop
+.   432    010005300H        02901H    cmp      r1,#1
+.   434    010005302H        0DD01H    ble.n    2 -> 440
+.   436    010005304H        0DF04H    svc      4
+.   438    010005306H   <LineNo: 166>
+.   440    010005308H          049H    lsls     r1,r1,#1
+.   442    01000530AH        046C0H    nop
+.   444    01000530CH        04A01H    ldr      r2,[pc,#4] -> 452 ; Const: 019H 25
+.   446    01000530EH        01852H    adds     r2,r2,r1
+.   448    010005310H        0447AH    add      r2,pc
+.   450    010005312H        04710H    bx       r2
+.   452    010005314H   <Const: 019H 25>
+    | 1: SYSTEM.PUT(MCU.SYSCFG_PROC1_NMI_MASK, irqMask)
+.   456    010005318H        04806H    ldr      r0,[pc,#24] -> 484 ; Const: 040004000H 1073758208
+.   458    01000531AH        09901H    ldr      r1,[sp,#4]
+.   460    01000531CH        06001H    str      r1,[r0]
+.   462    01000531EH        0E007H    b        14 -> 480
+.   464    010005320H        046C0H    nop
+    END
+.   466    010005322H        04805H    ldr      r0,[pc,#20] -> 488 ; Const: 040004004H 1073758212
+.   468    010005324H        09901H    ldr      r1,[sp,#4]
+.   470    010005326H        06001H    str      r1,[r0]
+.   472    010005328H        0E002H    b        4 -> 480
+.   474    01000532AH        046C0H    nop
+  END SetNMI;
+.   476    01000532CH        0E7F4H    b        -24 -> 456
+.   478    01000532EH        0E7F8H    b        -16 -> 466
+.   480    010005330H        0B002H    add      sp,#8
+.   482    010005332H        0BD00H    pop      { pc }
+.   484    010005334H   <Const: 040004000H 1073758208>
+.   488    010005338H   <Const: 040004004H 1073758212>
+
+END Exceptions.
+.   492    01000533CH        0B500H    push     { lr }
+.   494    01000533EH        0BD00H    pop      { pc }

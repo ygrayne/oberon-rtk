@@ -75,10 +75,8 @@ MODULE Alarms;
 
 
   PROCEDURE Disarm*(dev: Device);
-    VAR en: SET;
   BEGIN
-    en := {dev.alarmNo}; (* compiler issue workaround v9.1 *)
-    SYSTEM.PUT(MCU.TIMER_ARMED + MCU.ASET, en) (* atomic *)
+    SYSTEM.PUT(MCU.TIMER_ARMED + MCU.ASET, {dev.alarmNo}) (* atomic *)
   END Disarm;
 
 
@@ -91,10 +89,8 @@ MODULE Alarms;
 
 
   PROCEDURE DeassertInt*(dev: Device);
-    VAR en: SET;
   BEGIN
-    en := {dev.alarmNo}; (* compiler issue workaround v9.1 *)
-    SYSTEM.PUT(MCU.TIMER_INTR + MCU.ACLR, en)  (* atomic *)
+    SYSTEM.PUT(MCU.TIMER_INTR + MCU.ACLR, {dev.alarmNo})  (* atomic *)
   END DeassertInt;
 
 
@@ -102,8 +98,7 @@ MODULE Alarms;
   (* must not change int prio while enabled *)
     VAR en: SET;
   BEGIN
-    en := {dev.alarmNo}; (* compiler issue workaround v9.1 *)
-    SYSTEM.PUT(MCU.TIMER_INTE + MCU.ASET, en);
+    SYSTEM.PUT(MCU.TIMER_INTE + MCU.ASET, {dev.alarmNo});
     DeassertInt(dev);
     en := {dev.intNo};
     Exceptions.ClearPendingInt(en);
@@ -115,10 +110,9 @@ MODULE Alarms;
   PROCEDURE Disable*(dev: Device);
     VAR en: SET;
   BEGIN
-    en := {dev.alarmNo}; (* compiler issue workaround v9.1 *)
-    SYSTEM.PUT(MCU.TIMER_INTE + MCU.ACLR, en);
+    SYSTEM.PUT(MCU.TIMER_INTE + MCU.ACLR, {dev.alarmNo});
     DeassertInt(dev);
-    en := {dev.intNo}; (* compiler issue workaround v9.1 *)
+    en := {dev.intNo};
     Exceptions.ClearPendingInt(en);
     Exceptions.DisableInt(en)
   END Disable;

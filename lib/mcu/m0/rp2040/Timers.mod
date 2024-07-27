@@ -52,18 +52,14 @@ MODULE Timers;
 
 
   PROCEDURE EnableAlarmInt*(alarmNo: INTEGER);
-    VAR en: SET;
   BEGIN
-    en := {alarmNo}; (* compiler issue workaround v9.1 *)
-    SYSTEM.PUT(MCU.TIMER_INTE + MCU.ASET, en)
+    SYSTEM.PUT(MCU.TIMER_INTE + MCU.ASET, {alarmNo})
   END EnableAlarmInt;
 
 
   PROCEDURE DeassertAlarmInt*(alarmNo: INTEGER);
-    VAR en: SET;
   BEGIN
-    en := {alarmNo}; (* compiler issue workaround v9.1 *)
-    SYSTEM.PUT(MCU.TIMER_INTR + MCU.ACLR, en)
+    SYSTEM.PUT(MCU.TIMER_INTR + MCU.ACLR, {alarmNo})
   END DeassertAlarmInt;
 
 

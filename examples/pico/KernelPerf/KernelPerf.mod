@@ -27,7 +27,7 @@ MODULE KernelPerf;
     TestString40 = "1234567890123456789012345678901234567890";
     TestString50 = "12345678901234567890123456789012345678901234567890";
 
-    TestCase = 12;
+    TestCase = 0;
 
     ThreadRunningPinNo = 16;
     Th0RunningPioNo = 19;

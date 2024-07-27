@@ -1,0 +1,531 @@
+.     0  <Pad: 0>
+MODULE Clocks;
+(**
+  Oberon RTK Framework
+  Clocks:
+  * initialisation at start-up (auto)
+  * clock monitor on pin 21
+  * clock-gating: enabling and disabling of specific clocks for power-savings
+  * more to come: resus, freq counters
+  Remark: maybe split the clock init from other functions, so these can
+  only be loaded when needed.
+  --
+  MCU: Cortex-M0+ RP2040, tested on Pico
+  Datasheet: 2.15.7, p195
+  --
+  Current configuration:
+  * clk_sys: 125 Mhz
+  * clk_ref: 48 Mhz
+  * clk_peri: 48 Mhz
+  * clk_tick: 1 Mhz
+  --
+  Run 'python -m vcocalc -h' for PLL calculations.
+  --
+  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2, GPIO, StartUp;
+
+  CONST
+    (* CLK_GPOUT0_CTRL *)
+    PLLsys* = 00H; (* reset value *)
+    PLLusb* = 03H;
+    ROSC*   = 04H;
+    XOSC*   = 05H;
+    ClkSys* = 06H;
+    ClkUSB* = 07H;
+    ClkADC* = 08H;
+    ClkRTC* = 09H;
+    ClkRef* = 0AH;
+
+    (* XOSC_CTRL[23:12] *)
+    XOSC_CTRL_DISABLE* = 0D1EH;
+    XOSC_CTRL_ENABLE*  = 0FABH;
+
+    XOSC_STATUS_STABLE = 31;
+
+    PLL_SYS_PWR_VCOPD = 5;
+    PLL_SYS_PWR_POSTDIVPD = 3;
+    PLL_SYS_PWR_PD = 0;
+
+    PLL_USB_PWR_VCOPD = 5;
+    PLL_USB_PWR_POSTDIVPD = 3;
+    PLL_USB_PWR_PD = 0;
+
+    PLL_SYS_CS_LOCK = 31;
+    PLL_USB_CS_LOCK = 31;
+
+    CLK_GPOUT0_CTRL_ENABLE = 11;
+    CLK_PERI_CTRL_ENABLE = 11;
+
+
+  (* clk signal external monitoring *)
+  (* oscilloscopes rock! *)
+
+  PROCEDURE Monitor*(which: INTEGER);
+  (* on pin 21 using CLOCK GPOUT0 *)
+    CONST Pin = 21;
+    VAR x: INTEGER;
+  BEGIN
+.     4     04H  0B501H          push     { r0, lr }
+.     6     06H  0B081H          sub      sp,#4
+    (* set up clock GPOUT0 *)
+    x := 0;
+.     8     08H  02000H          movs     r0,#0
+.    10     0AH  09000H          str      r0,[sp]
+    BFI(x, 8, 5, which);
+.    12     0CH  09801H          ldr      r0,[sp,#4]
+.    14     0EH  04669H          mov      r1,sp
+.    16    010H  0680AH          ldr      r2,[r1]
+.    18    012H  04B0AH          ldr      r3,[pc,#40] -> 60
+.    20    014H  0401AH          ands     r2,r3
+.    22    016H  00140H          lsls     r0,r0,#5
+.    24    018H  04302H          orrs     r2,r0
+.    26    01AH  09200H          str      r2,[sp]
+    SYSTEM.PUT(MCU.CLK_GPOUT0_CTRL, x);
+.    28    01CH  04808H          ldr      r0,[pc,#32] -> 64
+.    30    01EH  09900H          ldr      r1,[sp]
+.    32    020H  06001H          str      r1,[r0]
+    SYSTEM.PUT(MCU.CLK_GPOUT0_CTRL + MCU.ASET, {CLK_GPOUT0_CTRL_ENABLE});
+.    34    022H  04808H          ldr      r0,[pc,#32] -> 68
+.    36    024H  02101H          movs     r1,#1
+.    38    026H  002C9H          lsls     r1,r1,#11
+.    40    028H  06001H          str      r1,[r0]
+    GPIO.SetFunction(Pin, GPIO.Fclk)
+.    42    02AH  02015H          movs     r0,#21
+.    44    02CH  02108H          movs     r1,#8
+  END Monitor;
+.    46    02EH  004020000H      bl.w     Ext Proc #2
+.    50    032H  0E000H          b        0 -> 54
+.    52  <LineNo: 75>
+.    54    036H  0B002H          add      sp,#8
+.    56    038H  0BD00H          pop      { pc }
+.    58    03AH  046C0H          nop
+.    60  <Const: 0FFFFFE1FH  -481>
+.    64  <Const: 040008000H  040008000H>
+.    68  <Const: 04000A000H  04000A000H>
+
+
+  (* clock gating *)
+  (* note: all clocks are enabled upon reset *)
+
+  PROCEDURE EnableClockWake*(en0, en1: SET);
+  BEGIN
+.    72    048H  0B503H          push     { r0, r1, lr }
+    SYSTEM.PUT(MCU.CLK_WAKE_EN0 + MCU.ASET, en0);
+.    74    04AH  04804H          ldr      r0,[pc,#16] -> 92
+.    76    04CH  09900H          ldr      r1,[sp]
+.    78    04EH  06001H          str      r1,[r0]
+    SYSTEM.PUT(MCU.CLK_WAKE_EN1 + MCU.ASET, en1)
+  END EnableClockWake;
+.    80    050H  04803H          ldr      r0,[pc,#12] -> 96
+.    82    052H  09901H          ldr      r1,[sp,#4]
+.    84    054H  06001H          str      r1,[r0]
+.    86    056H  0B002H          add      sp,#8
+.    88    058H  0BD00H          pop      { pc }
+.    90    05AH  046C0H          nop
+.    92  <Const: 04000A0A0H  04000A0A0H>
+.    96  <Const: 04000A0A4H  04000A0A4H>
+
+  PROCEDURE DisableClockWake*(en0, en1: SET);
+  BEGIN
+.   100    064H  0B503H          push     { r0, r1, lr }
+    SYSTEM.PUT(MCU.CLK_WAKE_EN0 + MCU.ACLR, en0);
+.   102    066H  04804H          ldr      r0,[pc,#16] -> 120
+.   104    068H  09900H          ldr      r1,[sp]
+.   106    06AH  06001H          str      r1,[r0]
+    SYSTEM.PUT(MCU.CLK_WAKE_EN1 + MCU.ACLR, en1)
+  END DisableClockWake;
+.   108    06CH  04803H          ldr      r0,[pc,#12] -> 124
+.   110    06EH  09901H          ldr      r1,[sp,#4]
+.   112    070H  06001H          str      r1,[r0]
+.   114    072H  0B002H          add      sp,#8
+.   116    074H  0BD00H          pop      { pc }
+.   118    076H  046C0H          nop
+.   120  <Const: 04000B0A0H  04000B0A0H>
+.   124  <Const: 04000B0A4H  04000B0A4H>
+
+  PROCEDURE EnableClockSleep*(en0, en1: SET);
+  BEGIN
+.   128    080H  0B503H          push     { r0, r1, lr }
+    SYSTEM.PUT(MCU.CLK_SLEEP_EN0 + MCU.ASET, en0);
+.   130    082H  04804H          ldr      r0,[pc,#16] -> 148
+.   132    084H  09900H          ldr      r1,[sp]
+.   134    086H  06001H          str      r1,[r0]
+    SYSTEM.PUT(MCU.CLK_SLEEP_EN1 + MCU.ASET, en1)
+  END EnableClockSleep;
+.   136    088H  04803H          ldr      r0,[pc,#12] -> 152
+.   138    08AH  09901H          ldr      r1,[sp,#4]
+.   140    08CH  06001H          str      r1,[r0]
+.   142    08EH  0B002H          add      sp,#8
+.   144    090H  0BD00H          pop      { pc }
+.   146    092H  046C0H          nop
+.   148  <Const: 04000A0A8H  04000A0A8H>
+.   152  <Const: 04000A0ACH  04000A0ACH>
+
+  PROCEDURE DisableClockSleep*(en0, en1: SET);
+  BEGIN
+.   156    09CH  0B503H          push     { r0, r1, lr }
+    SYSTEM.PUT(MCU.CLK_SLEEP_EN0 + MCU.ACLR, en0);
+.   158    09EH  04804H          ldr      r0,[pc,#16] -> 176
+.   160    0A0H  09900H          ldr      r1,[sp]
+.   162    0A2H  06001H          str      r1,[r0]
+    SYSTEM.PUT(MCU.CLK_SLEEP_EN1 + MCU.ACLR, en1)
+  END DisableClockSleep;
+.   164    0A4H  04803H          ldr      r0,[pc,#12] -> 180
+.   166    0A6H  09901H          ldr      r1,[sp,#4]
+.   168    0A8H  06001H          str      r1,[r0]
+.   170    0AAH  0B002H          add      sp,#8
+.   172    0ACH  0BD00H          pop      { pc }
+.   174    0AEH  046C0H          nop
+.   176  <Const: 04000B0A8H  04000B0A8H>
+.   180  <Const: 04000B0ACH  04000B0ACH>
+
+  PROCEDURE GetEnabled*(VAR en0, en1: SET);
+  BEGIN
+.   184    0B8H  0B503H          push     { r0, r1, lr }
+    SYSTEM.GET(MCU.CLK_ENABLED0, en0);
+.   186    0BAH  04805H          ldr      r0,[pc,#20] -> 208
+.   188    0BCH  06801H          ldr      r1,[r0]
+.   190    0BEH  09A00H          ldr      r2,[sp]
+.   192    0C0H  06011H          str      r1,[r2]
+    SYSTEM.GET(MCU.CLK_ENABLED1, en1)
+  END GetEnabled;
+.   194    0C2H  04804H          ldr      r0,[pc,#16] -> 212
+.   196    0C4H  06801H          ldr      r1,[r0]
+.   198    0C6H  09A01H          ldr      r2,[sp,#4]
+.   200    0C8H  06011H          str      r1,[r2]
+.   202    0CAH  0B002H          add      sp,#8
+.   204    0CCH  0BD00H          pop      { pc }
+.   206    0CEH  046C0H          nop
+.   208  <Const: 0400080B0H  0400080B0H>
+.   212  <Const: 0400080B4H  0400080B4H>
+
+  (* start-up *)
+
+  PROCEDURE startXOSC;
+    VAR x: INTEGER;
+  BEGIN
+.   216    0D8H  0B500H          push     { lr }
+.   218    0DAH  0B081H          sub      sp,#4
+    (* ensure register accessibility *)
+    StartUp.AwaitPowerOnResetDone(MCU.PSM_XOSC);
+.   220    0DCH  02001H          movs     r0,#1
+.   222    0DEH  004010000H      bl.w     Ext Proc #1
+.   226    0E2H  0E000H          b        0 -> 230
+.   228  <LineNo: 118>
+    (* set start-up delay *)
+    SYSTEM.PUT(MCU.XOSC_STARTUP, 94); (* about 2 ms *)
+.   230    0E6H  0480BH          ldr      r0,[pc,#44] -> 276
+.   232    0E8H  0215EH          movs     r1,#94
+.   234    0EAH  06001H          str      r1,[r0]
+    (* enable *)
+    SYSTEM.GET(MCU.XOSC_CTRL, x);
+.   236    0ECH  0480AH          ldr      r0,[pc,#40] -> 280
+.   238    0EEH  06801H          ldr      r1,[r0]
+.   240    0F0H  09100H          str      r1,[sp]
+    BFI(x, 23, 12, XOSC_CTRL_ENABLE);
+.   242    0F2H  0480AH          ldr      r0,[pc,#40] -> 284
+.   244    0F4H  04669H          mov      r1,sp
+.   246    0F6H  0680AH          ldr      r2,[r1]
+.   248    0F8H  04B09H          ldr      r3,[pc,#36] -> 288
+.   250    0FAH  0401AH          ands     r2,r3
+.   252    0FCH  00300H          lsls     r0,r0,#12
+.   254    0FEH  04302H          orrs     r2,r0
+.   256   0100H  09200H          str      r2,[sp]
+    SYSTEM.PUT(MCU.XOSC_CTRL, x);
+.   258   0102H  04805H          ldr      r0,[pc,#20] -> 280
+.   260   0104H  09900H          ldr      r1,[sp]
+.   262   0106H  06001H          str      r1,[r0]
+    (* wait for osc to stabilize *)
+    REPEAT UNTIL SYSTEM.BIT(MCU.XOSC_STATUS, XOSC_STATUS_STABLE)
+  END startXOSC;
+.   264   0108H  04806H          ldr      r0,[pc,#24] -> 292
+.   266   010AH  06801H          ldr      r1,[r0]
+.   268   010CH  00009H          movs     r1,r1
+.   270   010EH  0D5FBH          bpl.n    -10 -> 264
+.   272   0110H  0B001H          add      sp,#4
+.   274   0112H  0BD00H          pop      { pc }
+.   276  <Const: 04002400CH  04002400CH>
+.   280  <Const: 040024000H  040024000H>
+.   284  <Const: 000000FABH  4011>
+.   288  <Const: 0FF000FFFH  -16773121>
+.   292  <Const: 040024004H  040024004H>
+
+
+  PROCEDURE startSysPLL;
+  (* at 48 MHz *)
+    VAR x: INTEGER;
+  BEGIN
+.   296   0128H  0B500H          push     { lr }
+.   298   012AH  0B081H          sub      sp,#4
+    StartUp.ReleaseReset(MCU.RESETS_PLL_SYS);
+.   300   012CH  0200CH          movs     r0,#12
+.   302   012EH  00402006FH      bl.w     Ext Proc #2
+.   306   0132H  0E000H          b        0 -> 310
+.   308  <LineNo: 134>
+    StartUp.AwaitReleaseDone(MCU.RESETS_PLL_SYS);
+.   310   0136H  0200CH          movs     r0,#12
+.   312   0138H  004030097H      bl.w     Ext Proc #3
+.   316   013CH  0E000H          b        0 -> 320
+.   318  <LineNo: 135>
+    (* set freq 125 MHz *)
+    SYSTEM.PUT(MCU.PLL_SYS_FBDIV_INT, 125);
+.   320   0140H  04811H          ldr      r0,[pc,#68] -> 392
+.   322   0142H  0217DH          movs     r1,#125
+.   324   0144H  06001H          str      r1,[r0]
+    (* power up VCO and PLL *)
+    SYSTEM.PUT(MCU.PLL_SYS_PWR + MCU.ACLR, {PLL_SYS_PWR_VCOPD, PLL_SYS_PWR_PD}); (* clear bits *)
+.   326   0146H  04811H          ldr      r0,[pc,#68] -> 396
+.   328   0148H  02121H          movs     r1,#33
+.   330   014AH  06001H          str      r1,[r0]
+    REPEAT UNTIL SYSTEM.BIT(MCU.PLL_SYS_CS, PLL_SYS_CS_LOCK);
+.   332   014CH  04810H          ldr      r0,[pc,#64] -> 400
+.   334   014EH  06801H          ldr      r1,[r0]
+.   336   0150H  00009H          movs     r1,r1
+.   338   0152H  0D5FBH          bpl.n    -10 -> 332
+    (* set post dividers *)
+    (* 125 Mhz, note: high VCO freq *)
+    x := 0;
+.   340   0154H  02000H          movs     r0,#0
+.   342   0156H  09000H          str      r0,[sp]
+    BFI(x, 18, 16, 6);
+.   344   0158H  02006H          movs     r0,#6
+.   346   015AH  04669H          mov      r1,sp
+.   348   015CH  0680AH          ldr      r2,[r1]
+.   350   015EH  04B0DH          ldr      r3,[pc,#52] -> 404
+.   352   0160H  0401AH          ands     r2,r3
+.   354   0162H  00400H          lsls     r0,r0,#16
+.   356   0164H  04302H          orrs     r2,r0
+.   358   0166H  09200H          str      r2,[sp]
+    BFI(x, 14, 12, 2);
+.   360   0168H  02002H          movs     r0,#2
+.   362   016AH  04669H          mov      r1,sp
+.   364   016CH  0680AH          ldr      r2,[r1]
+.   366   016EH  04B0AH          ldr      r3,[pc,#40] -> 408
+.   368   0170H  0401AH          ands     r2,r3
+.   370   0172H  00300H          lsls     r0,r0,#12
+.   372   0174H  04302H          orrs     r2,r0
+.   374   0176H  09200H          str      r2,[sp]
+    SYSTEM.PUT(MCU.PLL_SYS_PRIM, x);
+.   376   0178H  04808H          ldr      r0,[pc,#32] -> 412
+.   378   017AH  09900H          ldr      r1,[sp]
+.   380   017CH  06001H          str      r1,[r0]
+    (* power up post dividers *)
+    SYSTEM.PUT(MCU.PLL_SYS_PWR + MCU.ACLR, {PLL_SYS_PWR_POSTDIVPD})
+  END startSysPLL;
+.   382   017EH  04803H          ldr      r0,[pc,#12] -> 396
+.   384   0180H  02108H          movs     r1,#8
+.   386   0182H  06001H          str      r1,[r0]
+.   388   0184H  0B001H          add      sp,#4
+.   390   0186H  0BD00H          pop      { pc }
+.   392  <Const: 040028008H  040028008H>
+.   396  <Const: 04002B004H  04002B004H>
+.   400  <Const: 040028000H  040028000H>
+.   404  <Const: 0FFF8FFFFH  -458753>
+.   408  <Const: 0FFFF8FFFH  -28673>
+.   412  <Const: 04002800CH  04002800CH>
+
+
+  PROCEDURE startUsbPLL;
+  (* 48 MHz *)
+  (* required for peripheral clock *)
+  (* if we want to keep it independent of the system clock *)
+  (* we'll also feed the reference clock with this PLL *)
+    VAR x: INTEGER;
+  BEGIN
+.   416   01A0H  0B500H          push     { lr }
+.   418   01A2H  0B081H          sub      sp,#4
+    StartUp.ReleaseReset(MCU.RESETS_PLL_USB);
+.   420   01A4H  0200DH          movs     r0,#13
+.   422   01A6H  00402009CH      bl.w     Ext Proc #2
+.   426   01AAH  0E000H          b        0 -> 430
+.   428  <LineNo: 159>
+    StartUp.AwaitReleaseDone(MCU.RESETS_PLL_USB);
+.   430   01AEH  0200DH          movs     r0,#13
+.   432   01B0H  0040300D3H      bl.w     Ext Proc #3
+.   436   01B4H  0E000H          b        0 -> 440
+.   438  <LineNo: 160>
+    (* set freq 48 MHz *)
+    SYSTEM.PUT(MCU.PLL_USB_FBDIV_INT, 64);
+.   440   01B8H  04811H          ldr      r0,[pc,#68] -> 512
+.   442   01BAH  02140H          movs     r1,#64
+.   444   01BCH  06001H          str      r1,[r0]
+    (* power up VCO and PLL *)
+    SYSTEM.PUT(MCU.PLL_USB_PWR + MCU.ACLR, {PLL_USB_PWR_VCOPD, PLL_USB_PWR_PD}); (* clear bits *)
+.   446   01BEH  04811H          ldr      r0,[pc,#68] -> 516
+.   448   01C0H  02121H          movs     r1,#33
+.   450   01C2H  06001H          str      r1,[r0]
+    REPEAT UNTIL SYSTEM.BIT(MCU.PLL_USB_CS, PLL_USB_CS_LOCK);
+.   452   01C4H  04810H          ldr      r0,[pc,#64] -> 520
+.   454   01C6H  06801H          ldr      r1,[r0]
+.   456   01C8H  00009H          movs     r1,r1
+.   458   01CAH  0D5FBH          bpl.n    -10 -> 452
+    (* set post dividers *)
+    x := 0;
+.   460   01CCH  02000H          movs     r0,#0
+.   462   01CEH  09000H          str      r0,[sp]
+    BFI(x, 18, 16, 4);
+.   464   01D0H  02004H          movs     r0,#4
+.   466   01D2H  04669H          mov      r1,sp
+.   468   01D4H  0680AH          ldr      r2,[r1]
+.   470   01D6H  04B0DH          ldr      r3,[pc,#52] -> 524
+.   472   01D8H  0401AH          ands     r2,r3
+.   474   01DAH  00400H          lsls     r0,r0,#16
+.   476   01DCH  04302H          orrs     r2,r0
+.   478   01DEH  09200H          str      r2,[sp]
+    BFI(x, 14, 12, 4);
+.   480   01E0H  02004H          movs     r0,#4
+.   482   01E2H  04669H          mov      r1,sp
+.   484   01E4H  0680AH          ldr      r2,[r1]
+.   486   01E6H  04B0AH          ldr      r3,[pc,#40] -> 528
+.   488   01E8H  0401AH          ands     r2,r3
+.   490   01EAH  00300H          lsls     r0,r0,#12
+.   492   01ECH  04302H          orrs     r2,r0
+.   494   01EEH  09200H          str      r2,[sp]
+    SYSTEM.PUT(MCU.PLL_USB_PRIM, x);
+.   496   01F0H  04808H          ldr      r0,[pc,#32] -> 532
+.   498   01F2H  09900H          ldr      r1,[sp]
+.   500   01F4H  06001H          str      r1,[r0]
+    (* power up post dividers *)
+    SYSTEM.PUT(MCU.PLL_USB_PWR + MCU.ACLR, {PLL_USB_PWR_POSTDIVPD})
+  END startUsbPLL;
+.   502   01F6H  04803H          ldr      r0,[pc,#12] -> 516
+.   504   01F8H  02108H          movs     r1,#8
+.   506   01FAH  06001H          str      r1,[r0]
+.   508   01FCH  0B001H          add      sp,#4
+.   510   01FEH  0BD00H          pop      { pc }
+.   512  <Const: 04002C008H  04002C008H>
+.   516  <Const: 04002F004H  04002F004H>
+.   520  <Const: 04002C000H  04002C000H>
+.   524  <Const: 0FFF8FFFFH  -458753>
+.   528  <Const: 0FFFF8FFFH  -28673>
+.   532  <Const: 04002C00CH  04002C00CH>
+
+
+  PROCEDURE connectClocks;
+    VAR x: INTEGER;
+  BEGIN
+.   536   0218H  0B500H          push     { lr }
+.   538   021AH  0B081H          sub      sp,#4
+    (* system clock *)
+    (* reset status: clk_sys AUXSRC set to pll_sys *)
+    (* switch clk_sys SRC to aux *)
+    SYSTEM.PUT(MCU.CLK_SYS_CTRL + MCU.ASET, {0});
+.   540   021CH  04810H          ldr      r0,[pc,#64] -> 608
+.   542   021EH  02101H          movs     r1,#1
+.   544   0220H  06001H          str      r1,[r0]
+    REPEAT UNTIL SYSTEM.BIT(MCU.CLK_SYS_SELECTED, 1);
+.   546   0222H  04810H          ldr      r0,[pc,#64] -> 612
+.   548   0224H  06801H          ldr      r1,[r0]
+.   550   0226H  00789H          lsls     r1,r1,#30
+.   552   0228H  0D5FBH          bpl.n    -10 -> 546
+
+    (* reference clock *)
+    (* reset status: clk_ref AUXSRC set to pll_usb *)
+    (* switch clk_ref AUXSRC to pll_usb *)
+    (* switch clk_ref SRC to aux *)
+    SYSTEM.PUT(MCU.CLK_REF_CTRL + MCU.ASET, {0});
+.   554   022AH  0480FH          ldr      r0,[pc,#60] -> 616
+.   556   022CH  02101H          movs     r1,#1
+.   558   022EH  06001H          str      r1,[r0]
+    REPEAT UNTIL SYSTEM.BIT(MCU.CLK_REF_SELECTED, 1);
+.   560   0230H  0480EH          ldr      r0,[pc,#56] -> 620
+.   562   0232H  06801H          ldr      r1,[r0]
+.   564   0234H  00789H          lsls     r1,r1,#30
+.   566   0236H  0D5FBH          bpl.n    -10 -> 560
+
+    (* peripheral clock *)
+    (* reset status: clk_peri AUXSRC set to clk_sys *)
+    (* connect clk_peri AUXSRC to pll_usb *)
+    x := 0;
+.   568   0238H  02000H          movs     r0,#0
+.   570   023AH  09000H          str      r0,[sp]
+    BFI(x, 7, 5, 2);
+.   572   023CH  02002H          movs     r0,#2
+.   574   023EH  04669H          mov      r1,sp
+.   576   0240H  0680AH          ldr      r2,[r1]
+.   578   0242H  04B0BH          ldr      r3,[pc,#44] -> 624
+.   580   0244H  0401AH          ands     r2,r3
+.   582   0246H  00140H          lsls     r0,r0,#5
+.   584   0248H  04302H          orrs     r2,r0
+.   586   024AH  09200H          str      r2,[sp]
+    SYSTEM.PUT(MCU.CLK_PERI_CTRL, x);
+.   588   024CH  04809H          ldr      r0,[pc,#36] -> 628
+.   590   024EH  09900H          ldr      r1,[sp]
+.   592   0250H  06001H          str      r1,[r0]
+    (* enable clk_peri *)
+    SYSTEM.PUT(MCU.CLK_PERI_CTRL + MCU.ASET, {CLK_PERI_CTRL_ENABLE})
+  END connectClocks;
+.   594   0252H  04809H          ldr      r0,[pc,#36] -> 632
+.   596   0254H  02101H          movs     r1,#1
+.   598   0256H  002C9H          lsls     r1,r1,#11
+.   600   0258H  06001H          str      r1,[r0]
+.   602   025AH  0B001H          add      sp,#4
+.   604   025CH  0BD00H          pop      { pc }
+.   606   025EH  046C0H          nop
+.   608  <Const: 04000A03CH  04000A03CH>
+.   612  <Const: 040008044H  040008044H>
+.   616  <Const: 04000A030H  04000A030H>
+.   620  <Const: 040008038H  040008038H>
+.   624  <Const: 0FFFFFF1FH  -225>
+.   628  <Const: 040008048H  040008048H>
+.   632  <Const: 04000A048H  04000A048H>
+
+
+  PROCEDURE startTickClock;
+  (* 1 MHz, used for sys tick, timer, watchdog *)
+  (* derived from clk_ref => divider = 48 *)
+  BEGIN
+.   636   027CH  0B500H          push     { lr }
+    SYSTEM.PUT(MCU.WATCHDOG_TICK, 48);
+.   638   027EH  04804H          ldr      r0,[pc,#16] -> 656
+.   640   0280H  02130H          movs     r1,#48
+.   642   0282H  06001H          str      r1,[r0]
+    SYSTEM.PUT(MCU.WATCHDOG_TICK + MCU.ASET, {MCU.WATCHDOG_TICK_EN})
+  END startTickClock;
+.   644   0284H  04803H          ldr      r0,[pc,#12] -> 660
+.   646   0286H  02101H          movs     r1,#1
+.   648   0288H  00249H          lsls     r1,r1,#9
+.   650   028AH  06001H          str      r1,[r0]
+.   652   028CH  0BD00H          pop      { pc }
+.   654   028EH  046C0H          nop
+.   656  <Const: 04005802CH  04005802CH>
+.   660  <Const: 04005A02CH  04005A02CH>
+
+
+  PROCEDURE init;
+  BEGIN
+.   664   0298H  0B500H          push     { lr }
+    startXOSC;
+.   666   029AH  0F7FFFF1DH      bl.w     -454 -> 216
+.   670   029EH  0E000H          b        0 -> 674
+.   672  <LineNo: 214>
+    startSysPLL;
+.   674   02A2H  0F7FFFF41H      bl.w     -382 -> 296
+.   678   02A6H  0E000H          b        0 -> 682
+.   680  <LineNo: 215>
+    startUsbPLL;
+.   682   02AAH  0F7FFFF79H      bl.w     -270 -> 416
+.   686   02AEH  0E000H          b        0 -> 690
+.   688  <LineNo: 216>
+    connectClocks;
+.   690   02B2H  0F7FFFFB1H      bl.w     -158 -> 536
+.   694   02B6H  0E000H          b        0 -> 698
+.   696  <LineNo: 217>
+    startTickClock
+  END init;
+.   698   02BAH  0F7FFFFDFH      bl.w     -66 -> 636
+.   702   02BEH  0E000H          b        0 -> 706
+.   704  <LineNo: 218>
+.   706   02C2H  0BD00H          pop      { pc }
+
+BEGIN
+.   708   02C4H  0B500H          push     { lr }
+  init
+END Clocks.
+.   710   02C6H  0F7FFFFE7H      bl.w     -50 -> 664
+.   714   02CAH  0E000H          b        0 -> 718
+.   716  <LineNo: 222>
+.   718   02CEH  0BD00H          pop      { pc }

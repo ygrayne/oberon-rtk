@@ -1,0 +1,26 @@
+.     0    010005420H   <Pad: 0>
+MODULE DebugEvalImp;
+
+  TYPE
+    R0* = RECORD
+      i: INTEGER
+    END;
+.     4    010005424H   <Type: 4>
+.     8    010005428H   <Type: 0>
+.    12    01000542CH   <Type: 0>
+.    16    010005430H   <Type: 0>
+.    20    010005434H   <Type: 0>
+
+  VAR
+    x: INTEGER;
+
+BEGIN
+.    24    010005438H        0B500H    push     { lr }
+  x := 42
+END DebugEvalImp.
+.    26    01000543AH        0202AH    movs     r0,#42
+.    28    01000543CH        04901H    ldr      r1,[pc,#4] -> 36 ; Global: 02002FC68H
+.    30    01000543EH        06008H    str      r0,[r1]
+.    32    010005440H        0BD00H    pop      { pc }
+.    34    010005442H        046C0H    nop
+.    36    010005444H   <Global: 02002FC68H>

@@ -1,0 +1,355 @@
+.     0  <Pad: 0>
+MODULE DebugEval;
+(**
+  Oberon RTK Framework
+  Example program, multi-threaded, single-core
+  Description: https://oberon-rtk.org/examples/debugeval/
+  --
+  MCU: RP2040
+  Board: Pico
+  --
+  Copyright (c) 2024 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, Main, Kernel, Out, LEDext, Timers, DebugEvalImp;
+
+  CONST
+  (* the (*constants*) *)
+    MillisecsPerTick = 10;
+    ThreadStackSize (* crazy comment *) = 1024;
+    Big0 = 0F0000000H;
+    Big1 = 00E000000H;
+    Neg = -42;
+
+  TYPE
+    R0 = RECORD(DebugEvalImp.R0)
+      i, j: INTEGER
+    END;
+.     4  <Type: 12>
+.     8  <Type: 040000H>
+.    12  <Type: 0>
+.    16  <Type: 0>
+.    20  <Type: 0>
+    R1 = RECORD(R0)
+      x, y: INTEGER
+    END;
+.    24  <Type: 20>
+.    28  <Type: 040004H>
+.    32  <Type: 018000EH>
+.    36  <Type: 0>
+.    40  <Type: 0>
+    R2 = RECORD(R1)
+      a, b: INTEGER
+    END;
+.    44  <Type: 28>
+.    48  <Type: 040010H>
+.    52  <Type: 0180018H>
+.    56  <Type: 02C001AH>
+.    60  <Type: 0>
+
+  VAR
+  (* the variables *)
+    t0, t1: Kernel.Thread;
+    tid0, tid1: INTEGER;
+    x: INTEGER;
+    unused: INTEGER; (* gets a memory slot anyway *)
+    y: INTEGER;
+    r1: R1;
+
+
+  PROCEDURE    writeThreadInfo(tid, cid: INTEGER);
+  (* print thread info *)
+  BEGIN(*really crazy comment*)Out.String("c"); Out.Int(cid, 0);
+.    64    040H  0B503H          push     { r0, r1, lr }
+.    66    042H  046C0H          nop
+.    68    044H  0A000H          adr      r0,pc,#0 -> 72
+.    70    046H  0E001H          b        2 -> 76
+.    72  <String: "c...">
+.    76    04CH  02102H          movs     r1,#2
+.    78    04EH  004030000H      bl.w     Ext Proc #3
+.    82    052H  0E000H          b        0 -> 86
+.    84  <LineNo: 47>
+.    86    056H  09801H          ldr      r0,[sp,#4]
+.    88    058H  02100H          movs     r1,#0
+.    90    05AH  004050027H      bl.w     Ext Proc #5
+.    94    05EH  0E000H          b        0 -> 98
+.    96  <LineNo: 47>
+    Out.String("-t"); Out.Int(tid, 0);
+.    98    062H  046C0H          nop
+.   100    064H  0A000H          adr      r0,pc,#0 -> 104
+.   102    066H  0E001H          b        2 -> 108
+.   104  <String: "-t..">
+.   108    06CH  02103H          movs     r1,#3
+.   110    06EH  00403002DH      bl.w     Ext Proc #3
+.   114    072H  0E000H          b        0 -> 118
+.   116  <LineNo: 48>
+.   118    076H  09800H          ldr      r0,[sp]
+.   120    078H  02100H          movs     r1,#0
+.   122    07AH  004050037H      bl.w     Ext Proc #5
+.   126    07EH  0E000H          b        0 -> 130
+.   128  <LineNo: 48>
+  END writeThreadInfo;
+.   130    082H  0B002H          add      sp,#8
+.   132    084H  0BD00H          pop      { pc }
+.   134    086H  046C0H          nop
+
+(*
+  PROCEDURE commentedOut;
+  BEGIN
+  (* some (* and even (* and more *) more *) nesting *)
+  END commentedOut;
+*)
+
+  PROCEDURE testType(r: R1);
+  BEGIN
+.   136    088H  0B503H          push     { r0, r1, lr }
+    IF r IS R2 THEN
+.   138    08AH  0A800H          add      r0,sp,#0
+.   140    08CH  068C0H          ldr      r0,[r0,#12]
+.   142    08EH  04904H          ldr      r1,[pc,#16] -> 160
+.   144    090H  0467AH          mov      r2,pc
+.   146    092H  01889H          adds     r1,r1,r2
+.   148    094H  04288H          cmp      r0,r1
+.   150    096H  0D001H          beq.n    2 -> 156
+.   152    098H  0E000H          b        0 -> 156
+.   154    09AH  046C0H          nop
+    END
+  END testType;
+.   156    09CH  0B002H          add      sp,#8
+.   158    09EH  0BD00H          pop      { pc }
+.   160  <Const: 0FFFFFF98H  -104>
+
+  PROCEDURE t0c;
+  (* thread 0 code *)
+    CONST Big2 = 0D00001H;
+    VAR ledNo: INTEGER;
+  BEGIN
+.   164    0A4H  0B500H          push     { lr }
+.   166    0A6H  0B081H          sub      sp,#4
+    SYSTEM.PUT(LEDext.SET, {LEDext.LEDpico});
+.   168    0A8H  04816H          ldr      r0,[pc,#88] -> 260
+.   170    0AAH  02101H          movs     r1,#1
+.   172    0ACH  00649H          lsls     r1,r1,#25
+.   174    0AEH  06001H          str      r1,[r0]
+    ledNo := 0;
+.   176    0B0H  02000H          movs     r0,#0
+.   178    0B2H  09000H          str      r0,[sp]
+    x := Big0;
+.   180    0B4H  04814H          ldr      r0,[pc,#80] -> 264
+.   182    0B6H  04918H          ldr      r1,[pc,#96] -> 280
+.   184    0B8H  06008H          str      r0,[r1]
+    x := x + Big1;
+.   186    0BAH  04817H          ldr      r0,[pc,#92] -> 280
+.   188    0BCH  06800H          ldr      r0,[r0]
+.   190    0BEH  02107H          movs     r1,#7
+.   192    0C0H  00649H          lsls     r1,r1,#25
+.   194    0C2H  01840H          adds     r0,r0,r1
+.   196    0C4H  04914H          ldr      r1,[pc,#80] -> 280
+.   198    0C6H  06008H          str      r0,[r1]
+    x := x + Big2;
+.   200    0C8H  04813H          ldr      r0,[pc,#76] -> 280
+.   202    0CAH  06800H          ldr      r0,[r0]
+.   204    0CCH  0490FH          ldr      r1,[pc,#60] -> 268
+.   206    0CEH  01840H          adds     r0,r0,r1
+.   208    0D0H  04911H          ldr      r1,[pc,#68] -> 280
+.   210    0D2H  06008H          str      r0,[r1]
+    y := Neg;
+.   212    0D4H  0480EH          ldr      r0,[pc,#56] -> 272
+.   214    0D6H  04911H          ldr      r1,[pc,#68] -> 284
+.   216    0D8H  06008H          str      r0,[r1]
+    REPEAT
+      LEDext.SetValue(ledNo);
+.   218    0DAH  09800H          ldr      r0,[sp]
+.   220    0DCH  004030000H      bl.w     Ext Proc #3
+.   224    0E0H  0E000H          b        0 -> 228
+.   226  <LineNo: 76>
+      INC(ledNo);
+.   228    0E4H  09800H          ldr      r0,[sp]
+.   230    0E6H  03001H          adds     r0,#1
+.   232    0E8H  09000H          str      r0,[sp]
+      SYSTEM.PUT(LEDext.XOR, {LEDext.LEDpico});
+.   234    0EAH  0480AH          ldr      r0,[pc,#40] -> 276
+.   236    0ECH  02101H          movs     r1,#1
+.   238    0EEH  00649H          lsls     r1,r1,#25
+.   240    0F0H  06001H          str      r1,[r0]
+      Kernel.Next
+    UNTIL FALSE
+.   242    0F2H  004090000H      bl.w     Ext Proc #9
+.   246    0F6H  0E000H          b        0 -> 250
+.   248  <LineNo: 79>
+  END t0c;
+.   250    0FAH  04280H          cmp      r0,r0
+.   252    0FCH  0D0EDH          beq.n    -38 -> 218
+.   254    0FEH  0B001H          add      sp,#4
+.   256   0100H  0BD00H          pop      { pc }
+.   258   0102H  046C0H          nop
+.   260  <Const: 0D0000014H  -805306348>
+.   264  <Const: 0F0000000H  -268435456>
+.   268  <Const: 000D00001H  0D00001H>
+.   272  <Const: 0FFFFFFD6H  -42>
+.   276  <Const: 0D000001CH  -805306340>
+.   280  <Global: 000140000H  0140000H>
+.   284  <Global: 0001C008CH  01C008CH>
+
+  PROCEDURE t1c;
+  (* thread 1 code *)
+    VAR tid, cid, cnt, before, timeL: INTEGER;
+  BEGIN
+.   288   0120H  0B500H          push     { lr }
+.   290   0122H  0B085H          sub      sp,#20
+    tid := Kernel.Tid();
+.   292   0124H  004150079H      bl.w     Ext Proc #21
+.   296   0128H  0E000H          b        0 -> 300
+.   298  <LineNo: 87>
+.   300   012CH  09000H          str      r0,[sp]
+    cnt := 0;
+.   302   012EH  02000H          movs     r0,#0
+.   304   0130H  09002H          str      r0,[sp,#8]
+    Timers.GetTimeL(before);
+.   306   0132H  0A803H          add      r0,sp,#12
+.   308   0134H  004020000H      bl.w     Ext Proc #2
+.   312   0138H  0E000H          b        0 -> 316
+.   314  <LineNo: 89>
+    REPEAT
+      Kernel.Next;
+.   316   013CH  004090092H      bl.w     Ext Proc #9
+.   320   0140H  0E000H          b        0 -> 324
+.   322  <LineNo: 91>
+      Timers.GetTimeL(timeL);
+.   324   0144H  0A804H          add      r0,sp,#16
+.   326   0146H  00402009AH      bl.w     Ext Proc #2
+.   330   014AH  0E000H          b        0 -> 334
+.   332  <LineNo: 92>
+      writeThreadInfo(tid, cid);
+.   334   014EH  09800H          ldr      r0,[sp]
+.   336   0150H  09901H          ldr      r1,[sp,#4]
+.   338   0152H  0F7FFFF75H      bl.w     -278 -> 64
+.   342   0156H  0E000H          b        0 -> 346
+.   344  <LineNo: 93>
+      Out.Int(cnt, 8); Out.Int(timeL - before, 8); Out.Ln;
+.   346   015AH  09802H          ldr      r0,[sp,#8]
+.   348   015CH  02108H          movs     r1,#8
+.   350   015EH  00405003DH      bl.w     Ext Proc #5
+.   354   0162H  0E000H          b        0 -> 358
+.   356  <LineNo: 94>
+.   358   0166H  09804H          ldr      r0,[sp,#16]
+.   360   0168H  09903H          ldr      r1,[sp,#12]
+.   362   016AH  01A40H          subs     r0,r0,r1
+.   364   016CH  02108H          movs     r1,#8
+.   366   016EH  0040500AFH      bl.w     Ext Proc #5
+.   370   0172H  0E000H          b        0 -> 374
+.   372  <LineNo: 94>
+.   374   0176H  0040400B7H      bl.w     Ext Proc #4
+.   378   017AH  0E000H          b        0 -> 382
+.   380  <LineNo: 94>
+      before := timeL;
+.   382   017EH  09804H          ldr      r0,[sp,#16]
+.   384   0180H  09003H          str      r0,[sp,#12]
+      INC(cnt)
+    UNTIL FALSE
+.   386   0182H  09802H          ldr      r0,[sp,#8]
+.   388   0184H  03001H          adds     r0,#1
+.   390   0186H  09002H          str      r0,[sp,#8]
+  END t1c;
+.   392   0188H  04280H          cmp      r0,r0
+.   394   018AH  0D0D7H          beq.n    -82 -> 316
+.   396   018CH  0B005H          add      sp,#20
+.   398   018EH  0BD00H          pop      { pc }
+
+
+  PROCEDURE run;
+  (* let's get running *)
+    VAR res: INTEGER;
+  BEGIN
+.   400   0190H  0B500H          push     { lr }
+.   402   0192H  0B081H          sub      sp,#4
+    Kernel.Install(MillisecsPerTick);
+.   404   0194H  0200AH          movs     r0,#10
+.   406   0196H  00418009EH      bl.w     Ext Proc #24
+.   410   019AH  0E000H          b        0 -> 414
+.   412  <LineNo: 105>
+    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK);
+.   414   019EH  046C0H          nop
+.   416   01A0H  04821H          ldr      r0,[pc,#132] -> 552
+.   418   01A2H  04478H          add      r0,pc
+.   420   01A4H  02101H          movs     r1,#1
+.   422   01A6H  00289H          lsls     r1,r1,#10
+.   424   01A8H  04A21H          ldr      r2,[pc,#132] -> 560
+.   426   01AAH  04B22H          ldr      r3,[pc,#136] -> 564
+.   428   01ACH  0466CH          mov      r4,sp
+.   430   01AEH  0040400CBH      bl.w     Ext Proc #4
+.   434   01B2H  0E000H          b        0 -> 438
+.   436  <LineNo: 106>
+.   438   01B6H  09800H          ldr      r0,[sp]
+.   440   01B8H  02800H          cmp      r0,#0
+.   442   01BAH  0D001H          beq.n    2 -> 448
+.   444   01BCH  0DF00H          svc      0
+.   446  <LineNo: 106>
+    Kernel.SetPeriod(t0, 250, 0); Kernel.Enable(t0);
+.   448   01C0H  0481BH          ldr      r0,[pc,#108] -> 560
+.   450   01C2H  06800H          ldr      r0,[r0]
+.   452   01C4H  021FAH          movs     r1,#250
+.   454   01C6H  02200H          movs     r2,#0
+.   456   01C8H  0040800D7H      bl.w     Ext Proc #8
+.   460   01CCH  0E000H          b        0 -> 464
+.   462  <LineNo: 107>
+.   464   01D0H  04817H          ldr      r0,[pc,#92] -> 560
+.   466   01D2H  06800H          ldr      r0,[r0]
+.   468   01D4H  0040600E4H      bl.w     Ext Proc #6
+.   472   01D8H  0E000H          b        0 -> 476
+.   474  <LineNo: 107>
+    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.OK);
+.   476   01DCH  04813H          ldr      r0,[pc,#76] -> 556
+.   478   01DEH  04478H          add      r0,pc
+.   480   01E0H  02101H          movs     r1,#1
+.   482   01E2H  00289H          lsls     r1,r1,#10
+.   484   01E4H  04A14H          ldr      r2,[pc,#80] -> 568
+.   486   01E6H  04B15H          ldr      r3,[pc,#84] -> 572
+.   488   01E8H  0466CH          mov      r4,sp
+.   490   01EAH  0040400EAH      bl.w     Ext Proc #4
+.   494   01EEH  0E000H          b        0 -> 498
+.   496  <LineNo: 108>
+.   498   01F2H  09800H          ldr      r0,[sp]
+.   500   01F4H  02800H          cmp      r0,#0
+.   502   01F6H  0D001H          beq.n    2 -> 508
+.   504   01F8H  0DF00H          svc      0
+.   506  <LineNo: 108>
+    Kernel.SetPeriod(t1, 1000, 0); Kernel.Enable(t1);
+.   508   01FCH  0480EH          ldr      r0,[pc,#56] -> 568
+.   510   01FEH  06800H          ldr      r0,[r0]
+.   512   0200H  0217DH          movs     r1,#125
+.   514   0202H  000C9H          lsls     r1,r1,#3
+.   516   0204H  02200H          movs     r2,#0
+.   518   0206H  0040800F5H      bl.w     Ext Proc #8
+.   522   020AH  0E000H          b        0 -> 526
+.   524  <LineNo: 109>
+.   526   020EH  0480AH          ldr      r0,[pc,#40] -> 568
+.   528   0210H  06800H          ldr      r0,[r0]
+.   530   0212H  004060103H      bl.w     Ext Proc #6
+.   534   0216H  0E000H          b        0 -> 538
+.   536  <LineNo: 109>
+    Kernel.Run
+    (* we'll not return here *)
+  END run;
+.   538   021AH  004170109H      bl.w     Ext Proc #23
+.   542   021EH  0E000H          b        0 -> 546
+.   544  <LineNo: 110>
+.   546   0222H  0B001H          add      sp,#4
+.   548   0224H  0BD00H          pop      { pc }
+.   550   0226H  046C0H          nop
+.   552  <Const: 0FFFFFEFEH  -258>
+.   556  <Const: 0FFFFFF3EH  -194>
+.   560  <Global: 00004008EH  04008EH>
+.   564  <Global: 0000C0118H  0C0118H>
+.   568  <Global: 00008011AH  08011AH>
+.   572  <Global: 00010011CH  010011CH>
+
+BEGIN
+.   576   0240H  0B500H          push     { lr }
+  run
+END DebugEval.
+.   578   0242H  0F7FFFFA5H      bl.w     -182 -> 400
+.   582   0246H  0E000H          b        0 -> 586
+.   584  <LineNo: 115>
+.   586   024AH  0BD00H          pop      { pc }

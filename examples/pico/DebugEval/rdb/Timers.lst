@@ -1,0 +1,181 @@
+.     0  <Pad: 0>
+MODULE Timers;
+(**
+  Oberon RTK Framework
+  One single timer on MCU
+  64 bit micro seconds => rolls over in 500,000+ years.
+  --
+  * get time, set time
+  * alarm interrupt handling
+  --
+  MCU: Cortex-M0+ RP2040, tested on Pico
+  --
+  Copyright (c) 2023-2024 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2, Exceptions;
+
+  CONST
+    NumAlarms* = 4;
+
+
+  PROCEDURE GetTime*(VAR timeH, timeL: INTEGER);
+    VAR t0: INTEGER; done: BOOLEAN;
+  BEGIN
+.     4     04H  0B503H          push     { r0, r1, lr }
+.     6     06H  0B082H          sub      sp,#8
+    SYSTEM.GET(MCU.TIMER_TIMERAWH, timeH);
+.     8     08H  04810H          ldr      r0,[pc,#64] -> 76
+.    10     0AH  06801H          ldr      r1,[r0]
+.    12     0CH  09A02H          ldr      r2,[sp,#8]
+.    14     0EH  06011H          str      r1,[r2]
+    done := FALSE;
+.    16    010H  02000H          movs     r0,#0
+.    18    012H  0A901H          add      r1,sp,#4
+.    20    014H  07008H          strb     r0,[r1]
+    REPEAT
+      SYSTEM.GET(MCU.TIMER_TIMERAWL, timeL);
+.    22    016H  0480EH          ldr      r0,[pc,#56] -> 80
+.    24    018H  06801H          ldr      r1,[r0]
+.    26    01AH  09A03H          ldr      r2,[sp,#12]
+.    28    01CH  06011H          str      r1,[r2]
+      SYSTEM.GET(MCU.TIMER_TIMERAWH, t0);
+.    30    01EH  0480BH          ldr      r0,[pc,#44] -> 76
+.    32    020H  06801H          ldr      r1,[r0]
+.    34    022H  09100H          str      r1,[sp]
+      done := t0 = timeH;
+.    36    024H  09800H          ldr      r0,[sp]
+.    38    026H  09902H          ldr      r1,[sp,#8]
+.    40    028H  06809H          ldr      r1,[r1]
+.    42    02AH  04288H          cmp      r0,r1
+.    44    02CH  0D001H          beq.n    2 -> 50
+.    46    02EH  02000H          movs     r0,#0
+.    48    030H  0E000H          b        0 -> 52
+.    50    032H  02001H          movs     r0,#1
+.    52    034H  0A901H          add      r1,sp,#4
+.    54    036H  07008H          strb     r0,[r1]
+      timeH := t0
+    UNTIL done
+.    56    038H  09800H          ldr      r0,[sp]
+.    58    03AH  09902H          ldr      r1,[sp,#8]
+.    60    03CH  06008H          str      r0,[r1]
+  END GetTime;
+.    62    03EH  0A801H          add      r0,sp,#4
+.    64    040H  07800H          ldrb     r0,[r0]
+.    66    042H  02101H          movs     r1,#1
+.    68    044H  04208H          tst      r0,r1
+.    70    046H  0D0E6H          beq.n    -52 -> 22
+.    72    048H  0B004H          add      sp,#16
+.    74    04AH  0BD00H          pop      { pc }
+.    76  <Const: 040054024H  040054024H>
+.    80  <Const: 040054028H  040054028H>
+
+
+  PROCEDURE GetTimeL*(VAR timeL: INTEGER);
+  BEGIN
+.    84    054H  0B501H          push     { r0, lr }
+    SYSTEM.GET(MCU.TIMER_TIMERAWL, timeL)
+  END GetTimeL;
+.    86    056H  04803H          ldr      r0,[pc,#12] -> 100
+.    88    058H  06801H          ldr      r1,[r0]
+.    90    05AH  09A00H          ldr      r2,[sp]
+.    92    05CH  06011H          str      r1,[r2]
+.    94    05EH  0B001H          add      sp,#4
+.    96    060H  0BD00H          pop      { pc }
+.    98    062H  046C0H          nop
+.   100  <Const: 040054028H  040054028H>
+
+
+  PROCEDURE InstallAlarmIntHandler*(alarmNo: INTEGER; handler: PROCEDURE);
+  BEGIN
+.   104    068H  0B503H          push     { r0, r1, lr }
+    Exceptions.InstallIntHandler(Exceptions.TIMER_IRQ_0 + alarmNo, handler)
+.   106    06AH  09800H          ldr      r0,[sp]
+.   108    06CH  03000H          adds     r0,#0
+.   110    06EH  09901H          ldr      r1,[sp,#4]
+  END InstallAlarmIntHandler;
+.   112    070H  004090000H      bl.w     Ext Proc #9
+.   116    074H  0E000H          b        0 -> 120
+.   118  <LineNo: 44>
+.   120    078H  0B002H          add      sp,#8
+.   122    07AH  0BD00H          pop      { pc }
+
+
+  PROCEDURE SetAlarmIntPrio*(alarmNo, prio: INTEGER);
+  BEGIN
+.   124    07CH  0B503H          push     { r0, r1, lr }
+    Exceptions.SetIntPrio(Exceptions.TIMER_IRQ_0 + alarmNo, prio)
+.   126    07EH  09800H          ldr      r0,[sp]
+.   128    080H  03000H          adds     r0,#0
+.   130    082H  09901H          ldr      r1,[sp,#4]
+  END SetAlarmIntPrio;
+.   132    084H  004070038H      bl.w     Ext Proc #7
+.   136    088H  0E000H          b        0 -> 140
+.   138  <LineNo: 50>
+.   140    08CH  0B002H          add      sp,#8
+.   142    08EH  0BD00H          pop      { pc }
+
+
+  PROCEDURE EnableAlarmInt*(alarmNo: INTEGER);
+  BEGIN
+.   144    090H  0B501H          push     { r0, lr }
+    SYSTEM.PUT(MCU.TIMER_INTE + MCU.ASET, {alarmNo})
+.   146    092H  09800H          ldr      r0,[sp]
+.   148    094H  02101H          movs     r1,#1
+.   150    096H  04081H          lsls     r1,r0
+.   152    098H  04608H          mov      r0,r1
+  END EnableAlarmInt;
+.   154    09AH  04902H          ldr      r1,[pc,#8] -> 164
+.   156    09CH  06008H          str      r0,[r1]
+.   158    09EH  0B001H          add      sp,#4
+.   160    0A0H  0BD00H          pop      { pc }
+.   162    0A2H  046C0H          nop
+.   164  <Const: 040056038H  040056038H>
+
+
+  PROCEDURE DeassertAlarmInt*(alarmNo: INTEGER);
+  BEGIN
+.   168    0A8H  0B501H          push     { r0, lr }
+    SYSTEM.PUT(MCU.TIMER_INTR + MCU.ACLR, {alarmNo})
+.   170    0AAH  09800H          ldr      r0,[sp]
+.   172    0ACH  02101H          movs     r1,#1
+.   174    0AEH  04081H          lsls     r1,r0
+.   176    0B0H  04608H          mov      r0,r1
+  END DeassertAlarmInt;
+.   178    0B2H  04902H          ldr      r1,[pc,#8] -> 188
+.   180    0B4H  06008H          str      r0,[r1]
+.   182    0B6H  0B001H          add      sp,#4
+.   184    0B8H  0BD00H          pop      { pc }
+.   186    0BAH  046C0H          nop
+.   188  <Const: 040057034H  040057034H>
+
+
+  PROCEDURE SetTime*(timeH, timeL: INTEGER);
+  (* for testing only *)
+  BEGIN
+.   192    0C0H  0B503H          push     { r0, r1, lr }
+    SYSTEM.PUT(MCU.TIMER_TIMELW, timeL);
+.   194    0C2H  04804H          ldr      r0,[pc,#16] -> 212
+.   196    0C4H  09901H          ldr      r1,[sp,#4]
+.   198    0C6H  06001H          str      r1,[r0]
+    SYSTEM.PUT(MCU.TIMER_TIMEHW, timeH)
+  END SetTime;
+.   200    0C8H  04803H          ldr      r0,[pc,#12] -> 216
+.   202    0CAH  09900H          ldr      r1,[sp]
+.   204    0CCH  06001H          str      r1,[r0]
+.   206    0CEH  0B002H          add      sp,#8
+.   208    0D0H  0BD00H          pop      { pc }
+.   210    0D2H  046C0H          nop
+.   212  <Const: 040054004H  040054004H>
+.   216  <Const: 040054000H  040054000H>
+
+(*
+  Nothing to configure, resets to time zero
+  PROCEDURE Init*;
+  END Init;
+*)
+
+END Timers.
+.   220    0DCH  0B500H          push     { lr }
+.   222    0DEH  0BD00H          pop      { pc }

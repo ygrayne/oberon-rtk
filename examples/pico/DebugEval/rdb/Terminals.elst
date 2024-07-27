@@ -1,0 +1,371 @@
+.     0    010003DB0H   <Pad: 0>
+MODULE Terminals;
+(**
+  Oberon RTK Framework
+  --
+  Max two text terminals via TextIO.Device, eg. UART
+  --
+  Use module Texts to write/read to/from any open terminal
+  See module Out for a use case
+  Each terminal can only be opened once.
+  --
+  MCU: Cortex-M0+ RP2040, tested on Pico
+  --
+  Copyright (c) 2020-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT TextIO, UARTdev, Errors;
+
+  CONST
+    TERM0* = 0;
+    TERM1* = 1;
+    NumTerms = 2;
+
+  TYPE
+    Ws* = ARRAY NumTerms OF TextIO.Writer;
+    Rs* = ARRAY NumTerms OF TextIO.Reader;
+
+  VAR
+    W*, Werr*: Ws;
+    R*: Rs;
+
+
+  PROCEDURE InitUART*(uartNo: INTEGER; uartCfg: UARTdev.DeviceCfg; baudrate: INTEGER; VAR dev: UARTdev.Device);
+  (* utility procedure *)
+  BEGIN
+.     4    010003DB4H        0B51FH    push     { r0, r1, r2, r3, r4, lr }
+    NEW(dev); ASSERT(dev # NIL, Errors.HeapOverflow);
+.     6    010003DB6H        09804H    ldr      r0,[sp,#16]
+.     8    010003DB8H        04911H    ldr      r1,[pc,#68] -> 80 ; Global: 010003964H
+.    10    010003DBAH    0F7FDFB15H    bl.w     MAU.New
+.    14    010003DBEH        0E000H    b        0 -> 18
+.    16    010003DC0H   <LineNo: 36>
+.    18    010003DC2H        09804H    ldr      r0,[sp,#16]
+.    20    010003DC4H        06800H    ldr      r0,[r0]
+.    22    010003DC6H        02800H    cmp      r0,#0
+.    24    010003DC8H        0D101H    bne.n    2 -> 30
+.    26    010003DCAH        0DF6CH    svc      108
+.    28    010003DCCH   <LineNo: 36>
+    UARTdev.Init(dev, uartNo);
+.    30    010003DCEH        09804H    ldr      r0,[sp,#16]
+.    32    010003DD0H        06800H    ldr      r0,[r0]
+.    34    010003DD2H        09900H    ldr      r1,[sp]
+.    36    010003DD4H    0F7FFFDDAH    bl.w     UARTdev.Init
+.    40    010003DD8H        0E000H    b        0 -> 44
+.    42    010003DDAH   <LineNo: 37>
+    UARTdev.Configure(dev, uartCfg, baudrate);
+.    44    010003DDCH        09804H    ldr      r0,[sp,#16]
+.    46    010003DDEH        06800H    ldr      r0,[r0]
+.    48    010003DE0H        09901H    ldr      r1,[sp,#4]
+.    50    010003DE2H        0AA02H    add      r2,sp,#8
+.    52    010003DE4H        06812H    ldr      r2,[r2]
+.    54    010003DE6H        09B03H    ldr      r3,[sp,#12]
+.    56    010003DE8H    0F7FFFE40H    bl.w     UARTdev.Configure
+.    60    010003DECH        0E000H    b        0 -> 64
+.    62    010003DEEH   <LineNo: 38>
+    UARTdev.Enable(dev)
+.    64    010003DF0H        09804H    ldr      r0,[sp,#16]
+.    66    010003DF2H        06800H    ldr      r0,[r0]
+  END InitUART;
+.    68    010003DF4H    0F7FFFF24H    bl.w     UARTdev.Enable
+.    72    010003DF8H        0E000H    b        0 -> 76
+.    74    010003DFAH   <LineNo: 39>
+.    76    010003DFCH        0B005H    add      sp,#20
+.    78    010003DFEH        0BD00H    pop      { pc }
+.    80    010003E00H   <Global: 010003964H>
+
+
+  PROCEDURE Open*(termNo: INTEGER; dev: TextIO.Device; psp: TextIO.PutStringProc; gsp: TextIO.GetStringProc);
+  BEGIN
+.    84    010003E04H        0B50FH    push     { r0, r1, r2, r3, lr }
+    ASSERT(termNo IN {TERM0, TERM1}, Errors.PreCond);
+.    86    010003E06H        02003H    movs     r0,#3
+.    88    010003E08H        09900H    ldr      r1,[sp]
+.    90    010003E0AH        02201H    movs     r2,#1
+.    92    010003E0CH        0408AH    lsls     r2,r1
+.    94    010003E0EH        04210H    tst      r0,r2
+.    96    010003E10H        0D101H    bne.n    2 -> 102
+.    98    010003E12H        0DF65H    svc      101
+.   100    010003E14H   <LineNo: 45>
+    ASSERT(dev # NIL, Errors.PreCond);
+.   102    010003E16H        09801H    ldr      r0,[sp,#4]
+.   104    010003E18H        02800H    cmp      r0,#0
+.   106    010003E1AH        0D101H    bne.n    2 -> 112
+.   108    010003E1CH        0DF65H    svc      101
+.   110    010003E1EH   <LineNo: 46>
+    IF W[termNo] = NIL THEN
+.   112    010003E20H        09800H    ldr      r0,[sp]
+.   114    010003E22H        02802H    cmp      r0,#2
+.   116    010003E24H        0D301H    bcc.n    2 -> 122
+.   118    010003E26H        0DF01H    svc      1
+.   120    010003E28H   <LineNo: 47>
+.   122    010003E2AH        04930H    ldr      r1,[pc,#192] -> 316 ; Global: 02002FCBCH
+.   124    010003E2CH          080H    lsls     r0,r0,#2
+.   126    010003E2EH        01808H    adds     r0,r1,r0
+.   128    010003E30H        06800H    ldr      r0,[r0]
+.   130    010003E32H        02800H    cmp      r0,#0
+.   132    010003E34H        0D001H    beq.n    2 -> 138
+.   134    010003E36H        0E052H    b        164 -> 302
+.   136    010003E38H        046C0H    nop
+      NEW(W[termNo]); ASSERT(W[termNo] # NIL, Errors.HeapOverflow);
+.   138    010003E3AH        09800H    ldr      r0,[sp]
+.   140    010003E3CH        02802H    cmp      r0,#2
+.   142    010003E3EH        0D301H    bcc.n    2 -> 148
+.   144    010003E40H        0DF01H    svc      1
+.   146    010003E42H   <LineNo: 48>
+.   148    010003E44H        04929H    ldr      r1,[pc,#164] -> 316 ; Global: 02002FCBCH
+.   150    010003E46H          080H    lsls     r0,r0,#2
+.   152    010003E48H        01808H    adds     r0,r1,r0
+.   154    010003E4AH        04926H    ldr      r1,[pc,#152] -> 308 ; Global: 010002514H
+.   156    010003E4CH    0F7FDFACCH    bl.w     MAU.New
+.   160    010003E50H        0E000H    b        0 -> 164
+.   162    010003E52H   <LineNo: 48>
+.   164    010003E54H        09800H    ldr      r0,[sp]
+.   166    010003E56H        02802H    cmp      r0,#2
+.   168    010003E58H        0D301H    bcc.n    2 -> 174
+.   170    010003E5AH        0DF01H    svc      1
+.   172    010003E5CH   <LineNo: 48>
+.   174    010003E5EH        04923H    ldr      r1,[pc,#140] -> 316 ; Global: 02002FCBCH
+.   176    010003E60H          080H    lsls     r0,r0,#2
+.   178    010003E62H        01808H    adds     r0,r1,r0
+.   180    010003E64H        06800H    ldr      r0,[r0]
+.   182    010003E66H        02800H    cmp      r0,#0
+.   184    010003E68H        0D101H    bne.n    2 -> 190
+.   186    010003E6AH        0DF6CH    svc      108
+.   188    010003E6CH   <LineNo: 48>
+      NEW(R[termNo]); ASSERT(R[termNo] # NIL, Errors.HeapOverflow);
+.   190    010003E6EH        09800H    ldr      r0,[sp]
+.   192    010003E70H        02802H    cmp      r0,#2
+.   194    010003E72H        0D301H    bcc.n    2 -> 200
+.   196    010003E74H        0DF01H    svc      1
+.   198    010003E76H   <LineNo: 49>
+.   200    010003E78H        0491DH    ldr      r1,[pc,#116] -> 320 ; Global: 02002FCACH
+.   202    010003E7AH          080H    lsls     r0,r0,#2
+.   204    010003E7CH        01808H    adds     r0,r1,r0
+.   206    010003E7EH        0491AH    ldr      r1,[pc,#104] -> 312 ; Global: 010002528H
+.   208    010003E80H    0F7FDFAB2H    bl.w     MAU.New
+.   212    010003E84H        0E000H    b        0 -> 216
+.   214    010003E86H   <LineNo: 49>
+.   216    010003E88H        09800H    ldr      r0,[sp]
+.   218    010003E8AH        02802H    cmp      r0,#2
+.   220    010003E8CH        0D301H    bcc.n    2 -> 226
+.   222    010003E8EH        0DF01H    svc      1
+.   224    010003E90H   <LineNo: 49>
+.   226    010003E92H        04917H    ldr      r1,[pc,#92] -> 320 ; Global: 02002FCACH
+.   228    010003E94H          080H    lsls     r0,r0,#2
+.   230    010003E96H        01808H    adds     r0,r1,r0
+.   232    010003E98H        06800H    ldr      r0,[r0]
+.   234    010003E9AH        02800H    cmp      r0,#0
+.   236    010003E9CH        0D101H    bne.n    2 -> 242
+.   238    010003E9EH        0DF6CH    svc      108
+.   240    010003EA0H   <LineNo: 49>
+      TextIO.OpenWriter(W[termNo], dev, psp);
+.   242    010003EA2H        09800H    ldr      r0,[sp]
+.   244    010003EA4H        02802H    cmp      r0,#2
+.   246    010003EA6H        0D301H    bcc.n    2 -> 252
+.   248    010003EA8H        0DF01H    svc      1
+.   250    010003EAAH   <LineNo: 50>
+.   252    010003EACH        0490FH    ldr      r1,[pc,#60] -> 316 ; Global: 02002FCBCH
+.   254    010003EAEH          080H    lsls     r0,r0,#2
+.   256    010003EB0H        01808H    adds     r0,r1,r0
+.   258    010003EB2H        06800H    ldr      r0,[r0]
+.   260    010003EB4H        09901H    ldr      r1,[sp,#4]
+.   262    010003EB6H        09A02H    ldr      r2,[sp,#8]
+.   264    010003EB8H    0F7FEFB40H    bl.w     TextIO.OpenWriter
+.   268    010003EBCH        0E000H    b        0 -> 272
+.   270    010003EBEH   <LineNo: 50>
+      TextIO.OpenReader(R[termNo], dev, gsp)
+.   272    010003EC0H        09800H    ldr      r0,[sp]
+.   274    010003EC2H        02802H    cmp      r0,#2
+.   276    010003EC4H        0D301H    bcc.n    2 -> 282
+.   278    010003EC6H        0DF01H    svc      1
+.   280    010003EC8H   <LineNo: 51>
+.   282    010003ECAH        04909H    ldr      r1,[pc,#36] -> 320 ; Global: 02002FCACH
+.   284    010003ECCH          080H    lsls     r0,r0,#2
+.   286    010003ECEH        01808H    adds     r0,r1,r0
+.   288    010003ED0H        06800H    ldr      r0,[r0]
+.   290    010003ED2H        09901H    ldr      r1,[sp,#4]
+.   292    010003ED4H        09A03H    ldr      r2,[sp,#12]
+    END
+.   294    010003ED6H    0F7FEFB4FH    bl.w     TextIO.OpenReader
+.   298    010003EDAH        0E000H    b        0 -> 302
+.   300    010003EDCH   <LineNo: 51>
+  END Open;
+.   302    010003EDEH        0B004H    add      sp,#16
+.   304    010003EE0H        0BD00H    pop      { pc }
+.   306    010003EE2H        046C0H    nop
+.   308    010003EE4H   <Global: 010002514H>
+.   312    010003EE8H   <Global: 010002528H>
+.   316    010003EECH   <Global: 02002FCBCH>
+.   320    010003EF0H   <Global: 02002FCACH>
+
+
+  PROCEDURE Close*(termNo: INTEGER; VAR dev: TextIO.Device);
+  BEGIN
+.   324    010003EF4H        0B503H    push     { r0, r1, lr }
+    dev := W[termNo].dev;
+.   326    010003EF6H        09800H    ldr      r0,[sp]
+.   328    010003EF8H        02802H    cmp      r0,#2
+.   330    010003EFAH        0D301H    bcc.n    2 -> 336
+.   332    010003EFCH        0DF01H    svc      1
+.   334    010003EFEH   <LineNo: 58>
+.   336    010003F00H        04909H    ldr      r1,[pc,#36] -> 376 ; Global: 02002FCBCH
+.   338    010003F02H          080H    lsls     r0,r0,#2
+.   340    010003F04H        01808H    adds     r0,r1,r0
+.   342    010003F06H        06800H    ldr      r0,[r0]
+.   344    010003F08H        06800H    ldr      r0,[r0]
+.   346    010003F0AH        09901H    ldr      r1,[sp,#4]
+.   348    010003F0CH        06008H    str      r0,[r1]
+    W[termNo] := NIL
+.   350    010003F0EH        09800H    ldr      r0,[sp]
+.   352    010003F10H        02802H    cmp      r0,#2
+.   354    010003F12H        0D301H    bcc.n    2 -> 360
+.   356    010003F14H        0DF01H    svc      1
+.   358    010003F16H   <LineNo: 59>
+.   360    010003F18H        04903H    ldr      r1,[pc,#12] -> 376 ; Global: 02002FCBCH
+.   362    010003F1AH          080H    lsls     r0,r0,#2
+.   364    010003F1CH        01808H    adds     r0,r1,r0
+  END Close;
+.   366    010003F1EH        02100H    movs     r1,#0
+.   368    010003F20H        06001H    str      r1,[r0]
+.   370    010003F22H        0B002H    add      sp,#8
+.   372    010003F24H        0BD00H    pop      { pc }
+.   374    010003F26H        046C0H    nop
+.   376    010003F28H   <Global: 02002FCBCH>
+
+
+  PROCEDURE OpenErr*(termNo: INTEGER; psp: TextIO.PutStringProc);
+  (**
+    Add an error output terminal, eg. using a simple busy-wait output.
+    Not much worries about thread mis-timing in case of an error, better get that
+    error message out intact. :)
+    See module Main for an example.
+  **)
+  BEGIN
+.   380    010003F2CH        0B503H    push     { r0, r1, lr }
+    ASSERT(termNo IN {TERM0, TERM1}, Errors.PreCond);
+.   382    010003F2EH        02003H    movs     r0,#3
+.   384    010003F30H        09900H    ldr      r1,[sp]
+.   386    010003F32H        02201H    movs     r2,#1
+.   388    010003F34H        0408AH    lsls     r2,r1
+.   390    010003F36H        04210H    tst      r0,r2
+.   392    010003F38H        0D101H    bne.n    2 -> 398
+.   394    010003F3AH        0DF65H    svc      101
+.   396    010003F3CH   <LineNo: 71>
+    ASSERT(W[termNo] # NIL, Errors.ProgError); (* main terminal must be open *)
+.   398    010003F3EH        09800H    ldr      r0,[sp]
+.   400    010003F40H        02802H    cmp      r0,#2
+.   402    010003F42H        0D301H    bcc.n    2 -> 408
+.   404    010003F44H        0DF01H    svc      1
+.   406    010003F46H   <LineNo: 72>
+.   408    010003F48H        04925H    ldr      r1,[pc,#148] -> 560 ; Global: 02002FCBCH
+.   410    010003F4AH          080H    lsls     r0,r0,#2
+.   412    010003F4CH        01808H    adds     r0,r1,r0
+.   414    010003F4EH        06800H    ldr      r0,[r0]
+.   416    010003F50H        02800H    cmp      r0,#0
+.   418    010003F52H        0D101H    bne.n    2 -> 424
+.   420    010003F54H        0DF68H    svc      104
+.   422    010003F56H   <LineNo: 72>
+    IF Werr[termNo] = NIL THEN
+.   424    010003F58H        09800H    ldr      r0,[sp]
+.   426    010003F5AH        02802H    cmp      r0,#2
+.   428    010003F5CH        0D301H    bcc.n    2 -> 434
+.   430    010003F5EH        0DF01H    svc      1
+.   432    010003F60H   <LineNo: 73>
+.   434    010003F62H        04920H    ldr      r1,[pc,#128] -> 564 ; Global: 02002FCB4H
+.   436    010003F64H          080H    lsls     r0,r0,#2
+.   438    010003F66H        01808H    adds     r0,r1,r0
+.   440    010003F68H        06800H    ldr      r0,[r0]
+.   442    010003F6AH        02800H    cmp      r0,#0
+.   444    010003F6CH        0D001H    beq.n    2 -> 450
+.   446    010003F6EH        0E032H    b        100 -> 550
+.   448    010003F70H        046C0H    nop
+      NEW(Werr[termNo]); ASSERT(Werr[termNo] # NIL, Errors.HeapOverflow);
+.   450    010003F72H        09800H    ldr      r0,[sp]
+.   452    010003F74H        02802H    cmp      r0,#2
+.   454    010003F76H        0D301H    bcc.n    2 -> 460
+.   456    010003F78H        0DF01H    svc      1
+.   458    010003F7AH   <LineNo: 74>
+.   460    010003F7CH        04919H    ldr      r1,[pc,#100] -> 564 ; Global: 02002FCB4H
+.   462    010003F7EH          080H    lsls     r0,r0,#2
+.   464    010003F80H        01808H    adds     r0,r1,r0
+.   466    010003F82H        04916H    ldr      r1,[pc,#88] -> 556 ; Global: 010002514H
+.   468    010003F84H    0F7FDFA30H    bl.w     MAU.New
+.   472    010003F88H        0E000H    b        0 -> 476
+.   474    010003F8AH   <LineNo: 74>
+.   476    010003F8CH        09800H    ldr      r0,[sp]
+.   478    010003F8EH        02802H    cmp      r0,#2
+.   480    010003F90H        0D301H    bcc.n    2 -> 486
+.   482    010003F92H        0DF01H    svc      1
+.   484    010003F94H   <LineNo: 74>
+.   486    010003F96H        04913H    ldr      r1,[pc,#76] -> 564 ; Global: 02002FCB4H
+.   488    010003F98H          080H    lsls     r0,r0,#2
+.   490    010003F9AH        01808H    adds     r0,r1,r0
+.   492    010003F9CH        06800H    ldr      r0,[r0]
+.   494    010003F9EH        02800H    cmp      r0,#0
+.   496    010003FA0H        0D101H    bne.n    2 -> 502
+.   498    010003FA2H        0DF6CH    svc      108
+.   500    010003FA4H   <LineNo: 74>
+      TextIO.OpenWriter(Werr[termNo], W[termNo].dev, psp);
+.   502    010003FA6H        09800H    ldr      r0,[sp]
+.   504    010003FA8H        02802H    cmp      r0,#2
+.   506    010003FAAH        0D301H    bcc.n    2 -> 512
+.   508    010003FACH        0DF01H    svc      1
+.   510    010003FAEH   <LineNo: 75>
+.   512    010003FB0H        0490CH    ldr      r1,[pc,#48] -> 564 ; Global: 02002FCB4H
+.   514    010003FB2H          080H    lsls     r0,r0,#2
+.   516    010003FB4H        01808H    adds     r0,r1,r0
+.   518    010003FB6H        06800H    ldr      r0,[r0]
+.   520    010003FB8H        09900H    ldr      r1,[sp]
+.   522    010003FBAH        02902H    cmp      r1,#2
+.   524    010003FBCH        0D301H    bcc.n    2 -> 530
+.   526    010003FBEH        0DF01H    svc      1
+.   528    010003FC0H   <LineNo: 75>
+.   530    010003FC2H        04A07H    ldr      r2,[pc,#28] -> 560 ; Global: 02002FCBCH
+.   532    010003FC4H          089H    lsls     r1,r1,#2
+.   534    010003FC6H        01851H    adds     r1,r2,r1
+.   536    010003FC8H        06809H    ldr      r1,[r1]
+.   538    010003FCAH        06809H    ldr      r1,[r1]
+.   540    010003FCCH        09A01H    ldr      r2,[sp,#4]
+.   542    010003FCEH    0F7FEFAB5H    bl.w     TextIO.OpenWriter
+.   546    010003FD2H        0E000H    b        0 -> 550
+.   548    010003FD4H   <LineNo: 75>
+    END
+  END OpenErr;
+.   550    010003FD6H        0B002H    add      sp,#8
+.   552    010003FD8H        0BD00H    pop      { pc }
+.   554    010003FDAH        046C0H    nop
+.   556    010003FDCH   <Global: 010002514H>
+.   560    010003FE0H   <Global: 02002FCBCH>
+.   564    010003FE4H   <Global: 02002FCB4H>
+
+
+BEGIN
+.   568    010003FE8H        0B500H    push     { lr }
+  W[0] := NIL; W[1] := NIL;
+.   570    010003FEAH        04809H    ldr      r0,[pc,#36] -> 608 ; Global: 02002FCBCH
+.   572    010003FECH        02100H    movs     r1,#0
+.   574    010003FEEH        06001H    str      r1,[r0]
+.   576    010003FF0H        04807H    ldr      r0,[pc,#28] -> 608 ; Global: 02002FCBCH
+.   578    010003FF2H        02100H    movs     r1,#0
+.   580    010003FF4H        06041H    str      r1,[r0,#4]
+  R[0] := NIL; R[1] := NIL;
+.   582    010003FF6H        04807H    ldr      r0,[pc,#28] -> 612 ; Global: 02002FCACH
+.   584    010003FF8H        02100H    movs     r1,#0
+.   586    010003FFAH        06001H    str      r1,[r0]
+.   588    010003FFCH        04805H    ldr      r0,[pc,#20] -> 612 ; Global: 02002FCACH
+.   590    010003FFEH        02100H    movs     r1,#0
+.   592    010004000H        06041H    str      r1,[r0,#4]
+  Werr[0] := NIL; Werr[1] := NIL
+.   594    010004002H        04805H    ldr      r0,[pc,#20] -> 616 ; Global: 02002FCB4H
+.   596    010004004H        02100H    movs     r1,#0
+.   598    010004006H        06001H    str      r1,[r0]
+.   600    010004008H        04803H    ldr      r0,[pc,#12] -> 616 ; Global: 02002FCB4H
+END Terminals.
+.   602    01000400AH        02100H    movs     r1,#0
+.   604    01000400CH        06041H    str      r1,[r0,#4]
+.   606    01000400EH        0BD00H    pop      { pc }
+.   608    010004010H   <Global: 02002FCBCH>
+.   612    010004014H   <Global: 02002FCACH>
+.   616    010004018H   <Global: 02002FCB4H>

@@ -1,0 +1,275 @@
+.     0    010004FE4H   <Pad: 0>
+MODULE LEDext;
+(**
+  Oberon RTK Framework
+  --
+  Eight additional LEDs, connected via GPIO pins.
+  Include also the green one on the Pico for convenience.
+  --
+  MCU: RP2040
+  Board: Pico
+  --
+  Usage:
+  * Via SIO:
+    GPIO.Set({LEDext.LED0}),
+    GPIO.Clear({LEDext.LED0}),
+    GPIO.Toggle({LEDext.LED0})
+  * Direct, avoiding procedure calls, eg. for leaf procedures:
+    SYSTEM.PUT(LEDext.SET, {LEDext.LED0}),
+    SYSTEM.PUT(LEDext.CLR, {LEDext.LED0}),
+    SYSTEM.PUT(LEDext.XOR, {LEDext.LED0})
+  * A set of LEDs can be set on or off with one call.
+  --
+  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+  IMPORT GPIO, MCU := MCU2;
+
+  CONST
+    LEDpinNoPico = 25;
+    LEDpinNo0 = 2;
+    LEDpinNo1 = 3;
+    LEDpinNo2 = 6;
+    LEDpinNo3 = 7;
+    LEDpinNo4 = 8;
+    LEDpinNo5 = 9;
+    LEDpinNo6 = 14;
+    LEDpinNo7 = 15;
+
+    LEDpico* = LEDpinNoPico;
+    LED0* = LEDpinNo0;
+    LED1* = LEDpinNo1;
+    LED2* = LEDpinNo2;
+    LED3* = LEDpinNo3;
+    LED4* = LEDpinNo4;
+    LED5* = LEDpinNo5;
+    LED6* = LEDpinNo6;
+    LED7* = LEDpinNo7;
+
+    SET* = MCU.SIO_GPIO_OUT_SET;
+    CLR* = MCU.SIO_GPIO_OUT_CLR;
+    XOR* = MCU.SIO_GPIO_OUT_XOR;
+
+    NumLeds = 8;
+
+  VAR LED*: ARRAY 8 OF INTEGER;
+
+
+  PROCEDURE SetLedBits*(v, highBit, lowBit: INTEGER);
+    VAR i, numBits: INTEGER; setMask, clearMask: INTEGER;
+  BEGIN
+.     4    010004FE8H        0B507H    push     { r0, r1, r2, lr }
+.     6    010004FEAH        0B084H    sub      sp,#16
+    setMask := 0; clearMask := 0;
+.     8    010004FECH        02000H    movs     r0,#0
+.    10    010004FEEH        09002H    str      r0,[sp,#8]
+.    12    010004FF0H        02000H    movs     r0,#0
+.    14    010004FF2H        09003H    str      r0,[sp,#12]
+    i := 0; numBits := highBit - lowBit;
+.    16    010004FF4H        02000H    movs     r0,#0
+.    18    010004FF6H        09000H    str      r0,[sp]
+.    20    010004FF8H        09805H    ldr      r0,[sp,#20]
+.    22    010004FFAH        09906H    ldr      r1,[sp,#24]
+.    24    010004FFCH        01A40H    subs     r0,r0,r1
+.    26    010004FFEH        09001H    str      r0,[sp,#4]
+    WHILE i <= numBits DO
+.    28    010005000H        09800H    ldr      r0,[sp]
+.    30    010005002H        09901H    ldr      r1,[sp,#4]
+.    32    010005004H        04288H    cmp      r0,r1
+.    34    010005006H        0DD01H    ble.n    2 -> 40
+.    36    010005008H        0E030H    b        96 -> 136
+.    38    01000500AH        046C0H    nop
+      IF i IN BITS(v) THEN
+.    40    01000500CH        09804H    ldr      r0,[sp,#16]
+.    42    01000500EH        09900H    ldr      r1,[sp]
+.    44    010005010H        02201H    movs     r2,#1
+.    46    010005012H        0408AH    lsls     r2,r1
+.    48    010005014H        04210H    tst      r0,r2
+.    50    010005016H        0D101H    bne.n    2 -> 56
+.    52    010005018H        0E013H    b        38 -> 94
+.    54    01000501AH        046C0H    nop
+        INCL(BITS(setMask), LED[i + lowBit])
+.    56    01000501CH        09800H    ldr      r0,[sp]
+.    58    01000501EH        09906H    ldr      r1,[sp,#24]
+.    60    010005020H        01840H    adds     r0,r0,r1
+.    62    010005022H        02808H    cmp      r0,#8
+.    64    010005024H        0D301H    bcc.n    2 -> 70
+.    66    010005026H        0DF01H    svc      1
+.    68    010005028H   <LineNo: 64>
+.    70    01000502AH        04916H    ldr      r1,[pc,#88] -> 160 ; Global: 02002FC6CH
+.    72    01000502CH          080H    lsls     r0,r0,#2
+.    74    01000502EH        01808H    adds     r0,r1,r0
+      ELSE
+.    76    010005030H        06800H    ldr      r0,[r0]
+.    78    010005032H        02101H    movs     r1,#1
+.    80    010005034H        04081H    lsls     r1,r0
+.    82    010005036H        0AA02H    add      r2,sp,#8
+.    84    010005038H        06813H    ldr      r3,[r2]
+.    86    01000503AH        0430BH    orrs     r3,r1
+.    88    01000503CH        06013H    str      r3,[r2]
+        INCL(BITS(clearMask), LED[i + lowBit])
+.    90    01000503EH        0E011H    b        34 -> 128
+.    92    010005040H        046C0H    nop
+.    94    010005042H        09800H    ldr      r0,[sp]
+.    96    010005044H        09906H    ldr      r1,[sp,#24]
+.    98    010005046H        01840H    adds     r0,r0,r1
+.   100    010005048H        02808H    cmp      r0,#8
+.   102    01000504AH        0D301H    bcc.n    2 -> 108
+.   104    01000504CH        0DF01H    svc      1
+.   106    01000504EH   <LineNo: 66>
+.   108    010005050H        0490CH    ldr      r1,[pc,#48] -> 160 ; Global: 02002FC6CH
+.   110    010005052H          080H    lsls     r0,r0,#2
+.   112    010005054H        01808H    adds     r0,r1,r0
+      END;
+.   114    010005056H        06800H    ldr      r0,[r0]
+.   116    010005058H        02101H    movs     r1,#1
+.   118    01000505AH        04081H    lsls     r1,r0
+.   120    01000505CH        0AA03H    add      r2,sp,#12
+.   122    01000505EH        06813H    ldr      r3,[r2]
+.   124    010005060H        0430BH    orrs     r3,r1
+.   126    010005062H        06013H    str      r3,[r2]
+      INC(i)
+    END;
+.   128    010005064H        09800H    ldr      r0,[sp]
+.   130    010005066H        03001H    adds     r0,#1
+.   132    010005068H        09000H    str      r0,[sp]
+.   134    01000506AH        0E7C9H    b        -110 -> 28
+    GPIO.Clear(BITS(clearMask));
+.   136    01000506CH        09803H    ldr      r0,[sp,#12]
+.   138    01000506EH    0F7FBFFD5H    bl.w     GPIO.Clear
+.   142    010005072H        0E000H    b        0 -> 146
+.   144    010005074H   <LineNo: 70>
+    GPIO.Set(BITS(setMask))
+.   146    010005076H        09802H    ldr      r0,[sp,#8]
+  END SetLedBits;
+.   148    010005078H    0F7FBFFC8H    bl.w     GPIO.Set
+.   152    01000507CH        0E000H    b        0 -> 156
+.   154    01000507EH   <LineNo: 71>
+.   156    010005080H        0B007H    add      sp,#28
+.   158    010005082H        0BD00H    pop      { pc }
+.   160    010005084H   <Global: 02002FC6CH>
+
+
+  PROCEDURE SetValue*(v: INTEGER);
+  BEGIN
+.   164    010005088H        0B501H    push     { r0, lr }
+    SetLedBits(v, 7, 0)
+.   166    01000508AH        09800H    ldr      r0,[sp]
+.   168    01000508CH        02107H    movs     r1,#7
+.   170    01000508EH        02200H    movs     r2,#0
+  END SetValue;
+.   172    010005090H    0F7FFFFAAH    bl.w     LEDext.SetLedBits
+.   176    010005094H        0E000H    b        0 -> 180
+.   178    010005096H   <LineNo: 77>
+.   180    010005098H        0B001H    add      sp,#4
+.   182    01000509AH        0BD00H    pop      { pc }
+
+
+  PROCEDURE init;
+    VAR i: INTEGER; en: INTEGER;
+  BEGIN
+.   184    01000509CH        0B500H    push     { lr }
+.   186    01000509EH        0B082H    sub      sp,#8
+    LED[0] := LEDpinNo0;
+.   188    0100050A0H        04827H    ldr      r0,[pc,#156] -> 348 ; Global: 02002FC6CH
+.   190    0100050A2H        02102H    movs     r1,#2
+.   192    0100050A4H        06001H    str      r1,[r0]
+    LED[1] := LEDpinNo1;
+.   194    0100050A6H        04826H    ldr      r0,[pc,#152] -> 348 ; Global: 02002FC6CH
+.   196    0100050A8H        02103H    movs     r1,#3
+.   198    0100050AAH        06041H    str      r1,[r0,#4]
+    LED[2] := LEDpinNo2;
+.   200    0100050ACH        04824H    ldr      r0,[pc,#144] -> 348 ; Global: 02002FC6CH
+.   202    0100050AEH        02106H    movs     r1,#6
+.   204    0100050B0H        06081H    str      r1,[r0,#8]
+    LED[3] := LEDpinNo3;
+.   206    0100050B2H        04823H    ldr      r0,[pc,#140] -> 348 ; Global: 02002FC6CH
+.   208    0100050B4H        02107H    movs     r1,#7
+.   210    0100050B6H        060C1H    str      r1,[r0,#12]
+    LED[4] := LEDpinNo4;
+.   212    0100050B8H        04821H    ldr      r0,[pc,#132] -> 348 ; Global: 02002FC6CH
+.   214    0100050BAH        02108H    movs     r1,#8
+.   216    0100050BCH        06101H    str      r1,[r0,#16]
+    LED[5] := LEDpinNo5;
+.   218    0100050BEH        04820H    ldr      r0,[pc,#128] -> 348 ; Global: 02002FC6CH
+.   220    0100050C0H        02109H    movs     r1,#9
+.   222    0100050C2H        06141H    str      r1,[r0,#20]
+    LED[6] := LEDpinNo6;
+.   224    0100050C4H        0481EH    ldr      r0,[pc,#120] -> 348 ; Global: 02002FC6CH
+.   226    0100050C6H        0210EH    movs     r1,#14
+.   228    0100050C8H        06181H    str      r1,[r0,#24]
+    LED[7] := LEDpinNo7;
+.   230    0100050CAH        0481DH    ldr      r0,[pc,#116] -> 348 ; Global: 02002FC6CH
+.   232    0100050CCH        0210FH    movs     r1,#15
+.   234    0100050CEH        061C1H    str      r1,[r0,#28]
+    GPIO.SetFunction(LEDpinNoPico, GPIO.Fsio);
+.   236    0100050D0H        02019H    movs     r0,#25
+.   238    0100050D2H        02105H    movs     r1,#5
+.   240    0100050D4H    0F7FBFEB6H    bl.w     GPIO.SetFunction
+.   244    0100050D8H        0E000H    b        0 -> 248
+.   246    0100050DAH   <LineNo: 92>
+    GPIO.OutputEnable({LEDpinNoPico});
+.   248    0100050DCH        02001H    movs     r0,#1
+.   250    0100050DEH         0640H    lsls     r0,r0,#25
+.   252    0100050E0H    0F7FBFFDAH    bl.w     GPIO.OutputEnable
+.   256    0100050E4H        0E000H    b        0 -> 260
+.   258    0100050E6H   <LineNo: 93>
+    i := 0;
+.   260    0100050E8H        02000H    movs     r0,#0
+.   262    0100050EAH        09000H    str      r0,[sp]
+    WHILE i < NumLeds DO
+.   264    0100050ECH        09800H    ldr      r0,[sp]
+.   266    0100050EEH        02808H    cmp      r0,#8
+.   268    0100050F0H        0DB01H    blt.n    2 -> 274
+.   270    0100050F2H        0E022H    b        68 -> 342
+.   272    0100050F4H        046C0H    nop
+      GPIO.SetFunction(LED[i], GPIO.Fsio);
+.   274    0100050F6H        09800H    ldr      r0,[sp]
+.   276    0100050F8H        02808H    cmp      r0,#8
+.   278    0100050FAH        0D301H    bcc.n    2 -> 284
+.   280    0100050FCH        0DF01H    svc      1
+.   282    0100050FEH   <LineNo: 96>
+.   284    010005100H        0490FH    ldr      r1,[pc,#60] -> 348 ; Global: 02002FC6CH
+.   286    010005102H          080H    lsls     r0,r0,#2
+.   288    010005104H        01808H    adds     r0,r1,r0
+.   290    010005106H        06800H    ldr      r0,[r0]
+.   292    010005108H        02105H    movs     r1,#5
+.   294    01000510AH    0F7FBFE9BH    bl.w     GPIO.SetFunction
+.   298    01000510EH        0E000H    b        0 -> 302
+.   300    010005110H   <LineNo: 96>
+      GPIO.OutputEnable(BITS(ORD({LED[i]})));
+.   302    010005112H        09800H    ldr      r0,[sp]
+.   304    010005114H        02808H    cmp      r0,#8
+.   306    010005116H        0D301H    bcc.n    2 -> 312
+.   308    010005118H        0DF01H    svc      1
+.   310    01000511AH   <LineNo: 97>
+.   312    01000511CH        04908H    ldr      r1,[pc,#32] -> 348 ; Global: 02002FC6CH
+.   314    01000511EH          080H    lsls     r0,r0,#2
+.   316    010005120H        01808H    adds     r0,r1,r0
+.   318    010005122H        06800H    ldr      r0,[r0]
+.   320    010005124H        02101H    movs     r1,#1
+.   322    010005126H        04081H    lsls     r1,r0
+.   324    010005128H        04608H    mov      r0,r1
+.   326    01000512AH    0F7FBFFB5H    bl.w     GPIO.OutputEnable
+.   330    01000512EH        0E000H    b        0 -> 334
+.   332    010005130H   <LineNo: 97>
+      INC(i)
+    END
+.   334    010005132H        09800H    ldr      r0,[sp]
+.   336    010005134H        03001H    adds     r0,#1
+.   338    010005136H        09000H    str      r0,[sp]
+.   340    010005138H        0E7D8H    b        -80 -> 264
+  END init;
+.   342    01000513AH        0B002H    add      sp,#8
+.   344    01000513CH        0BD00H    pop      { pc }
+.   346    01000513EH        046C0H    nop
+.   348    010005140H   <Global: 02002FC6CH>
+
+BEGIN
+.   352    010005144H        0B500H    push     { lr }
+  init
+END LEDext.
+.   354    010005146H    0F7FFFFA9H    bl.w     LEDext.init
+.   358    01000514AH        0E000H    b        0 -> 362
+.   360    01000514CH   <LineNo: 103>
+.   362    01000514EH        0BD00H    pop      { pc }

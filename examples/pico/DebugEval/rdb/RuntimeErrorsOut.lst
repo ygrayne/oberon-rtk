@@ -1,0 +1,1099 @@
+.     0  <Pad: 0>
+MODULE RuntimeErrorsOut;
+(**
+  Oberon RTK Framework
+  Human-readable output for exceptions.
+  --
+  Copyright (c) 2020-2024 Gray, gray@grayraven.org
+  Portions copyright (c) 2008-2023 CFB Software, https://www.astrobe.com
+  Used with permission.
+  Please refer to the licensing conditions as defined at the end of this file.
+**)
+
+  IMPORT RuntimeErrors, TextIO, Texts, Errors, ResData;
+
+  CONST
+    NoValue = -1;
+    NumCores = RuntimeErrors.NumCores;
+
+  TYPE
+    Name* = ARRAY 16 OF CHAR;
+
+  VAR
+    W: ARRAY NumCores OF TextIO.Writer;
+
+
+  (* --- Astrobe code begin --- *)
+
+  PROCEDURE* intArrayToChars(a: ARRAY OF BYTE; VAR chars: ARRAY OF CHAR);
+  (* from Astrobe library *)
+    VAR i: INTEGER;
+  BEGIN
+.     4     04H  0B50FH          push     { r0, r1, r2, r3, lr }
+.     6     06H  0B081H          sub      sp,#4
+    FOR i := 0 TO LEN(a) - 1 DO
+.     8     08H  02000H          movs     r0,#0
+.    10     0AH  09000H          str      r0,[sp]
+.    12     0CH  09802H          ldr      r0,[sp,#8]
+.    14     0EH  03801H          subs     r0,#1
+      chars[i] := CHR(a[i])
+.    16    010H  09900H          ldr      r1,[sp]
+.    18    012H  04281H          cmp      r1,r0
+.    20    014H  0DD01H          ble.n    2 -> 26
+.    22    016H  0E00CH          b        24 -> 50
+.    24    018H  046C0H          nop
+.    26    01AH  09800H          ldr      r0,[sp]
+.    28    01CH  09903H          ldr      r1,[sp,#12]
+.    30    01EH  01808H          adds     r0,r1,r0
+.    32    020H  09900H          ldr      r1,[sp]
+.    34    022H  09A01H          ldr      r2,[sp,#4]
+.    36    024H  01851H          adds     r1,r2,r1
+    END
+.    38    026H  07809H          ldrb     r1,[r1]
+.    40    028H  07001H          strb     r1,[r0]
+  END intArrayToChars;
+.    42    02AH  09800H          ldr      r0,[sp]
+.    44    02CH  03001H          adds     r0,#1
+.    46    02EH  09000H          str      r0,[sp]
+.    48    030H  0E7ECH          b        -40 -> 12
+.    50    032H  0B005H          add      sp,#20
+.    52    034H  0BD00H          pop      { pc }
+.    54    036H  046C0H          nop
+
+
+  PROCEDURE GetName*(target: INTEGER; VAR modName, procName: Name);
+  (* from Astrobe library *)
+    CONST ItemSize = 6;
+    VAR
+      r: ResData.Resource;
+      i, index, count, addr, resSize, nItems, recType: INTEGER;
+      a: ARRAY 4 OF INTEGER;
+      modIdx, foundIdx: INTEGER;
+  BEGIN
+.    56    038H  0B507H          push     { r0, r1, r2, lr }
+.    58    03AH  0B090H          sub      sp,#64
+    ResData.Open(r, ".ref");
+.    60    03CH  04668H          mov      r0,sp
+.    62    03EH  04947H          ldr      r1,[pc,#284] -> 348
+.    64    040H  0A200H          adr      r2,pc,#0 -> 68
+.    66    042H  0E003H          b        6 -> 76
+.    68  <String: ".ref">
+.    72  <String: "....">
+.    76    04CH  02305H          movs     r3,#5
+.    78    04EH  0040C0000H      bl.w     Ext Proc #12
+.    82    052H  0E000H          b        0 -> 86
+.    84  <LineNo: 46>
+    resSize := ResData.Size(r);
+.    86    056H  04668H          mov      r0,sp
+.    88    058H  04940H          ldr      r1,[pc,#256] -> 348
+.    90    05AH  004030027H      bl.w     Ext Proc #3
+.    94    05EH  0E000H          b        0 -> 98
+.    96  <LineNo: 47>
+.    98    062H  09007H          str      r0,[sp,#28]
+    nItems := resSize DIV (ItemSize * 4);
+.   100    064H  09807H          ldr      r0,[sp,#28]
+.   102    066H  02118H          movs     r1,#24
+.   104    068H  02401H          movs     r4,#1
+.   106    06AH  007E4H          lsls     r4,r4,#31
+.   108    06CH  02200H          movs     r2,#0
+.   110    06EH  02300H          movs     r3,#0
+.   112    070H  00040H          lsls     r0,r0,#1
+.   114    072H  0415BH          adcs     r3,r3
+.   116    074H  0428BH          cmp      r3,r1
+.   118    076H  0D301H          bcc.n    2 -> 124
+.   120    078H  01912H          adds     r2,r2,r4
+.   122    07AH  01A5BH          subs     r3,r3,r1
+.   124    07CH  00864H          lsrs     r4,r4,#1
+.   126    07EH  0D1F7H          bne.n    -18 -> 112
+.   128    080H  04610H          mov      r0,r2
+.   130    082H  09008H          str      r0,[sp,#32]
+    i := 0;
+.   132    084H  02000H          movs     r0,#0
+.   134    086H  09003H          str      r0,[sp,#12]
+    addr := 0;
+.   136    088H  02000H          movs     r0,#0
+.   138    08AH  09006H          str      r0,[sp,#24]
+    index := 0;
+.   140    08CH  02000H          movs     r0,#0
+.   142    08EH  09004H          str      r0,[sp,#16]
+    modIdx := nItems - 1;
+.   144    090H  09808H          ldr      r0,[sp,#32]
+.   146    092H  03801H          subs     r0,#1
+.   148    094H  0900EH          str      r0,[sp,#56]
+    foundIdx := nItems - 1;
+.   150    096H  09808H          ldr      r0,[sp,#32]
+.   152    098H  03801H          subs     r0,#1
+.   154    09AH  0900FH          str      r0,[sp,#60]
+    WHILE (i < nItems) DO
+.   156    09CH  09803H          ldr      r0,[sp,#12]
+.   158    09EH  09908H          ldr      r1,[sp,#32]
+.   160    0A0H  04288H          cmp      r0,r1
+.   162    0A2H  0DB01H          blt.n    2 -> 168
+.   164    0A4H  0E02CH          b        88 -> 256
+.   166    0A6H  046C0H          nop
+      ResData.GetInt(r, index, recType);
+.   168    0A8H  04668H          mov      r0,sp
+.   170    0AAH  0492CH          ldr      r1,[pc,#176] -> 348
+.   172    0ACH  09A04H          ldr      r2,[sp,#16]
+.   174    0AEH  0AB09H          add      r3,sp,#36
+.   176    0B0H  00404002DH      bl.w     Ext Proc #4
+.   180    0B4H  0E000H          b        0 -> 184
+.   182  <LineNo: 55>
+      ResData.GetInt(r, index + 5, addr);
+.   184    0B8H  04668H          mov      r0,sp
+.   186    0BAH  04928H          ldr      r1,[pc,#160] -> 348
+.   188    0BCH  09A04H          ldr      r2,[sp,#16]
+.   190    0BEH  03205H          adds     r2,#5
+.   192    0C0H  0AB06H          add      r3,sp,#24
+.   194    0C2H  004040058H      bl.w     Ext Proc #4
+.   198    0C6H  0E000H          b        0 -> 202
+.   200  <LineNo: 56>
+      IF addr > target THEN
+.   202    0CAH  09806H          ldr      r0,[sp,#24]
+.   204    0CCH  09910H          ldr      r1,[sp,#64]
+.   206    0CEH  04288H          cmp      r0,r1
+.   208    0D0H  0DC01H          bgt.n    2 -> 214
+.   210    0D2H  0E007H          b        14 -> 228
+.   212    0D4H  046C0H          nop
+        foundIdx := i - 1;
+.   214    0D6H  09803H          ldr      r0,[sp,#12]
+.   216    0D8H  03801H          subs     r0,#1
+.   218    0DAH  0900FH          str      r0,[sp,#60]
+        i := nItems
+      ELSIF recType = 0 THEN
+.   220    0DCH  09808H          ldr      r0,[sp,#32]
+.   222    0DEH  09003H          str      r0,[sp,#12]
+.   224    0E0H  0E007H          b        14 -> 242
+.   226    0E2H  046C0H          nop
+.   228    0E4H  09809H          ldr      r0,[sp,#36]
+.   230    0E6H  02800H          cmp      r0,#0
+.   232    0E8H  0D001H          beq.n    2 -> 238
+.   234    0EAH  0E002H          b        4 -> 242
+.   236    0ECH  046C0H          nop
+        modIdx := i
+      END;
+.   238    0EEH  09803H          ldr      r0,[sp,#12]
+.   240    0F0H  0900EH          str      r0,[sp,#56]
+      index := index + ItemSize;
+.   242    0F2H  09804H          ldr      r0,[sp,#16]
+.   244    0F4H  03006H          adds     r0,#6
+.   246    0F6H  09004H          str      r0,[sp,#16]
+      INC(i)
+    END;
+.   248    0F8H  09803H          ldr      r0,[sp,#12]
+.   250    0FAH  03001H          adds     r0,#1
+.   252    0FCH  09003H          str      r0,[sp,#12]
+.   254    0FEH  0E7CDH          b        -102 -> 156
+    count := ResData.GetIntArray(r, modIdx * ItemSize + 1, LEN(a), a);
+.   256   0100H  04668H          mov      r0,sp
+.   258   0102H  04916H          ldr      r1,[pc,#88] -> 348
+.   260   0104H  09A0EH          ldr      r2,[sp,#56]
+.   262   0106H  02306H          movs     r3,#6
+.   264   0108H  0435AH          muls     r2,r3
+.   266   010AH  03201H          adds     r2,#1
+.   268   010CH  02304H          movs     r3,#4
+.   270   010EH  0AC0AH          add      r4,sp,#40
+.   272   0110H  02504H          movs     r5,#4
+.   274   0112H  004070061H      bl.w     Ext Proc #7
+.   278   0116H  0E000H          b        0 -> 282
+.   280  <LineNo: 66>
+.   282   011AH  09005H          str      r0,[sp,#20]
+    intArrayToChars(a, modName);
+.   284   011CH  0A80AH          add      r0,sp,#40
+.   286   011EH  02110H          movs     r1,#16
+.   288   0120H  09A11H          ldr      r2,[sp,#68]
+.   290   0122H  02310H          movs     r3,#16
+.   292   0124H  0F7FFFF6EH      bl.w     -292 -> 4
+.   296   0128H  0E000H          b        0 -> 300
+.   298  <LineNo: 67>
+    count := ResData.GetIntArray(r, foundIdx * ItemSize + 1, LEN(a), a);
+.   300   012CH  04668H          mov      r0,sp
+.   302   012EH  0490BH          ldr      r1,[pc,#44] -> 348
+.   304   0130H  09A0FH          ldr      r2,[sp,#60]
+.   306   0132H  02306H          movs     r3,#6
+.   308   0134H  0435AH          muls     r2,r3
+.   310   0136H  03201H          adds     r2,#1
+.   312   0138H  02304H          movs     r3,#4
+.   314   013AH  0AC0AH          add      r4,sp,#40
+.   316   013CH  02504H          movs     r5,#4
+.   318   013EH  004070089H      bl.w     Ext Proc #7
+.   322   0142H  0E000H          b        0 -> 326
+.   324  <LineNo: 68>
+.   326   0146H  09005H          str      r0,[sp,#20]
+    intArrayToChars(a, procName)
+.   328   0148H  0A80AH          add      r0,sp,#40
+.   330   014AH  02110H          movs     r1,#16
+.   332   014CH  09A12H          ldr      r2,[sp,#72]
+.   334   014EH  02310H          movs     r3,#16
+  END GetName;
+.   336   0150H  0F7FFFF58H      bl.w     -336 -> 4
+.   340   0154H  0E000H          b        0 -> 344
+.   342  <LineNo: 69>
+.   344   0158H  0B013H          add      sp,#76
+.   346   015AH  0BD00H          pop      { pc }
+.   348  <Global: 00201009FH  0201009FH>
+
+  (* --- Astrobe code end --- *)
+
+  PROCEDURE printStackTrace(W: TextIO.Writer; tr: RuntimeErrors.Trace);
+    VAR
+      i: INTEGER;
+      moduleName, procName: Name;
+  BEGIN
+.   352   0160H  0B507H          push     { r0, r1, r2, lr }
+.   354   0162H  0B089H          sub      sp,#36
+    IF tr.count > 1 THEN
+.   356   0164H  0980AH          ldr      r0,[sp,#40]
+.   358   0166H  06C00H          ldr      r0,[r0,#64]
+.   360   0168H  02801H          cmp      r0,#1
+.   362   016AH  0DC01H          bgt.n    2 -> 368
+.   364   016CH  0E0FCH          b        504 -> 872
+.   366   016EH  046C0H          nop
+      Texts.WriteString(W, "trace:"); Texts.WriteLn(W);
+.   368   0170H  09809H          ldr      r0,[sp,#36]
+.   370   0172H  046C0H          nop
+.   372   0174H  0A100H          adr      r1,pc,#0 -> 376
+.   374   0176H  0E003H          b        6 -> 384
+.   376  <String: "trac">
+.   380  <String: "e:..">
+.   384   0180H  02207H          movs     r2,#7
+.   386   0182H  004050000H      bl.w     Ext Proc #5
+.   390   0186H  0E000H          b        0 -> 394
+.   392  <LineNo: 80>
+.   394   018AH  09809H          ldr      r0,[sp,#36]
+.   396   018CH  0040600C1H      bl.w     Ext Proc #6
+.   400   0190H  0E000H          b        0 -> 404
+.   402  <LineNo: 80>
+      i := 0;
+.   404   0194H  02000H          movs     r0,#0
+.   406   0196H  09000H          str      r0,[sp]
+      GetName(tr.tp[i].address, moduleName, procName);
+.   408   0198H  09800H          ldr      r0,[sp]
+.   410   019AH  02808H          cmp      r0,#8
+.   412   019CH  0D301H          bcc.n    2 -> 418
+.   414   019EH  0DF01H          svc      1
+.   416  <LineNo: 82>
+.   418   01A2H  0990AH          ldr      r1,[sp,#40]
+.   420   01A4H  000C0H          lsls     r0,r0,#3
+.   422   01A6H  01808H          adds     r0,r1,r0
+.   424   01A8H  06800H          ldr      r0,[r0]
+.   426   01AAH  0A901H          add      r1,sp,#4
+.   428   01ACH  0AA05H          add      r2,sp,#20
+.   430   01AEH  0F7FFFF43H      bl.w     -378 -> 56
+.   434   01B2H  0E000H          b        0 -> 438
+.   436  <LineNo: 82>
+      WHILE i < tr.count DO
+.   438   01B6H  09800H          ldr      r0,[sp]
+.   440   01B8H  0990AH          ldr      r1,[sp,#40]
+.   442   01BAH  06C09H          ldr      r1,[r1,#64]
+.   444   01BCH  04288H          cmp      r0,r1
+.   446   01BEH  0DB01H          blt.n    2 -> 452
+.   448   01C0H  0E0A6H          b        332 -> 784
+.   450   01C2H  046C0H          nop
+        Texts.WriteString(W, "  "); Texts.WriteString(W, moduleName); Texts.WriteString(W, "."); Texts.WriteString(W, procName);
+.   452   01C4H  09809H          ldr      r0,[sp,#36]
+.   454   01C6H  046C0H          nop
+.   456   01C8H  0A100H          adr      r1,pc,#0 -> 460
+.   458   01CAH  0E001H          b        2 -> 464
+.   460  <String: "  ..">
+.   464   01D0H  02203H          movs     r2,#3
+.   466   01D2H  0040500C6H      bl.w     Ext Proc #5
+.   470   01D6H  0E000H          b        0 -> 474
+.   472  <LineNo: 84>
+.   474   01DAH  09809H          ldr      r0,[sp,#36]
+.   476   01DCH  0A901H          add      r1,sp,#4
+.   478   01DEH  02210H          movs     r2,#16
+.   480   01E0H  0040500E9H      bl.w     Ext Proc #5
+.   484   01E4H  0E000H          b        0 -> 488
+.   486  <LineNo: 84>
+.   488   01E8H  09809H          ldr      r0,[sp,#36]
+.   490   01EAH  046C0H          nop
+.   492   01ECH  0A100H          adr      r1,pc,#0 -> 496
+.   494   01EEH  0E001H          b        2 -> 500
+.   496  <String: "....">
+.   500   01F4H  02202H          movs     r2,#2
+.   502   01F6H  0040500F0H      bl.w     Ext Proc #5
+.   506   01FAH  0E000H          b        0 -> 510
+.   508  <LineNo: 84>
+.   510   01FEH  09809H          ldr      r0,[sp,#36]
+.   512   0200H  0A905H          add      r1,sp,#20
+.   514   0202H  02210H          movs     r2,#16
+.   516   0204H  0040500FBH      bl.w     Ext Proc #5
+.   520   0208H  0E000H          b        0 -> 524
+.   522  <LineNo: 84>
+        Texts.WriteString(W, "  "); Texts.WriteHex(W, tr.tp[i].address, 0);
+.   524   020CH  09809H          ldr      r0,[sp,#36]
+.   526   020EH  046C0H          nop
+.   528   0210H  0A100H          adr      r1,pc,#0 -> 532
+.   530   0212H  0E001H          b        2 -> 536
+.   532  <String: "  ..">
+.   536   0218H  02203H          movs     r2,#3
+.   538   021AH  004050102H      bl.w     Ext Proc #5
+.   542   021EH  0E000H          b        0 -> 546
+.   544  <LineNo: 85>
+.   546   0222H  09809H          ldr      r0,[sp,#36]
+.   548   0224H  09900H          ldr      r1,[sp]
+.   550   0226H  02908H          cmp      r1,#8
+.   552   0228H  0D301H          bcc.n    2 -> 558
+.   554   022AH  0DF01H          svc      1
+.   556  <LineNo: 85>
+.   558   022EH  09A0AH          ldr      r2,[sp,#40]
+.   560   0230H  000C9H          lsls     r1,r1,#3
+.   562   0232H  01851H          adds     r1,r2,r1
+.   564   0234H  06809H          ldr      r1,[r1]
+.   566   0236H  02200H          movs     r2,#0
+.   568   0238H  00408010DH      bl.w     Ext Proc #8
+.   572   023CH  0E000H          b        0 -> 576
+.   574  <LineNo: 85>
+        IF tr.tp[i].lineNo > 0 THEN
+.   576   0240H  09800H          ldr      r0,[sp]
+.   578   0242H  02808H          cmp      r0,#8
+.   580   0244H  0D301H          bcc.n    2 -> 586
+.   582   0246H  0DF01H          svc      1
+.   584  <LineNo: 86>
+.   586   024AH  0990AH          ldr      r1,[sp,#40]
+.   588   024CH  000C0H          lsls     r0,r0,#3
+.   590   024EH  01808H          adds     r0,r1,r0
+.   592   0250H  06840H          ldr      r0,[r0,#4]
+.   594   0252H  02800H          cmp      r0,#0
+.   596   0254H  0DC01H          bgt.n    2 -> 602
+.   598   0256H  0E019H          b        50 -> 652
+.   600   0258H  046C0H          nop
+          Texts.WriteString(W, "  "); Texts.WriteInt(W, tr.tp[i].lineNo, 4);
+.   602   025AH  09809H          ldr      r0,[sp,#36]
+.   604   025CH  0A100H          adr      r1,pc,#0 -> 608
+.   606   025EH  0E001H          b        2 -> 612
+.   608  <String: "  ..">
+.   612   0264H  02203H          movs     r2,#3
+.   614   0266H  00405011CH      bl.w     Ext Proc #5
+.   618   026AH  0E000H          b        0 -> 622
+.   620  <LineNo: 87>
+.   622   026EH  09809H          ldr      r0,[sp,#36]
+.   624   0270H  09900H          ldr      r1,[sp]
+.   626   0272H  02908H          cmp      r1,#8
+.   628   0274H  0D301H          bcc.n    2 -> 634
+.   630   0276H  0DF01H          svc      1
+.   632  <LineNo: 87>
+.   634   027AH  09A0AH          ldr      r2,[sp,#40]
+.   636   027CH  000C9H          lsls     r1,r1,#3
+.   638   027EH  01851H          adds     r1,r2,r1
+.   640   0280H  06849H          ldr      r1,[r1,#4]
+.   642   0282H  02204H          movs     r2,#4
+.   644   0284H  004070133H      bl.w     Ext Proc #7
+.   648   0288H  0E000H          b        0 -> 652
+.   650  <LineNo: 87>
+        END;
+        Texts.WriteLn(W);
+.   652   028CH  09809H          ldr      r0,[sp,#36]
+.   654   028EH  004060142H      bl.w     Ext Proc #6
+.   658   0292H  0E000H          b        0 -> 662
+.   660  <LineNo: 89>
+        INC(i);
+.   662   0296H  09800H          ldr      r0,[sp]
+.   664   0298H  03001H          adds     r0,#1
+.   666   029AH  09000H          str      r0,[sp]
+        IF procName = ".init" THEN
+.   668   029CH  02000H          movs     r0,#0
+.   670   029EH  0A905H          add      r1,sp,#20
+.   672   02A0H  0A200H          adr      r2,pc,#0 -> 676
+.   674   02A2H  0E003H          b        6 -> 684
+.   676  <String: ".ini">
+.   680  <String: "t...">
+.   684   02ACH  05C0BH          ldrb     r3,[r1,r0]
+.   686   02AEH  05C14H          ldrb     r4,[r2,r0]
+.   688   02B0H  03001H          adds     r0,#1
+.   690   02B2H  042A3H          cmp      r3,r4
+.   692   02B4H  0D101H          bne.n    2 -> 698
+.   694   02B6H  02B00H          cmp      r3,#0
+.   696   02B8H  0D1F8H          bne.n    -16 -> 684
+.   698   02BAH  0D001H          beq.n    2 -> 704
+.   700   02BCH  0E018H          b        48 -> 752
+.   702   02BEH  046C0H          nop
+          moduleName := "start"; procName := "up"
+.   704   02C0H  0A801H          add      r0,sp,#4
+.   706   02C2H  046C0H          nop
+.   708   02C4H  0A100H          adr      r1,pc,#0 -> 712
+.   710   02C6H  0E003H          b        6 -> 720
+.   712  <String: "star">
+.   716  <String: "t...">
+.   720   02D0H  0680AH          ldr      r2,[r1]
+.   722   02D2H  03104H          adds     r1,#4
+.   724   02D4H  06002H          str      r2,[r0]
+.   726   02D6H  03004H          adds     r0,#4
+.   728   02D8H  0680AH          ldr      r2,[r1]
+.   730   02DAH  06002H          str      r2,[r0]
+        ELSE
+.   732   02DCH  0A805H          add      r0,sp,#20
+.   734   02DEH  046C0H          nop
+.   736   02E0H  0A100H          adr      r1,pc,#0 -> 740
+.   738   02E2H  0E001H          b        2 -> 744
+.   740  <String: "up..">
+.   744   02E8H  0680AH          ldr      r2,[r1]
+.   746   02EAH  06002H          str      r2,[r0]
+          GetName(tr.tp[i].address, moduleName, procName)
+.   748   02ECH  0E00FH          b        30 -> 782
+.   750   02EEH  046C0H          nop
+.   752   02F0H  09800H          ldr      r0,[sp]
+.   754   02F2H  02808H          cmp      r0,#8
+.   756   02F4H  0D301H          bcc.n    2 -> 762
+.   758   02F6H  0DF01H          svc      1
+.   760  <LineNo: 94>
+.   762   02FAH  0990AH          ldr      r1,[sp,#40]
+.   764   02FCH  000C0H          lsls     r0,r0,#3
+.   766   02FEH  01808H          adds     r0,r1,r0
+.   768   0300H  06800H          ldr      r0,[r0]
+.   770   0302H  0A901H          add      r1,sp,#4
+.   772   0304H  0AA05H          add      r2,sp,#20
+        END
+.   774   0306H  0F7FFFE97H      bl.w     -722 -> 56
+.   778   030AH  0E000H          b        0 -> 782
+.   780  <LineNo: 94>
+      END;
+.   782   030EH  0E752H          b        -348 -> 438
+      IF tr.tp[i].address = RuntimeErrors.MoreTracePoints THEN
+.   784   0310H  09800H          ldr      r0,[sp]
+.   786   0312H  02808H          cmp      r0,#8
+.   788   0314H  0D301H          bcc.n    2 -> 794
+.   790   0316H  0DF01H          svc      1
+.   792  <LineNo: 97>
+.   794   031AH  0990AH          ldr      r1,[sp,#40]
+.   796   031CH  000C0H          lsls     r0,r0,#3
+.   798   031EH  01808H          adds     r0,r1,r0
+.   800   0320H  06800H          ldr      r0,[r0]
+.   802   0322H  02101H          movs     r1,#1
+.   804   0324H  042C8H          cmn      r0,r1
+.   806   0326H  0D001H          beq.n    2 -> 812
+.   808   0328H  0E01CH          b        56 -> 868
+.   810   032AH  046C0H          nop
+        Texts.Write(W, " "); Texts.WriteString(W, "--- more ---"); Texts.WriteLn(W)
+.   812   032CH  09809H          ldr      r0,[sp,#36]
+.   814   032EH  02120H          movs     r1,#32
+.   816   0330H  004040147H      bl.w     Ext Proc #4
+.   820   0334H  0E000H          b        0 -> 824
+.   822  <LineNo: 98>
+.   824   0338H  09809H          ldr      r0,[sp,#36]
+.   826   033AH  046C0H          nop
+.   828   033CH  0A100H          adr      r1,pc,#0 -> 832
+.   830   033EH  0E007H          b        14 -> 848
+.   832  <String: "--- ">
+.   836  <String: "more">
+.   840  <String: " ---">
+.   844  <String: "....">
+.   848   0350H  0220DH          movs     r2,#13
+.   850   0352H  004050198H      bl.w     Ext Proc #5
+.   854   0356H  0E000H          b        0 -> 858
+.   856  <LineNo: 98>
+.   858   035AH  09809H          ldr      r0,[sp,#36]
+      END
+.   860   035CH  0040601A9H      bl.w     Ext Proc #6
+.   864   0360H  0E000H          b        0 -> 868
+.   866  <LineNo: 98>
+    ELSE
+      Texts.WriteString(W, "no trace"); Texts.WriteLn(W)
+.   868   0364H  0E014H          b        40 -> 912
+.   870   0366H  046C0H          nop
+.   872   0368H  09809H          ldr      r0,[sp,#36]
+.   874   036AH  046C0H          nop
+.   876   036CH  0A100H          adr      r1,pc,#0 -> 880
+.   878   036EH  0E005H          b        10 -> 892
+.   880  <String: "no t">
+.   884  <String: "race">
+.   888  <String: "....">
+.   892   037CH  02209H          movs     r2,#9
+.   894   037EH  0040501AEH      bl.w     Ext Proc #5
+.   898   0382H  0E000H          b        0 -> 902
+.   900  <LineNo: 101>
+.   902   0386H  09809H          ldr      r0,[sp,#36]
+    END
+.   904   0388H  0040601BFH      bl.w     Ext Proc #6
+.   908   038CH  0E000H          b        0 -> 912
+.   910  <LineNo: 101>
+  END printStackTrace;
+.   912   0390H  0B00CH          add      sp,#48
+.   914   0392H  0BD00H          pop      { pc }
+
+
+  PROCEDURE regOut(W: TextIO.Writer; label: ARRAY OF CHAR; value: INTEGER);
+  BEGIN
+.   916   0394H  0B50FH          push     { r0, r1, r2, r3, lr }
+    Texts.Write(W, " "); Texts.WriteString(W, label);
+.   918   0396H  09800H          ldr      r0,[sp]
+.   920   0398H  02120H          movs     r1,#32
+.   922   039AH  0040401C4H      bl.w     Ext Proc #4
+.   926   039EH  0E000H          b        0 -> 930
+.   928  <LineNo: 108>
+.   930   03A2H  09800H          ldr      r0,[sp]
+.   932   03A4H  09901H          ldr      r1,[sp,#4]
+.   934   03A6H  09A02H          ldr      r2,[sp,#8]
+.   936   03A8H  0040501CDH      bl.w     Ext Proc #5
+.   940   03ACH  0E000H          b        0 -> 944
+.   942  <LineNo: 108>
+    Texts.WriteHex(W, value, 10); (*Out.Bin(value, 37);*)
+.   944   03B0H  09800H          ldr      r0,[sp]
+.   946   03B2H  09903H          ldr      r1,[sp,#12]
+.   948   03B4H  0220AH          movs     r2,#10
+.   950   03B6H  0040801D4H      bl.w     Ext Proc #8
+.   954   03BAH  0E000H          b        0 -> 958
+.   956  <LineNo: 109>
+    Texts.WriteLn(W)
+.   958   03BEH  09800H          ldr      r0,[sp]
+  END regOut;
+.   960   03C0H  0040601DBH      bl.w     Ext Proc #6
+.   964   03C4H  0E000H          b        0 -> 968
+.   966  <LineNo: 110>
+.   968   03C8H  0B004H          add      sp,#16
+.   970   03CAH  0BD00H          pop      { pc }
+
+
+  PROCEDURE printStackedRegs(W: TextIO.Writer; stackedRegs: RuntimeErrors.StackedRegisters);
+  BEGIN
+.   972   03CCH  0B507H          push     { r0, r1, r2, lr }
+    Texts.WriteString(W, "stacked registers:"); Texts.WriteLn(W);
+.   974   03CEH  09800H          ldr      r0,[sp]
+.   976   03D0H  0A100H          adr      r1,pc,#0 -> 980
+.   978   03D2H  0E009H          b        18 -> 1000
+.   980  <String: "stac">
+.   984  <String: "ked ">
+.   988  <String: "regi">
+.   992  <String: "ster">
+.   996  <String: "s:..">
+.  1000   03E8H  02213H          movs     r2,#19
+.  1002   03EAH  0040501E0H      bl.w     Ext Proc #5
+.  1006   03EEH  0E000H          b        0 -> 1010
+.  1008  <LineNo: 116>
+.  1010   03F2H  09800H          ldr      r0,[sp]
+.  1012   03F4H  0040601F5H      bl.w     Ext Proc #6
+.  1016   03F8H  0E000H          b        0 -> 1020
+.  1018  <LineNo: 116>
+    regOut(W, "  r0:", stackedRegs.r0);
+.  1020   03FCH  09800H          ldr      r0,[sp]
+.  1022   03FEH  046C0H          nop
+.  1024   0400H  0A100H          adr      r1,pc,#0 -> 1028
+.  1026   0402H  0E003H          b        6 -> 1036
+.  1028  <String: "  r0">
+.  1032  <String: ":...">
+.  1036   040CH  02206H          movs     r2,#6
+.  1038   040EH  09B01H          ldr      r3,[sp,#4]
+.  1040   0410H  0681BH          ldr      r3,[r3]
+.  1042   0412H  0F7FFFFBFH      bl.w     -130 -> 916
+.  1046   0416H  0E000H          b        0 -> 1050
+.  1048  <LineNo: 117>
+    regOut(W, "  r1:", stackedRegs.r1);
+.  1050   041AH  09800H          ldr      r0,[sp]
+.  1052   041CH  0A100H          adr      r1,pc,#0 -> 1056
+.  1054   041EH  0E003H          b        6 -> 1064
+.  1056  <String: "  r1">
+.  1060  <String: ":...">
+.  1064   0428H  02206H          movs     r2,#6
+.  1066   042AH  09B01H          ldr      r3,[sp,#4]
+.  1068   042CH  0685BH          ldr      r3,[r3,#4]
+.  1070   042EH  0F7FFFFB1H      bl.w     -158 -> 916
+.  1074   0432H  0E000H          b        0 -> 1078
+.  1076  <LineNo: 118>
+    regOut(W, "  r2:", stackedRegs.r2);
+.  1078   0436H  09800H          ldr      r0,[sp]
+.  1080   0438H  0A100H          adr      r1,pc,#0 -> 1084
+.  1082   043AH  0E003H          b        6 -> 1092
+.  1084  <String: "  r2">
+.  1088  <String: ":...">
+.  1092   0444H  02206H          movs     r2,#6
+.  1094   0446H  09B01H          ldr      r3,[sp,#4]
+.  1096   0448H  0689BH          ldr      r3,[r3,#8]
+.  1098   044AH  0F7FFFFA3H      bl.w     -186 -> 916
+.  1102   044EH  0E000H          b        0 -> 1106
+.  1104  <LineNo: 119>
+    regOut(W, "  r3:", stackedRegs.r3);
+.  1106   0452H  09800H          ldr      r0,[sp]
+.  1108   0454H  0A100H          adr      r1,pc,#0 -> 1112
+.  1110   0456H  0E003H          b        6 -> 1120
+.  1112  <String: "  r3">
+.  1116  <String: ":...">
+.  1120   0460H  02206H          movs     r2,#6
+.  1122   0462H  09B01H          ldr      r3,[sp,#4]
+.  1124   0464H  068DBH          ldr      r3,[r3,#12]
+.  1126   0466H  0F7FFFF95H      bl.w     -214 -> 916
+.  1130   046AH  0E000H          b        0 -> 1134
+.  1132  <LineNo: 120>
+    regOut(W, " r12:", stackedRegs.r12);
+.  1134   046EH  09800H          ldr      r0,[sp]
+.  1136   0470H  0A100H          adr      r1,pc,#0 -> 1140
+.  1138   0472H  0E003H          b        6 -> 1148
+.  1140  <String: " r12">
+.  1144  <String: ":...">
+.  1148   047CH  02206H          movs     r2,#6
+.  1150   047EH  09B01H          ldr      r3,[sp,#4]
+.  1152   0480H  0691BH          ldr      r3,[r3,#16]
+.  1154   0482H  0F7FFFF87H      bl.w     -242 -> 916
+.  1158   0486H  0E000H          b        0 -> 1162
+.  1160  <LineNo: 121>
+    regOut(W, "  lr:", stackedRegs.lr);
+.  1162   048AH  09800H          ldr      r0,[sp]
+.  1164   048CH  0A100H          adr      r1,pc,#0 -> 1168
+.  1166   048EH  0E003H          b        6 -> 1176
+.  1168  <String: "  lr">
+.  1172  <String: ":...">
+.  1176   0498H  02206H          movs     r2,#6
+.  1178   049AH  09B01H          ldr      r3,[sp,#4]
+.  1180   049CH  0695BH          ldr      r3,[r3,#20]
+.  1182   049EH  0F7FFFF79H      bl.w     -270 -> 916
+.  1186   04A2H  0E000H          b        0 -> 1190
+.  1188  <LineNo: 122>
+    regOut(W, "  pc:", stackedRegs.pc);
+.  1190   04A6H  09800H          ldr      r0,[sp]
+.  1192   04A8H  0A100H          adr      r1,pc,#0 -> 1196
+.  1194   04AAH  0E003H          b        6 -> 1204
+.  1196  <String: "  pc">
+.  1200  <String: ":...">
+.  1204   04B4H  02206H          movs     r2,#6
+.  1206   04B6H  09B01H          ldr      r3,[sp,#4]
+.  1208   04B8H  0699BH          ldr      r3,[r3,#24]
+.  1210   04BAH  0F7FFFF6BH      bl.w     -298 -> 916
+.  1214   04BEH  0E000H          b        0 -> 1218
+.  1216  <LineNo: 123>
+    regOut(W, "xpsr:", stackedRegs.xpsr);
+.  1218   04C2H  09800H          ldr      r0,[sp]
+.  1220   04C4H  0A100H          adr      r1,pc,#0 -> 1224
+.  1222   04C6H  0E003H          b        6 -> 1232
+.  1224  <String: "xpsr">
+.  1228  <String: ":...">
+.  1232   04D0H  02206H          movs     r2,#6
+.  1234   04D2H  09B01H          ldr      r3,[sp,#4]
+.  1236   04D4H  069DBH          ldr      r3,[r3,#28]
+.  1238   04D6H  0F7FFFF5DH      bl.w     -326 -> 916
+.  1242   04DAH  0E000H          b        0 -> 1246
+.  1244  <LineNo: 124>
+    regOut(W, "  sp:", stackedRegs.sp)
+.  1246   04DEH  09800H          ldr      r0,[sp]
+.  1248   04E0H  0A100H          adr      r1,pc,#0 -> 1252
+.  1250   04E2H  0E003H          b        6 -> 1260
+.  1252  <String: "  sp">
+.  1256  <String: ":...">
+.  1260   04ECH  02206H          movs     r2,#6
+.  1262   04EEH  09B01H          ldr      r3,[sp,#4]
+.  1264   04F0H  06A1BH          ldr      r3,[r3,#32]
+  END printStackedRegs;
+.  1266   04F2H  0F7FFFF4FH      bl.w     -354 -> 916
+.  1270   04F6H  0E000H          b        0 -> 1274
+.  1272  <LineNo: 125>
+.  1274   04FAH  0B003H          add      sp,#12
+.  1276   04FCH  0BD00H          pop      { pc }
+.  1278   04FEH  046C0H          nop
+
+
+  PROCEDURE printCurrentRegs(W: TextIO.Writer; currentRegs: RuntimeErrors.CurrentRegisters);
+  BEGIN
+.  1280   0500H  0B507H          push     { r0, r1, r2, lr }
+    Texts.WriteString(W, "current registers:"); Texts.WriteLn(W);
+.  1282   0502H  09800H          ldr      r0,[sp]
+.  1284   0504H  0A100H          adr      r1,pc,#0 -> 1288
+.  1286   0506H  0E009H          b        18 -> 1308
+.  1288  <String: "curr">
+.  1292  <String: "ent ">
+.  1296  <String: "regi">
+.  1300  <String: "ster">
+.  1304  <String: "s:..">
+.  1308   051CH  02213H          movs     r2,#19
+.  1310   051EH  0040501FAH      bl.w     Ext Proc #5
+.  1314   0522H  0E000H          b        0 -> 1318
+.  1316  <LineNo: 131>
+.  1318   0526H  09800H          ldr      r0,[sp]
+.  1320   0528H  00406028FH      bl.w     Ext Proc #6
+.  1324   052CH  0E000H          b        0 -> 1328
+.  1326  <LineNo: 131>
+    regOut(W, "  sp:", currentRegs.sp);
+.  1328   0530H  09800H          ldr      r0,[sp]
+.  1330   0532H  046C0H          nop
+.  1332   0534H  0A100H          adr      r1,pc,#0 -> 1336
+.  1334   0536H  0E003H          b        6 -> 1344
+.  1336  <String: "  sp">
+.  1340  <String: ":...">
+.  1344   0540H  02206H          movs     r2,#6
+.  1346   0542H  09B01H          ldr      r3,[sp,#4]
+.  1348   0544H  0681BH          ldr      r3,[r3]
+.  1350   0546H  0F7FFFF25H      bl.w     -438 -> 916
+.  1354   054AH  0E000H          b        0 -> 1358
+.  1356  <LineNo: 132>
+    regOut(W, "  lr:", currentRegs.lr);
+.  1358   054EH  09800H          ldr      r0,[sp]
+.  1360   0550H  0A100H          adr      r1,pc,#0 -> 1364
+.  1362   0552H  0E003H          b        6 -> 1372
+.  1364  <String: "  lr">
+.  1368  <String: ":...">
+.  1372   055CH  02206H          movs     r2,#6
+.  1374   055EH  09B01H          ldr      r3,[sp,#4]
+.  1376   0560H  0685BH          ldr      r3,[r3,#4]
+.  1378   0562H  0F7FFFF17H      bl.w     -466 -> 916
+.  1382   0566H  0E000H          b        0 -> 1386
+.  1384  <LineNo: 133>
+    regOut(W, "  pc:", currentRegs.pc);
+.  1386   056AH  09800H          ldr      r0,[sp]
+.  1388   056CH  0A100H          adr      r1,pc,#0 -> 1392
+.  1390   056EH  0E003H          b        6 -> 1400
+.  1392  <String: "  pc">
+.  1396  <String: ":...">
+.  1400   0578H  02206H          movs     r2,#6
+.  1402   057AH  09B01H          ldr      r3,[sp,#4]
+.  1404   057CH  0689BH          ldr      r3,[r3,#8]
+.  1406   057EH  0F7FFFF09H      bl.w     -494 -> 916
+.  1410   0582H  0E000H          b        0 -> 1414
+.  1412  <LineNo: 134>
+    regOut(W, "xpsr:", currentRegs.xpsr)
+.  1414   0586H  09800H          ldr      r0,[sp]
+.  1416   0588H  0A100H          adr      r1,pc,#0 -> 1420
+.  1418   058AH  0E003H          b        6 -> 1428
+.  1420  <String: "xpsr">
+.  1424  <String: ":...">
+.  1428   0594H  02206H          movs     r2,#6
+.  1430   0596H  09B01H          ldr      r3,[sp,#4]
+.  1432   0598H  068DBH          ldr      r3,[r3,#12]
+  END printCurrentRegs;
+.  1434   059AH  0F7FFFEFBH      bl.w     -522 -> 916
+.  1438   059EH  0E000H          b        0 -> 1442
+.  1440  <LineNo: 135>
+.  1442   05A2H  0B003H          add      sp,#12
+.  1444   05A4H  0BD00H          pop      { pc }
+.  1446   05A6H  046C0H          nop
+
+
+  PROCEDURE PrintException*(W: TextIO.Writer; er: RuntimeErrors.ExceptionRec);
+    VAR
+      code, core, address, lineNo: INTEGER;
+      moduleName, procName: Name;
+      msg: Errors.String;
+  BEGIN
+.  1448   05A8H  0B507H          push     { r0, r1, r2, lr }
+.  1450   05AAH  0B09CH          sub      sp,#112
+    CASE er OF
+      RuntimeErrors.FaultRec:
+.  1452   05ACH  0A81DH          add      r0,sp,#116
+.  1454   05AEH  06840H          ldr      r0,[r0,#4]
+.  1456   05B0H  04971H          ldr      r1,[pc,#452] -> 1912
+.  1458   05B2H  04288H          cmp      r0,r1
+.  1460   05B4H  0D001H          beq.n    2 -> 1466
+.  1462   05B6H  0E00EH          b        28 -> 1494
+.  1464   05B8H  046C0H          nop
+        code := -er.code;
+.  1466   05BAH  0981DH          ldr      r0,[sp,#116]
+.  1468   05BCH  06800H          ldr      r0,[r0]
+.  1470   05BEH  04240H          rsbs     r0,r0,#0
+.  1472   05C0H  09000H          str      r0,[sp]
+        core := er.core;
+.  1474   05C2H  0981DH          ldr      r0,[sp,#116]
+.  1476   05C4H  06840H          ldr      r0,[r0,#4]
+.  1478   05C6H  09001H          str      r0,[sp,#4]
+        address := er.address;
+.  1480   05C8H  0981DH          ldr      r0,[sp,#116]
+.  1482   05CAH  06880H          ldr      r0,[r0,#8]
+.  1484   05CCH  09002H          str      r0,[sp,#8]
+        lineNo := NoValue;
+.  1486   05CEH  04869H          ldr      r0,[pc,#420] -> 1908
+.  1488   05D0H  09003H          str      r0,[sp,#12]
+    | RuntimeErrors.ErrorRec:
+.  1490   05D2H  0E013H          b        38 -> 1532
+.  1492   05D4H  046C0H          nop
+.  1494   05D6H  0A81DH          add      r0,sp,#116
+.  1496   05D8H  06840H          ldr      r0,[r0,#4]
+.  1498   05DAH  04968H          ldr      r1,[pc,#416] -> 1916
+.  1500   05DCH  04288H          cmp      r0,r1
+.  1502   05DEH  0D001H          beq.n    2 -> 1508
+.  1504   05E0H  0E00CH          b        24 -> 1532
+.  1506   05E2H  046C0H          nop
+        code := er.code;
+.  1508   05E4H  0981DH          ldr      r0,[sp,#116]
+.  1510   05E6H  06800H          ldr      r0,[r0]
+.  1512   05E8H  09000H          str      r0,[sp]
+        core := er.core;
+.  1514   05EAH  0981DH          ldr      r0,[sp,#116]
+.  1516   05ECH  06840H          ldr      r0,[r0,#4]
+.  1518   05EEH  09001H          str      r0,[sp,#4]
+        address := er.trace.tp[0].address;
+.  1520   05F0H  0981DH          ldr      r0,[sp,#116]
+.  1522   05F2H  06880H          ldr      r0,[r0,#8]
+.  1524   05F4H  09002H          str      r0,[sp,#8]
+        lineNo := er.trace.tp[0].lineNo
+    END;
+.  1526   05F6H  0981DH          ldr      r0,[sp,#116]
+.  1528   05F8H  068C0H          ldr      r0,[r0,#12]
+.  1530   05FAH  09003H          str      r0,[sp,#12]
+    Errors.GetExceptionType(code, msg);
+.  1532   05FCH  09800H          ldr      r0,[sp]
+.  1534   05FEH  0A90CH          add      r1,sp,#48
+.  1536   0600H  004020000H      bl.w     Ext Proc #2
+.  1540   0604H  0E000H          b        0 -> 1544
+.  1542  <LineNo: 157>
+    Texts.WriteString(W, "exception: "); Texts.WriteString(W, msg);
+.  1544   0608H  0981CH          ldr      r0,[sp,#112]
+.  1546   060AH  046C0H          nop
+.  1548   060CH  0A100H          adr      r1,pc,#0 -> 1552
+.  1550   060EH  0E005H          b        10 -> 1564
+.  1552  <String: "exce">
+.  1556  <String: "ptio">
+.  1560  <String: "n: .">
+.  1564   061CH  0220CH          movs     r2,#12
+.  1566   061EH  004050294H      bl.w     Ext Proc #5
+.  1570   0622H  0E000H          b        0 -> 1574
+.  1572  <LineNo: 158>
+.  1574   0626H  0981CH          ldr      r0,[sp,#112]
+.  1576   0628H  0A90CH          add      r1,sp,#48
+.  1578   062AH  02240H          movs     r2,#64
+.  1580   062CH  00405030FH      bl.w     Ext Proc #5
+.  1584   0630H  0E000H          b        0 -> 1588
+.  1586  <LineNo: 158>
+    Errors.Msg(code, msg);
+.  1588   0634H  09800H          ldr      r0,[sp]
+.  1590   0636H  0A90CH          add      r1,sp,#48
+.  1592   0638H  004010300H      bl.w     Ext Proc #1
+.  1596   063CH  0E000H          b        0 -> 1600
+.  1598  <LineNo: 159>
+    Texts.Write(W, " "); Texts.WriteInt(W, code, 0); Texts.WriteString(W, " core: ");
+.  1600   0640H  0981CH          ldr      r0,[sp,#112]
+.  1602   0642H  02120H          movs     r1,#32
+.  1604   0644H  004040316H      bl.w     Ext Proc #4
+.  1608   0648H  0E000H          b        0 -> 1612
+.  1610  <LineNo: 160>
+.  1612   064CH  0981CH          ldr      r0,[sp,#112]
+.  1614   064EH  09900H          ldr      r1,[sp]
+.  1616   0650H  02200H          movs     r2,#0
+.  1618   0652H  004070322H      bl.w     Ext Proc #7
+.  1622   0656H  0E000H          b        0 -> 1626
+.  1624  <LineNo: 160>
+.  1626   065AH  0981CH          ldr      r0,[sp,#112]
+.  1628   065CH  0A100H          adr      r1,pc,#0 -> 1632
+.  1630   065EH  0E003H          b        6 -> 1640
+.  1632  <String: " cor">
+.  1636  <String: "e: .">
+.  1640   0668H  02208H          movs     r2,#8
+.  1642   066AH  004050329H      bl.w     Ext Proc #5
+.  1646   066EH  0E000H          b        0 -> 1650
+.  1648  <LineNo: 160>
+    Texts.WriteInt(W, core, 0); Texts.WriteLn(W);
+.  1650   0672H  0981CH          ldr      r0,[sp,#112]
+.  1652   0674H  09901H          ldr      r1,[sp,#4]
+.  1654   0676H  02200H          movs     r2,#0
+.  1656   0678H  004070335H      bl.w     Ext Proc #7
+.  1660   067CH  0E000H          b        0 -> 1664
+.  1662  <LineNo: 161>
+.  1664   0680H  0981CH          ldr      r0,[sp,#112]
+.  1666   0682H  00406033CH      bl.w     Ext Proc #6
+.  1670   0686H  0E000H          b        0 -> 1674
+.  1672  <LineNo: 161>
+    Texts.WriteString(W, msg); Texts.WriteLn(W);
+.  1674   068AH  0981CH          ldr      r0,[sp,#112]
+.  1676   068CH  0A90CH          add      r1,sp,#48
+.  1678   068EH  02240H          movs     r2,#64
+.  1680   0690H  004050341H      bl.w     Ext Proc #5
+.  1684   0694H  0E000H          b        0 -> 1688
+.  1686  <LineNo: 162>
+.  1688   0698H  0981CH          ldr      r0,[sp,#112]
+.  1690   069AH  004060348H      bl.w     Ext Proc #6
+.  1694   069EH  0E000H          b        0 -> 1698
+.  1696  <LineNo: 162>
+    GetName(address, moduleName, procName);
+.  1698   06A2H  09802H          ldr      r0,[sp,#8]
+.  1700   06A4H  0A904H          add      r1,sp,#16
+.  1702   06A6H  0AA08H          add      r2,sp,#32
+.  1704   06A8H  0F7FFFCC6H      bl.w     -1652 -> 56
+.  1708   06ACH  0E000H          b        0 -> 1712
+.  1710  <LineNo: 163>
+    Texts.WriteString(W, moduleName); Texts.Write(W, "."); Texts.WriteString(W, procName);
+.  1712   06B0H  0981CH          ldr      r0,[sp,#112]
+.  1714   06B2H  0A904H          add      r1,sp,#16
+.  1716   06B4H  02210H          movs     r2,#16
+.  1718   06B6H  00405034DH      bl.w     Ext Proc #5
+.  1722   06BAH  0E000H          b        0 -> 1726
+.  1724  <LineNo: 164>
+.  1726   06BEH  0981CH          ldr      r0,[sp,#112]
+.  1728   06C0H  0212EH          movs     r1,#46
+.  1730   06C2H  00404035BH      bl.w     Ext Proc #4
+.  1734   06C6H  0E000H          b        0 -> 1738
+.  1736  <LineNo: 164>
+.  1738   06CAH  0981CH          ldr      r0,[sp,#112]
+.  1740   06CCH  0A908H          add      r1,sp,#32
+.  1742   06CEH  02210H          movs     r2,#16
+.  1744   06D0H  004050361H      bl.w     Ext Proc #5
+.  1748   06D4H  0E000H          b        0 -> 1752
+.  1750  <LineNo: 164>
+    Texts.WriteString(W, "  a: "); Texts.WriteHex(W, address, 0);
+.  1752   06D8H  0981CH          ldr      r0,[sp,#112]
+.  1754   06DAH  046C0H          nop
+.  1756   06DCH  0A100H          adr      r1,pc,#0 -> 1760
+.  1758   06DEH  0E003H          b        6 -> 1768
+.  1760  <String: "  a:">
+.  1764  <String: " ...">
+.  1768   06E8H  02206H          movs     r2,#6
+.  1770   06EAH  004050368H      bl.w     Ext Proc #5
+.  1774   06EEH  0E000H          b        0 -> 1778
+.  1776  <LineNo: 165>
+.  1778   06F2H  0981CH          ldr      r0,[sp,#112]
+.  1780   06F4H  09902H          ldr      r1,[sp,#8]
+.  1782   06F6H  02200H          movs     r2,#0
+.  1784   06F8H  004080375H      bl.w     Ext Proc #8
+.  1788   06FCH  0E000H          b        0 -> 1792
+.  1790  <LineNo: 165>
+    IF lineNo # NoValue THEN
+.  1792   0700H  09803H          ldr      r0,[sp,#12]
+.  1794   0702H  02101H          movs     r1,#1
+.  1796   0704H  042C8H          cmn      r0,r1
+.  1798   0706H  0D101H          bne.n    2 -> 1804
+.  1800   0708H  0E014H          b        40 -> 1844
+.  1802   070AH  046C0H          nop
+      Texts.WriteString(W, "  ln: "); Texts.WriteInt(W, lineNo, 0)
+.  1804   070CH  0981CH          ldr      r0,[sp,#112]
+.  1806   070EH  046C0H          nop
+.  1808   0710H  0A100H          adr      r1,pc,#0 -> 1812
+.  1810   0712H  0E003H          b        6 -> 1820
+.  1812  <String: "  ln">
+.  1816  <String: ": ..">
+.  1820   071CH  02207H          movs     r2,#7
+.  1822   071EH  00405037CH      bl.w     Ext Proc #5
+.  1826   0722H  0E000H          b        0 -> 1830
+.  1828  <LineNo: 167>
+.  1830   0726H  0981CH          ldr      r0,[sp,#112]
+.  1832   0728H  09903H          ldr      r1,[sp,#12]
+.  1834   072AH  02200H          movs     r2,#0
+    END;
+.  1836   072CH  00407038FH      bl.w     Ext Proc #7
+.  1840   0730H  0E000H          b        0 -> 1844
+.  1842  <LineNo: 167>
+    Texts.WriteLn(W);
+.  1844   0734H  0981CH          ldr      r0,[sp,#112]
+.  1846   0736H  004060396H      bl.w     Ext Proc #6
+.  1850   073AH  0E000H          b        0 -> 1854
+.  1852  <LineNo: 169>
+    CASE er OF
+      RuntimeErrors.ErrorRec:
+.  1854   073EH  0A81DH          add      r0,sp,#116
+.  1856   0740H  06840H          ldr      r0,[r0,#4]
+.  1858   0742H  0490EH          ldr      r1,[pc,#56] -> 1916
+.  1860   0744H  04288H          cmp      r0,r1
+.  1862   0746H  0D001H          beq.n    2 -> 1868
+.  1864   0748H  0E025H          b        74 -> 1942
+.  1866   074AH  046C0H          nop
+        printStackTrace(W, er.trace);
+.  1868   074CH  0981CH          ldr      r0,[sp,#112]
+.  1870   074EH  0991DH          ldr      r1,[sp,#116]
+.  1872   0750H  03108H          adds     r1,#8
+.  1874   0752H  0AA1EH          add      r2,sp,#120
+.  1876   0754H  06812H          ldr      r2,[r2]
+.  1878   0756H  0F7FFFD03H      bl.w     -1530 -> 352
+.  1882   075AH  0E000H          b        0 -> 1886
+.  1884  <LineNo: 172>
+        printStackedRegs(W, er.stackedRegs);
+.  1886   075EH  0981CH          ldr      r0,[sp,#112]
+.  1888   0760H  0991DH          ldr      r1,[sp,#116]
+.  1890   0762H  0314CH          adds     r1,#76
+.  1892   0764H  0AA1EH          add      r2,sp,#120
+.  1894   0766H  06812H          ldr      r2,[r2]
+.  1896   0768H  0F7FFFE30H      bl.w     -928 -> 972
+.  1900   076CH  0E000H          b        0 -> 1904
+.  1902  <LineNo: 173>
+.  1904   0770H  0F000F806H      bl.w     12 -> 1920
+.  1908  <Const: 0FFFFFFFFH  -1>
+.  1912  <Global: 002060000H  02060000H>
+.  1916  <Global: 0020703BCH  020703BCH>
+        printCurrentRegs(W, er.currentRegs)
+.  1920   0780H  0981CH          ldr      r0,[sp,#112]
+.  1922   0782H  0991DH          ldr      r1,[sp,#116]
+.  1924   0784H  03170H          adds     r1,#112
+.  1926   0786H  0AA1EH          add      r2,sp,#120
+.  1928   0788H  06812H          ldr      r2,[r2]
+    | RuntimeErrors.FaultRec:
+.  1930   078AH  0F7FFFEB9H      bl.w     -654 -> 1280
+.  1934   078EH  0E000H          b        0 -> 1938
+.  1936  <LineNo: 174>
+.  1938   0792H  0E019H          b        50 -> 1992
+.  1940   0794H  046C0H          nop
+.  1942   0796H  0A81DH          add      r0,sp,#116
+.  1944   0798H  06840H          ldr      r0,[r0,#4]
+.  1946   079AH  0490CH          ldr      r1,[pc,#48] -> 1996
+.  1948   079CH  04288H          cmp      r0,r1
+.  1950   079EH  0D001H          beq.n    2 -> 1956
+.  1952   07A0H  0E012H          b        36 -> 1992
+.  1954   07A2H  046C0H          nop
+        printStackedRegs(W, er.stackedRegs);
+.  1956   07A4H  0981CH          ldr      r0,[sp,#112]
+.  1958   07A6H  0991DH          ldr      r1,[sp,#116]
+.  1960   07A8H  0310CH          adds     r1,#12
+.  1962   07AAH  0AA1EH          add      r2,sp,#120
+.  1964   07ACH  06812H          ldr      r2,[r2]
+.  1966   07AEH  0F7FFFE0DH      bl.w     -998 -> 972
+.  1970   07B2H  0E000H          b        0 -> 1974
+.  1972  <LineNo: 176>
+        printCurrentRegs(W, er.currentRegs)
+.  1974   07B6H  0981CH          ldr      r0,[sp,#112]
+.  1976   07B8H  0991DH          ldr      r1,[sp,#116]
+.  1978   07BAH  03130H          adds     r1,#48
+.  1980   07BCH  0AA1EH          add      r2,sp,#120
+.  1982   07BEH  06812H          ldr      r2,[r2]
+    END
+.  1984   07C0H  0F7FFFE9EH      bl.w     -708 -> 1280
+.  1988   07C4H  0E000H          b        0 -> 1992
+.  1990  <LineNo: 177>
+  END PrintException;
+.  1992   07C8H  0B01FH          add      sp,#124
+.  1994   07CAH  0BD00H          pop      { pc }
+.  1996  <Global: 0020603BEH  020603BEH>
+
+
+  (* RuntimeErrors-compatible handler *)
+
+  PROCEDURE HandleException*(cpuId: INTEGER;  er: RuntimeErrors.ExceptionRec);
+  BEGIN
+.  2000   07D0H  0B507H          push     { r0, r1, r2, lr }
+    ASSERT(cpuId < NumCores, Errors.PreCond);
+.  2002   07D2H  09800H          ldr      r0,[sp]
+.  2004   07D4H  02802H          cmp      r0,#2
+.  2006   07D6H  0DB01H          blt.n    2 -> 2012
+.  2008   07D8H  0DF65H          svc      101
+.  2010  <LineNo: 186>
+    PrintException(W[cpuId], er)
+.  2012   07DCH  09800H          ldr      r0,[sp]
+.  2014   07DEH  02802H          cmp      r0,#2
+.  2016   07E0H  0D301H          bcc.n    2 -> 2022
+.  2018   07E2H  0DF01H          svc      1
+.  2020  <LineNo: 187>
+.  2022   07E6H  04906H          ldr      r1,[pc,#24] -> 2048
+.  2024   07E8H  00080H          lsls     r0,r0,#2
+.  2026   07EAH  01808H          adds     r0,r1,r0
+.  2028   07ECH  06800H          ldr      r0,[r0]
+.  2030   07EEH  09901H          ldr      r1,[sp,#4]
+.  2032   07F0H  0AA02H          add      r2,sp,#8
+.  2034   07F2H  06812H          ldr      r2,[r2]
+  END HandleException;
+.  2036   07F4H  0F7FFFED8H      bl.w     -592 -> 1448
+.  2040   07F8H  0E000H          b        0 -> 2044
+.  2042  <LineNo: 187>
+.  2044   07FCH  0B003H          add      sp,#12
+.  2046   07FEH  0BD00H          pop      { pc }
+.  2048  <Global: 000080000H  080000H>
+
+  (* plug a writer *)
+
+  PROCEDURE SetWriter*(coreId: INTEGER; Wr: TextIO.Writer);
+  BEGIN
+.  2052   0804H  0B503H          push     { r0, r1, lr }
+    ASSERT(coreId < NumCores, Errors.PreCond);
+.  2054   0806H  09800H          ldr      r0,[sp]
+.  2056   0808H  02802H          cmp      r0,#2
+.  2058   080AH  0DB01H          blt.n    2 -> 2064
+.  2060   080CH  0DF65H          svc      101
+.  2062  <LineNo: 194>
+    W[coreId] := Wr
+.  2064   0810H  09800H          ldr      r0,[sp]
+.  2066   0812H  02802H          cmp      r0,#2
+.  2068   0814H  0D301H          bcc.n    2 -> 2074
+.  2070   0816H  0DF01H          svc      1
+.  2072  <LineNo: 195>
+.  2074   081AH  04903H          ldr      r1,[pc,#12] -> 2088
+.  2076   081CH  00080H          lsls     r0,r0,#2
+.  2078   081EH  01808H          adds     r0,r1,r0
+  END SetWriter;
+.  2080   0820H  09901H          ldr      r1,[sp,#4]
+.  2082   0822H  06001H          str      r1,[r0]
+.  2084   0824H  0B002H          add      sp,#8
+.  2086   0826H  0BD00H          pop      { pc }
+.  2088  <Global: 000080400H  080400H>
+
+END RuntimeErrorsOut.
+.  2092   082CH  0B500H          push     { lr }
+.  2094   082EH  0BD00H          pop      { pc }
