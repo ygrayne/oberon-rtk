@@ -6782,10 +6782,10 @@ END ResData;
      12588    01000312CH        0B500H    push     { lr }
      12590    01000312EH        0BD00H    pop      { pc }
 
-MODULE RuntimeErrorsOu;
+MODULE RuntimeErrorsOut;
      12592    010003130H        00000H    ; Pad
 
-  PROCEDURE* RuntimeErrorsOu.intArrayToChars(a: ARRAY OF BYTE; VAR chars: ARRAY OF CHAR);
+  PROCEDURE* RuntimeErrorsOut.intArrayToChars(a: ARRAY OF BYTE; VAR chars: ARRAY OF CHAR);
     VAR i: INTEGER;
   BEGIN
      12596    010003134H        0B50FH    push     { r0, r1, r2, r3, lr }
@@ -6819,7 +6819,7 @@ MODULE RuntimeErrorsOu;
      12644    010003164H        0BD00H    pop      { pc }
      12646    010003166H        046C0H    nop
 
-  PROCEDURE RuntimeErrorsOu.GetName*(target: INTEGER; VAR modName, procName: Name);
+  PROCEDURE RuntimeErrorsOut.GetName*(target: INTEGER; VAR modName, procName: Name);
     CONST ItemSize = 6;
     VAR
       r: ResData.Resource;
@@ -6960,7 +6960,7 @@ MODULE RuntimeErrorsOu;
      12878    01000324EH        02110H    movs     r1,#16
      12880    010003250H        09A11H    ldr      r2,[sp,#68]
      12882    010003252H        02310H    movs     r3,#16
-     12884    010003254H    0F7FFFF6EH    bl.w     RuntimeErrorsOu.intArrayToChars
+     12884    010003254H    0F7FFFF6EH    bl.w     RuntimeErrorsOut.intArrayToChars
      12888    010003258H        0E000H    b        0 -> 12892
      12890    01000325AH        00043H    ; LineNo: 67
     count := ResData.GetIntArray(r, foundIdx * ItemSize + 1, LEN(a), a);
@@ -6983,14 +6983,14 @@ MODULE RuntimeErrorsOu;
      12924    01000327CH        09A12H    ldr      r2,[sp,#72]
      12926    01000327EH        02310H    movs     r3,#16
   END GetName;
-     12928    010003280H    0F7FFFF58H    bl.w     RuntimeErrorsOu.intArrayToChars
+     12928    010003280H    0F7FFFF58H    bl.w     RuntimeErrorsOut.intArrayToChars
      12932    010003284H        0E000H    b        0 -> 12936
      12934    010003286H        00045H    ; LineNo: 69
      12936    010003288H        0B013H    add      sp,#76
      12938    01000328AH        0BD00H    pop      { pc }
      12940    01000328CH    010002D6CH    ; Global 010002D6CH
 
-  PROCEDURE RuntimeErrorsOu.printStackTrace(W: TextIO.Writer; tr: RuntimeErrors.Trace);
+  PROCEDURE RuntimeErrorsOut.printStackTrace(W: TextIO.Writer; tr: RuntimeErrors.Trace);
     VAR
       i: INTEGER;
       moduleName, procName: Name;
@@ -7034,7 +7034,7 @@ MODULE RuntimeErrorsOu;
      13016    0100032D8H        06800H    ldr      r0,[r0]
      13018    0100032DAH        0A901H    add      r1,sp,#4
      13020    0100032DCH        0AA05H    add      r2,sp,#20
-     13022    0100032DEH    0F7FFFF43H    bl.w     RuntimeErrorsOu.GetName
+     13022    0100032DEH    0F7FFFF43H    bl.w     RuntimeErrorsOut.GetName
      13026    0100032E2H        0E000H    b        0 -> 13030
      13028    0100032E4H        00052H    ; LineNo: 82
       WHILE i < tr.count DO
@@ -7200,7 +7200,7 @@ MODULE RuntimeErrorsOu;
      13362    010003432H        0A901H    add      r1,sp,#4
      13364    010003434H        0AA05H    add      r2,sp,#20
         END
-     13366    010003436H    0F7FFFE97H    bl.w     RuntimeErrorsOu.GetName
+     13366    010003436H    0F7FFFE97H    bl.w     RuntimeErrorsOut.GetName
      13370    01000343AH        0E000H    b        0 -> 13374
      13372    01000343CH        0005EH    ; LineNo: 94
       END;
@@ -7267,7 +7267,7 @@ MODULE RuntimeErrorsOu;
      13504    0100034C0H        0B00CH    add      sp,#48
      13506    0100034C2H        0BD00H    pop      { pc }
 
-  PROCEDURE RuntimeErrorsOu.regOut(W: TextIO.Writer; label: ARRAY OF CHAR; value: INTEGER);
+  PROCEDURE RuntimeErrorsOut.regOut(W: TextIO.Writer; label: ARRAY OF CHAR; value: INTEGER);
   BEGIN
      13508    0100034C4H        0B50FH    push     { r0, r1, r2, r3, lr }
     Texts.Write(W, " "); Texts.WriteString(W, label);
@@ -7298,7 +7298,7 @@ MODULE RuntimeErrorsOu;
      13560    0100034F8H        0B004H    add      sp,#16
      13562    0100034FAH        0BD00H    pop      { pc }
 
-  PROCEDURE RuntimeErrorsOu.printStackedRegs(W: TextIO.Writer; stackedRegs: RuntimeErrors.StackedRegisters);
+  PROCEDURE RuntimeErrorsOut.printStackedRegs(W: TextIO.Writer; stackedRegs: RuntimeErrors.StackedRegisters);
   BEGIN
      13564    0100034FCH        0B507H    push     { r0, r1, r2, lr }
     Texts.WriteString(W, "stacked registers:"); Texts.WriteLn(W);
@@ -7328,7 +7328,7 @@ MODULE RuntimeErrorsOu;
      13628    01000353CH        02206H    movs     r2,#6
      13630    01000353EH        09B01H    ldr      r3,[sp,#4]
      13632    010003540H        0681BH    ldr      r3,[r3]
-     13634    010003542H    0F7FFFFBFH    bl.w     RuntimeErrorsOu.regOut
+     13634    010003542H    0F7FFFFBFH    bl.w     RuntimeErrorsOut.regOut
      13638    010003546H        0E000H    b        0 -> 13642
      13640    010003548H        00075H    ; LineNo: 117
     regOut(W, "  r1:", stackedRegs.r1);
@@ -7340,7 +7340,7 @@ MODULE RuntimeErrorsOu;
      13656    010003558H        02206H    movs     r2,#6
      13658    01000355AH        09B01H    ldr      r3,[sp,#4]
      13660    01000355CH        0685BH    ldr      r3,[r3,#4]
-     13662    01000355EH    0F7FFFFB1H    bl.w     RuntimeErrorsOu.regOut
+     13662    01000355EH    0F7FFFFB1H    bl.w     RuntimeErrorsOut.regOut
      13666    010003562H        0E000H    b        0 -> 13670
      13668    010003564H        00076H    ; LineNo: 118
     regOut(W, "  r2:", stackedRegs.r2);
@@ -7352,7 +7352,7 @@ MODULE RuntimeErrorsOu;
      13684    010003574H        02206H    movs     r2,#6
      13686    010003576H        09B01H    ldr      r3,[sp,#4]
      13688    010003578H        0689BH    ldr      r3,[r3,#8]
-     13690    01000357AH    0F7FFFFA3H    bl.w     RuntimeErrorsOu.regOut
+     13690    01000357AH    0F7FFFFA3H    bl.w     RuntimeErrorsOut.regOut
      13694    01000357EH        0E000H    b        0 -> 13698
      13696    010003580H        00077H    ; LineNo: 119
     regOut(W, "  r3:", stackedRegs.r3);
@@ -7364,7 +7364,7 @@ MODULE RuntimeErrorsOu;
      13712    010003590H        02206H    movs     r2,#6
      13714    010003592H        09B01H    ldr      r3,[sp,#4]
      13716    010003594H        068DBH    ldr      r3,[r3,#12]
-     13718    010003596H    0F7FFFF95H    bl.w     RuntimeErrorsOu.regOut
+     13718    010003596H    0F7FFFF95H    bl.w     RuntimeErrorsOut.regOut
      13722    01000359AH        0E000H    b        0 -> 13726
      13724    01000359CH        00078H    ; LineNo: 120
     regOut(W, " r12:", stackedRegs.r12);
@@ -7376,7 +7376,7 @@ MODULE RuntimeErrorsOu;
      13740    0100035ACH        02206H    movs     r2,#6
      13742    0100035AEH        09B01H    ldr      r3,[sp,#4]
      13744    0100035B0H        0691BH    ldr      r3,[r3,#16]
-     13746    0100035B2H    0F7FFFF87H    bl.w     RuntimeErrorsOu.regOut
+     13746    0100035B2H    0F7FFFF87H    bl.w     RuntimeErrorsOut.regOut
      13750    0100035B6H        0E000H    b        0 -> 13754
      13752    0100035B8H        00079H    ; LineNo: 121
     regOut(W, "  lr:", stackedRegs.lr);
@@ -7388,7 +7388,7 @@ MODULE RuntimeErrorsOu;
      13768    0100035C8H        02206H    movs     r2,#6
      13770    0100035CAH        09B01H    ldr      r3,[sp,#4]
      13772    0100035CCH        0695BH    ldr      r3,[r3,#20]
-     13774    0100035CEH    0F7FFFF79H    bl.w     RuntimeErrorsOu.regOut
+     13774    0100035CEH    0F7FFFF79H    bl.w     RuntimeErrorsOut.regOut
      13778    0100035D2H        0E000H    b        0 -> 13782
      13780    0100035D4H        0007AH    ; LineNo: 122
     regOut(W, "  pc:", stackedRegs.pc);
@@ -7400,7 +7400,7 @@ MODULE RuntimeErrorsOu;
      13796    0100035E4H        02206H    movs     r2,#6
      13798    0100035E6H        09B01H    ldr      r3,[sp,#4]
      13800    0100035E8H        0699BH    ldr      r3,[r3,#24]
-     13802    0100035EAH    0F7FFFF6BH    bl.w     RuntimeErrorsOu.regOut
+     13802    0100035EAH    0F7FFFF6BH    bl.w     RuntimeErrorsOut.regOut
      13806    0100035EEH        0E000H    b        0 -> 13810
      13808    0100035F0H        0007BH    ; LineNo: 123
     regOut(W, "xpsr:", stackedRegs.xpsr);
@@ -7412,7 +7412,7 @@ MODULE RuntimeErrorsOu;
      13824    010003600H        02206H    movs     r2,#6
      13826    010003602H        09B01H    ldr      r3,[sp,#4]
      13828    010003604H        069DBH    ldr      r3,[r3,#28]
-     13830    010003606H    0F7FFFF5DH    bl.w     RuntimeErrorsOu.regOut
+     13830    010003606H    0F7FFFF5DH    bl.w     RuntimeErrorsOut.regOut
      13834    01000360AH        0E000H    b        0 -> 13838
      13836    01000360CH        0007CH    ; LineNo: 124
     regOut(W, "  sp:", stackedRegs.sp)
@@ -7425,14 +7425,14 @@ MODULE RuntimeErrorsOu;
      13854    01000361EH        09B01H    ldr      r3,[sp,#4]
      13856    010003620H        06A1BH    ldr      r3,[r3,#32]
   END printStackedRegs;
-     13858    010003622H    0F7FFFF4FH    bl.w     RuntimeErrorsOu.regOut
+     13858    010003622H    0F7FFFF4FH    bl.w     RuntimeErrorsOut.regOut
      13862    010003626H        0E000H    b        0 -> 13866
      13864    010003628H        0007DH    ; LineNo: 125
      13866    01000362AH        0B003H    add      sp,#12
      13868    01000362CH        0BD00H    pop      { pc }
      13870    01000362EH        046C0H    nop
 
-  PROCEDURE RuntimeErrorsOu.printCurrentRegs(W: TextIO.Writer; currentRegs: RuntimeErrors.CurrentRegisters);
+  PROCEDURE RuntimeErrorsOut.printCurrentRegs(W: TextIO.Writer; currentRegs: RuntimeErrors.CurrentRegisters);
   BEGIN
      13872    010003630H        0B507H    push     { r0, r1, r2, lr }
     Texts.WriteString(W, "current registers:"); Texts.WriteLn(W);
@@ -7462,7 +7462,7 @@ MODULE RuntimeErrorsOu;
      13936    010003670H        02206H    movs     r2,#6
      13938    010003672H        09B01H    ldr      r3,[sp,#4]
      13940    010003674H        0681BH    ldr      r3,[r3]
-     13942    010003676H    0F7FFFF25H    bl.w     RuntimeErrorsOu.regOut
+     13942    010003676H    0F7FFFF25H    bl.w     RuntimeErrorsOut.regOut
      13946    01000367AH        0E000H    b        0 -> 13950
      13948    01000367CH        00084H    ; LineNo: 132
     regOut(W, "  lr:", currentRegs.lr);
@@ -7474,7 +7474,7 @@ MODULE RuntimeErrorsOu;
      13964    01000368CH        02206H    movs     r2,#6
      13966    01000368EH        09B01H    ldr      r3,[sp,#4]
      13968    010003690H        0685BH    ldr      r3,[r3,#4]
-     13970    010003692H    0F7FFFF17H    bl.w     RuntimeErrorsOu.regOut
+     13970    010003692H    0F7FFFF17H    bl.w     RuntimeErrorsOut.regOut
      13974    010003696H        0E000H    b        0 -> 13978
      13976    010003698H        00085H    ; LineNo: 133
     regOut(W, "  pc:", currentRegs.pc);
@@ -7486,7 +7486,7 @@ MODULE RuntimeErrorsOu;
      13992    0100036A8H        02206H    movs     r2,#6
      13994    0100036AAH        09B01H    ldr      r3,[sp,#4]
      13996    0100036ACH        0689BH    ldr      r3,[r3,#8]
-     13998    0100036AEH    0F7FFFF09H    bl.w     RuntimeErrorsOu.regOut
+     13998    0100036AEH    0F7FFFF09H    bl.w     RuntimeErrorsOut.regOut
      14002    0100036B2H        0E000H    b        0 -> 14006
      14004    0100036B4H        00086H    ; LineNo: 134
     regOut(W, "xpsr:", currentRegs.xpsr)
@@ -7499,14 +7499,14 @@ MODULE RuntimeErrorsOu;
      14022    0100036C6H        09B01H    ldr      r3,[sp,#4]
      14024    0100036C8H        068DBH    ldr      r3,[r3,#12]
   END printCurrentRegs;
-     14026    0100036CAH    0F7FFFEFBH    bl.w     RuntimeErrorsOu.regOut
+     14026    0100036CAH    0F7FFFEFBH    bl.w     RuntimeErrorsOut.regOut
      14030    0100036CEH        0E000H    b        0 -> 14034
      14032    0100036D0H        00087H    ; LineNo: 135
      14034    0100036D2H        0B003H    add      sp,#12
      14036    0100036D4H        0BD00H    pop      { pc }
      14038    0100036D6H        046C0H    nop
 
-  PROCEDURE RuntimeErrorsOu.PrintException*(W: TextIO.Writer; er: RuntimeErrors.ExceptionRec);
+  PROCEDURE RuntimeErrorsOut.PrintException*(W: TextIO.Writer; er: RuntimeErrors.ExceptionRec);
     VAR
       code, core, address, lineNo: INTEGER;
       moduleName, procName: Name;
@@ -7643,7 +7643,7 @@ MODULE RuntimeErrorsOu;
      14290    0100037D2H        09802H    ldr      r0,[sp,#8]
      14292    0100037D4H        0A904H    add      r1,sp,#16
      14294    0100037D6H        0AA08H    add      r2,sp,#32
-     14296    0100037D8H    0F7FFFCC6H    bl.w     RuntimeErrorsOu.GetName
+     14296    0100037D8H    0F7FFFCC6H    bl.w     RuntimeErrorsOut.GetName
      14300    0100037DCH        0E000H    b        0 -> 14304
      14302    0100037DEH        000A3H    ; LineNo: 163
     Texts.WriteString(W, moduleName); Texts.Write(W, "."); Texts.WriteString(W, procName);
@@ -7726,7 +7726,7 @@ MODULE RuntimeErrorsOu;
      14464    010003880H        03108H    adds     r1,#8
      14466    010003882H        0AA1EH    add      r2,sp,#120
      14468    010003884H        06812H    ldr      r2,[r2]
-     14470    010003886H    0F7FFFD03H    bl.w     RuntimeErrorsOu.printStackTrace
+     14470    010003886H    0F7FFFD03H    bl.w     RuntimeErrorsOut.printStackTrace
      14474    01000388AH        0E000H    b        0 -> 14478
      14476    01000388CH        000ACH    ; LineNo: 172
         printStackedRegs(W, er.stackedRegs);
@@ -7735,10 +7735,10 @@ MODULE RuntimeErrorsOu;
      14482    010003892H        0314CH    adds     r1,#76
      14484    010003894H        0AA1EH    add      r2,sp,#120
      14486    010003896H        06812H    ldr      r2,[r2]
-     14488    010003898H    0F7FFFE30H    bl.w     RuntimeErrorsOu.printStackedRegs
+     14488    010003898H    0F7FFFE30H    bl.w     RuntimeErrorsOut.printStackedRegs
      14492    01000389CH        0E000H    b        0 -> 14496
      14494    01000389EH        000ADH    ; LineNo: 173
-     14496    0100038A0H    0F000F806H    bl.w     RuntimeErrorsOu.PrintException + 472
+     14496    0100038A0H    0F000F806H    bl.w     RuntimeErrorsOut.PrintException + 472
      14500    0100038A4H    0FFFFFFFFH    ; Const 0FFFFFFFFH -1
      14504    0100038A8H    010001BF8H    ; Global 010001BF8H
      14508    0100038ACH    010001C0CH    ; Global 010001C0CH
@@ -7749,7 +7749,7 @@ MODULE RuntimeErrorsOu;
      14518    0100038B6H        0AA1EH    add      r2,sp,#120
      14520    0100038B8H        06812H    ldr      r2,[r2]
     | RuntimeErrors.FaultRec:
-     14522    0100038BAH    0F7FFFEB9H    bl.w     RuntimeErrorsOu.printCurrentRegs
+     14522    0100038BAH    0F7FFFEB9H    bl.w     RuntimeErrorsOut.printCurrentRegs
      14526    0100038BEH        0E000H    b        0 -> 14530
      14528    0100038C0H        000AEH    ; LineNo: 174
      14530    0100038C2H        0E019H    b        50 -> 14584
@@ -7767,7 +7767,7 @@ MODULE RuntimeErrorsOu;
      14552    0100038D8H        0310CH    adds     r1,#12
      14554    0100038DAH        0AA1EH    add      r2,sp,#120
      14556    0100038DCH        06812H    ldr      r2,[r2]
-     14558    0100038DEH    0F7FFFE0DH    bl.w     RuntimeErrorsOu.printStackedRegs
+     14558    0100038DEH    0F7FFFE0DH    bl.w     RuntimeErrorsOut.printStackedRegs
      14562    0100038E2H        0E000H    b        0 -> 14566
      14564    0100038E4H        000B0H    ; LineNo: 176
         printCurrentRegs(W, er.currentRegs)
@@ -7777,7 +7777,7 @@ MODULE RuntimeErrorsOu;
      14572    0100038ECH        0AA1EH    add      r2,sp,#120
      14574    0100038EEH        06812H    ldr      r2,[r2]
     END
-     14576    0100038F0H    0F7FFFE9EH    bl.w     RuntimeErrorsOu.printCurrentRegs
+     14576    0100038F0H    0F7FFFE9EH    bl.w     RuntimeErrorsOut.printCurrentRegs
      14580    0100038F4H        0E000H    b        0 -> 14584
      14582    0100038F6H        000B1H    ; LineNo: 177
   END PrintException;
@@ -7785,7 +7785,7 @@ MODULE RuntimeErrorsOu;
      14586    0100038FAH        0BD00H    pop      { pc }
      14588    0100038FCH    010001BF8H    ; Global 010001BF8H
 
-  PROCEDURE RuntimeErrorsOu.HandleException*(cpuId: INTEGER;  er: RuntimeErrors.ExceptionRec);
+  PROCEDURE RuntimeErrorsOut.HandleException*(cpuId: INTEGER;  er: RuntimeErrors.ExceptionRec);
   BEGIN
      14592    010003900H        0B507H    push     { r0, r1, r2, lr }
     ASSERT(cpuId < NumCores, Errors.PreCond);
@@ -7808,14 +7808,14 @@ MODULE RuntimeErrorsOu;
      14624    010003920H        0AA02H    add      r2,sp,#8
      14626    010003922H        06812H    ldr      r2,[r2]
   END HandleException;
-     14628    010003924H    0F7FFFED8H    bl.w     RuntimeErrorsOu.PrintException
+     14628    010003924H    0F7FFFED8H    bl.w     RuntimeErrorsOut.PrintException
      14632    010003928H        0E000H    b        0 -> 14636
      14634    01000392AH        000BBH    ; LineNo: 187
      14636    01000392CH        0B003H    add      sp,#12
      14638    01000392EH        0BD00H    pop      { pc }
      14640    010003930H    02002FCC4H    ; Global 02002FCC4H
 
-  PROCEDURE RuntimeErrorsOu.SetWriter*(coreId: INTEGER; Wr: TextIO.Writer);
+  PROCEDURE RuntimeErrorsOut.SetWriter*(coreId: INTEGER; Wr: TextIO.Writer);
   BEGIN
      14644    010003934H        0B503H    push     { r0, r1, lr }
     ASSERT(coreId < NumCores, Errors.PreCond);
@@ -7840,9 +7840,9 @@ MODULE RuntimeErrorsOu;
      14678    010003956H        0BD00H    pop      { pc }
      14680    010003958H    02002FCC4H    ; Global 02002FCC4H
 
-PROCEDURE RuntimeErrorsOu..init;
+PROCEDURE RuntimeErrorsOut..init;
 END .init;
-END RuntimeErrorsOu;
+END RuntimeErrorsOut;
      14684    01000395CH        0B500H    push     { lr }
      14686    01000395EH        0BD00H    pop      { pc }
 
@@ -9619,7 +9619,7 @@ MODULE Main;
      17708    01000452CH        02000H    movs     r0,#0
      17710    01000452EH        04915H    ldr      r1,[pc,#84] -> 17796 ; Global 02002FCB4H
      17712    010004530H        06809H    ldr      r1,[r1]
-     17714    010004532H    0F7FFF9FFH    bl.w     RuntimeErrorsOu.SetWriter
+     17714    010004532H    0F7FFF9FFH    bl.w     RuntimeErrorsOut.SetWriter
      17718    010004536H        0E000H    b        0 -> 17722
      17720    010004538H        00045H    ; LineNo: 69
     RuntimeErrors.SetHandler(Core0, RuntimeErrorsOut.HandleException);
@@ -9638,7 +9638,7 @@ MODULE Main;
      17746    010004552H        02001H    movs     r0,#1
      17748    010004554H        0490BH    ldr      r1,[pc,#44] -> 17796 ; Global 02002FCB4H
      17750    010004556H        06849H    ldr      r1,[r1,#4]
-     17752    010004558H    0F7FFF9ECH    bl.w     RuntimeErrorsOu.SetWriter
+     17752    010004558H    0F7FFF9ECH    bl.w     RuntimeErrorsOut.SetWriter
      17756    01000455CH        0E000H    b        0 -> 17760
      17758    01000455EH        0004BH    ; LineNo: 75
     RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException);
@@ -12285,7 +12285,7 @@ END DebugEval.
      22212    0100056C4H    0F7FCFF66H    bl.w     TextIO..init
      22216    0100056C8H    0F7FDFB44H    bl.w     Texts..init
      22220    0100056CCH    0F7FDFD2EH    bl.w     ResData..init
-     22224    0100056D0H    0F7FEF944H    bl.w     RuntimeErrorsOu..init
+     22224    0100056D0H    0F7FEF944H    bl.w     RuntimeErrorsOut..init
      22228    0100056D4H    0F7FEFB6AH    bl.w     UARTdev..init
      22232    0100056D8H    0F7FEFC86H    bl.w     Terminals..init
      22236    0100056DCH    0F7FEFD68H    bl.w     Out..init

@@ -155,7 +155,7 @@ MODULE Main;
 .   196    01000452CH        02000H    movs     r0,#0
 .   198    01000452EH        04915H    ldr      r1,[pc,#84] -> 284 ; Global: 02002FCB4H
 .   200    010004530H        06809H    ldr      r1,[r1]
-.   202    010004532H    0F7FFF9FFH    bl.w     RuntimeErrorsOu.SetWriter
+.   202    010004532H    0F7FFF9FFH    bl.w     RuntimeErrorsOut.SetWriter
 .   206    010004536H        0E000H    b        0 -> 210
 .   208    010004538H   <LineNo: 69>
     RuntimeErrors.SetHandler(Core0, RuntimeErrorsOut.HandleException);
@@ -177,7 +177,7 @@ MODULE Main;
 .   234    010004552H        02001H    movs     r0,#1
 .   236    010004554H        0490BH    ldr      r1,[pc,#44] -> 284 ; Global: 02002FCB4H
 .   238    010004556H        06849H    ldr      r1,[r1,#4]
-.   240    010004558H    0F7FFF9ECH    bl.w     RuntimeErrorsOu.SetWriter
+.   240    010004558H    0F7FFF9ECH    bl.w     RuntimeErrorsOut.SetWriter
 .   244    01000455CH        0E000H    b        0 -> 248
 .   246    01000455EH   <LineNo: 75>
     RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException);

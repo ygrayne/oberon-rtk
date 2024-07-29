@@ -203,7 +203,7 @@ MODULE RuntimeErrorsOut;
 .   286    01000324EH        02110H    movs     r1,#16
 .   288    010003250H        09A11H    ldr      r2,[sp,#68]
 .   290    010003252H        02310H    movs     r3,#16
-.   292    010003254H    0F7FFFF6EH    bl.w     RuntimeErrorsOu.intArrayToChars
+.   292    010003254H    0F7FFFF6EH    bl.w     RuntimeErrorsOut.intArrayToChars
 .   296    010003258H        0E000H    b        0 -> 300
 .   298    01000325AH   <LineNo: 67>
     count := ResData.GetIntArray(r, foundIdx * ItemSize + 1, LEN(a), a);
@@ -226,7 +226,7 @@ MODULE RuntimeErrorsOut;
 .   332    01000327CH        09A12H    ldr      r2,[sp,#72]
 .   334    01000327EH        02310H    movs     r3,#16
   END GetName;
-.   336    010003280H    0F7FFFF58H    bl.w     RuntimeErrorsOu.intArrayToChars
+.   336    010003280H    0F7FFFF58H    bl.w     RuntimeErrorsOut.intArrayToChars
 .   340    010003284H        0E000H    b        0 -> 344
 .   342    010003286H   <LineNo: 69>
 .   344    010003288H        0B013H    add      sp,#76
@@ -279,7 +279,7 @@ MODULE RuntimeErrorsOut;
 .   424    0100032D8H        06800H    ldr      r0,[r0]
 .   426    0100032DAH        0A901H    add      r1,sp,#4
 .   428    0100032DCH        0AA05H    add      r2,sp,#20
-.   430    0100032DEH    0F7FFFF43H    bl.w     RuntimeErrorsOu.GetName
+.   430    0100032DEH    0F7FFFF43H    bl.w     RuntimeErrorsOut.GetName
 .   434    0100032E2H        0E000H    b        0 -> 438
 .   436    0100032E4H   <LineNo: 82>
       WHILE i < tr.count DO
@@ -445,7 +445,7 @@ MODULE RuntimeErrorsOut;
 .   770    010003432H        0A901H    add      r1,sp,#4
 .   772    010003434H        0AA05H    add      r2,sp,#20
         END
-.   774    010003436H    0F7FFFE97H    bl.w     RuntimeErrorsOu.GetName
+.   774    010003436H    0F7FFFE97H    bl.w     RuntimeErrorsOut.GetName
 .   778    01000343AH        0E000H    b        0 -> 782
 .   780    01000343CH   <LineNo: 94>
       END;
@@ -575,7 +575,7 @@ MODULE RuntimeErrorsOut;
 .  1036    01000353CH        02206H    movs     r2,#6
 .  1038    01000353EH        09B01H    ldr      r3,[sp,#4]
 .  1040    010003540H        0681BH    ldr      r3,[r3]
-.  1042    010003542H    0F7FFFFBFH    bl.w     RuntimeErrorsOu.regOut
+.  1042    010003542H    0F7FFFFBFH    bl.w     RuntimeErrorsOut.regOut
 .  1046    010003546H        0E000H    b        0 -> 1050
 .  1048    010003548H   <LineNo: 117>
     regOut(W, "  r1:", stackedRegs.r1);
@@ -587,7 +587,7 @@ MODULE RuntimeErrorsOut;
 .  1064    010003558H        02206H    movs     r2,#6
 .  1066    01000355AH        09B01H    ldr      r3,[sp,#4]
 .  1068    01000355CH        0685BH    ldr      r3,[r3,#4]
-.  1070    01000355EH    0F7FFFFB1H    bl.w     RuntimeErrorsOu.regOut
+.  1070    01000355EH    0F7FFFFB1H    bl.w     RuntimeErrorsOut.regOut
 .  1074    010003562H        0E000H    b        0 -> 1078
 .  1076    010003564H   <LineNo: 118>
     regOut(W, "  r2:", stackedRegs.r2);
@@ -599,7 +599,7 @@ MODULE RuntimeErrorsOut;
 .  1092    010003574H        02206H    movs     r2,#6
 .  1094    010003576H        09B01H    ldr      r3,[sp,#4]
 .  1096    010003578H        0689BH    ldr      r3,[r3,#8]
-.  1098    01000357AH    0F7FFFFA3H    bl.w     RuntimeErrorsOu.regOut
+.  1098    01000357AH    0F7FFFFA3H    bl.w     RuntimeErrorsOut.regOut
 .  1102    01000357EH        0E000H    b        0 -> 1106
 .  1104    010003580H   <LineNo: 119>
     regOut(W, "  r3:", stackedRegs.r3);
@@ -611,7 +611,7 @@ MODULE RuntimeErrorsOut;
 .  1120    010003590H        02206H    movs     r2,#6
 .  1122    010003592H        09B01H    ldr      r3,[sp,#4]
 .  1124    010003594H        068DBH    ldr      r3,[r3,#12]
-.  1126    010003596H    0F7FFFF95H    bl.w     RuntimeErrorsOu.regOut
+.  1126    010003596H    0F7FFFF95H    bl.w     RuntimeErrorsOut.regOut
 .  1130    01000359AH        0E000H    b        0 -> 1134
 .  1132    01000359CH   <LineNo: 120>
     regOut(W, " r12:", stackedRegs.r12);
@@ -623,7 +623,7 @@ MODULE RuntimeErrorsOut;
 .  1148    0100035ACH        02206H    movs     r2,#6
 .  1150    0100035AEH        09B01H    ldr      r3,[sp,#4]
 .  1152    0100035B0H        0691BH    ldr      r3,[r3,#16]
-.  1154    0100035B2H    0F7FFFF87H    bl.w     RuntimeErrorsOu.regOut
+.  1154    0100035B2H    0F7FFFF87H    bl.w     RuntimeErrorsOut.regOut
 .  1158    0100035B6H        0E000H    b        0 -> 1162
 .  1160    0100035B8H   <LineNo: 121>
     regOut(W, "  lr:", stackedRegs.lr);
@@ -635,7 +635,7 @@ MODULE RuntimeErrorsOut;
 .  1176    0100035C8H        02206H    movs     r2,#6
 .  1178    0100035CAH        09B01H    ldr      r3,[sp,#4]
 .  1180    0100035CCH        0695BH    ldr      r3,[r3,#20]
-.  1182    0100035CEH    0F7FFFF79H    bl.w     RuntimeErrorsOu.regOut
+.  1182    0100035CEH    0F7FFFF79H    bl.w     RuntimeErrorsOut.regOut
 .  1186    0100035D2H        0E000H    b        0 -> 1190
 .  1188    0100035D4H   <LineNo: 122>
     regOut(W, "  pc:", stackedRegs.pc);
@@ -647,7 +647,7 @@ MODULE RuntimeErrorsOut;
 .  1204    0100035E4H        02206H    movs     r2,#6
 .  1206    0100035E6H        09B01H    ldr      r3,[sp,#4]
 .  1208    0100035E8H        0699BH    ldr      r3,[r3,#24]
-.  1210    0100035EAH    0F7FFFF6BH    bl.w     RuntimeErrorsOu.regOut
+.  1210    0100035EAH    0F7FFFF6BH    bl.w     RuntimeErrorsOut.regOut
 .  1214    0100035EEH        0E000H    b        0 -> 1218
 .  1216    0100035F0H   <LineNo: 123>
     regOut(W, "xpsr:", stackedRegs.xpsr);
@@ -659,7 +659,7 @@ MODULE RuntimeErrorsOut;
 .  1232    010003600H        02206H    movs     r2,#6
 .  1234    010003602H        09B01H    ldr      r3,[sp,#4]
 .  1236    010003604H        069DBH    ldr      r3,[r3,#28]
-.  1238    010003606H    0F7FFFF5DH    bl.w     RuntimeErrorsOu.regOut
+.  1238    010003606H    0F7FFFF5DH    bl.w     RuntimeErrorsOut.regOut
 .  1242    01000360AH        0E000H    b        0 -> 1246
 .  1244    01000360CH   <LineNo: 124>
     regOut(W, "  sp:", stackedRegs.sp)
@@ -672,7 +672,7 @@ MODULE RuntimeErrorsOut;
 .  1262    01000361EH        09B01H    ldr      r3,[sp,#4]
 .  1264    010003620H        06A1BH    ldr      r3,[r3,#32]
   END printStackedRegs;
-.  1266    010003622H    0F7FFFF4FH    bl.w     RuntimeErrorsOu.regOut
+.  1266    010003622H    0F7FFFF4FH    bl.w     RuntimeErrorsOut.regOut
 .  1270    010003626H        0E000H    b        0 -> 1274
 .  1272    010003628H   <LineNo: 125>
 .  1274    01000362AH        0B003H    add      sp,#12
@@ -710,7 +710,7 @@ MODULE RuntimeErrorsOut;
 .  1344    010003670H        02206H    movs     r2,#6
 .  1346    010003672H        09B01H    ldr      r3,[sp,#4]
 .  1348    010003674H        0681BH    ldr      r3,[r3]
-.  1350    010003676H    0F7FFFF25H    bl.w     RuntimeErrorsOu.regOut
+.  1350    010003676H    0F7FFFF25H    bl.w     RuntimeErrorsOut.regOut
 .  1354    01000367AH        0E000H    b        0 -> 1358
 .  1356    01000367CH   <LineNo: 132>
     regOut(W, "  lr:", currentRegs.lr);
@@ -722,7 +722,7 @@ MODULE RuntimeErrorsOut;
 .  1372    01000368CH        02206H    movs     r2,#6
 .  1374    01000368EH        09B01H    ldr      r3,[sp,#4]
 .  1376    010003690H        0685BH    ldr      r3,[r3,#4]
-.  1378    010003692H    0F7FFFF17H    bl.w     RuntimeErrorsOu.regOut
+.  1378    010003692H    0F7FFFF17H    bl.w     RuntimeErrorsOut.regOut
 .  1382    010003696H        0E000H    b        0 -> 1386
 .  1384    010003698H   <LineNo: 133>
     regOut(W, "  pc:", currentRegs.pc);
@@ -734,7 +734,7 @@ MODULE RuntimeErrorsOut;
 .  1400    0100036A8H        02206H    movs     r2,#6
 .  1402    0100036AAH        09B01H    ldr      r3,[sp,#4]
 .  1404    0100036ACH        0689BH    ldr      r3,[r3,#8]
-.  1406    0100036AEH    0F7FFFF09H    bl.w     RuntimeErrorsOu.regOut
+.  1406    0100036AEH    0F7FFFF09H    bl.w     RuntimeErrorsOut.regOut
 .  1410    0100036B2H        0E000H    b        0 -> 1414
 .  1412    0100036B4H   <LineNo: 134>
     regOut(W, "xpsr:", currentRegs.xpsr)
@@ -747,7 +747,7 @@ MODULE RuntimeErrorsOut;
 .  1430    0100036C6H        09B01H    ldr      r3,[sp,#4]
 .  1432    0100036C8H        068DBH    ldr      r3,[r3,#12]
   END printCurrentRegs;
-.  1434    0100036CAH    0F7FFFEFBH    bl.w     RuntimeErrorsOu.regOut
+.  1434    0100036CAH    0F7FFFEFBH    bl.w     RuntimeErrorsOut.regOut
 .  1438    0100036CEH        0E000H    b        0 -> 1442
 .  1440    0100036D0H   <LineNo: 135>
 .  1442    0100036D2H        0B003H    add      sp,#12
@@ -892,7 +892,7 @@ MODULE RuntimeErrorsOut;
 .  1698    0100037D2H        09802H    ldr      r0,[sp,#8]
 .  1700    0100037D4H        0A904H    add      r1,sp,#16
 .  1702    0100037D6H        0AA08H    add      r2,sp,#32
-.  1704    0100037D8H    0F7FFFCC6H    bl.w     RuntimeErrorsOu.GetName
+.  1704    0100037D8H    0F7FFFCC6H    bl.w     RuntimeErrorsOut.GetName
 .  1708    0100037DCH        0E000H    b        0 -> 1712
 .  1710    0100037DEH   <LineNo: 163>
     Texts.WriteString(W, moduleName); Texts.Write(W, "."); Texts.WriteString(W, procName);
@@ -975,7 +975,7 @@ MODULE RuntimeErrorsOut;
 .  1872    010003880H        03108H    adds     r1,#8
 .  1874    010003882H        0AA1EH    add      r2,sp,#120
 .  1876    010003884H        06812H    ldr      r2,[r2]
-.  1878    010003886H    0F7FFFD03H    bl.w     RuntimeErrorsOu.printStackTrace
+.  1878    010003886H    0F7FFFD03H    bl.w     RuntimeErrorsOut.printStackTrace
 .  1882    01000388AH        0E000H    b        0 -> 1886
 .  1884    01000388CH   <LineNo: 172>
         printStackedRegs(W, er.stackedRegs);
@@ -984,10 +984,10 @@ MODULE RuntimeErrorsOut;
 .  1890    010003892H        0314CH    adds     r1,#76
 .  1892    010003894H        0AA1EH    add      r2,sp,#120
 .  1894    010003896H        06812H    ldr      r2,[r2]
-.  1896    010003898H    0F7FFFE30H    bl.w     RuntimeErrorsOu.printStackedRegs
+.  1896    010003898H    0F7FFFE30H    bl.w     RuntimeErrorsOut.printStackedRegs
 .  1900    01000389CH        0E000H    b        0 -> 1904
 .  1902    01000389EH   <LineNo: 173>
-.  1904    0100038A0H    0F000F806H    bl.w     RuntimeErrorsOu.PrintException + 472
+.  1904    0100038A0H    0F000F806H    bl.w     RuntimeErrorsOut.PrintException + 472
 .  1908    0100038A4H   <Const: 0FFFFFFFFH -1>
 .  1912    0100038A8H   <Global: 010001BF8H>
 .  1916    0100038ACH   <Global: 010001C0CH>
@@ -998,7 +998,7 @@ MODULE RuntimeErrorsOut;
 .  1926    0100038B6H        0AA1EH    add      r2,sp,#120
 .  1928    0100038B8H        06812H    ldr      r2,[r2]
     | RuntimeErrors.FaultRec:
-.  1930    0100038BAH    0F7FFFEB9H    bl.w     RuntimeErrorsOu.printCurrentRegs
+.  1930    0100038BAH    0F7FFFEB9H    bl.w     RuntimeErrorsOut.printCurrentRegs
 .  1934    0100038BEH        0E000H    b        0 -> 1938
 .  1936    0100038C0H   <LineNo: 174>
 .  1938    0100038C2H        0E019H    b        50 -> 1992
@@ -1016,7 +1016,7 @@ MODULE RuntimeErrorsOut;
 .  1960    0100038D8H        0310CH    adds     r1,#12
 .  1962    0100038DAH        0AA1EH    add      r2,sp,#120
 .  1964    0100038DCH        06812H    ldr      r2,[r2]
-.  1966    0100038DEH    0F7FFFE0DH    bl.w     RuntimeErrorsOu.printStackedRegs
+.  1966    0100038DEH    0F7FFFE0DH    bl.w     RuntimeErrorsOut.printStackedRegs
 .  1970    0100038E2H        0E000H    b        0 -> 1974
 .  1972    0100038E4H   <LineNo: 176>
         printCurrentRegs(W, er.currentRegs)
@@ -1026,7 +1026,7 @@ MODULE RuntimeErrorsOut;
 .  1980    0100038ECH        0AA1EH    add      r2,sp,#120
 .  1982    0100038EEH        06812H    ldr      r2,[r2]
     END
-.  1984    0100038F0H    0F7FFFE9EH    bl.w     RuntimeErrorsOu.printCurrentRegs
+.  1984    0100038F0H    0F7FFFE9EH    bl.w     RuntimeErrorsOut.printCurrentRegs
 .  1988    0100038F4H        0E000H    b        0 -> 1992
 .  1990    0100038F6H   <LineNo: 177>
   END PrintException;
@@ -1060,7 +1060,7 @@ MODULE RuntimeErrorsOut;
 .  2032    010003920H        0AA02H    add      r2,sp,#8
 .  2034    010003922H        06812H    ldr      r2,[r2]
   END HandleException;
-.  2036    010003924H    0F7FFFED8H    bl.w     RuntimeErrorsOu.PrintException
+.  2036    010003924H    0F7FFFED8H    bl.w     RuntimeErrorsOut.PrintException
 .  2040    010003928H        0E000H    b        0 -> 2044
 .  2042    01000392AH   <LineNo: 187>
 .  2044    01000392CH        0B003H    add      sp,#12
