@@ -23,6 +23,8 @@ MODULE TextIO;
     NoInput* = 4;
     FifoOverrun* = 5;
 
+    EOL* = 0AX; (* LF *)
+
   TYPE
     Device* = POINTER TO DeviceDesc;
     DeviceDesc* = RECORD END;

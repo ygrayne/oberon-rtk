@@ -4,6 +4,11 @@ MODULE UARTkstr;
   --
   UART string device driver for kernel use
   --
+  Variant for example: https://oberon-rtk.org/examples/readterminal/
+  Includes
+  * the GPIO pins for performance and behaviour testing and measuring
+  * delays in the interrupt handler
+  --
   * string IO procedures
   * hw-buffered (fifo)
   --
@@ -11,13 +16,18 @@ MODULE UARTkstr;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, UARTdev, TextIO, Kernel, Exceptions, Errors;
+  IMPORT SYSTEM, MCU := MCU2, UARTdev, TextIO, Kernel, Exceptions, Errors, GPIO;
 
   CONST
     RxIntPrio = 2;
     EOL = TextIO.EOL;
     TxFifoLvl = UARTdev.TXIFLSEL_val_48;  (* 4/8 = 16 entries *)
-    RxFifoLvl = UARTdev.RXIFLSEL_val_48;  (* 4/8 = 16 entries *)
+    RxFifoLvl = UARTdev.RXIFLSEL_val_18;  (* 1/8 = 4 entries *)
+
+    (* testing *)
+    RxPin = 1;
+    RxHandlerFifoPin = 16;
+    RxHandlerTimeoutPin = 17;
 
   TYPE
     UARTint = POINTER TO UARTintDesc;
@@ -68,7 +78,7 @@ MODULE UARTkstr;
 
 
   PROCEDURE rxHandler[0];
-    VAR mis: SET; uartInt: UARTint; ch: CHAR; excNo: INTEGER; overflow: BOOLEAN;
+    VAR mis: SET; uartInt: UARTint; ch: CHAR; excNo, i: INTEGER; overflow: BOOLEAN;
   BEGIN
     Exceptions.GetIntStatus(excNo);
     ASSERT((excNo = MCU.NVIC_UART0_IRQ_EXC) OR (excNo = MCU.NVIC_UART0_IRQ_EXC), Errors.ProgError);
@@ -76,18 +86,24 @@ MODULE UARTkstr;
     UARTdev.GetIntStatus(uartInt.dev, mis);
     (* rx fifo at trigger level *)
     IF UARTdev.MIS_RXMIS IN mis THEN
+      SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {RxHandlerFifoPin});
       readFifo(uartInt, ch, overflow);
       IF ch = EOL THEN (* timeout int will not fire is rx fifo is empty => handle case with (trigger level - 1) chars sent. *)
         SYSTEM.PUT(uartInt.strAddr, 0X);
         IF overflow THEN uartInt.res := TextIO.BufferOverflow END;
-        UARTdev.DisableInt(uartInt.dev, {UARTdev.IMSC_RXIM, UARTdev.IMSC_RTIM})
+        UARTdev.DisableInt(uartInt.dev, {UARTdev.IMSC_RXIM, UARTdev.IMSC_RTIM});
       END;
+      i := 0; WHILE i < 100 DO INC(i) END; (* some delay for nicer traces on oscilloscope *)
+      SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {RxHandlerFifoPin})
     (* rx timeout *)
     ELSIF UARTdev.MIS_RTMIS IN mis THEN
+      SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {RxHandlerTimeoutPin});
       readFifo(uartInt, ch, overflow);
       SYSTEM.PUT(uartInt.strAddr, 0X);
       IF overflow THEN uartInt.res := TextIO.BufferOverflow END;
-      UARTdev.DisableInt(uartInt.dev, {UARTdev.IMSC_RXIM, UARTdev.IMSC_RTIM})
+      UARTdev.DisableInt(uartInt.dev, {UARTdev.IMSC_RXIM, UARTdev.IMSC_RTIM});
+      i := 0; WHILE i < 100 DO INC(i) END; (* some delay for nicer traces on oscilloscope *)
+      SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {RxHandlerTimeoutPin})
     END
   END rxHandler;
 
@@ -102,6 +118,7 @@ MODULE UARTkstr;
     uartInt.cnt := 0;
     uartInt.res := TextIO.NoError;
     UARTdev.EnableInt(dev0, {UARTdev.IMSC_RXIM, UARTdev.IMSC_RTIM});
+    GPIO.Clear({RxHandlerFifoPin, RxHandlerTimeoutPin});
     Kernel.AwaitDeviceFlags(dev0.IMSC, {}, {UARTdev.IMSC_RXIM}); (* await int disabled *)
     numCh := uartInt.cnt;
     res := uartInt.res
@@ -131,4 +148,15 @@ MODULE UARTkstr;
     UARTdev.SetFifoLvl(dev, TxFifoLvl, RxFifoLvl)
   END Install;
 
+
+  PROCEDURE init;
+  BEGIN
+    GPIO.SetFunction(RxPin, GPIO.Fsio);
+    GPIO.SetFunction(RxHandlerFifoPin, GPIO.Fsio);
+    GPIO.SetFunction(RxHandlerTimeoutPin, GPIO.Fsio);
+    GPIO.OutputEnable({RxPin, RxHandlerFifoPin, RxHandlerTimeoutPin})
+  END init;
+
+BEGIN
+  init
 END UARTkstr.

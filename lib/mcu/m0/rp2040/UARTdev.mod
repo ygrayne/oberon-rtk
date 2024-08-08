@@ -40,9 +40,9 @@ MODULE UARTdev;
       WLEN_val_8* = 3;
       WLEN_val_7* = 2;
       WLEN_val_6* = 1;
-      WLEN_val_5* = 0; (* reset *)
+      WLEN_val_5* = 0;    (* reset value *)
     LCR_H_FEN*      = 4;  (* fifo enable, reset = disabled *)
-    LCR_H_STP2*     = 3; (* two stop bits select, reset = disabled, ie. one stop bit *)
+    LCR_H_STP2*     = 3;  (* two stop bits select, reset = disabled, ie. one stop bit *)
     LCR_H_EPS*      = 2;  (* even parity select, reset = disabled, ie. odd parity *)
     LCR_H_PEN*      = 1;  (* parity enable, reset = disabled *)
     LCR_H_BRK*      = 0;
@@ -67,27 +67,39 @@ MODULE UARTdev;
     DMACR_TXDMAE*   = 1; (* transmit via DMA enabled *)
     DMACR_RXDMAE*   = 0; (* receive via DMA enabled *)
 
-    (* IFLS bits and values *)
+    (* IFLS bits and values: FIFO levels *)
     IFLS_RXIFLSEL1*     = 5;
     IFLS_RXIFLSEL0*     = 3;
+      RXIFLSEL_val_18* = 000H; (* 1/8 full:        4 items in fifo *)
+      RXIFLSEL_val_28* = 001H; (* 2/8 = 1/4 full:  8 *)
+      RXIFLSEL_val_48* = 002H; (* 4/8 = 1/2 full: 16 *)
+      RXIFLSEL_val_68* = 003H; (* 6/8 = 3/4 full: 24 *)
+      RXIFLSEL_val_78* = 004H; (* 7/8 full:       28 *)
     IFLS_TXIFLSEL1*     = 2;
     IFLS_TXIFLSEL0*     = 0;
+      TXIFLSEL_val_18* = 000H; (* 1/8 full:        4 items in fifo *)
+      TXIFLSEL_val_28* = 001H; (* 2/8 = 1/4 full:  8 *)
+      TXIFLSEL_val_48* = 002H; (* 4/8 = 1/2 full: 16 *)
+      TXIFLSEL_val_68* = 003H; (* 6/8 = 3/4 full: 24 *)
+      TXIFLSEL_val_78* = 004H; (* 7/8 full:       28 *)
 
-    RXIFLSEL_val_18* = 000H; (* 1/8 full:        4 items in fifo *)
-    RXIFLSEL_val_28* = 001H; (* 2/8 = 1/4 full:  8 *)
-    RXIFLSEL_val_48* = 002H; (* 4/8 = 1/2 full: 16 *)
-    RXIFLSEL_val_68* = 003H; (* 6/8 = 3/4 full: 24 *)
-    RXIFLSEL_val_78* = 004H; (* 7/8 full:       28 *)
+    (* IMSC bits: int mask set/clr *)
+    IMSC_OEIM* = 10;  (* FIFO overrrun *)
+    IMSC_RTIM* = 6;   (* receive timeout *)
+    IMSC_TXIM* = 5;   (* tramsmit *)
+    IMSC_RXIM* = 4;   (* receive *)
 
-    TXIFLSEL_val_18* = 000H; (* 1/8 full:        4 items in fifo *)
-    TXIFLSEL_val_28* = 001H; (* 2/8 = 1/4 full:  8 *)
-    TXIFLSEL_val_48* = 002H; (* 4/8 = 1/2 full: 16 *)
-    TXIFLSEL_val_68* = 003H; (* 6/8 = 3/4 full: 24 *)
-    TXIFLSEL_val_78* = 004H; (* 7/8 full:       28 *)
+    (* MIS bits: int status *)
+    MIS_OEMIS* = IMSC_OEIM;
+    MIS_RTMIS* = IMSC_RTIM;
+    MIS_TXMIS* = IMSC_TXIM;
+    MIS_RXMIS* = IMSC_RXIM;
 
-    (* IMSC bits *)
-    IMSC_TXIM* = 5;
-
+    (* ICR bits: interrupt clear *)
+    ICR_OEIC* = IMSC_OEIM;
+    ICR_RTIC* = IMSC_RTIM;
+    ICR_TXIC* = IMSC_TXIM;
+    ICR_RXIC* = IMSC_RXIM;
 
   TYPE
     Device* = POINTER TO DeviceDesc;
@@ -97,7 +109,7 @@ MODULE UARTdev;
       intNo*: INTEGER;
       CR, IBRD, FBRD, LCR_H: INTEGER;
       TDR*, RDR*, FR*, RSR*: INTEGER;
-      DMACR, IFLS, IMSC*, MIS, ICR: INTEGER
+      DMACR, IFLS, IMSC*, MIS*, ICR*: INTEGER
     END;
 
     DeviceCfg* = RECORD (* see ASSERTs in 'Configure' for valid values *)
@@ -114,7 +126,7 @@ MODULE UARTdev;
 
   PROCEDURE Init*(dev: Device; uartNo: INTEGER);
   (**
-    Init Device data.
+    Init device data.
   **)
     VAR base: INTEGER;
   BEGIN

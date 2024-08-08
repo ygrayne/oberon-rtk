@@ -241,7 +241,7 @@ MODULE Texts;
 
   PROCEDURE ReadString*(R: TextIO.Reader; VAR s: ARRAY OF CHAR; VAR res: INTEGER);
   (**
-    Read a string via 'R', terminated by any char < " ", usually a CR.
+    Read a string via 'R', terminated by 'TextIO.EOL'.
     Flush the rest of the input in case of buffer overflow.
     The string is truncated to the buffer length, terminated by 0X.
   **)
@@ -258,8 +258,8 @@ MODULE Texts;
 
   PROCEDURE ReadInt*(R: TextIO.Reader; VAR int, res: INTEGER);
   (**
-    Read an integer in decimal form via 'R', terminated by any char < " ", usually a CR.
-    Flush the rest of the input in case of buffer overflow or fifo overrun.
+    Read an integer in decimal form via 'R', terminated by 'TextIO.EOL'.
+    Flush the rest of the input in case of buffer overflow.
     The number is not valid in case of any error.
     As long as there's no buffer overflow or fifo overrrun, any number of leading
     blanks, blanks after the sign, leading zeros, and trailing blanks are permitted.

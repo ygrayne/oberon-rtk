@@ -179,6 +179,35 @@ CONST
   NVIC_I2C1_IRQ*       = 24;
   NVIC_RTC_IRQ*        = 25;
 
+  (* IRQ exception numbers *)
+  NVIC_IRQ_Base = 16;
+  NVIC_TIMER_IRQ_0_EXC*    = NVIC_IRQ_Base + 0;
+  NVIC_TIMER_IRQ_1_EXC*    = NVIC_IRQ_Base + 1;
+  NVIC_TIMER_IRQ_2_EXC*    = NVIC_IRQ_Base + 2;
+  NVIC_TIMER_IRQ_3_EXC*    = NVIC_IRQ_Base + 3;
+  NVIC_PWM_IRQ_WRAP_EXC*   = NVIC_IRQ_Base + 4;
+  NVIC_USBCTRL_IRQ_EXC*    = NVIC_IRQ_Base + 5;
+  NVIC_XIP_IRQ_EXC*        = NVIC_IRQ_Base + 6;
+  NVIC_PIO0_IRQ_0_EXC*     = NVIC_IRQ_Base + 7;
+  NVIC_PIO0_IRQ_1_EXC*     = NVIC_IRQ_Base + 8;
+  NVIC_PIO1_IRQ_0_EXC*     = NVIC_IRQ_Base + 9;
+  NVIC_PIO1_IRQ_1_EXC*     = NVIC_IRQ_Base + 10;
+  NVIC_DMA_IRQ_0_EXC*      = NVIC_IRQ_Base + 11;
+  NVIC_DMA_IRQ_1_EXC*      = NVIC_IRQ_Base + 12;
+  NVIC_IO_IRQ_BANK0_EXC*   = NVIC_IRQ_Base + 13;
+  NVIC_IO_IRQ_QSPI_EXC*    = NVIC_IRQ_Base + 14;
+  NVIC_SIO_IRQ_PROC0_EXC*  = NVIC_IRQ_Base + 15;
+  NVIC_SIO_IRQ_PROC1_EXC*  = NVIC_IRQ_Base + 16;
+  NVIC_CLOCKS_IRQ_EXC*     = NVIC_IRQ_Base + 17;
+  NVIC_SPI0_IRQ_EXC*       = NVIC_IRQ_Base + 18;
+  NVIC_SPI1_IRQ_EXC*       = NVIC_IRQ_Base + 19;
+  NVIC_UART0_IRQ_EXC*      = NVIC_IRQ_Base + 20;
+  NVIC_UART1_IRQ_EXC*      = NVIC_IRQ_Base + 21;
+  NVIC_ADC_IRQ_FIFO_EXC*   = NVIC_IRQ_Base + 22;
+  NVIC_I2C0_IRQ_EXC*       = NVIC_IRQ_Base + 23;
+  NVIC_I2C1_IRQ_EXC*       = NVIC_IRQ_Base + 24;
+  NVIC_RTC_IRQ_EXC*        = NVIC_IRQ_Base + 25;
+
   (* system control block, SCB *)
   (* registers are core-specific, ie. not shared *)
   (* datasheet 2.4.4, p74 *)
@@ -945,22 +974,29 @@ CONST
 
   (* === assembly instructions === *)
   NOP* = 046C0H;
+
   (* read specical regs MRS *)
   (* 0F3EF8 B 09H r11(B) PSP(09) *)
-  MRS_R11_IPSR* = 0F3EF8B05H;  (* move to r11 from IPSR  *)
-  MRS_R11_XPSR* = 0F3EF8B03H;  (* move to r11 from XPSR *)
-  MRS_R11_MSP*  = 0F3EF8B08H;  (* move to r11 from MSP *)
-  MRS_R11_PSP*  = 0F3EF8B09H;  (* move to r11 from PSP *)
-  MRS_R11_CTL*  = 0F3EF8B14H;  (* move to r11 from CONTROL *)
-  MRS_R03_IPSR* = 0F3EF8305H;  (* move to r3 from IPSR *)
-  MRS_R03_XPSR* = 0F3EF8303H;  (* move to r3 from XPSR *)
-  MRS_R03_MSP*  = 0F3EF8308H;  (* move to r3 from MSP *)
-  MRS_R03_PSP*  = 0F3EF8309H;  (* move to r3 from PSP *)
-  MRS_R03_CTL*  = 0F3EF8314H;  (* move to r3 from CONTROL *)
+  MRS_R11_IPSR* = 0F3EF8B05H;  (* move IPSR to r11 *)
+  MRS_R03_IPSR* = 0F3EF8305H;  (* move IPSR to r3 *)
+  MRS_R00_IPSR* = 0F3EF8005H;  (* move IPSR to r0 *)
+
+  MRS_R11_XPSR* = 0F3EF8B03H;  (* move XPSR to r11 *)
+  MRS_R03_XPSR* = 0F3EF8303H;  (* move XPSR to r3 *)
+
+  MRS_R11_MSP*  = 0F3EF8B08H;  (* move to MSP r11 *)
+  MRS_R03_MSP*  = 0F3EF8308H;  (* move to MSP r3 *)
+
+  MRS_R11_PSP*  = 0F3EF8B09H;  (* move PSP to r11 *)
+  MRS_R03_PSP*  = 0F3EF8309H;  (* move PSP to r3 *)
+
+  MRS_R11_CTL*  = 0F3EF8B14H;  (* move CONTROL to r11 *)
+  MRS_R03_CTL*  = 0F3EF8314H;  (* move CONTROL to r3 *)
+
   (* write special regs MSR *)
   (* 0F38 B 88 09H r11(B) PSP(09) *)
-  MSR_PSP_R11* = 0F38B8809H;  (* move to PSP from r11  *)
-  MSR_CTL_R11* = 0F38B8814H;  (* move to CONTROL from r11 *)
+  MSR_PSP_R11* = 0F38B8809H;  (* move r11 to PSP *)
+  MSR_CTL_R11* = 0F38B8814H;  (* move r11 to CONTROL *)
 
   (* instruction sync *)
   ISB* = 0F3BF8F6FH;

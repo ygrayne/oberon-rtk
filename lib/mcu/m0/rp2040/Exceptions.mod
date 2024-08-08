@@ -58,6 +58,15 @@ MODULE Exceptions;
     SysExcNo* = {11, 14, 15};
     SysExcSysTickNo* = 15;
 
+  (* ISPR *)
+
+  PROCEDURE GetIntStatus*(VAR status: INTEGER);
+    CONST R0 = 0;
+  BEGIN
+    SYSTEM.EMIT(MCU.MRS_R00_IPSR);
+    status := SYSTEM.REG(R0)
+  END GetIntStatus;
+
   (* IRQs, via NVIC *)
 
   PROCEDURE EnableInt*(irqMask: SET);
@@ -108,7 +117,7 @@ MODULE Exceptions;
 
 
   PROCEDURE GetIntPrio*(irqNo: INTEGER; VAR prio: INTEGER);
-  (* prio: 0 to 3, 0 - highest *)
+  (* prio: 0 to 3, 0 = highest *)
     VAR addr: INTEGER;
   BEGIN
     addr := MCU.M0PLUS_NVIC_IPR + ((irqNo DIV 4) * 4);
