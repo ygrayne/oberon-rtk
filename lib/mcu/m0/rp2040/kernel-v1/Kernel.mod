@@ -332,7 +332,7 @@ MODULE Kernel;
             END
           END;
           IF t0 # NIL THEN
-            slotIn(t, ctx)
+            slotIn(t0, ctx)
           END;
           INC(tid)
         END

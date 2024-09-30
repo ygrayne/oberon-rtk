@@ -265,9 +265,10 @@ MODULE RuntimeErrors;
 
 
   PROCEDURE stackFrameBase(stackAddr, EXC_RETURN: INTEGER): INTEGER;
+    CONST PSPflag = 2;
     VAR addr: INTEGER;
   BEGIN
-    IF 2 IN BITS(EXC_RETURN) THEN (* PSP and MSP used *)
+    IF PSPflag IN BITS(EXC_RETURN) THEN (* PSP and MSP used *)
       SYSTEM.EMIT(MCU.MRS_R11_PSP);
       addr := SYSTEM.REG(11)
     ELSE (* only MSP used *)

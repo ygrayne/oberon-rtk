@@ -984,11 +984,13 @@ CONST
   MRS_R11_XPSR* = 0F3EF8B03H;  (* move XPSR to r11 *)
   MRS_R03_XPSR* = 0F3EF8303H;  (* move XPSR to r3 *)
 
-  MRS_R11_MSP*  = 0F3EF8B08H;  (* move to MSP r11 *)
-  MRS_R03_MSP*  = 0F3EF8308H;  (* move to MSP r3 *)
+  MRS_R11_MSP*  = 0F3EF8B08H;  (* move MSP to r11 *)
+  MRS_R03_MSP*  = 0F3EF8308H;  (* move MSP to r3 *)
+  MRS_R00_MSP*  = 0F3EF8008H;  (* move MSP to r3 *)
 
   MRS_R11_PSP*  = 0F3EF8B09H;  (* move PSP to r11 *)
   MRS_R03_PSP*  = 0F3EF8309H;  (* move PSP to r3 *)
+  MRS_R00_PSP*  = 0F3EF8009H;  (* move PSP to r0 *)
 
   MRS_R11_CTL*  = 0F3EF8B14H;  (* move CONTROL to r11 *)
   MRS_R03_CTL*  = 0F3EF8314H;  (* move CONTROL to r3 *)
