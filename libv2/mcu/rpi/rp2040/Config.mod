@@ -4,7 +4,7 @@ MODULE Config;
   Configurations and options
   Extending LinkOptions for two cores
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  MCU: RP2040
   --
   Copyright (c) 2023-2024 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -22,10 +22,10 @@ MODULE Config;
   |                           |
  ~~~                         ~~~
   |                           |
-  |    core 1 heap            | 020030200H = CoreOneHeapStart
+  |    core 1 heap            | 020020200H = CoreOneHeapStart
   +---------------------------+
   |                           |
-  |    core 1 vector table    | 020030000H = CoreOneDataStart = LinkOptions.DataEnd
+  |    core 1 vector table    | 020020000H = CoreOneDataStart = LinkOptions.DataEnd
   +---------------------------+
   |    module data (shared)   | shared as per MODULE separation/encapsulation
   |                           |
@@ -67,10 +67,10 @@ MODULE Config;
     MessagesBufferSize* = 4;
 
     (* core one base storage parameters *)
-    CoreOneDataStart* = 020030000H;
-    CoreOneStackStart* = 020040000H - 04H; (* use same semantics as Astrobe *)
-    CoreOneHeapStart*  = 020030200H;
-    CoreOneHeapLimit* = 0;
+    CoreOneDataStart*   = 020020000H;
+    CoreOneHeapStart*   = 020020200H;
+    CoreOneStackStart*  = 020040000H - 04H; (* use same semantics as Astrobe *)
+    CoreOneHeapLimit*   = 0;
 
     CoreZeroMainStackSize* = 1024;
     CoreOneMainStackSize* = 1024;

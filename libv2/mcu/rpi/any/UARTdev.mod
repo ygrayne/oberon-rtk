@@ -10,7 +10,7 @@ MODULE UARTdev;
   --
   The GPIO pins and pads used must be configured by the client module or program.
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2020-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -21,7 +21,7 @@ MODULE UARTdev;
   CONST
     UART0* = 0;
     UART1* = 1;
-    NumUART* = 2;
+    NumUART* = MCU.NumUART;
 
     (* generic values *)
     Enabled* = 1;
@@ -134,8 +134,8 @@ MODULE UARTdev;
     ASSERT(uartNo IN {UART0, UART1});
     dev.uartNo := uartNo;
     CASE uartNo OF
-      UART0: base := MCU.UART0_Base; dev.devNo := MCU.RESETS_UART0; dev.intNo := MCU.NVIC_UART0_IRQ
-    | UART1: base := MCU.UART1_Base; dev.devNo := MCU.RESETS_UART1; dev.intNo := MCU.NVIC_UART1_IRQ
+      UART0: base := MCU.UART0_BASE; dev.devNo := MCU.RESETS_UART0; dev.intNo := MCU.PPB_NVIC_UART0_IRQ
+    | UART1: base := MCU.UART1_BASE; dev.devNo := MCU.RESETS_UART1; dev.intNo := MCU.PPB_NVIC_UART1_IRQ
     END;
     dev.CR    := base + MCU.UART_CR_Offset;
     dev.IBRD  := base + MCU.UART_IBRD_Offset;
@@ -188,7 +188,7 @@ MODULE UARTdev;
     SYSTEM.PUT(dev.IBRD, intDiv);
     SYSTEM.PUT(dev.FBRD, fracDiv);
 
-    (* note: LCR_H cfg MUST appear after baudrate cfg, 4.2.7.1, p426 *)
+    (* note: LCR_H cfg MUST appear after baudrate cfg, cf. RP2040 datasheet 4.2.7.1, p426 *)
     x := 0;
     BFI(x, LCR_H_SPS, cfg.stickyParityEn);
     BFI(x, LCR_H_WLEN1, LCR_H_WLEN0, cfg.dataBits);

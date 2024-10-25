@@ -6,7 +6,7 @@ MODULE Errors;
   Copyright (c) 2019-2024 Gray, gray@grayraven.org
 **)
 
-  IMPORT Error;
+  IMPORT Error, MCU := MCU2;
 
   CONST
     MaxMsgLength = 64;
@@ -16,12 +16,13 @@ MODULE Errors;
 
     (* MCU fault codes *)
     (* all *)
-    NMI* = -2;
-    HardFault* = -3;
-    (* M3 only *)
-    MemMgmtFault* = -4;
-    BusFault* = -5;
-    UsageFault* = -6;
+    NMI*          = -MCU.PPB_NVIC_NMI_Exc;
+    HardFault*    = -MCU.PPB_NVIC_HardFault_Exc;
+    (* M33 only *)
+    MemMgmtFault* = -MCU.PPB_NVIC_MemMgmtFault_Exc;
+    BusFault*     = -MCU.PPB_NVIC_BusFault_Exc;
+    UsageFault*   = -MCU.PPB_NVIC_UsageFault_Exc;
+    SecureFault*  = -MCU.PPB_NVIC_SecureFault_Exc;
 
     (* Astrobe error codes, see Error.mod *)
     FirstAstrobeCode = 1;

@@ -3,8 +3,8 @@ MODULE LED;
   Oberon RTK Framework
   Green LED on Pico
   --
-  MCU: RP2040
-  Board: Pico
+  MCU: RP2040, RP2350
+  Board: Pico, Pico2
   --
   Usage:
   * Via SIO:
@@ -32,7 +32,8 @@ MODULE LED;
 
   PROCEDURE init;
   BEGIN
-    GPIO.SetFunction(LEDpinNo, GPIO.Fsio);
+    GPIO.SetFunction(LEDpinNo, MCU.IO_BANK0_Fsio);
+    GPIO.DisableIsolation(LEDpinNo); (* no-op on RP2040 *)
     GPIO.OutputEnable({LEDpinNo})
   END init;
 

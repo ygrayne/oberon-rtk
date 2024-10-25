@@ -4,7 +4,7 @@ MODULE MCU2;
   --
   MCU register and memory addresses, bits, values, assembly instructions
   --
-  MCU: Cortex-M33 RP2350, tested on Pico2
+  MCU: RP2350
   --
   Copyright (c) 2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -1315,9 +1315,6 @@ MODULE MCU2;
     PPB_SCR*          = PPB_BASE + 0ED10H;
     PPB_CCR*          = PPB_BASE + 0ED14H;
 
-    (* defining non-implemented 'PPB_SHPR0' allows to calculate other 'PPB_SHPRx' *)
-    (* uniformly across M-architectures using the exception number *)
-    PPB_SHPR0*        = PPB_BASE + 0ED14H; (* not implemented in M33 *)
     PPB_SHPR1*        = PPB_BASE + 0ED18H;
     PPB_SHPR2*        = PPB_BASE + 0ED1CH;
     PPB_SHPR3*        = PPB_BASE + 0ED20H;

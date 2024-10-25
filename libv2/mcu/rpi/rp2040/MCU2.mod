@@ -4,7 +4,7 @@ MODULE MCU2;
   --
   MCU register and memory addresses, bits, values, assembly instructions
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  MCU: RP2040
   --
   Copyright (c) 2023-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

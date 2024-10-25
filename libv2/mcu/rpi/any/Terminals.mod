@@ -8,7 +8,7 @@ MODULE Terminals;
   See module Out for a use case
   Each terminal can only be opened once.
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2020-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

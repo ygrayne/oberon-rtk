@@ -4,28 +4,28 @@ MODULE Config;
   Configurations and options
   Extending LinkOptions for two cores
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  MCU: RP2350
   --
   Copyright (c) 2023-2024 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
   --
   Settings for Astrobe:
-  * Data Range: 020000000H, 020030000H
-  * Code Range: 010000100H, 010200000H
+  * Data Range: 020000000H, 020040000H
+  * Code Range: 010000100H, 010400000H
   * Heap Start: 020000200H
   * Heap Limit: 000000000H
   These values are collected from LinkOptions.
   --
   Memory map SRAM:
   +---------------------------+
-  |    core 1 stack           | 020040000H - 04H = CoreOneStackStart
+  |    core 1 stack           | 020080000H - 04H = CoreOneStackStart
   |                           |
  ~~~                         ~~~
   |                           |
-  |    core 1 heap            | 020030200H = CoreOneHeapStart
+  |    core 1 heap            | 020040200H = CoreOneHeapStart
   +---------------------------+
   |                           |
-  |    core 1 vector table    | 020030000H = CoreOneDataStart = LinkOptions.DataEnd
+  |    core 1 vector table    | 020040000H = CoreOneDataStart = LinkOptions.DataEnd
   +---------------------------+
   |    module data (shared)   | shared as per MODULE separation/encapsulation
   |                           |
@@ -43,7 +43,7 @@ MODULE Config;
   +---------------------------+
 
   Memory map FLASH:
-                                010200000H = LinkOptions.CodeEnd
+                                010400000H = LinkOptions.CodeEnd
   +---------------------------+
   |                           |
   |                           |
@@ -51,7 +51,7 @@ MODULE Config;
   |                           |
   |                           | 010000100H = LinkOptions.CodeStart
   +---------------------------+
-  |    boot code phase 2      | 010000000H
+  |    meta data              | 010000000H
   +---------------------------+
 **)
 
@@ -67,17 +67,17 @@ MODULE Config;
     MessagesBufferSize* = 4;
 
     (* core one base storage parameters *)
-    CoreOneDataStart* = 020030000H;
-    CoreOneStackStart* = 020040000H - 04H; (* use same semantics as Astrobe *)
-    CoreOneHeapStart*  = 020030200H;
-    CoreOneHeapLimit* = 0;
+    CoreOneDataStart*   = 020040000H;
+    CoreOneHeapStart*   = 020040200H;
+    CoreOneStackStart*  = 020080000H - 04H; (* use same semantics as Astrobe *)
+    CoreOneHeapLimit*   = 0;
 
     CoreZeroMainStackSize* = 1024;
     CoreOneMainStackSize* = 1024;
 
-    CoreZeroRamExtStart* = 020040000H;
+    CoreZeroRamExtStart* = 020080000H;
     CoreZeroRamExtEnd* = CoreZeroRamExtStart + 01000H;
-    CoreOneRamExtStart* = 020041000H;
+    CoreOneRamExtStart* = 020081000H;
     CoreOneRamExtEnd* = CoreOneRamExtStart + 01000H;
 
   VAR

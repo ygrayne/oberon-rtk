@@ -4,7 +4,7 @@ MODULE Main;
   --
   Main module
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2023 - 2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -15,7 +15,7 @@ MODULE Main;
     (* ignore the "is not used" warnings... :) *)
     (* LinkOptions is the first import of Config *)
     Config, Clocks, Memory, RuntimeErrors,
-    RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr;
+    RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr, MCU := MCU2;
 
   CONST
     Baudrate0 = 38400; (* terminal 0 *)
@@ -33,9 +33,18 @@ MODULE Main;
 
 
   PROCEDURE configPins(txPinNo, rxPinNo: INTEGER);
+    VAR padCfg: GPIO.PadCfg;
   BEGIN
-    GPIO.SetFunction(txPinNo, GPIO.Fuart);
-    GPIO.SetFunction(rxPinNo, GPIO.Fuart)
+    GPIO.GetPadBaseCfg(padCfg);
+    padCfg.pullupEn := GPIO.Enabled;
+    padCfg.pulldownEn := GPIO.Disabled;
+    GPIO.ConfigurePad(txPinNo, padCfg);
+    GPIO.ConfigurePad(rxPinNo, padCfg);
+    GPIO.SetFunction(txPinNo, MCU.IO_BANK0_Fuart);
+    GPIO.SetFunction(rxPinNo, MCU.IO_BANK0_Fuart);
+    GPIO.EnableInput(rxPinNo);
+    GPIO.DisableIsolation(txPinNo); (* no-op on RP2040 *)
+    GPIO.DisableIsolation(rxPinNo)
   END configPins;
 
 
@@ -73,7 +82,7 @@ MODULE Main;
     (* use error output writer *)
     Terminals.OpenErr(TERM1, UARTstr.PutString);
     RuntimeErrorsOut.SetWriter(Core1, Terminals.Werr[1]);
-    RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException);
+    RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException)
   END init;
 
 BEGIN

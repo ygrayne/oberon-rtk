@@ -382,7 +382,7 @@ MODULE RuntimeErrors;
       (* set VTOR register to SRAM bottom *)
       IF i = 0 THEN
         (* VTOR of other cores will be set by core wake-up sequence *)
-        SYSTEM.PUT(MCU.SCB_VTOR, Memory.DataMem[0].dataStart)
+        SYSTEM.PUT(MCU.PPB_VTOR, Memory.DataMem[0].dataStart)
       END;
 
       (* populate vector table *)
@@ -391,6 +391,7 @@ MODULE RuntimeErrors;
       install(vectorTableBase + MCU.NMIhandlerOffset, faultHandler);
       install(vectorTableBase + MCU.HardFaultHandlerOffset, faultHandler);
       install(vectorTableBase + MCU.SVChandlerOffset, errorHandler);
+      install(vectorTableBase + MCU.DebugMonitorOffset, faultHandler);
       addr := vectorTableBase + MCU.MissingHandlerOffset;
       WHILE addr < vectorTableTop DO
         install(addr, faultHandler); INC(addr, 4)

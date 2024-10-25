@@ -9,7 +9,7 @@ MODULE StartUp;
   MCU: Cortex-M0+ RP2040
   --
   See
-  * 'PSM-*' values in MCU2.mod for blocks to reset
+  * 'PSM_*' values in MCU2.mod for blocks to reset
   * 'RESETS_*' values in MCU2.mod for subsytems to reset
   --
   Copyright (c) 2023-2024 Gray gray@grayraven.org
