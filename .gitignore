@@ -9,6 +9,7 @@
 
 # add dirs
 !/lib/
+!/libv2/
 !/examples/
 !/config/
 !/tools/
