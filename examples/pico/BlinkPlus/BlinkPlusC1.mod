@@ -16,7 +16,7 @@ MODULE BlinkPlusC1;
   IMPORT Main, Out, GPIO, LED, Timers;
 
   CONST
-    Interval = 500 * 1000;
+    Interval = 1000 * 1000;
 
 
   PROCEDURE fail;

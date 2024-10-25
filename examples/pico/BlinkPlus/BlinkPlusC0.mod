@@ -12,7 +12,7 @@ MODULE BlinkPlusC0;
   Copyright (c) 2023-2024 Gray, gray@grayraven.org
 **)
 
-  IMPORT Main, Out, MultiCore, Memory, Timers, C1 := BLinkPlusC1;
+  IMPORT Main, Out, MultiCore, Memory, Timers, C1 := BlinkPlusC1;
 
   CONST
     Core1 = 1;

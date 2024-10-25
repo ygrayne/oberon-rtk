@@ -4,7 +4,7 @@ MODULE Memory;
   * heap memory allocation for two cores
   * stacks allocation for two cores
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2023-2024 Gray, gray@grayraven.org
   Portions copyright (c) 2012-2021 CFB Software, https://www.astrobe.com

@@ -23,7 +23,7 @@ MODULE Clocks;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, (*GPIO,*) StartUp;
+  IMPORT SYSTEM, MCU := MCU2, GPIO, StartUp;
 
   CONST
     (* CLK_GPOUT0_CTRL *)
@@ -93,7 +93,6 @@ MODULE Clocks;
   (* clk signal external monitoring *)
   (* oscilloscopes rock! *)
 
-(*
   PROCEDURE Monitor*(which: INTEGER);
   (* on pin 21 using CLOCK GPOUT0 *)
     CONST Pin = 21;
@@ -106,7 +105,6 @@ MODULE Clocks;
     SYSTEM.PUT(MCU.CLK_GPOUT0_CTRL + MCU.ASET, {CLK_GPOUT0_CTRL_ENABLE});
     GPIO.SetFunction(Pin, MCU.IO_BANK0_Fclk)
   END Monitor;
-*)
 
   (* clock gating *)
   (* note: all clocks are enabled upon reset *)
@@ -256,7 +254,5 @@ MODULE Clocks;
   END init;
 
 BEGIN
-  (*
   init
-  *)
 END Clocks.

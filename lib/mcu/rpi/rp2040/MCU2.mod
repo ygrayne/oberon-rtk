@@ -11,7 +11,15 @@ MODULE MCU2;
 **)
 
   CONST
-    NumCores* = 2;
+    NumCores*   = 2;
+    NumUART*    = 2;
+    NumSPI*     = 2;
+    NumI2C*     = 2;
+    NumTimers*  = 1;
+    NumPIO*     = 2;
+    NumPWMchan* = 8;
+    NumDMAchan* = 12;
+    NumGPIO*    = 30;
 
     (* as configured in Clocks.mod *)
     SysClkFreq*  = 125 * 1000000; (* from SYS PLL *)
@@ -81,6 +89,8 @@ MODULE MCU2;
     PPB_BASE*             = 0E0000000H;
 
     (* == SRAM == *)
+    SRAM0_BASE*           = 020000000H;
+    SRAM_HALF_BASE*       = 020020000H;
     SRAM4_BASE*           = 020040000H;
     SRAM5_BASE*           = 020041000H;
     SRAM_EXT0*            = SRAM4_BASE;
@@ -298,6 +308,8 @@ MODULE MCU2;
     IO_BANK0_Fpio1*   = 7;
     IO_BANK0_Fclk*    = 8;
     IO_BANK0_Fusb*    = 9;
+
+    IO_BANK0_Functions* = {IO_BANK0_Fspi .. IO_BANK0_Fusb};
 
     (* raw interrupts *)
     IO_BANK0_INTR0*       = IO_BANK0_BASE + 00F0H;
@@ -941,6 +953,8 @@ MODULE MCU2;
     PPB_NVIC_PendSV_Exc*        = 14;
     PPB_NVIC_SysTick_Exc*       = 15;
 
+    PPB_NVIC_SysExc*  = {3, 11, 14, 15};
+
     VectorTableSize*            = 192; (* 16 + 32 words *)
     ResetHandlerOffset*         = 004H;
     NMIhandlerOffset*           = 008H;
@@ -962,9 +976,9 @@ MODULE MCU2;
     PPB_SCR*          = PPB_BASE + 0ED10H;
     PPB_CCR*          = PPB_BASE + 0ED14H;
 
-    (* defining non-implemented 'PPB_SHPR0' allows to calculate other 'PPB_SHPRx' *)
+    (* defining non-implemented 'PPB_SHPR1' allows to calculate other 'PPB_SHPRx' *)
     (* uniformly across M-architectures using the exception number *)
-    PPB_SHPR0*        = PPB_BASE + 0ED14H;  (* not implemented in M0+ *)
+    PPB_SHPR1*        = PPB_BASE + 0ED18H;  (* not implemented in M0+ *)
     PPB_SHPR2*        = PPB_BASE + 0ED1CH;
     PPB_SHPR3*        = PPB_BASE + 0ED20H;
     PPB_SHCSR*        = PPB_BASE + 0ED24H;

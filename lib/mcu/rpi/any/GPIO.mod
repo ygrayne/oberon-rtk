@@ -4,11 +4,7 @@ MODULE GPIO;
   --
   General Purpose IO (GPIO)
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
-  Datasheet:
-  * 2.19.6.1, p243 (GPIO)
-  * 2.19.6.3, p298 (banks and pads)
-  * 2.3.1.17, p42 (SIO)
+  MCU: RP2040, RP2350
   --
   Pin mumbers 0 .. 29, on "lo bank" (IO_BANK0)
   The "hi bank" for QPSI is not handled here.
@@ -28,7 +24,7 @@ MODULE GPIO;
     (* BANK0_GPIO bits and values *)
     BANK0_GPIO_OD*          = 7;
     BANK0_GPIO_IE*          = 6;
-    BANK0_GPIO_DRIVE1*      = 5; (* [5:4], drive stringth *)
+    BANK0_GPIO_DRIVE1*      = 5; (* [5:4], drive strength *)
     BANK0_GPIO_DRIVE0*      = 4;
       DRIVE_val_2mA*  = 0;
       DRIVE_val_4mA*  = 1;  (* reset *)
@@ -49,23 +45,10 @@ MODULE GPIO;
     SlewSlow*  = SLEWFAST_val_slow;  (* reset *)
     SlewFast*  = SLEWFAST_val_fast;
 
-    OD = 7; (* output disable *)
-    IE = 6; (* input enable *)
-
-    (* GPIO functions *)
-    F1* = 1;   F2* = 2;   F3* = 3;   F4* = 4;
-    F5* = 5;   F6* = 6;   F7* = 7;   F8* = 8;   F9* = 9;
-
-    Fspi* = F1;
-    Fuart* = F2;
-    Fi2c* = F3;
-    Fpwm* = F4;
-    Fsio* = F5;
-    Fpio0* = F6;
-    Fpio1* = F7;
-    Fclk* = F8;
-    Fusb* = F9;
-
+    (* PADS_BANK0_GPIOx BITS *)
+    PADS_ISO  = 8;  (* pad isolation *)
+    PADS_OD   = 7;  (* output disable *)
+    PADS_IE   = 6;  (* input enable *)
 
   TYPE
     PadCfg* = RECORD (* see ASSERTs in 'ConfigurePad' for valid values *)
@@ -73,18 +56,18 @@ MODULE GPIO;
       inputEn*: INTEGER;        (* reset: Enabled *)
       driveStrength*: INTEGER;  (* reset: Drive4mA *)
       pullupEn*: INTEGER;       (* reset: Disabled *)
-      pulldownEn*: INTEGER;     (* reset: Enabled *)
+      pulldownEn*: INTEGER;     (* reset: Enabled (RP2040), Disabled (RP2350) *)
       schmittTrigEn*: INTEGER;  (* reset: Enabled *)
       slewRate*: INTEGER        (* reset: SlewSlow *)
     END;
 
-  (* --- GPIO device --- *)
+  (* --- GPIO devices --- *)
 
   PROCEDURE SetFunction*(pinNo, functionNo: INTEGER);
     VAR addr, x: INTEGER;
   BEGIN
-    ASSERT(functionNo IN {F1 .. F9}, Errors. PreCond);
-    addr := MCU.IO_BANK0_GPIO_CTRL + (pinNo * MCU.IO_BANK0_GPIO_Offset);
+    ASSERT(functionNo IN MCU.IO_BANK0_Functions, Errors. PreCond);
+    addr := MCU.IO_BANK0_GPIO0_CTRL + (pinNo * MCU.IO_BANK0_GPIO_Offset);
     SYSTEM.GET(addr, x);
     BFI(x, 4, 0, functionNo);
     SYSTEM.PUT(addr, x)
@@ -93,14 +76,11 @@ MODULE GPIO;
   PROCEDURE SetInverters*(pinNo: INTEGER; mask: SET);
     VAR addr, x: INTEGER;
   BEGIN
-    addr := MCU.IO_BANK0_GPIO_CTRL + (pinNo * MCU.IO_BANK0_GPIO_Offset);
+    addr := MCU.IO_BANK0_GPIO0_CTRL + (pinNo * MCU.IO_BANK0_GPIO_Offset);
     SYSTEM.GET(addr, x);
     BFI(x, 31, 5, ORD(mask));
     SYSTEM.PUT(addr, x)
   END SetInverters;
-
-  (* define interrupts functions here *)
-  (* ... *)
 
   (* --- pads --- *)
 
@@ -115,7 +95,7 @@ MODULE GPIO;
     ASSERT(cfg.schmittTrigEn IN {Disabled, Enabled}, Errors.PreCond);
     ASSERT(cfg.slewRate IN {SLEWFAST_val_slow, SLEWFAST_val_fast}, Errors.PreCond);
 
-    addr := MCU.PADS_BANK0_GPIO + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
+    addr := MCU.PADS_BANK0_GPIO0 + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
     x := cfg.slewRate;
     x := x + LSL(cfg.schmittTrigEn, BANK0_GPIO_SCHMITT);
     x := x + LSL(cfg.pulldownEn, BANK0_GPIO_PDE);
@@ -130,7 +110,7 @@ MODULE GPIO;
   PROCEDURE GetPadBaseCfg*(VAR cfg: PadCfg);
   (**
     outputDe        = Disabled,           hardware reset value, ie. output is enabled
-    inputEn         = Enabled,            hardware reset value
+    inputEn         = Disabled,
     driveStrength   = DRIVE_val_4mA,      hardware reset value
     pullupEn        = Disabled,           hardware reset value
     pulldownEn      = Enabled,            hardware reset value
@@ -141,7 +121,6 @@ MODULE GPIO;
   **)
   BEGIN
     CLEAR(cfg);
-    cfg.inputEn := Enabled;
     cfg.driveStrength := DRIVE_val_4mA;
     cfg.pulldownEn := Enabled;
     cfg.schmittTrigEn := Enabled
@@ -149,21 +128,35 @@ MODULE GPIO;
 
 
   PROCEDURE DisableOutput*(pinNo: INTEGER);
-  (* reset: output enabled *)
     VAR addr: INTEGER;
   BEGIN
-    addr := MCU.PADS_BANK0_GPIO + MCU.ASET + (pinNo * MCU.PADS_BANK0_GPIO_Offset); (* set DISABLE bit *)
-    SYSTEM.PUT(addr, {OD})
+    addr := MCU.PADS_BANK0_GPIO0 + MCU.ASET + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
+    SYSTEM.PUT(addr, {PADS_OD})
   END DisableOutput;
 
 
-  PROCEDURE DisableInput*(pinNo: INTEGER);
-  (* reset: enabled *)
+  PROCEDURE EnableInput*(pinNo: INTEGER);
     VAR addr: INTEGER;
   BEGIN
-    addr := MCU.PADS_BANK0_GPIO + MCU.ACLR + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
-    SYSTEM.PUT(addr, {IE})
+    addr := MCU.PADS_BANK0_GPIO0 + MCU.ASET + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
+    SYSTEM.PUT(addr, {PADS_IE})
+  END EnableInput;
+
+
+  PROCEDURE DisableInput*(pinNo: INTEGER);
+    VAR addr: INTEGER;
+  BEGIN
+    addr := MCU.PADS_BANK0_GPIO0 + MCU.ACLR + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
+    SYSTEM.PUT(addr, {PADS_IE})
   END DisableInput;
+
+
+  PROCEDURE DisableIsolation*(pinNo: INTEGER);
+    VAR addr: INTEGER;
+  BEGIN
+    addr := MCU.PADS_BANK0_GPIO0 + MCU.ACLR + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
+    SYSTEM.PUT(addr, {PADS_ISO})
+  END DisableIsolation;
 
 
   (* GPIO control via SIO *)
@@ -233,11 +226,17 @@ MODULE GPIO;
   END GetOutputEnable;
 
   PROCEDURE init;
+    VAR i: INTEGER;
   BEGIN
     StartUp.ReleaseReset(MCU.RESETS_IO_BANK0);
     StartUp.AwaitReleaseDone(MCU.RESETS_IO_BANK0);
     StartUp.ReleaseReset(MCU.RESETS_PADS_BANK0);
-    StartUp.AwaitReleaseDone(MCU.RESETS_PADS_BANK0)
+    StartUp.AwaitReleaseDone(MCU.RESETS_PADS_BANK0);
+    i := 0;
+    WHILE i < MCU.NumGPIO DO
+      DisableInput(i);
+      INC(i)
+    END
   END init;
 
 BEGIN

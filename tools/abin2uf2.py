@@ -2,15 +2,13 @@
 
 # Translate an Astrobe .bin file to UF2 format for Pico.
 # Optionally copy to Pico's "virtual drive".
-# Tested with .bin files created by Astrobe v9.1 for Cortex-M0.
+# Tested with .bin files created by Astrobe v9.3 for Cortex-M0.
 # --
 # Run with option -h for help.
 # --
 # Put into a directory on $PYTHONPATH, together with the default
 # bootstage 2 file, and run as 'python -m abin2uf2 ...'
 # No idea if that's the right way, but it works.
-# --
-# Don't look too close, it's my first ever Python program. :)
 # --
 # Copyright (c) 2023-2024 Gray, gray@graraven.org
 # https://oberon-rtk.org/licences/
@@ -67,13 +65,16 @@ if args.verbose:
     print("number of code blocks in bin file:", numblocks)
 numblocks = numblocks + 1 # +1 for bootloader block
 
-header0 = struct.pack("<L", 0x0A324655) # UF2\n
-header1 = struct.pack("<L", 0x9E5D5157) # magic
-header3 = struct.pack("<L", 0x00002000) # flags
-header5 = struct.pack("<L", 256)        # data size
-header7 = struct.pack("<L", numblocks)  # blocks
-header8 = struct.pack("<L", 0xE48BFF56) # Pico family ID
-header9 = struct.pack("<L", 0x0AB16F30) # magic
+# UF2 headers
+RP2040_FAMID = 0xE48BFF56
+
+header0 = struct.pack("<L", 0x0A324655)     # UF2\n
+header1 = struct.pack("<L", 0x9E5D5157)     # magic
+header3 = struct.pack("<L", 0x00002000)     # flags
+header5 = struct.pack("<L", 256)            # data size
+header7 = struct.pack("<L", numblocks)      # blocks
+header8 = struct.pack("<L", RP2040_FAMID)   # family ID
+header9 = struct.pack("<L", 0x0AB16F30)     # magic
 
 # rp2040 & pico board
 flashaddr = 0x10000000

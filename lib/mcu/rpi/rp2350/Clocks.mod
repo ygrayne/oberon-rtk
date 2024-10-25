@@ -5,7 +5,6 @@ MODULE Clocks;
   * initialisation at start-up (auto)
   * clock monitor on pin 21
   * clock-gating: enabling and disabling of specific clocks for power-savings
-  * more to come: resus, freq counters
   Remark: maybe split the clock init from other functions, so these can
   only be loaded when needed.
   --
@@ -23,7 +22,7 @@ MODULE Clocks;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, (*GPIO,*) StartUp;
+  IMPORT SYSTEM, MCU := MCU2, GPIO, StartUp;
 
   CONST
     (* CLK_GPOUT0_CTRL *)
@@ -102,7 +101,7 @@ MODULE Clocks;
 
   (* clk signal external monitoring *)
   (* oscilloscopes rock! *)
-(*
+
   PROCEDURE Monitor*(which: INTEGER);
   (* on pin 21 using CLOCK GPOUT0 *)
     CONST Pin = 21;
@@ -114,9 +113,9 @@ MODULE Clocks;
     SYSTEM.PUT(MCU.CLK_GPOUT0_CTRL, x);
     SYSTEM.PUT(MCU.CLK_GPOUT0_CTRL + MCU.ASET, {CLK_GPOUT0_CTRL_ENABLE});
     GPIO.SetFunction(Pin, MCU.IO_BANK0_Fclk);
-    GPIO.RemoveLatch(Pin)
+    GPIO.DisableIsolation(Pin)
   END Monitor;
-*)
+
 
   (* clock gating *)
   (* note: all clocks are enabled upon reset *)

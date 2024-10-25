@@ -1,4 +1,4 @@
-# Oberon Modules Library for the RP2040
+# Oberon Modules Library
 
 See [https://oberon-rtk.org/software/](https://oberon-rtk.org/software/)
 

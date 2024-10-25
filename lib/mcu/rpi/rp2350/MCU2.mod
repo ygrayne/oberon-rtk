@@ -11,7 +11,15 @@ MODULE MCU2;
 **)
 
   CONST
-    NumCores* = 2;
+    NumCores*   = 2;
+    NumUART*    = 2;
+    NumSPI*     = 2;
+    NumI2C*     = 2;
+    NumTimers*  = 2;
+    NumPIO*     = 3;
+    NumPWMchan* = 12;
+    NumDMAchan* = 16;
+    NumGPIO*    = 30; (* QFN-60 package as on Pico2 *)
 
     (* as configured in Clocks.mod *)
     SysClkFreq*  = 125 * 1000000; (* from SYS PLL *)
@@ -111,8 +119,11 @@ MODULE MCU2;
     EPPB_BASE*            = 0E0080000H;
 
     (* == SRAM == *)
+    SRAM0_BASE*           = 020000000H;
+    SRAM4_BASE*           = 020040000H;
     SRAM8_BASE*           = 020080000H;
     SRAM9_BASE*           = 020081000H;
+    SRAM_HALF_BASE*       = SRAM4_BASE;
     SRAM_EXT0*            = SRAM8_BASE;
     SRAM_EXT1*            = SRAM9_BASE;
 
@@ -367,6 +378,8 @@ MODULE MCU2;
     IO_BANK0_Fclk*    = 9;
     IO_BANK0_Fusb*    = 10;
     IO_BANK0_FuartAlt* = 11;
+
+    IO_BANK0_Functions* = {IO_BANK0_Fhstx .. IO_BANK0_FuartAlt};
 
     (* note: identifiers abbreviated due to compiler name length restrictions *)
     IO_BANK0_IRQSUM_PROC0_SEC0*       = IO_BANK0_BASE + 0200H;
@@ -1273,6 +1286,8 @@ MODULE MCU2;
     PPB_NVIC_SVC_Exc*           = 11;
     PPB_NVIC_PendSV_Exc*        = 14;
     PPB_NVIC_SysTick_Exc*       = 15;
+
+    PPB_NVIC_SysExc*  = {3, 4, 5, 6, 7, 11, 14, 15};
 
     (* vector table *)
     VectorTableSize*            = 272; (* 16 + 52 words *)
