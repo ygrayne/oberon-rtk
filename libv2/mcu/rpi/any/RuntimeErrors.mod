@@ -114,6 +114,8 @@ MODULE RuntimeErrors;
       haltOn, stackTraceOn, stackedRegsOn, currentRegsOn: BOOLEAN
     END;
 
+    ExceptionHandler* = PROCEDURE(cpuId: INTEGER; er: ExceptionRec);
+
 
   VAR
     exc: ARRAY NumCores OF Exception;
@@ -330,7 +332,7 @@ MODULE RuntimeErrors;
   END faultHandler;
 
 
-  PROCEDURE* SetHandler*(cpuId: INTEGER; eh: PROCEDURE(cpuId: INTEGER; er: ExceptionRec));
+  PROCEDURE* SetHandler*(cpuId: INTEGER; eh: ExceptionHandler);
   BEGIN
     exc[cpuId].handleException := eh
   END SetHandler;
