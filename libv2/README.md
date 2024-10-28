@@ -1,5 +1,16 @@
-# Modules v2 for RP MCUs
+# Oberon Modules Library
 
-* any: for all MCUs
-* rp2040: specific for RP2040
-* rp2350: specific for RP2350
+Version v2.
+
++ libv2
+  + any
+  + board
+    + rpi
+      + any
+      + pico
+      + pico2
+  + MCU
+    + rpi
+      + any
+      + rp2040
+      + rp2350

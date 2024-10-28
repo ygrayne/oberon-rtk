@@ -1,6 +1,6 @@
 MODULE UARTdev;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
   --
   UART device
   * initialisation of device data structure
@@ -22,6 +22,7 @@ MODULE UARTdev;
     UART0* = 0;
     UART1* = 1;
     NumUART* = MCU.NumUART;
+    UARTs = {UART0 .. NumUART - 1};
 
     (* generic values *)
     Enabled* = 1;
@@ -131,12 +132,11 @@ MODULE UARTdev;
     VAR base: INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
-    ASSERT(uartNo IN {UART0, UART1});
+    ASSERT(uartNo IN UARTs);
     dev.uartNo := uartNo;
-    CASE uartNo OF
-      UART0: base := MCU.UART0_BASE; dev.devNo := MCU.RESETS_UART0; dev.intNo := MCU.PPB_NVIC_UART0_IRQ
-    | UART1: base := MCU.UART1_BASE; dev.devNo := MCU.RESETS_UART1; dev.intNo := MCU.PPB_NVIC_UART1_IRQ
-    END;
+    dev.devNo := MCU.RESETS_UART0 + uartNo;
+    dev.intNo := MCU.PPB_NVIC_UART0_IRQ + uartNo;
+    base      := MCU.UART0_BASE + (uartNo * MCU.UART_Offset);
     dev.CR    := base + MCU.UART_CR_Offset;
     dev.IBRD  := base + MCU.UART_IBRD_Offset;
     dev.FBRD  := base + MCU.UART_FBRD_Offset;

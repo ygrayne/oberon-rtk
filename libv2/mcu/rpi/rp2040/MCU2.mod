@@ -11,15 +11,16 @@ MODULE MCU2;
 **)
 
   CONST
-    NumCores*   = 2;
-    NumUART*    = 2;
-    NumSPI*     = 2;
-    NumI2C*     = 2;
-    NumTimers*  = 1;
-    NumPIO*     = 2;
-    NumPWMchan* = 8;
-    NumDMAchan* = 12;
-    NumGPIO*    = 30;
+    NumCores*       = 2;
+    NumUART*        = 2;
+    NumSPI*         = 2;
+    NumI2C*         = 2;
+    NumTimers*      = 1;
+    NumPIO*         = 2;
+    NumPWMchan*     = 8;
+    NumDMAchan*     = 12;
+    NumGPIO*        = 30;
+    NumInterrupts*  = 32;
 
     (* as configured in Clocks.mod *)
     SysClkFreq*  = 125 * 1000000; (* from SYS PLL *)
@@ -478,6 +479,7 @@ MODULE MCU2;
     (* == UART0, UART1 == *)
     (* datasheet 4.2.8, p427 *)
     (* offsets from UART0_BASE, UART1_BASE *)
+    UART_Offset*        = UART1_BASE - UART0_BASE;
     UART_DR_Offset*     = 0000H;
     UART_RSR_Offset*    = 0004H;
     UART_FR_Offset*     = 0018H;
@@ -591,6 +593,7 @@ MODULE MCU2;
     (* == TIMER == *)
     (* datasheet 4.6.5, p541 *)
     (* offsets from TIMER0_BASE *)
+    TIMER_Offset*           = 0;
     TIMER_TIMEHW_Offset*    = 000H;
     TIMER_TIMELW_Offset*    = 004H;
     TIMER_TIMEHR_Offset*    = 008H;
@@ -885,13 +888,9 @@ MODULE MCU2;
 
     (* -- NVIC -- *)
     PPB_NVIC_ISER0*   = PPB_BASE + 0E100H;
-      PPB_NVIC_ISER_Offset* = 0;
     PPB_NVIC_ICER0*   = PPB_BASE + 0E180H;
-      PPB_NVIC_ICER_Offset* = 0;
     PPB_NVIC_ISPR0*   = PPB_BASE + 0E200H;
-      PPB_NVIC_ISPR_Offset* = 0;
     PPB_NVIC_ICPR0*   = PPB_BASE + 0E280H;
-      PPB_NVIC_ICPR_Offset* = 0;
 
     PPB_NVIC_IPR0*    = PPB_BASE + 0E400H;
     PPB_NVIC_IPR1*    = PPB_BASE + 0E404H;
@@ -901,7 +900,6 @@ MODULE MCU2;
     PPB_NVIC_IPR5*    = PPB_BASE + 0E414H;
     PPB_NVIC_IPR6*    = PPB_BASE + 0E418H;
     PPB_NVIC_IPR7*    = PPB_BASE + 0E41CH;
-      PPB_NVIC_IPR_Offset* = 4;
 
     (* IRQ numbers *)
     (* datasheet 32.3.2, p60 *)
@@ -950,12 +948,13 @@ MODULE MCU2;
     PPB_NVIC_UsageFault_Exc*    = 6;  (* not implemented in M0+ *)
     PPB_NVIC_SecureFault_Exc*   = 7;  (* not implemented in M0+ *)
     PPB_NVIC_SVC_Exc*           = 11;
+    PPB_NVIC_DebugMon_Exc*      = 12;
     PPB_NVIC_PendSV_Exc*        = 14;
     PPB_NVIC_SysTick_Exc*       = 15;
 
     PPB_NVIC_SysExc*  = {3, 11, 14, 15};
 
-    VectorTableSize*            = 192; (* 16 + 32 words *)
+    VectorTableSize*            = 192; (* bytes, 16 sys excetions + 32 interrupts, one word each *)
     ResetHandlerOffset*         = 004H;
     NMIhandlerOffset*           = 008H;
     HardFaultHandlerOffset*     = 00CH;

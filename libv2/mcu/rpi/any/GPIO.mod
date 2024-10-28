@@ -1,6 +1,6 @@
 MODULE GPIO;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
   --
   General Purpose IO (GPIO)
   --
@@ -53,10 +53,10 @@ MODULE GPIO;
   TYPE
     PadCfg* = RECORD (* see ASSERTs in 'ConfigurePad' for valid values *)
       outputDe*: INTEGER;       (* reset: Disabled *)
-      inputEn*: INTEGER;        (* reset: Enabled *)
+      inputEn*: INTEGER;        (* reset: Enabled (RP2040), Disabled (RP2350) *)
       driveStrength*: INTEGER;  (* reset: Drive4mA *)
       pullupEn*: INTEGER;       (* reset: Disabled *)
-      pulldownEn*: INTEGER;     (* reset: Enabled (RP2040), Disabled (RP2350) *)
+      pulldownEn*: INTEGER;     (* reset: Enabled *)
       schmittTrigEn*: INTEGER;  (* reset: Enabled *)
       slewRate*: INTEGER        (* reset: SlewSlow *)
     END;

@@ -58,7 +58,7 @@ MODULE Exceptions;
     SysExcNo* = {11, 14, 15};
     SysExcSysTickNo* = 15;
 
-  (* ISPR *)
+  (* IPSR *)
 
   PROCEDURE GetIntStatus*(VAR status: INTEGER);
     CONST R0 = 0;

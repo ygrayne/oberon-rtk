@@ -4,22 +4,23 @@ MODULE MCU2;
   --
   MCU register and memory addresses, bits, values, assembly instructions
   --
-  MCU: RP2350
+  MCU: RP2350, Pico2
   --
   Copyright (c) 2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
   CONST
-    NumCores*   = 2;
-    NumUART*    = 2;
-    NumSPI*     = 2;
-    NumI2C*     = 2;
-    NumTimers*  = 2;
-    NumPIO*     = 3;
-    NumPWMchan* = 12;
-    NumDMAchan* = 16;
-    NumGPIO*    = 30; (* QFN-60 package as on Pico2 *)
+    NumCores*       = 2;
+    NumUART*        = 2;
+    NumSPI*         = 2;
+    NumI2C*         = 2;
+    NumTimers*      = 2;
+    NumPIO*         = 3;
+    NumPWMchan*     = 12;
+    NumDMAchan*     = 16;
+    NumGPIO*        = 30; (* QFN-60 package as on Pico2 *)
+    NumInterrupts*  = 52;
 
     (* as configured in Clocks.mod *)
     SysClkFreq*  = 125 * 1000000; (* from SYS PLL *)
@@ -587,6 +588,7 @@ MODULE MCU2;
     (* == UART0, UART1 == *)
     (* datasheet 12.1.8, p958 *)
     (* offsets from UART0_BASE, UART1_BASE *)
+    UART_Offset*        = UART1_BASE - UART0_BASE;
     UART_DR_Offset*     = 000H;
     UART_RSR_Offset*    = 004H;
     UART_FR_Offset*     = 018H;
@@ -703,6 +705,7 @@ MODULE MCU2;
     (* == TIMER0, TIMER1 == *)
     (* datasheet 12.8.5, p1173 *)
     (* offsets from TIMER0_BASE, TIMER1_BASE *)
+    TIMER_Offset*           = TIMER1_BASE - TIMER0_BASE;
     TIMER_TIMEHW_Offset*    = 000H;
     TIMER_TIMELW_Offset*    = 004H;
     TIMER_TIMEHR_Offset*    = 008H;
@@ -1177,45 +1180,38 @@ MODULE MCU2;
     (* -- NVIC -- *)
     PPB_NVIC_ISER0*   = PPB_BASE + 0E100H;
     PPB_NVIC_ISER1*   = PPB_BASE + 0E104H;
-      PPB_NVIC_ISER_Offset* = 4;
 
     PPB_NVIC_ICER0*    = PPB_BASE + 0E180H;
     PPB_NVIC_ICER1*    = PPB_BASE + 0E184H;
-      PPB_NVIC_ICER_Offset* = 4;
 
     PPB_NVIC_ISPR0*   = PPB_BASE + 0E200H;
     PPB_NVIC_ISPR1*   = PPB_BASE + 0E204H;
-      PPB_NVIC_ISPR_Offset* = 4;
 
     PPB_NVIC_ICPR0*   = PPB_BASE + 0E280H;
     PPB_NVIC_ICPR1*   = PPB_BASE + 0E284H;
-      PPB_NVIC_ICPR_Offset* = 4;
 
     PPB_NVIC_IABR0*   = PPB_BASE + 0E300H;
     PPB_NVIC_IABR1*   = PPB_BASE + 0E304H;
-      PPB_NVIC_IABR_Offset* = 4;
 
     PPB_NVIC_ITNS0*   = PPB_BASE + 0E380H;
     PPB_NVIC_ITNS1*   = PPB_BASE + 0E384H;
-      PPB_NVIC_ITNS_Offset* = 4;
 
-    PPB_NVIC_IPR0*      = PPB_BASE + 0E400H;
-    PPB_NVIC_IPR1*      = PPB_BASE + 0E404H;
-    PPB_NVIC_IPR2*      = PPB_BASE + 0E408H;
-    PPB_NVIC_IPR3*      = PPB_BASE + 0E40CH;
-    PPB_NVIC_IPR4*      = PPB_BASE + 0E410H;
-    PPB_NVIC_IPR5*      = PPB_BASE + 0E414H;
-    PPB_NVIC_IPR6*      = PPB_BASE + 0E418H;
-    PPB_NVIC_IPR7*      = PPB_BASE + 0E41CH;
-    PPB_NVIC_IPR8*      = PPB_BASE + 0E420H;
-    PPB_NVIC_IPR9*      = PPB_BASE + 0E424H;
-    PPB_NVIC_IPR10*     = PPB_BASE + 0E428H;
-    PPB_NVIC_IPR11*     = PPB_BASE + 0E42CH;
-    PPB_NVIC_IPR12*     = PPB_BASE + 0E430H;
-    PPB_NVIC_IPR13*     = PPB_BASE + 0E434H;
-    PPB_NVIC_IPR14*     = PPB_BASE + 0E438H;
-    PPB_NVIC_IPR15*     = PPB_BASE + 0E43CH;
-      PPB_NVIC_IPR_Offset* = 4;
+    PPB_NVIC_IPR0*    = PPB_BASE + 0E400H;
+    PPB_NVIC_IPR1*    = PPB_BASE + 0E404H;
+    PPB_NVIC_IPR2*    = PPB_BASE + 0E408H;
+    PPB_NVIC_IPR3*    = PPB_BASE + 0E40CH;
+    PPB_NVIC_IPR4*    = PPB_BASE + 0E410H;
+    PPB_NVIC_IPR5*    = PPB_BASE + 0E414H;
+    PPB_NVIC_IPR6*    = PPB_BASE + 0E418H;
+    PPB_NVIC_IPR7*    = PPB_BASE + 0E41CH;
+    PPB_NVIC_IPR8*    = PPB_BASE + 0E420H;
+    PPB_NVIC_IPR9*    = PPB_BASE + 0E424H;
+    PPB_NVIC_IPR10*   = PPB_BASE + 0E428H;
+    PPB_NVIC_IPR11*   = PPB_BASE + 0E42CH;
+    PPB_NVIC_IPR12*   = PPB_BASE + 0E430H;
+    PPB_NVIC_IPR13*   = PPB_BASE + 0E434H;
+    PPB_NVIC_IPR14*   = PPB_BASE + 0E438H;
+    PPB_NVIC_IPR15*   = PPB_BASE + 0E43CH;
 
     (* IRQ numbers *)
     (* datasheet 3.2, p83 *)
@@ -1240,15 +1236,15 @@ MODULE MCU2;
     PPB_NVIC_PIO1_IRQ_1*        = 18;
     PPB_NVIC_PIO2_IRQ_0*        = 19;
     PPB_NVIC_PIO2_IRQ_1*        = 20;
-    PPB_NVIC_IO_IRQ_BANK0*      = 21;
-    PPB_NVIC_IO_IRQ_BANK0_NS*   = 22;
-    PPB_NVIC_IO_IRQ_QSPI*       = 23;
-    PPB_NVIC_IO_IRQ_QSPI_NS*    = 24;
-    PPB_NVIC_SIO_IRQ_FIFO*      = 25;
-    PPB_NVIC_SIO_IRQ_BELL*      = 26;
-    PPB_NVIC_SIO_IRQ_FIFO_NS*   = 27;
-    PPB_NVIC_SIO_IRQ_BELL_NS*   = 28;
-    PPB_NVIC_SIO_IRQ_MTIMECMP*  = 29;
+    PPB_NVIC_IO_IRQ_BANK0*      = 21; (* core local *)
+    PPB_NVIC_IO_IRQ_BANK0_NS*   = 22; (* core local *)
+    PPB_NVIC_IO_IRQ_QSPI*       = 23; (* core local *)
+    PPB_NVIC_IO_IRQ_QSPI_NS*    = 24; (* core local *)
+    PPB_NVIC_SIO_IRQ_FIFO*      = 25; (* core local *)
+    PPB_NVIC_SIO_IRQ_BELL*      = 26; (* core local *)
+    PPB_NVIC_SIO_IRQ_FIFO_NS*   = 27; (* core local *)
+    PPB_NVIC_SIO_IRQ_BELL_NS*   = 28; (* core local *)
+    PPB_NVIC_SIO_IRQ_MTIMECMP*  = 29; (* core local *)
     PPB_NVIC_CLOCKS_IRQ*        = 30;
     PPB_NVIC_SPI0_IRQ*          = 31;
     PPB_NVIC_SPI1_IRQ*          = 32;
@@ -1284,13 +1280,14 @@ MODULE MCU2;
     PPB_NVIC_UsageFault_Exc*    = 6;
     PPB_NVIC_SecureFault_Exc*   = 7;
     PPB_NVIC_SVC_Exc*           = 11;
+    PPB_NVIC_DebugMon_Exc*      = 12;
     PPB_NVIC_PendSV_Exc*        = 14;
     PPB_NVIC_SysTick_Exc*       = 15;
 
     PPB_NVIC_SysExc*  = {3, 4, 5, 6, 7, 11, 14, 15};
 
     (* vector table *)
-    VectorTableSize*            = 272; (* 16 + 52 words *)
+    VectorTableSize*            = 272; (* bytes, 16 sys exceptions + 52 interrupts, one word each *)
     ResetHandlerOffset*         = 004H;
     NMIhandlerOffset*           = 008H;
     HardFaultHandlerOffset*     = 00CH;
@@ -1391,7 +1388,7 @@ MODULE MCU2;
     CONTROL_SPSEL* = 1; (* enable PSP *)
 
   (* ===== assembly instructions ===== *)
-    (* Thumb instructions, for compatibility/porting for now *)
+
     NOP* = 046C0H;
 
     (* read specical regs MRS *)
@@ -1405,7 +1402,7 @@ MODULE MCU2;
 
     MRS_R11_MSP*  = 0F3EF8B08H;  (* move MSP to r11 *)
     MRS_R03_MSP*  = 0F3EF8308H;  (* move MSP to r3 *)
-    MRS_R00_MSP*  = 0F3EF8008H;  (* move MSP to r3 *)
+    MRS_R00_MSP*  = 0F3EF8008H;  (* move MSP to r0 *)
 
     MRS_R11_PSP*  = 0F3EF8B09H;  (* move PSP to r11 *)
     MRS_R03_PSP*  = 0F3EF8309H;  (* move PSP to r3 *)

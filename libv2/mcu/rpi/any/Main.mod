@@ -1,6 +1,6 @@
 MODULE Main;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
   --
   Main module
   --
