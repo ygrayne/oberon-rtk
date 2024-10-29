@@ -83,6 +83,7 @@ MODULE Main;
     Terminals.OpenErr(TERM1, UARTstr.PutString);
     RuntimeErrorsOut.SetWriter(Core1, Terminals.Werr[1]);
     RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException)
+  
   END init;
 
 BEGIN
