@@ -1,6 +1,6 @@
 MODULE Terminals;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
   --
   Max two text terminals via TextIO.Device, eg. UART
   --

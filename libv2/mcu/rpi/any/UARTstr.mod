@@ -23,7 +23,7 @@ MODULE UARTstr;
   END PutChar;
 
 
-  PROCEDURE PutString*(dev: TextIO.Device; s: ARRAY OF CHAR; numChar: INTEGER);
+  PROCEDURE* PutString*(dev: TextIO.Device; s: ARRAY OF CHAR; numChar: INTEGER);
     VAR dev0: UARTdev.Device; i: INTEGER;
   BEGIN
     dev0 := dev(UARTdev.Device);

@@ -1,6 +1,7 @@
 MODULE Memory;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
+  --
   * heap memory allocation for two cores
   * stacks allocation for two cores
   --
@@ -76,7 +77,7 @@ MODULE Memory;
   END Allocate;
 
 
-  PROCEDURE Deallocate*(VAR p: INTEGER; typeDesc: INTEGER);
+  PROCEDURE* Deallocate*(VAR p: INTEGER; typeDesc: INTEGER);
   (* from Astrobe Library, modified *)
   (* Assign NIL = 0 to the pointer 'p'. Reclaim the space if this was the most
      recent allocation, otherwise do nothing. *)
@@ -93,7 +94,7 @@ MODULE Memory;
 
   (* --- Astrobe code end --- *)
 
-  PROCEDURE LockHeaps*;
+  PROCEDURE* LockHeaps*;
     CONST Core0 = 0; Core1 = 1;
   BEGIN
     heaps[Core0].heapLimit := heaps[Core0].heapTop;
@@ -102,7 +103,7 @@ MODULE Memory;
 
   (* === thread & loop stacks === *)
 
-  PROCEDURE initStackCheck(addr, limit: INTEGER);
+  PROCEDURE* initStackCheck(addr, limit: INTEGER);
   BEGIN
     WHILE addr < limit DO
       SYSTEM.PUT(addr, addr + 3);
@@ -111,7 +112,7 @@ MODULE Memory;
   END initStackCheck;
 
 
-  PROCEDURE checkStackUsage(addr, limit: INTEGER; VAR unused: INTEGER);
+  PROCEDURE* checkStackUsage(addr, limit: INTEGER; VAR unused: INTEGER);
     VAR value: INTEGER;
   BEGIN
     SYSTEM.GET(addr, value);
@@ -146,7 +147,7 @@ MODULE Memory;
   END CheckThreadStackUsage;
 
 
-  PROCEDURE allocStack(VAR stkAddr: INTEGER; cid, stkSize: INTEGER);
+  PROCEDURE* allocStack(VAR stkAddr: INTEGER; cid, stkSize: INTEGER);
     VAR limit: INTEGER;
   BEGIN
     limit := heaps[cid].heapLimit;
@@ -192,7 +193,7 @@ MODULE Memory;
   END AllocLoopStack;
 
 
-  PROCEDURE EnableStackCheck*(on: BOOLEAN);
+  PROCEDURE* EnableStackCheck*(on: BOOLEAN);
     VAR cid: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);

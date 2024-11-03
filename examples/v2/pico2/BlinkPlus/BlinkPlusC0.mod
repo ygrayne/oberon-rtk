@@ -7,13 +7,13 @@ MODULE BlinkPlusC0;
   --
   Core 1 program module: BlinkPlusC1
   --
-  MCU: RP2040
-  Board: Pico
+  MCU: RP2350
+  Board: Pico2
   --
   Copyright (c) 2023-2024 Gray, gray@grayraven.org
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Main, Out, MultiCore, Memory, Timers, Errors, C1 := BlinkPlusC1;
+  IMPORT SYSTEM, Main, Out, MultiCore, Memory, Timers, Errors, C1 := BlinkPlusC1;
 
   CONST
     Core1 = 1;
@@ -32,7 +32,10 @@ MODULE BlinkPlusC0;
     VAR before, timeH, timeL, cnt: INTEGER; timer: Timers.Device;
   BEGIN
     MultiCore.InitCoreOne(C1.Run, Memory.DataMem[Core1].stackStart, Memory.DataMem[Core1].dataStart);
-    timer := C1.Timer;
+    NEW(timer); ASSERT(timer # NIL, Errors.HeapOverflow);
+    Timers.Init(timer, Timers.TIMER0);
+    Timers.Configure(timer);
+    Timers.SetTime(timer, 0, 0FFFFFFFFH - 10000000); (* force timeL roll-over after ten seconds *)
     Out.String("core 0"); Out.Ln;
     Timers.GetTime(timer, timeH, before);
     cnt := 0;

@@ -1,12 +1,13 @@
 MODULE StartUp;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
+  --
   Start-up control
   * power-on state machine (hardware controlled part)
   * reset controller (software controlled part)
   Note: watchdog resets selecyion in 'Watchdog.mod'
   --
-  MCU: Cortex-M0+ RP2040
+  MCU: RP2040, RP2350
   --
   See
   * 'PSM_*' values in MCU2.mod for blocks to reset
@@ -30,23 +31,17 @@ MODULE StartUp;
 
   (* reset controller *)
 
-  PROCEDURE ReleaseReset*(devNo: INTEGER);
-  (* release the reset out of start-up *)
-    VAR x: SET;
+  PROCEDURE* ReleaseReset*(devNo: INTEGER);
+  (* release the reset of a device out of start-up *)
+    VAR done: SET;
   BEGIN
-    SYSTEM.GET(MCU.RESETS_DONE, x);
-    IF ~(devNo IN x) THEN
-      SYSTEM.PUT(MCU.RESETS_RESET + MCU.ACLR, {devNo})
+    SYSTEM.GET(MCU.RESETS_DONE, done);
+    IF ~(devNo IN done) THEN
+      SYSTEM.PUT(MCU.RESETS_RESET + MCU.ACLR, {devNo});
+      REPEAT
+        SYSTEM.GET(MCU.RESETS_DONE, done);
+      UNTIL (devNo IN done)
     END
   END ReleaseReset;
-
-
-  PROCEDURE AwaitReleaseDone*(devNo: INTEGER);
-    VAR x: SET;
-  BEGIN
-    REPEAT
-      SYSTEM.GET(MCU.RESETS_DONE, x);
-    UNTIL (devNo IN x)
-  END AwaitReleaseDone;
 
 END StartUp.

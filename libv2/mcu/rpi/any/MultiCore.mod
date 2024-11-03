@@ -1,10 +1,11 @@
 MODULE MultiCore;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
+  --
   Multi-core handling
   Very basic :)
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2023-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -25,7 +26,7 @@ MODULE MultiCore;
     FifoValue* = ARRAY 4 OF BYTE; (* compatible with any 4-byte data structure, incl. basic types *)
 
 
-  PROCEDURE CPUid*(): INTEGER;
+  PROCEDURE* CPUid*(): INTEGER;
     VAR x: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, x);
@@ -33,25 +34,25 @@ MODULE MultiCore;
   END CPUid;
 
 
-  PROCEDURE Send*(value: FifoValue);
+  PROCEDURE* Send*(value: FifoValue);
   BEGIN
     SYSTEM.PUT(MCU.SIO_FIFO_WR, value)
   END Send;
 
 
-  PROCEDURE Receive*(VAR value: FifoValue);
+  PROCEDURE* Receive*(VAR value: FifoValue);
   BEGIN
     SYSTEM.GET(MCU.SIO_FIFO_RD, value)
   END Receive;
 
 
-  PROCEDURE Valid*(): BOOLEAN;
+  PROCEDURE* Valid*(): BOOLEAN;
   BEGIN
     RETURN SYSTEM.BIT(MCU.SIO_FIFO_ST, ST_VLD)
   END Valid;
 
 
-  PROCEDURE Ready*(): BOOLEAN;
+  PROCEDURE* Ready*(): BOOLEAN;
   BEGIN
     RETURN SYSTEM.BIT(MCU.SIO_FIFO_ST, ST_RDY)
   END Ready;

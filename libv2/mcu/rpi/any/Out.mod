@@ -1,6 +1,6 @@
 MODULE Out;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
   --
   Output via two TextIO.Writer.
   --

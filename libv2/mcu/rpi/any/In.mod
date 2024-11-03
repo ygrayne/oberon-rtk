@@ -1,7 +1,8 @@
 MODULE In;
 (**
-  Oberon RTK Framework
-  Input vua two TextIO.Reader.
+  Oberon RTK Framework v2
+  --
+  Input via two TextIO.Reader.
   --
   Copyright (c) 2020-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

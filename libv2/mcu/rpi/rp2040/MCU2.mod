@@ -1,6 +1,6 @@
 MODULE MCU2;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
   --
   MCU register and memory addresses, bits, values, assembly instructions
   --
@@ -943,12 +943,12 @@ MODULE MCU2;
     (* exception numbers *)
     PPB_NVIC_NMI_Exc*           = 2;
     PPB_NVIC_HardFault_Exc*     = 3;
-    PPB_NVIC_MemMgmtFault_Exc*  = 4;  (* not implemented in M0+ *)
-    PPB_NVIC_BusFault_Exc*      = 5;  (* not implemented in M0+ *)
-    PPB_NVIC_UsageFault_Exc*    = 6;  (* not implemented in M0+ *)
-    PPB_NVIC_SecureFault_Exc*   = 7;  (* not implemented in M0+ *)
+    PPB_NVIC_MemMgmtFault_Exc*  = 4;  (* not implemented in RP2040 *)
+    PPB_NVIC_BusFault_Exc*      = 5;  (* not implemented in RP2040 *)
+    PPB_NVIC_UsageFault_Exc*    = 6;  (* not implemented in RP2040 *)
+    PPB_NVIC_SecureFault_Exc*   = 7;  (* not implemented in RP2040 *)
     PPB_NVIC_SVC_Exc*           = 11;
-    PPB_NVIC_DebugMon_Exc*      = 12;
+    PPB_NVIC_DebugMon_Exc*      = 12; (* not implemented in RP2040 *)
     PPB_NVIC_PendSV_Exc*        = 14;
     PPB_NVIC_SysTick_Exc*       = 15;
 
@@ -959,13 +959,8 @@ MODULE MCU2;
     NMIhandlerOffset*           = 008H;
     HardFaultHandlerOffset*     = 00CH;
     SVChandlerOffset*           = 02CH;
-
-    DebugMonitorOffset*         = 030H;   (* not implemented in M0+ *)
-
+    PendSVhandlerOffset*        = 038H;
     SysTickHandlerOffset*       = 03CH;
-
-    MissingHandlerOffset*       = 038H;
-    IrqZeroHandlerOffset*       = 040H;
 
     (* -- SCB -- *)
     PPB_CPUID*        = PPB_BASE + 0ED00H;
@@ -980,6 +975,7 @@ MODULE MCU2;
     PPB_SHPR1*        = PPB_BASE + 0ED18H;  (* not implemented in M0+ *)
     PPB_SHPR2*        = PPB_BASE + 0ED1CH;
     PPB_SHPR3*        = PPB_BASE + 0ED20H;
+
     PPB_SHCSR*        = PPB_BASE + 0ED24H;
 
     (* -- MPU -- *)

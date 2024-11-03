@@ -4,7 +4,7 @@ MODULE Exceptions;
   --
   Exception management
   --
-  MCU: RP2040, RP2350
+  MCU: RP2040
   --
   Copyright (c) 2020-2024 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -12,9 +12,12 @@ MODULE Exceptions;
 
   IMPORT SYSTEM, MCU := MCU2, Errors;
 
+  CONST
+    IRQ0_VectOffset = 040H;
+
   (* IPSR *)
 
-  PROCEDURE GetIntStatus*(VAR status: INTEGER);
+  PROCEDURE* GetIntStatus*(VAR status: INTEGER);
     CONST R0 = 0;
   BEGIN
     SYSTEM.EMIT(MCU.MRS_R00_IPSR);
@@ -23,61 +26,49 @@ MODULE Exceptions;
 
   (* IRQs, via NVIC *)
 
-  PROCEDURE iset(intNo, ireg: INTEGER);
+  PROCEDURE* EnableInt*(intNo: INTEGER);
   BEGIN
-    ASSERT(intNo < MCU.NumInterrupts, Errors.ProgError);
-    SYSTEM.PUT(ireg + ((intNo DIV 32) * 4), {intNo MOD 32})
-  END iset;
-
-  PROCEDURE iget(intNo, ireg: INTEGER; VAR value: BOOLEAN);
-    VAR x: SET;
-  BEGIN
-    ASSERT(intNo < MCU.NumInterrupts, Errors.ProgError);
-    SYSTEM.GET(ireg + ((intNo DIV 32) * 4), x);
-    value := (intNo MOD 32) IN x
-  END iget;
-
-
-  PROCEDURE EnableInt*(intNo: INTEGER);
-  BEGIN
-    iset(intNo, MCU.PPB_NVIC_ISER0)
+    SYSTEM.PUT(MCU.PPB_NVIC_ISER0, {intNo})
   END EnableInt;
 
 
-  PROCEDURE GetEnabledInt*(intNo: INTEGER; VAR en: BOOLEAN);
+  PROCEDURE* GetEnabledInt*(intNo: INTEGER; VAR en: BOOLEAN);
+    VAR x: SET;
   BEGIN
-    iget(intNo, MCU.PPB_NVIC_ISER0, en)
+    SYSTEM.GET(MCU.PPB_NVIC_ISER0, x);
+    en := intNo IN x
   END GetEnabledInt;
 
 
-  PROCEDURE DisableInt*(intNo: INTEGER);
+  PROCEDURE* DisableInt*(intNo: INTEGER);
   BEGIN
-    iset(intNo, MCU.PPB_NVIC_ICER0)
+    SYSTEM.PUT(MCU.PPB_NVIC_ICER0, {intNo})
   END DisableInt;
 
 
-  PROCEDURE SetPendingInt*(intNo: INTEGER);
+  PROCEDURE* SetPendingInt*(intNo: INTEGER);
   BEGIN
-    iset(intNo, MCU.PPB_NVIC_ISPR0)
+    SYSTEM.PUT(MCU.PPB_NVIC_ISPR0, {intNo})
   END SetPendingInt;
 
 
-  PROCEDURE GetPendingInt*(intNo: INTEGER; VAR pend: BOOLEAN);
+  PROCEDURE* GetPendingInt*(intNo: INTEGER; VAR pend: BOOLEAN);
+    VAR x: SET;
   BEGIN
-    iget(intNo, MCU.PPB_NVIC_ISPR0, pend)
+    SYSTEM.GET(MCU.PPB_NVIC_ISER0, x);
+    pend := intNo IN x
   END GetPendingInt;
 
 
-  PROCEDURE ClearPendingInt*(intNo: INTEGER);
+  PROCEDURE* ClearPendingInt*(intNo: INTEGER);
   BEGIN
-    iset(intNo, MCU.PPB_NVIC_ICPR0)
+    SYSTEM.PUT(MCU.PPB_NVIC_ICPR0, {intNo})
   END ClearPendingInt;
 
 
-  PROCEDURE SetIntPrio*(intNo, prio: INTEGER);
+  PROCEDURE* SetIntPrio*(intNo, prio: INTEGER);
   (* 0 <= prio <= 0FFH *)
-  (* RP2040: prio's two most significant bits (of eight) used => four levels *)
-  (* RP2350: prio's three most significant bits (of eight) used => eight levels *)
+  (* prio's two most significant bits (of eight) used => four levels *)
     VAR addr, x: INTEGER;
   BEGIN
     ASSERT(intNo < MCU.NumInterrupts, Errors.ProgError);
@@ -89,7 +80,7 @@ MODULE Exceptions;
   END SetIntPrio;
 
 
-  PROCEDURE GetIntPrio*(intNo: INTEGER; VAR prio: INTEGER);
+  PROCEDURE* GetIntPrio*(intNo: INTEGER; VAR prio: INTEGER);
     VAR addr: INTEGER;
   BEGIN
     ASSERT(intNo < MCU.NumInterrupts, Errors.ProgError);
@@ -100,19 +91,19 @@ MODULE Exceptions;
   END GetIntPrio;
 
 
-  PROCEDURE InstallIntHandler*(intNo: INTEGER; handler: PROCEDURE);
+  PROCEDURE* InstallIntHandler*(intNo: INTEGER; handler: PROCEDURE);
     VAR vectAddr, vtor: INTEGER;
   BEGIN
     ASSERT(intNo < MCU.NumInterrupts, Errors.ProgError);
     SYSTEM.GET(MCU.PPB_VTOR, vtor);
-    vectAddr := vtor + MCU.IrqZeroHandlerOffset + (intNo * 4);
+    vectAddr := vtor + IRQ0_VectOffset + (intNo * 4);
     INCL(SYSTEM.VAL(SET, handler), 0); (* thumb code *)
     SYSTEM.PUT(vectAddr, handler)
   END InstallIntHandler;
 
   (* system exception handlers *)
 
-  PROCEDURE SetSysExcPrio*(excNo, prio: INTEGER);
+  PROCEDURE* SetSysExcPrio*(excNo, prio: INTEGER);
     CONST SHPR0 = MCU.PPB_SHPR1 - 04H;
     VAR addr, x: INTEGER;
   BEGIN
@@ -125,7 +116,7 @@ MODULE Exceptions;
   END SetSysExcPrio;
 
 
-  PROCEDURE GetSysExcPrio*(excNo: INTEGER; VAR prio: INTEGER);
+  PROCEDURE* GetSysExcPrio*(excNo: INTEGER; VAR prio: INTEGER);
     CONST SHPR0 = MCU.PPB_SHPR1 - 04H;
     VAR addr: INTEGER;
   BEGIN
@@ -137,7 +128,7 @@ MODULE Exceptions;
   END GetSysExcPrio;
 
 
-  PROCEDURE InstallSysExcHandler*(excNo: INTEGER; handler: PROCEDURE);
+  PROCEDURE* InstallSysExcHandler*(excNo: INTEGER; handler: PROCEDURE);
     VAR vtor, vectAddr: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.PPB_VTOR, vtor);

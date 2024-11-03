@@ -1,13 +1,14 @@
 MODULE RuntimeErrors;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
+  --
   Exception handling: run-time errors and faults
   Multi-core
   --
   Error: run-time errors, including ASSERT, triggered by SVC calls
   Fault: hardware faults, triggered by MCU
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  MCU: RP2040
   --
   Note, no printing is done here, since we don't know if there's
   even a terminal connected out in the wild, and if there's an
@@ -29,16 +30,15 @@ MODULE RuntimeErrors;
 
   CONST
     NumCores* = Config.NumCores;
-    NumStackedRegs* = 4;
     TraceDepth* = 7;
     MoreTracePoints* = -1;
     StackTraceNotLR = 0;
     StackTraceLineNo = 1;
     StackTraceNoLineNo = 2;
-    ErrorLed = LED.Green;
+    ErrorLed = LED.Pico;
 
-    (* stacked registers offsets from r0 *)
-    StartStacktraceOffset = 32;
+    (* stacked registers sizes and offsets from r0 *)
+    StateContextSize = 32;
     PSRoffset = 28;
     PCoffset = 24;
 
@@ -49,22 +49,33 @@ MODULE RuntimeErrors;
 
   (*
     offsets if handler is compiled as normal procedure:
-    +36 +48   lower end of stack frame of interrupted proc with stack alignment
-    +32 +44   lower end of stack frame of interrupted proc without stack alignment
-        from here down, stacked by hardware
-    +28 +40   xPSR
-    +24 +36   PC  = handler return address
-    +20 +32   LR  = interrupted procs's LR
-    +16 +28   R12
-    +12 +24   R3
-    +8  +20   R2
-    +4  +16   R1
-     0  +12   R0
+    +36 +52   lower end of stack frame of interrupted proc with stack alignment
+    +32 +48   lower end of stack frame of interrupted proc without stack alignment
+        from here down, stacked by hardware (8 words)
+    +28 +44   xPSR
+    +24 +40   PC  = handler return address
+    +20 +36   LR  = interrupted procs's LR
+    +16 +32   R12
+    +12 +28   R3
+    +8  +24   R2
+    +4  +20   R1
+     0  +16   R0 <= stackFrameAddr
         from here down, pushed by handler prologue
-        +8    LR  = EXC_RETURN
+        +12   LR  = EXC_RETURN
+        +8    local var of handler
         +4    local var of handler
         SP => local var of handler
   *)
+
+    (* EXC_RETURN bits *)
+    EXC_RET_S     = 6;  (* = 1: secure stack frame, faulty code was running in secure domain *)
+    EXC_RET_DCRS  = 5;  (* = 0: all CPU regs stacked by hardware, extended state context *)
+    EXC_RET_FType = 4;  (* = 0: all FPU regs stacked by hardware, extended FPU context *)
+    EXC_RET_Mode  = 3;  (* = 1: thread mode, faulty code was running in thread mode *)
+    EXC_RET_SPSEL = 2;  (* = 1: PSP used for stacking *)
+    EXC_RET_ES    = 0;  (* = 1: exception running in secure domain *)
+
+    (* note: on the RP2040, all code runs in "secure" domain, and there is no FPU *)
 
 
   TYPE
@@ -255,25 +266,25 @@ MODULE RuntimeErrors;
 
 
   PROCEDURE traceStart(stackFrameBase: INTEGER): INTEGER;
-    CONST StackAlignBit = 9; (* in stacked PSR *)
+    CONST StackAlign = 9; (* in stacked PSR *)
     VAR addr: INTEGER;
   BEGIN
-    addr := stackFrameBase + StartStacktraceOffset;
-    IF SYSTEM.BIT(stackFrameBase + PSRoffset, StackAlignBit) THEN
+    addr := stackFrameBase + StateContextSize;
+    IF SYSTEM.BIT(stackFrameBase + PSRoffset, StackAlign) THEN
       INC(addr, 4)
     END
     RETURN addr
   END traceStart;
 
 
-  PROCEDURE stackFrameBase(stackAddr, EXC_RETURN: INTEGER): INTEGER;
-    CONST PSPflag = 2;
+  PROCEDURE stackFrameBase(stackAddr, exc_return: INTEGER): INTEGER;
+  (* address of stacked R0 *)
     VAR addr: INTEGER;
   BEGIN
-    IF PSPflag IN BITS(EXC_RETURN) THEN (* PSP and MSP used *)
+    IF EXC_RET_SPSEL IN BITS(exc_return) THEN (* PSP used for stacking *)
       SYSTEM.EMIT(MCU.MRS_R11_PSP);
       addr := SYSTEM.REG(11)
-    ELSE (* only MSP used *)
+    ELSE (* MSP used *)
       addr := stackAddr
     END
     RETURN addr
@@ -283,7 +294,7 @@ MODULE RuntimeErrors;
   PROCEDURE errorHandler;
   (* via compiler-inserted SVC instruction *)
   (* in main stack *)
-    VAR stackFrameAddr, cid: INTEGER;
+    VAR stackFrameAddr, cid, exc_return: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     IF exc[cid].currentRegsOn THEN
@@ -293,8 +304,9 @@ MODULE RuntimeErrors;
       SYSTEM.EMIT(MCU.MRS_R11_XPSR);
       exc[cid].errorRec.currentRegs.xpsr := SYSTEM.REG(11);
     END;
+    exc_return := SYSTEM.REG(LR);
     exc[cid].errorRec.core := cid;
-    stackFrameAddr := stackFrameBase(SYSTEM.REG(SP) + 12, SYSTEM.REG(LR)); (* SP: + 12 for lr, stackFrameAddr, cid *)
+    stackFrameAddr := stackFrameBase(SYSTEM.REG(SP) + 16, exc_return); (* SP: + 16 for lr, stackFrameAddr, cid, exc_return *)
     IF exc[cid].stackedRegsOn THEN
       readRegs(stackFrameAddr, exc[cid].errorRec.stackedRegs)
     END;
@@ -311,7 +323,7 @@ MODULE RuntimeErrors;
   PROCEDURE faultHandler;
   (* via MCU hardware-generated exception *)
   (* in main stack *)
-    VAR stackFrameAddr, cid: INTEGER;
+    VAR stackFrameAddr, cid, exc_return: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     IF exc[cid].currentRegsOn THEN
@@ -321,8 +333,9 @@ MODULE RuntimeErrors;
       SYSTEM.EMIT(MCU.MRS_R11_XPSR);
       exc[cid].faultRec.currentRegs.xpsr := SYSTEM.REG(11)
     END;
+    exc_return := SYSTEM.REG(LR);
     exc[cid].faultRec.core := cid;
-    stackFrameAddr := stackFrameBase(SYSTEM.REG(SP) + 12, SYSTEM.REG(LR)); (* SP: + 12 for lr, stackFrameAddr, cid *)
+    stackFrameAddr := stackFrameBase(SYSTEM.REG(SP) + 16, exc_return); (* SP: + 16 for lr, stackFrameAddr, cid, exc_return *)
     IF exc[cid].stackedRegsOn THEN
       readRegs(stackFrameAddr, exc[cid].faultRec.stackedRegs)
     END;
@@ -374,6 +387,7 @@ MODULE RuntimeErrors;
 
 
   PROCEDURE init;
+    CONST Core0 = 0;
     VAR i, addr, vectorTableBase, vectorTableTop: INTEGER;
   BEGIN
     i := 0;
@@ -381,20 +395,19 @@ MODULE RuntimeErrors;
       (* mark top of main stack *)
       SYSTEM.PUT(Memory.DataMem[i].stackStart, Memory.DataMem[i].stackStart);
 
-      (* set VTOR register to SRAM bottom *)
-      IF i = 0 THEN
+      (* set core 0 VTOR register to core 0 SRAM bottom *)
+      IF i = Core0 THEN
         (* VTOR of other cores will be set by core wake-up sequence *)
-        SYSTEM.PUT(MCU.PPB_VTOR, Memory.DataMem[0].dataStart)
+        SYSTEM.PUT(MCU.PPB_VTOR, Memory.DataMem[Core0].dataStart)
       END;
 
-      (* populate vector table *)
+      (* initialise vector table *)
       vectorTableBase := Memory.DataMem[i].dataStart;
       vectorTableTop := vectorTableBase + MCU.VectorTableSize;
       install(vectorTableBase + MCU.NMIhandlerOffset, faultHandler);
       install(vectorTableBase + MCU.HardFaultHandlerOffset, faultHandler);
       install(vectorTableBase + MCU.SVChandlerOffset, errorHandler);
-      install(vectorTableBase + MCU.DebugMonitorOffset, faultHandler);
-      addr := vectorTableBase + MCU.MissingHandlerOffset;
+      addr := vectorTableBase + MCU.PendSVhandlerOffset;
       WHILE addr < vectorTableTop DO
         install(addr, faultHandler); INC(addr, 4)
       END;
@@ -419,8 +432,8 @@ END RuntimeErrors.
 
 
 (**
-  Copyright © 2020-2024 Gray, gray@grayraven.org
-  Copyright © 2008-2023 CFB Software, https://www.astrobe.com
+  Copyright (c) 2020-2024 Gray, gray@grayraven.org
+  Copyright (c) 2008-2023 CFB Software, https://www.astrobe.com
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:

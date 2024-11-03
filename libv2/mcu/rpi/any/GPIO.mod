@@ -229,9 +229,7 @@ MODULE GPIO;
     VAR i: INTEGER;
   BEGIN
     StartUp.ReleaseReset(MCU.RESETS_IO_BANK0);
-    StartUp.AwaitReleaseDone(MCU.RESETS_IO_BANK0);
     StartUp.ReleaseReset(MCU.RESETS_PADS_BANK0);
-    StartUp.AwaitReleaseDone(MCU.RESETS_PADS_BANK0);
     i := 0;
     WHILE i < MCU.NumGPIO DO
       DisableInput(i);

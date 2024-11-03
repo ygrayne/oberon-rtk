@@ -1,7 +1,10 @@
 MODULE RuntimeErrorsOut;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
+  --
   Human-readable output for exceptions.
+  --
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2020-2024 Gray, gray@grayraven.org
   Portions copyright (c) 2008-2023 CFB Software, https://www.astrobe.com
@@ -199,8 +202,8 @@ END RuntimeErrorsOut.
 
 
 (**
-  Copyright © 2020-2024 Gray, gray@grayraven.org
-  Copyright © 2008-2023 CFB Software, https://www.astrobe.com
+  Copyright (c) 2020-2024 Gray, gray@grayraven.org
+  Copyright (c) 2008-2023 CFB Software, https://www.astrobe.com
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:

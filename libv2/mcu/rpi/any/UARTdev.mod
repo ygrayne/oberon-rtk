@@ -125,7 +125,7 @@ MODULE UARTdev;
     END;
 
 
-  PROCEDURE Init*(dev: Device; uartNo: INTEGER);
+  PROCEDURE* Init*(dev: Device; uartNo: INTEGER);
   (**
     Init device data.
   **)
@@ -170,7 +170,6 @@ MODULE UARTdev;
 
     (* release reset on UART device *)
     StartUp.ReleaseReset(dev.devNo);
-    StartUp.AwaitReleaseDone(dev.devNo);
 
     (* disable *)
     SYSTEM.PUT(dev.CR, {});
@@ -201,21 +200,21 @@ MODULE UARTdev;
   END Configure;
 
 
-  PROCEDURE Enable*(dev: Device);
+  PROCEDURE* Enable*(dev: Device);
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
     SYSTEM.PUT(dev.CR + MCU.ASET, {CR_UARTEN, CR_RXE, CR_TXE})
   END Enable;
 
 
-  PROCEDURE Disable*(dev: Device);
+  PROCEDURE* Disable*(dev: Device);
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
     SYSTEM.PUT(dev.CR + MCU.ACLR, {CR_UARTEN, CR_RXE, CR_TXE})
   END Disable;
 
 
-  PROCEDURE Flags*(dev: Device): SET;
+  PROCEDURE* Flags*(dev: Device): SET;
     VAR flags: SET;
   BEGIN
     SYSTEM.GET(dev.FR, flags)
@@ -224,7 +223,7 @@ MODULE UARTdev;
 
   (* configuration data *)
 
-  PROCEDURE GetBaseCfg*(VAR cfg: DeviceCfg);
+  PROCEDURE* GetBaseCfg*(VAR cfg: DeviceCfg);
   (**
     stickyParityEn = Disabled,   hardware reset value
     dataBits       = WLENval_8,  hardware reset override
@@ -242,7 +241,7 @@ MODULE UARTdev;
   END GetBaseCfg;
 
 
-  PROCEDURE GetCurrentCfg*(dev: Device; VAR cfg: DeviceCfg);
+  PROCEDURE* GetCurrentCfg*(dev: Device; VAR cfg: DeviceCfg);
     VAR x: INTEGER;
   BEGIN
     SYSTEM.GET(dev.LCR_H, x);
@@ -257,7 +256,7 @@ MODULE UARTdev;
 
   (* interrupts *)
 
-  PROCEDURE SetFifoLvl*(dev: Device; txFifoLvl, rxFifoLvl: INTEGER);
+  PROCEDURE* SetFifoLvl*(dev: Device; txFifoLvl, rxFifoLvl: INTEGER);
     VAR x: INTEGER;
   BEGIN
     ASSERT(txFifoLvl IN {TXIFLSEL_val_18 .. TXIFLSEL_val_78});
@@ -268,31 +267,31 @@ MODULE UARTdev;
   END SetFifoLvl;
 
 
-  PROCEDURE EnableInt*(dev: Device; intMask: SET);
+  PROCEDURE* EnableInt*(dev: Device; intMask: SET);
   BEGIN
     SYSTEM.PUT(dev.IMSC + MCU.ASET, intMask)
   END EnableInt;
 
 
-  PROCEDURE DisableInt*(dev: Device; intMask: SET);
+  PROCEDURE* DisableInt*(dev: Device; intMask: SET);
   BEGIN
     SYSTEM.PUT(dev.IMSC + MCU.ACLR, intMask)
   END DisableInt;
 
 
-  PROCEDURE GetEnabledInt*(dev: Device; VAR enabled: SET);
+  PROCEDURE* GetEnabledInt*(dev: Device; VAR enabled: SET);
   BEGIN
     SYSTEM.GET(dev.IMSC, enabled)
   END GetEnabledInt;
 
 
-  PROCEDURE GetIntStatus*(dev: Device; VAR status: SET);
+  PROCEDURE* GetIntStatus*(dev: Device; VAR status: SET);
   BEGIN
     SYSTEM.GET(dev.MIS, status)
   END GetIntStatus;
 
 
-  PROCEDURE ClearInt*(dev: Device; intMask: SET);
+  PROCEDURE* ClearInt*(dev: Device; intMask: SET);
   BEGIN
     SYSTEM.PUT(dev.ICR + MCU.ASET, intMask)
   END ClearInt;

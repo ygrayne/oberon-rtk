@@ -1,6 +1,7 @@
 MODULE Clocks;
 (**
   Oberon RTK Framework
+  --
   Clocks:
   * initialisation at start-up (auto)
   * clock monitor on pin 21
@@ -120,31 +121,31 @@ MODULE Clocks;
   (* clock gating *)
   (* note: all clocks are enabled upon reset *)
 
-  PROCEDURE EnableClockWake*(en0, en1: SET);
+  PROCEDURE* EnableClockWake*(en0, en1: SET);
   BEGIN
     SYSTEM.PUT(MCU.CLK_WAKE_EN0 + MCU.ASET, en0);
     SYSTEM.PUT(MCU.CLK_WAKE_EN1 + MCU.ASET, en1)
   END EnableClockWake;
 
-  PROCEDURE DisableClockWake*(en0, en1: SET);
+  PROCEDURE* DisableClockWake*(en0, en1: SET);
   BEGIN
     SYSTEM.PUT(MCU.CLK_WAKE_EN0 + MCU.ACLR, en0);
     SYSTEM.PUT(MCU.CLK_WAKE_EN1 + MCU.ACLR, en1)
   END DisableClockWake;
 
-  PROCEDURE EnableClockSleep*(en0, en1: SET);
+  PROCEDURE* EnableClockSleep*(en0, en1: SET);
   BEGIN
     SYSTEM.PUT(MCU.CLK_SLEEP_EN0 + MCU.ASET, en0);
     SYSTEM.PUT(MCU.CLK_SLEEP_EN1 + MCU.ASET, en1)
   END EnableClockSleep;
 
-  PROCEDURE DisableClockSleep*(en0, en1: SET);
+  PROCEDURE* DisableClockSleep*(en0, en1: SET);
   BEGIN
     SYSTEM.PUT(MCU.CLK_SLEEP_EN0 + MCU.ACLR, en0);
     SYSTEM.PUT(MCU.CLK_SLEEP_EN1 + MCU.ACLR, en1)
   END DisableClockSleep;
 
-  PROCEDURE GetEnabled*(VAR en0, en1: SET);
+  PROCEDURE* GetEnabled*(VAR en0, en1: SET);
   BEGIN
     SYSTEM.GET(MCU.CLK_ENABLED0, en0);
     SYSTEM.GET(MCU.CLK_ENABLED1, en1)
@@ -174,7 +175,6 @@ MODULE Clocks;
     VAR x: INTEGER;
   BEGIN
     StartUp.ReleaseReset(MCU.RESETS_PLL_SYS);
-    StartUp.AwaitReleaseDone(MCU.RESETS_PLL_SYS);
     (* set freq 125 MHz *)
     SYSTEM.PUT(MCU.PLL_SYS_FBDIV_INT, 125);
     (* power up VCO and PLL (note: clear bits) *)
@@ -199,7 +199,6 @@ MODULE Clocks;
     VAR x: INTEGER;
   BEGIN
     StartUp.ReleaseReset(MCU.RESETS_PLL_USB);
-    StartUp.AwaitReleaseDone(MCU.RESETS_PLL_USB);
     (* set freq 48 MHz *)
     SYSTEM.PUT(MCU.PLL_USB_FBDIV_INT, 64);
     (* power up VCO and PLL (note: clear bits) *)
@@ -215,7 +214,7 @@ MODULE Clocks;
   END startUsbPLL;
 
 
-  PROCEDURE connectClocks;
+  PROCEDURE* connectClocks;
     VAR x: INTEGER;
   BEGIN
     (* system clock, always enabled *)
@@ -245,7 +244,7 @@ MODULE Clocks;
   END connectClocks;
 
 
-  PROCEDURE startTicks;
+  PROCEDURE* startTicks;
   (* 1 MHz, used for sys tick, timer, watchdog *)
   (* derived from clk_ref => divider = 12 *)
   CONST Divider = 12;

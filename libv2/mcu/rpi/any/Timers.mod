@@ -54,12 +54,11 @@ MODULE Timers;
 
   PROCEDURE Configure*(dev: Device);
   BEGIN
-    StartUp.ReleaseReset(dev.devNo);
-    StartUp.AwaitReleaseDone(dev.devNo)
+    StartUp.ReleaseReset(dev.devNo)
   END Configure;
 
 
-  PROCEDURE GetTime*(dev: Device; VAR timeH, timeL: INTEGER);
+  PROCEDURE* GetTime*(dev: Device; VAR timeH, timeL: INTEGER);
     VAR t0: INTEGER; done: BOOLEAN;
   BEGIN
     SYSTEM.GET(dev.TIMERAWH, timeH);
@@ -73,7 +72,7 @@ MODULE Timers;
   END GetTime;
 
 
-  PROCEDURE GetTimeL*(dev: Device; VAR timeL: INTEGER);
+  PROCEDURE* GetTimeL*(dev: Device; VAR timeL: INTEGER);
   BEGIN
     SYSTEM.GET(dev.TIMERAWL, timeL)
   END GetTimeL;
@@ -91,19 +90,19 @@ MODULE Timers;
   END SetAlarmIntPrio;
 
 
-  PROCEDURE EnableAlarmInt*(dev: Device; alarmNo: INTEGER);
+  PROCEDURE* EnableAlarmInt*(dev: Device; alarmNo: INTEGER);
   BEGIN
     SYSTEM.PUT(dev.INTE + MCU.ASET, {alarmNo})
   END EnableAlarmInt;
 
 
-  PROCEDURE DeassertAlarmInt*(dev: Device; alarmNo: INTEGER);
+  PROCEDURE* DeassertAlarmInt*(dev: Device; alarmNo: INTEGER);
   BEGIN
     SYSTEM.PUT(dev.INTR + MCU.ACLR, {alarmNo})
   END DeassertAlarmInt;
 
 
-  PROCEDURE SetTime*(dev: Device; timeH, timeL: INTEGER);
+  PROCEDURE* SetTime*(dev: Device; timeH, timeL: INTEGER);
   (* for testing only *)
   BEGIN
     SYSTEM.PUT(dev.TIMELW, timeL);

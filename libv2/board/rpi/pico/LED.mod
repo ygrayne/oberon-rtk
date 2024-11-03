@@ -1,7 +1,8 @@
 MODULE LED;
 (**
-  Oberon RTK Framework
-  Green LED on Pico
+  Oberon RTK Framework v2
+  --
+  Green LED on Pico and Pico2
   --
   MCU: RP2040, RP2350
   Board: Pico, Pico2

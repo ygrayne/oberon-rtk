@@ -4,7 +4,7 @@ MODULE Main;
   --
   Main module
   --
-  MCU: RP2040, RP2350
+  MCU: RP2040
   --
   Copyright (c) 2023 - 2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -42,9 +42,7 @@ MODULE Main;
     GPIO.ConfigurePad(rxPinNo, padCfg);
     GPIO.SetFunction(txPinNo, MCU.IO_BANK0_Fuart);
     GPIO.SetFunction(rxPinNo, MCU.IO_BANK0_Fuart);
-    GPIO.EnableInput(rxPinNo);
-    GPIO.DisableIsolation(txPinNo); (* no-op on RP2040 *)
-    GPIO.DisableIsolation(rxPinNo)
+    GPIO.EnableInput(rxPinNo)
   END configPins;
 
 
@@ -83,7 +81,7 @@ MODULE Main;
     Terminals.OpenErr(TERM1, UARTstr.PutString);
     RuntimeErrorsOut.SetWriter(Core1, Terminals.Werr[1]);
     RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException)
-  
+
   END init;
 
 BEGIN

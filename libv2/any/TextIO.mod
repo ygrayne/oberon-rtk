@@ -1,6 +1,6 @@
 MODULE TextIO;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
   --
   Text IO channels using writers and readers
   --
@@ -56,7 +56,7 @@ MODULE TextIO;
   END OpenWriter;
 
 
-  PROCEDURE InstallFlushOutProc*(w: Writer; fp: FlushOutProc);
+  PROCEDURE* InstallFlushOutProc*(w: Writer; fp: FlushOutProc);
   BEGIN
     ASSERT(w # NIL, Errors.PreCond);
     w.flush := fp

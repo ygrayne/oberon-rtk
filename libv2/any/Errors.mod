@@ -1,6 +1,7 @@
 MODULE Errors;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
+  --
   Definition of fault and error codes and corresponding message strings.
   --
   Copyright (c) 2019-2024 Gray, gray@grayraven.org
@@ -23,6 +24,7 @@ MODULE Errors;
     BusFault*     = -MCU.PPB_NVIC_BusFault_Exc;
     UsageFault*   = -MCU.PPB_NVIC_UsageFault_Exc;
     SecureFault*  = -MCU.PPB_NVIC_SecureFault_Exc;
+    DebugMon*     = -MCU.PPB_NVIC_DebugMon_Exc;
 
     (* Astrobe error codes, see Error.mod *)
     FirstAstrobeCode = 1;
@@ -57,7 +59,7 @@ MODULE Errors;
     String* = ARRAY MaxMsgLength OF CHAR;
 
 
-  PROCEDURE faultMessage(code: INTEGER; VAR msg: String);
+  PROCEDURE* faultMessage(code: INTEGER; VAR msg: String);
   BEGIN
     IF code = NMI THEN
       msg := "NMI"
@@ -69,6 +71,8 @@ MODULE Errors;
       msg := "bus fault"
     ELSIF code = UsageFault THEN
       msg := "usage fault"
+    ELSIF code = SecureFault THEN
+      msg := "secure fault"
     ELSE
       msg := "missing exception handler"
     END
