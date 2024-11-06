@@ -1,7 +1,8 @@
 MODULE Kernel;
 (**
-  Oberon RTK Framework
-  Multi-threading kernel, first variant (Kernel-v1)
+  Oberon RTK Framework v2
+  --
+  Multi-threading kernel v1
   --
   Based on coroutines
   Multi-core
@@ -9,7 +10,7 @@ MODULE Kernel;
   Cooperative scheduling
   No support for interrupts
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2020-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -128,7 +129,7 @@ MODULE Kernel;
       t.prio := 1;
       t.period := 0; t.delay := 0;
       t.devAddr := 0;
-      Coroutines. Allocate(t.cor, proc);
+      Coroutines.Allocate(t.cor, proc);
       res := NoError
     END
   END Reallocate;

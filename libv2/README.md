@@ -9,7 +9,7 @@ Version v2.
       + any
       + pico
       + pico2
-  + MCU
+  + mcu
     + rpi
       + any
       + rp2040

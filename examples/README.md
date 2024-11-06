@@ -6,5 +6,5 @@
   * pico2: same for the Pico 2 board
 
 Remarks:
-* Some example programs for the Pico can be compiled for the Pico 2 by using the corresponding config file. If so, this is indicated in the file header.
+* Some example programs for the Pico can be compiled for the Pico 2 by using the corresponding config file. If so, this is indicated in the file header and/or the README file.
 * Eventually, the original examples will be moved into a directory v1 (as with the config files), but doing this now would break all links on the website.

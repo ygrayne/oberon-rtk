@@ -5,10 +5,12 @@ Version v1.
 + lib
   + any
   + board
-    + any
     + rp2040
       + any
       + pico
+  + mcu
+    + m0
+      + rp2040
 
 See [https://oberon-rtk.org/software/](https://oberon-rtk.org/software/)
 

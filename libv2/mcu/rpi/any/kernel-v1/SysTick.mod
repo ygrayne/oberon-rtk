@@ -1,13 +1,11 @@
 MODULE SysTick;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
+  --
   System tick
   For Kernel v1: poll sys tick count flag
   --
-  Each core has its own sys tick, ie. registers
-  are not shared.
-  --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2020-2024 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -24,13 +22,13 @@ MODULE SysTick;
 
 
   PROCEDURE Tick*(): BOOLEAN;
-    RETURN SYSTEM.BIT(MCU.SYST_CSR, SYST_CSR_COUNTFLAG)
+    RETURN SYSTEM.BIT(MCU.PPB_SYST_CSR, SYST_CSR_COUNTFLAG)
   END Tick;
 
 
   PROCEDURE Enable*;
   BEGIN
-    SYSTEM.PUT(MCU.SYST_CSR, {SYST_CSR_ENABLE})
+    SYSTEM.PUT(MCU.PPB_SYST_CSR, {SYST_CSR_ENABLE})
   END Enable;
 
 
@@ -38,8 +36,8 @@ MODULE SysTick;
     VAR cntReload: INTEGER;
   BEGIN
     cntReload := millisecondsPerTick * CountPerMillisecond - 1;
-    SYSTEM.PUT(MCU.SYST_RVR, cntReload);
-    SYSTEM.PUT(MCU.SYST_CVR, 0) (* clear counter *)
+    SYSTEM.PUT(MCU.PPB_SYST_RVR, cntReload);
+    SYSTEM.PUT(MCU.PPB_SYST_CVR, 0) (* clear counter *)
   END Init;
 
 END SysTick.

@@ -1,10 +1,10 @@
 MODULE Coroutines;
 (**
-  Oberon RTK Framework
-  Simple coroutines
-  For Kernel v1
+  Oberon RTK Framework v2
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  Simple coroutines
+  --
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2020-2024 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
