@@ -1,11 +1,13 @@
 MODULE UARTkstr;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
   --
   UART string device driver for kernel use
   --
   * string IO procedures
   * hw-buffered (fifo)
+  --
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2020-2024 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -68,11 +70,14 @@ MODULE UARTkstr;
 
 
   PROCEDURE rxHandler[0];
+    CONST
+      UART0exc = MCU.PPB_NVIC_UART0_IRQ + MCU.PPB_IRQ_BASE;
+      UART1exc = MCU.PPB_NVIC_UART1_IRQ + MCU.PPB_IRQ_BASE;
     VAR mis: SET; uartInt: UARTint; ch: CHAR; excNo: INTEGER; overflow: BOOLEAN;
   BEGIN
     Exceptions.GetIntStatus(excNo);
-    ASSERT((excNo = MCU.NVIC_UART0_IRQ_EXC) OR (excNo = MCU.NVIC_UART0_IRQ_EXC), Errors.ProgError);
-    uartInt := uartInts[excNo - MCU.NVIC_UART0_IRQ_EXC]; (* UART exceptions have adjacent number *)
+    ASSERT((excNo = UART0exc) OR (excNo = UART1exc), Errors.ProgError);
+    uartInt := uartInts[excNo - UART0exc]; (* UART exceptions have adjacent number *)
     UARTdev.GetIntStatus(uartInt.dev, mis);
     (* rx fifo at trigger level *)
     IF UARTdev.MIS_RXMIS IN mis THEN
@@ -127,7 +132,7 @@ MODULE UARTkstr;
     uartInts[dev.uartNo].dev := dev;
     Exceptions.InstallIntHandler(dev.intNo, rxHandler);
     Exceptions.SetIntPrio(dev.intNo, RxIntPrio);
-    Exceptions.EnableInt({dev.intNo});
+    Exceptions.EnableInt(dev.intNo);
     UARTdev.SetFifoLvl(dev, TxFifoLvl, RxFifoLvl)
   END Install;
 

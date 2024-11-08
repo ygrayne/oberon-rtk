@@ -1,10 +1,10 @@
 # Example Programs
 
-* pico: the original example programs for the RP2040
-* v2
-  * pico: example programs for version 2 of Oberon RTK for the Pico board
-  * pico2: same for the Pico 2 board
+See [https://oberon-rtk.org/examples/](https://oberon-rtk.org/examples/)
 
-Remarks:
-* Some example programs for the Pico can be compiled for the Pico 2 by using the corresponding config file. If so, this is indicated in the file header and/or the README file.
-* Eventually, the original examples will be moved into a directory v1 (as with the config files), but doing this now would break all links on the website.
+Directories:
+* pico: the original example programs for the RP2040 (using lib)
+* rpi: example programs for Oberon RTK v2 (using libv2)
+  * any: for all Pico boards
+  * pico: for the Pico 1 board
+  * pico2: for the Pico 2 board

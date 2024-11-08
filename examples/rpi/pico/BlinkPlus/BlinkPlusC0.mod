@@ -11,6 +11,7 @@ MODULE BlinkPlusC0;
   Board: Pico
   --
   Copyright (c) 2023-2024 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
 **)
 
   IMPORT SYSTEM, MCU := MCU2, Main, Out, MultiCore, Memory, Timers, Errors, C1 := BlinkPlusC1;

@@ -6,9 +6,6 @@ MODULE GPIO;
   --
   MCU: RP2040, RP2350
   --
-  Pin mumbers 0 .. 29, on "lo bank" (IO_BANK0)
-  The "hi bank" for QPSI is not handled here.
-  --
   Copyright (c) 2023-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)

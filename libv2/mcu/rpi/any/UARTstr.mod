@@ -1,11 +1,13 @@
 MODULE UARTstr;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
   --
   UART string device driver, kernel not required (busy waiting)
   --
   * string IO procedures
   * hw-buffered (fifo)
+  --
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2020-2024 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/

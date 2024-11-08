@@ -9,7 +9,7 @@ MODULE Config;
   don't offer memory settings for both cores.
   --
   * MCU: RP2040
-  * Pico (1)
+  * Board: Pico
   Note: other boards with the RP2040 may offer more flash memory
   --
   Copyright (c) 2023-2024 Gray, gray@grayraven.org
