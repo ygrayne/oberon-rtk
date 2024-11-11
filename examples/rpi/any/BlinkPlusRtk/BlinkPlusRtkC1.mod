@@ -14,7 +14,7 @@ MODULE BlinkPlusRtkC1;
   Copyright (c) 2023-2024 Gray, gray@grayraven.org
 **)
 
-  IMPORT Main, Kernel, MultiCore, Out, Timers, GPIO, LED, Errors;
+  IMPORT Main, Kernel, MultiCore, Out, Timers, GPIO, LED, LEDext, Errors;
 
   CONST
     MillisecsPerTick  = 4;
@@ -79,6 +79,7 @@ MODULE BlinkPlusRtkC1;
     Timers.GetTimeL(Timer, before);
     REPEAT
       Timers.GetTimeL(Timer, timeL);
+      LEDext.SetValue(cnt);
       writeThreadInfo(tid, cid);
       Out.Int(cnt, 8); Out.Int(timeL - before, 8); Out.Ln;
       before := timeL;

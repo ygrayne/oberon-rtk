@@ -113,8 +113,7 @@ MODULE Clocks;
     BFI(x, CLK_GPOUT0_CTRL_AUXSRC_1, CLK_GPOUT0_CTRL_AUXSRC_0, which);
     SYSTEM.PUT(MCU.CLK_GPOUT0_CTRL, x);
     SYSTEM.PUT(MCU.CLK_GPOUT0_CTRL + MCU.ASET, {CLK_GPOUT0_CTRL_ENABLE});
-    GPIO.SetFunction(Pin, MCU.IO_BANK0_Fclk);
-    GPIO.DisableIsolation(Pin)
+    GPIO.SetFunction(Pin, MCU.IO_BANK0_Fclk)
   END Monitor;
 
 

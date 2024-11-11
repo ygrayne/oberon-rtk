@@ -61,7 +61,7 @@ MODULE MCU2;
     BUSCTRL_BASE*     = 040030000H;
     UART0_BASE*       = 040034000H;
     UART1_BASE*       = 040038000H;
-    SPIO_BASE*        = 04003C000H;
+    SPI0_BASE*        = 04003C000H;
     SPI1_BASE*        = 040040000H;
     I2C0_BASE*        = 040044000H;
     I2C1_BASE*        = 040048000H;
@@ -498,6 +498,7 @@ MODULE MCU2;
     (* == SPI0, SPI1 == *)
     (* datasheet 4.4.4, p516 *)
     (* offsets from SPI0_BASE, SPI1_BASE *)
+    SPI_Offset*       = SPI1_BASE - SPI0_BASE;
     SPI_CR0_Offset*   = 0000H;
     SPI_CR1_Offset*   = 0004H;
     SPI_DR_Offset*    = 0008H;

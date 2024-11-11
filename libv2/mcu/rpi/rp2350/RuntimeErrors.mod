@@ -405,7 +405,7 @@ MODULE RuntimeErrors;
   PROCEDURE* ledOnAndHalt(cid: INTEGER; er: ExceptionRec);
   (* simplistic default handler *)
   BEGIN
-    SYSTEM.PUT(LED.SET, ErrorLed);
+    SYSTEM.PUT(LED.LSET, ErrorLed);
     REPEAT UNTIL FALSE (* HALT in any case *)
   END ledOnAndHalt;
 

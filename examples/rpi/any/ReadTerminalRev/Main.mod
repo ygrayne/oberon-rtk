@@ -1,12 +1,11 @@
 MODULE Main;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
   --
   Main module
-  Custom version for example program NoBusyWaiting, https://oberon-rtk.org/examples/nobusywaiting
+  For example program ReadTerminal, https://oberon-rtk.org/examples/readterminal
   --
-  MCU: RP2040, RP2350
-  Board: Pico, Pico2
+  MCU: Cortex-M0+ RP2040, tested on Pico
   --
   Copyright (c) 2023 - 2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -17,11 +16,11 @@ MODULE Main;
     (* ignore the "is not used" warnings... :) *)
     (* LinkOptions is the first import of Config *)
     Config, Clocks, Memory, RuntimeErrors,
-    RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr, UARTkstr, MCU := MCU2;
+    RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr, UARTkstr;
 
   CONST
-    Baudrate0 = 9600; (* terminal 0 *)
-    Baudrate1 = 9600;
+    Baudrate0 = 115200; (* terminal 0 *)
+    Baudrate1 = 115200;
     Core0 = 0;
     Core1 = 1;
     TERM0 = Terminals.TERM0;
@@ -35,16 +34,9 @@ MODULE Main;
 
 
   PROCEDURE configPins(txPinNo, rxPinNo: INTEGER);
-    VAR padCfg: GPIO.PadCfg;
   BEGIN
-    GPIO.GetPadBaseCfg(padCfg);
-    padCfg.pullupEn := GPIO.Enabled;
-    padCfg.pulldownEn := GPIO.Disabled;
-    GPIO.ConfigurePad(txPinNo, padCfg);
-    GPIO.ConfigurePad(rxPinNo, padCfg);
-    GPIO.EnableInput(rxPinNo);
-    GPIO.SetFunction(txPinNo, MCU.IO_BANK0_Fuart);
-    GPIO.SetFunction(rxPinNo, MCU.IO_BANK0_Fuart)
+    GPIO.SetFunction(txPinNo, GPIO.Fuart);
+    GPIO.SetFunction(rxPinNo, GPIO.Fuart)
   END configPins;
 
 
@@ -63,15 +55,12 @@ MODULE Main;
 
     (* open text IO to/from two serial terminals *)
     Terminals.InitUART(UART0, uartCfg, Baudrate0, uartDev0);
-    Terminals.Open(TERM0, uartDev0, UARTstr.PutString, UARTstr.GetString);
+    Terminals.Open(TERM0, uartDev0, UARTkstr.PutString, UARTkstr.GetString);
+    UARTkstr.Install(uartDev0);
+
     Terminals.InitUART(UART1, uartCfg, Baudrate1, uartDev1);
-
-    Terminals.Open(TERM1, uartDev1, UARTstr.PutString, UARTstr.GetString);
-
-    (* see https://oberon-rtk.org/examples/nobusywaiting *)
-    (*
     Terminals.Open(TERM1, uartDev1, UARTkstr.PutString, UARTkstr.GetString);
-    *)
+    UARTkstr.Install(uartDev1);
 
     (* init Out and In to use the string buffers or terminals *)
     Out.Open(Terminals.W[0], Terminals.W[1]);

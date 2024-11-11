@@ -4,7 +4,7 @@ MODULE GPIO;
   --
   General Purpose IO (GPIO)
   --
-  MCU: RP2040, RP2350
+  MCU: RP2350
   --
   Copyright (c) 2023-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -67,8 +67,12 @@ MODULE GPIO;
     addr := MCU.IO_BANK0_GPIO0_CTRL + (pinNo * MCU.IO_BANK0_GPIO_Offset);
     SYSTEM.GET(addr, x);
     BFI(x, 4, 0, functionNo);
-    SYSTEM.PUT(addr, x)
+    SYSTEM.PUT(addr, x);
+    (* remove pad isolation *)
+    addr := MCU.PADS_BANK0_GPIO0 + MCU.ACLR + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
+    SYSTEM.PUT(addr, {PADS_ISO})
   END SetFunction;
+
 
   PROCEDURE SetInverters*(pinNo: INTEGER; mask: SET);
     VAR addr, x: INTEGER;
@@ -93,7 +97,8 @@ MODULE GPIO;
     ASSERT(cfg.slewRate IN {SLEWFAST_val_slow, SLEWFAST_val_fast}, Errors.PreCond);
 
     addr := MCU.PADS_BANK0_GPIO0 + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
-    x := cfg.slewRate;
+    SYSTEM.GET(addr, x);
+    x := x + cfg.slewRate;
     x := x + LSL(cfg.schmittTrigEn, BANK0_GPIO_SCHMITT);
     x := x + LSL(cfg.pulldownEn, BANK0_GPIO_PDE);
     x := x + LSL(cfg.pullupEn, BANK0_GPIO_PUE);
@@ -107,7 +112,7 @@ MODULE GPIO;
   PROCEDURE GetPadBaseCfg*(VAR cfg: PadCfg);
   (**
     outputDe        = Disabled,           hardware reset value, ie. output is enabled
-    inputEn         = Disabled,
+    inputEn         = Disabled,           hardware reset value
     driveStrength   = DRIVE_val_4mA,      hardware reset value
     pullupEn        = Disabled,           hardware reset value
     pulldownEn      = Enabled,            hardware reset value
@@ -146,14 +151,6 @@ MODULE GPIO;
     addr := MCU.PADS_BANK0_GPIO0 + MCU.ACLR + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
     SYSTEM.PUT(addr, {PADS_IE})
   END DisableInput;
-
-
-  PROCEDURE DisableIsolation*(pinNo: INTEGER);
-    VAR addr: INTEGER;
-  BEGIN
-    addr := MCU.PADS_BANK0_GPIO0 + MCU.ACLR + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
-    SYSTEM.PUT(addr, {PADS_ISO})
-  END DisableIsolation;
 
 
   (* GPIO control via SIO *)
@@ -223,15 +220,9 @@ MODULE GPIO;
   END GetOutputEnable;
 
   PROCEDURE init;
-    VAR i: INTEGER;
   BEGIN
     StartUp.ReleaseReset(MCU.RESETS_IO_BANK0);
-    StartUp.ReleaseReset(MCU.RESETS_PADS_BANK0);
-    i := 0;
-    WHILE i < MCU.NumGPIO DO
-      DisableInput(i);
-      INC(i)
-    END
+    StartUp.ReleaseReset(MCU.RESETS_PADS_BANK0)
   END init;
 
 BEGIN

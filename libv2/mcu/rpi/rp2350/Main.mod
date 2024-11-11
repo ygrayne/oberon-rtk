@@ -58,11 +58,9 @@ MODULE Main;
     padCfg.pulldownEn := GPIO.Disabled;
     GPIO.ConfigurePad(txPinNo, padCfg);
     GPIO.ConfigurePad(rxPinNo, padCfg);
-    GPIO.SetFunction(txPinNo, MCU.IO_BANK0_Fuart);
-    GPIO.SetFunction(rxPinNo, MCU.IO_BANK0_Fuart);
     GPIO.EnableInput(rxPinNo);
-    GPIO.DisableIsolation(txPinNo);
-    GPIO.DisableIsolation(rxPinNo)
+    GPIO.SetFunction(txPinNo, MCU.IO_BANK0_Fuart);
+    GPIO.SetFunction(rxPinNo, MCU.IO_BANK0_Fuart)
   END configPins;
 
 

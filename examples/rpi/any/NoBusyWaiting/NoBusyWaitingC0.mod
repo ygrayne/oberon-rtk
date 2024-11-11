@@ -27,9 +27,9 @@ MODULE NoBusyWaitingC0;
 
   PROCEDURE t0c;
   BEGIN
-    GPIO.Set({LED.Green});
+    GPIO.Set({LED.Pico});
     REPEAT
-      GPIO.Toggle({LED.Green});
+      GPIO.Toggle({LED.Pico});
       Kernel.Next
     UNTIL FALSE
   END t0c;
@@ -49,4 +49,3 @@ MODULE NoBusyWaitingC0;
 BEGIN
   run
 END NoBusyWaitingC0.
-

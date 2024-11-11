@@ -1,6 +1,6 @@
-# Oberon Modules Library
+# Oberon RTK Modules Library
 
-Version v1.
+Version v1
 
 + lib
   + any
@@ -12,6 +12,4 @@ Version v1.
     + m0
       + rp2040
 
-See [https://oberon-rtk.org/software/](https://oberon-rtk.org/software/)
-
-For the kernel: [https://oberon-rtk.org/kernel/](https://oberon-rtk.org/kernel/)
+[https://oberon-rtk.org/lib/](https://oberon-rtk.org/lib/)

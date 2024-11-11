@@ -1,4 +1,4 @@
 # Example Programs for Oberon RTK v2 (using libv2)
 
-* for Raspberry Pi boards
-* see [https://oberon-rtk.org/examples/](https://oberon-rtk.org/examples/)
+* for Pico and Pico 2
+* [https://oberon-rtk.org/examples/](https://oberon-rtk.org/examples/)

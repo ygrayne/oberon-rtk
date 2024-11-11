@@ -26,10 +26,16 @@ MODULE LEDext;
 
   CONST
     LEDpinNoPico = 25;
+    (*
     LEDpinNo0 = 2;
     LEDpinNo1 = 3;
     LEDpinNo2 = 6;
     LEDpinNo3 = 7;
+    *)
+    LEDpinNo0 = 27;
+    LEDpinNo1 = 28;
+    LEDpinNo2 = 26;
+    LEDpinNo3 = 22;
     LEDpinNo4 = 8;
     LEDpinNo5 = 9;
     LEDpinNo6 = 14;
@@ -45,9 +51,9 @@ MODULE LEDext;
     LED6* = LEDpinNo6;
     LED7* = LEDpinNo7;
 
-    SET* = MCU.SIO_GPIO_OUT_SET;
-    CLR* = MCU.SIO_GPIO_OUT_CLR;
-    XOR* = MCU.SIO_GPIO_OUT_XOR;
+    LSET* = MCU.SIO_GPIO_OUT_SET;
+    LCLR* = MCU.SIO_GPIO_OUT_CLR;
+    LXOR* = MCU.SIO_GPIO_OUT_XOR;
 
     NumLeds = 8;
 
@@ -55,6 +61,7 @@ MODULE LEDext;
 
 
   PROCEDURE SetLedBits*(v, highBit, lowBit: INTEGER);
+  (* atomic *)
     VAR i, numBits: INTEGER; setMask, clearMask: INTEGER;
   BEGIN
     setMask := 0; clearMask := 0;

@@ -21,7 +21,7 @@ MODULE SPIdev;
   The Tx and Rx FIFOs are always enabled in hardware (each 8x 16 bits).
   Only master mode is considered/implemented here.
   --
-  The RP2040 also supports TI synchronous serial and
+  The RPx also support TI synchronous serial and
   National Semiconductor Microwire frame formats.
   These formats are not considered/implemented here.
   --
@@ -43,6 +43,8 @@ MODULE SPIdev;
   CONST
     SPI0* = 0;
     SPI1* = 1;
+    NumSPI = MCU.NumSPI;
+    SPIs = {SPI0 .. NumSPI - 1};
 
     (* generic values *)
     Enabled* = 1;
@@ -113,12 +115,10 @@ MODULE SPIdev;
     VAR base: INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
-    ASSERT(spiNo IN {SPI0, SPI1}, Errors.PreCond);
+    ASSERT(spiNo IN SPIs, Errors.ProgError);
     dev.spiNo := spiNo;
-    CASE spiNo OF
-      SPI0: base := MCU.SPI0_Base; dev.devNo := MCU.RESETS_SPI0;
-    | SPI1: base := MCU.SPI1_Base; dev.devNo := MCU.RESETS_SPI1;
-    END;
+    dev.devNo := MCU.RESETS_SPI0 + spiNo;
+    base := MCU.SPI0_BASE + (spiNo * MCU.SPI_Offset);
     dev.CR0  := base + MCU.SPI_CR0_Offset;
     dev.CR1  := base + MCU.SPI_CR1_Offset;
     dev.CPSR := base + MCU.SPI_CPSR_Offset;
@@ -144,7 +144,6 @@ MODULE SPIdev;
 
     (* release reset on SPI device *)
     StartUp.ReleaseReset(dev.devNo);
-    StartUp.AwaitReleaseDone(dev.devNo);
 
     (* disable, set master mode *)
     SYSTEM.PUT(dev.CR1, {});

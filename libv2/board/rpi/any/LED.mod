@@ -13,9 +13,9 @@ MODULE LED;
     GPIO.Clear({LED.Pico},
     GPIO.Toggle({LED.Pico})
   * Direct, avoiding procedure calls, eg. for leaf procedures:
-    SYSTEM.PUT(LED.SET, {LED.Pico}),
-    SYSTEM.PUT(LED.CLR, {LED.Pico}),
-    SYSTEM.PUT(LED.XOR, {LED.Pico})
+    SYSTEM.PUT(LED.LSET, {LED.Pico}),
+    SYSTEM.PUT(LED.LCLR, {LED.Pico}),
+    SYSTEM.PUT(LED.LXOR, {LED.Pico})
   --
   Copyright (c) 2023-2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -27,14 +27,13 @@ MODULE LED;
     LEDpinNo = 25;
     Green* = LEDpinNo; (* deprecated *)
     Pico* = LEDpinNo;
-    SET* = MCU.SIO_GPIO_OUT_SET;
-    CLR* = MCU.SIO_GPIO_OUT_CLR;
-    XOR* = MCU.SIO_GPIO_OUT_XOR;
+    LSET* = MCU.SIO_GPIO_OUT_SET;
+    LCLR* = MCU.SIO_GPIO_OUT_CLR;
+    LXOR* = MCU.SIO_GPIO_OUT_XOR;
 
   PROCEDURE init;
   BEGIN
     GPIO.SetFunction(LEDpinNo, MCU.IO_BANK0_Fsio);
-    GPIO.DisableIsolation(LEDpinNo); (* no-op on RP2040 *)
     GPIO.OutputEnable({LEDpinNo})
   END init;
 

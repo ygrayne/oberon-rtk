@@ -1,3 +1,4 @@
-# Program Examples for the Pico ("Pico 1", using the RP2040)
+# Example Programs for Oberon RTK v1 (using lib)
 
-See [https://oberon-rtk.org/examples/](https://oberon-rtk.org/examples/)
+* for Pico
+* [https://oberon-rtk.org/examples/](https://oberon-rtk.org/examples/)
