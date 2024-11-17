@@ -1,18 +1,18 @@
 MODULE PIOsquare;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
   --
   Example program, without kernel, one core
   Description: https://oberon-rtk.org/examples/piosquare/
   --
-  MCU: Cortex-M0+ RP2040
-  Board: Pico
+  MCU: RP2040, RP2350
+  Board: Pico, Pico2
   --
   Copyright (c) 2024 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT Main, PIOsquarePio, PIO, GPIO, Out, Errors;
+  IMPORT Main, MCU := MCU2, PIOsquarePio, PIO, GPIO, Out, Errors;
 
 (*
   PIOBEGIN
@@ -56,8 +56,8 @@ MODULE PIOsquare;
     PIO.Configure(pioDev);
 
     (* GPIO pins *)
-    GPIO.SetFunction(WavePinNo0, GPIO.Fpio0);
-    GPIO.SetFunction(WavePinNo1, GPIO.Fpio0);
+    GPIO.SetFunction(WavePinNo0, MCU.IO_BANK0_Fpio0);
+    GPIO.SetFunction(WavePinNo1, MCU.IO_BANK0_Fpio0);
 
     (* get and load PIO code *)
     offset := 0;

@@ -80,9 +80,9 @@ MODULE Config;
     CoreZeroMainStackSize* = 1024;
     CoreOneMainStackSize* = 1024;
 
-    CoreZeroRamExtStart* = 020080000H;
+    CoreZeroRamExtStart* = MCU.SRAM_EXT0;
     CoreZeroRamExtEnd* = CoreZeroRamExtStart + 01000H;
-    CoreOneRamExtStart* = 020081000H;
+    CoreOneRamExtStart* = MCU.SRAM_EXT1;
     CoreOneRamExtEnd* = CoreOneRamExtStart + 01000H;
 
   VAR

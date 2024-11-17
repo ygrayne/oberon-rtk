@@ -1,6 +1,6 @@
 # Oberon RTK Modules Library
 
-Version v2
+Version v2 libv2
 
 + libv2
   + any

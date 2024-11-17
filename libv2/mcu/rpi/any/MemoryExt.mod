@@ -1,24 +1,33 @@
 MODULE MemoryExt;
 (**
-  Oberon RTK Framework
-  * extended memory allocation for two cores
-  * two 4k blocks above the 256k memory managed via Memory.mod
-    * SRAM block 4: core 0
-    * SRAM block 5: core 1
-    See module Config.mod.
-  * Copy procedure to SRAM
-  * Cache a procedure (maybe does not belong here)
+  Oberon RTK Framework v2
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  * extended memory allocation for two cores
+  * two 4k blocks,
+    * for RP2040:
+      * above the 256k memory managed via Memory.mod
+        * SRAM block 4: core 0 => MCU2.SRAM4_BASE = MCU2.SRAM_EXT0
+        * SRAM block 5: core 1 => MCU2.SRAM5_BASE = MCU2.SRAM_EXT1
+    * for RP 2350:
+      * above the 512k memory managed via Memory.mod
+        * SRAM block 8: core 0 => MCU2.SRAM8_BASE = MCU2.SRAM_EXT0
+        * SRAM block 9: core 1 => MCU2.SRAM9_BASE = MCU2.SRAM_EXT1
+    See module Config.mod.
+  The following two features may be factored out into another module:
+  * Copy procedure to SRAM
+  * Cache a procedure
+  --
+  MCU: RP2040, RP2350
+  Boards: Pico, Pico2
   --
   Copyright (c) 2024 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Config;
+  IMPORT SYSTEM, MCU := MCU2, Config, ResData, Errors, Out;
 
   CONST
-    NumCores = Config.NumCores;
+    NumCores = MCU.NumCores;
 
   TYPE
     CoreContext = RECORD
@@ -30,7 +39,7 @@ MODULE MemoryExt;
     coreCon: ARRAY NumCores OF CoreContext;
 
 
-  PROCEDURE Allocate*(VAR addr: INTEGER; blockSize: INTEGER);
+  PROCEDURE* Allocate*(VAR addr: INTEGER; blockSize: INTEGER);
   (* parameter order as in Memory.mod for consistency *)
     VAR cid, h: INTEGER;
   BEGIN
@@ -45,36 +54,59 @@ MODULE MemoryExt;
   END Allocate;
 
 
+  PROCEDURE getCopyEndAddr(procAddr: INTEGER; VAR nextProcAddr: INTEGER);
+    CONST ItemSize = 6;
+    VAR
+      r: ResData.Resource;
+      i, index, addr, resSize, numItems, recType: INTEGER;
+  BEGIN
+    ResData.Open(r, ".ref");
+    resSize := ResData.Size(r);
+    numItems := resSize DIV (ItemSize * 4);
+    i := 0;
+    index := 0;
+    nextProcAddr := 0;
+    WHILE i < numItems DO
+      ResData.GetInt(r, index, recType);
+      ResData.GetInt(r, index + 5, addr);
+      IF addr = procAddr THEN
+        ASSERT(recType # 0, Errors.ProgError); (* recType = 0 => module *)
+        ResData.GetInt(r, index + ItemSize, recType);
+        ResData.GetInt(r, index + ItemSize + 5, nextProcAddr);
+        ASSERT(recType # 0, Errors.BadResourceData);
+        ASSERT(nextProcAddr > procAddr, Errors.BadResourceData)
+      END;
+      index := index + ItemSize;
+      INC(i)
+    END
+  END getCopyEndAddr;
+
+
   PROCEDURE CopyProc*(procAddr: INTEGER; VAR toAddr: INTEGER);
   (* Copy a procedure to extended memory *)
-    CONST PushLr = 0B5H;
-    VAR addr, instr, procSize: INTEGER;
+  (* Includes any data blocks after the instructions *)
+    VAR procSize: INTEGER;
   BEGIN
-    addr := procAddr + 4;
-    SYSTEM.GET(addr, instr);
-    (* scan for push{... lr}, is always word aligned *)
-    WHILE BFX(instr, 15, 8) # PushLr DO
-      INC(addr, 4);
-      SYSTEM.GET(addr, instr);
-    END;
-    procSize := addr - procAddr;
-    Allocate(toAddr, procSize);
+    getCopyEndAddr(procAddr, toAddr);
     IF toAddr # 0 THEN
-      SYSTEM.COPY(procAddr, toAddr, procSize DIV 4)
+      procSize := toAddr - procAddr;
+      Allocate(toAddr, procSize);
+      IF toAddr # 0 THEN
+        SYSTEM.COPY(procAddr, toAddr, procSize DIV 4)
+      END
     END
   END CopyProc;
 
 
   PROCEDURE CacheProc*(procAddr: INTEGER);
-    CONST PushLr = 0B5H;
-    VAR instr: INTEGER;
+  (* Read a procedure to load it into flash memory cache *)
+  (* Includes any data blocks after the instructions *)
+    VAR instr, toAddr: INTEGER;
   BEGIN
-    SYSTEM.GET(procAddr, instr);
-    INC(procAddr, 4);
-    SYSTEM.GET(procAddr, instr);
-    WHILE BFX(instr, 15, 8) # PushLr DO
-      INC(procAddr, 4);
-      SYSTEM.GET(procAddr, instr)
+    getCopyEndAddr(procAddr, toAddr);
+    WHILE procAddr < toAddr DO
+      SYSTEM.GET(procAddr, instr);
+      INC(procAddr, 4)
     END
   END CacheProc;
 
@@ -91,4 +123,3 @@ MODULE MemoryExt;
 BEGIN
   init
 END MemoryExt.
-

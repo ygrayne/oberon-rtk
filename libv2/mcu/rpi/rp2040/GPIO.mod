@@ -43,7 +43,6 @@ MODULE GPIO;
     SlewFast*  = SLEWFAST_val_fast;
 
     (* PADS_BANK0_GPIOx BITS *)
-    PADS_ISO  = 8;  (* pad isolation *)
     PADS_OD   = 7;  (* output disable *)
     PADS_IE   = 6;  (* input enable *)
 
@@ -60,7 +59,7 @@ MODULE GPIO;
 
   (* --- GPIO devices --- *)
 
-  PROCEDURE SetFunction*(pinNo, functionNo: INTEGER);
+  PROCEDURE* SetFunction*(pinNo, functionNo: INTEGER);
     VAR addr, x: INTEGER;
   BEGIN
     ASSERT(functionNo IN MCU.IO_BANK0_Functions, Errors. PreCond);
@@ -70,7 +69,7 @@ MODULE GPIO;
     SYSTEM.PUT(addr, x)
   END SetFunction;
 
-  PROCEDURE SetInverters*(pinNo: INTEGER; mask: SET);
+  PROCEDURE* SetInverters*(pinNo: INTEGER; mask: SET);
     VAR addr, x: INTEGER;
   BEGIN
     addr := MCU.IO_BANK0_GPIO0_CTRL + (pinNo * MCU.IO_BANK0_GPIO_Offset);
@@ -81,7 +80,7 @@ MODULE GPIO;
 
   (* --- pads --- *)
 
-  PROCEDURE ConfigurePad*(pinNo: INTEGER; cfg: PadCfg);
+  PROCEDURE* ConfigurePad*(pinNo: INTEGER; cfg: PadCfg);
     VAR addr, x: INTEGER;
   BEGIN
     ASSERT(cfg.outputDe IN {Disabled, Enabled}, Errors.PreCond);
@@ -105,7 +104,7 @@ MODULE GPIO;
   END ConfigurePad;
 
 
-  PROCEDURE GetPadBaseCfg*(VAR cfg: PadCfg);
+  PROCEDURE* GetPadBaseCfg*(VAR cfg: PadCfg);
   (**
     outputDe        = Disabled,           hardware reset value, ie. output is enabled
     inputEn         = Disabled,           hardware reset value changed in 'init'
@@ -125,7 +124,7 @@ MODULE GPIO;
   END GetPadBaseCfg;
 
 
-  PROCEDURE DisableOutput*(pinNo: INTEGER);
+  PROCEDURE* DisableOutput*(pinNo: INTEGER);
     VAR addr: INTEGER;
   BEGIN
     addr := MCU.PADS_BANK0_GPIO0 + MCU.ASET + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
@@ -133,7 +132,7 @@ MODULE GPIO;
   END DisableOutput;
 
 
-  PROCEDURE EnableInput*(pinNo: INTEGER);
+  PROCEDURE* EnableInput*(pinNo: INTEGER);
     VAR addr: INTEGER;
   BEGIN
     addr := MCU.PADS_BANK0_GPIO0 + MCU.ASET + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
@@ -141,7 +140,7 @@ MODULE GPIO;
   END EnableInput;
 
 
-  PROCEDURE DisableInput*(pinNo: INTEGER);
+  PROCEDURE* DisableInput*(pinNo: INTEGER);
     VAR addr: INTEGER;
   BEGIN
     addr := MCU.PADS_BANK0_GPIO0 + MCU.ACLR + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
@@ -152,65 +151,65 @@ MODULE GPIO;
   (* GPIO control via SIO *)
   (* Need to select function 'Fsio' *)
 
-  PROCEDURE Set*(mask: SET);
+  PROCEDURE* Set*(mask: SET);
   (* atomic *)
   BEGIN
     SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, mask)
   END Set;
 
-  PROCEDURE Clear*(mask: SET);
+  PROCEDURE* Clear*(mask: SET);
   (* atomic *)
   BEGIN
     SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, mask)
   END Clear;
 
-  PROCEDURE Toggle*(mask: SET);
+  PROCEDURE* Toggle*(mask: SET);
   (* atomic *)
   BEGIN
     SYSTEM.PUT(MCU.SIO_GPIO_OUT_XOR, mask)
   END Toggle;
 
-  PROCEDURE Get*(VAR value: SET);
+  PROCEDURE* Get*(VAR value: SET);
   BEGIN
     SYSTEM.GET(MCU.SIO_GPIO_IN, value)
   END Get;
 
-  PROCEDURE Put*(value: SET);
+  PROCEDURE* Put*(value: SET);
   BEGIN
     SYSTEM.PUT(MCU.SIO_GPIO_OUT, value)
   END Put;
 
-  PROCEDURE GetBack*(VAR value: INTEGER);
+  PROCEDURE* GetBack*(VAR value: INTEGER);
   BEGIN
     SYSTEM.GET(MCU.SIO_GPIO_OUT, value)
   END GetBack;
 
-  PROCEDURE Check*(mask: SET): BOOLEAN;
+  PROCEDURE* Check*(mask: SET): BOOLEAN;
     VAR value: SET;
   BEGIN
     SYSTEM.GET(MCU.SIO_GPIO_IN, value);
     RETURN value * mask # {}
   END Check;
 
-  PROCEDURE OutputEnable*(mask: SET);
+  PROCEDURE* OutputEnable*(mask: SET);
   (* atomic *)
   BEGIN
     SYSTEM.PUT(MCU.SIO_GPIO_OE_SET, mask)
   END OutputEnable;
 
-  PROCEDURE OutputDisable*(mask: SET);
+  PROCEDURE* OutputDisable*(mask: SET);
   (* atomic *)
   BEGIN
     SYSTEM.PUT(MCU.SIO_GPIO_OE_CLR, mask)
   END OutputDisable;
 
-  PROCEDURE OutputEnToggle*(mask: SET);
+  PROCEDURE* OutputEnToggle*(mask: SET);
   (* atomic *)
   BEGIN
     SYSTEM.PUT(MCU.SIO_GPIO_OE_XOR, mask)
   END OutputEnToggle;
 
-  PROCEDURE GetOutputEnable*(VAR value: SET);
+  PROCEDURE* GetOutputEnable*(VAR value: SET);
   BEGIN
     SYSTEM.GET(MCU.SIO_GPIO_OE, value)
   END GetOutputEnable;

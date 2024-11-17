@@ -1,11 +1,12 @@
 MODULE StackUsage;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
+  --
   Example program, multi-threaded, single-core
   Description: https://oberon-rtk.org/examples/stackusage/
   --
-  MCU: RP2040
-  Board: Pico
+  MCU: RP2040, RP2350
+  Board: Pico, Pico2
   --
   Copyright (c) 2024 Gray, gray@grayraven.org
 **)
@@ -23,6 +24,7 @@ MODULE StackUsage;
     t: ARRAY 12 OF Kernel.Thread;
     id: ARRAY 12 OF INTEGER;
     limits: ARRAY 12 OF INTEGER;
+    timer: Timers.Device;
 
 
   PROCEDURE tbc;
@@ -100,7 +102,7 @@ MODULE StackUsage;
     REPEAT
       Out.String("stack usage:"); Out.Ln;
       Memory.CheckLoopStackUsage(stackSize, stackUsed);
-      Out.Int(-1, 4); Out.Int(MillisecsPerTick, 6);
+      Out.Int(-1, 4); Out.String("      ");
       Out.Int(stackSize, 6); Out.Int(stackUsed, 6);
       Out.Ln;
       i := 0;
@@ -112,7 +114,7 @@ MODULE StackUsage;
         INC(i)
       END;
       Memory.CheckThreadStackUsage(NumThreads, stackSize, stackUsed);
-      Out.Int(NumThreads, 4); Out.Int(1000, 6);
+      Out.Int(NumThreads, 4); Out.String("      ");
       Out.Int(stackSize, 6); Out.Int(stackUsed, 6);
       Out.Ln;
       Kernel.Next
@@ -123,7 +125,10 @@ MODULE StackUsage;
   PROCEDURE run;
     VAR i, seed, res: INTEGER;
   BEGIN
-    Timers.GetTimeL(seed);
+    NEW(timer); ASSERT(timer # NIL, Errors.HeapOverflow);
+    Timers.Init(timer, Timers.TIMER0);
+    Timers.Configure(timer);
+    Timers.GetTimeL(timer, seed);
     Random.Seed(seed);
     i := 0;
     WHILE i < NumThreads DO

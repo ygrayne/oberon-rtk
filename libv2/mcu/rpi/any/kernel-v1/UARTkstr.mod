@@ -71,8 +71,8 @@ MODULE UARTkstr;
 
   PROCEDURE rxHandler[0];
     CONST
-      UART0exc = MCU.PPB_NVIC_UART0_IRQ + MCU.PPB_IRQ_BASE;
-      UART1exc = MCU.PPB_NVIC_UART1_IRQ + MCU.PPB_IRQ_BASE;
+      UART0exc = MCU.PPB_UART0_IRQ + MCU.PPB_IRQ_BASE;
+      UART1exc = MCU.PPB_UART1_IRQ + MCU.PPB_IRQ_BASE;
     VAR mis: SET; uartInt: UARTint; ch: CHAR; excNo: INTEGER; overflow: BOOLEAN;
   BEGIN
     Exceptions.GetIntStatus(excNo);

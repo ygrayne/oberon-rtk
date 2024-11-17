@@ -41,7 +41,7 @@ MODULE Timers;
     ASSERT(timerNo IN Timers, Errors.ProgError);
     dev.timerNo := timerNo;
     dev.devNo := MCU.RESETS_TIMER0 + timerNo;
-    dev.intNo := MCU.PPB_NVIC_TIMER0_IRQ_0 + (timerNo * NumAlarms);
+    dev.intNo := MCU.PPB_TIMER0_IRQ_0 + (timerNo * NumAlarms);
     base := MCU.TIMER0_BASE + (timerNo * MCU.TIMER_Offset);
     dev.TIMERAWH := base + MCU.TIMER_TIMERAWH_Offset;
     dev.TIMERAWL := base + MCU.TIMER_TIMERAWL_Offset;

@@ -42,9 +42,8 @@ MODULE MCU2;
     (* datasheet 2.2, p30 *)
     (* -- memory base addresses -- *)
     ROM_BASE*           = 000000000H;
-    XIP_BASE*           = 010000000H;
-    XIP_BASE_UNCACHED*  = 014000000H;
-    SRAM_BASE*          = 020000000H;
+    XIP_BASE*           = 010000000H; (* see also "XIP" below *)
+    SRAM_BASE*          = 020000000H; (* see also "SRAM" below *)
 
     (* -- apb base addresses -- *)
     SYSINFO_BASE*     = 040000000H;
@@ -118,6 +117,10 @@ MODULE MCU2;
     PPB_BASE*             = 0E0000000H;
     PPB_NONSEC_BASE*      = 0E0020000H;
     EPPB_BASE*            = 0E0080000H;
+
+    (* == XIP == *)
+    XIP_NOCACHE_NOALLOC_BASE* = 014000000H;
+    XIP_MAINTENANCE_BASE*     = 018000000H;
 
     (* == SRAM == *)
     SRAM0_BASE*           = 020000000H;
@@ -652,7 +655,40 @@ MODULE MCU2;
     BUSCTRL_PERFSEL3*         = BUSCTRL_BASE + 028H;
 
     (* PERFSEL events *)
-    (* .. *)
+    PERFSEL_APB_ACC_CONT*       = 00AH;
+    PERFSEL_APB_ACC*            = 00BH;
+    PERFSEL_FASTPERI_ACC_CONT*  = 00EH;
+    PERFSEL_FASTPERI_ACC*       = 00FH;
+
+    PERFSEL_SRAM9_ACC_CONT*     = 012H;
+    PERFSEL_SRAM9_ACC*          = 013H;
+    PERFSEL_SRAM8_ACC_CONT*     = 016H;
+    PERFSEL_SRAM8_ACC*          = 017H;
+    PERFSEL_SRAM7_ACC_CONT*     = 01AH;
+    PERFSEL_SRAM7_ACC*          = 01BH;
+    PERFSEL_SRAM6_ACC_CONT*     = 01EH;
+    PERFSEL_SRAM6_ACC*          = 01FH;
+    PERFSEL_SRAM5_ACC_CONT*     = 022H;
+    PERFSEL_SRAM5_ACC*          = 023H;
+    PERFSEL_SRAM4_ACC_CONT*     = 026H;
+    PERFSEL_SRAM4_ACC*          = 027H;
+    PERFSEL_SRAM3_ACC_CONT*     = 02AH;
+    PERFSEL_SRAM3_ACC*          = 02BH;
+    PERFSEL_SRAM2_ACC_CONT*     = 02EH;
+    PERFSEL_SRAM2_ACC*          = 02FH;
+    PERFSEL_SRAM1_ACC_CONT*     = 032H;
+    PERFSEL_SRAM1_ACC*          = 033H;
+    PERFSEL_SRAM0_ACC_CONT*     = 036H;
+    PERFSEL_SRAM0_ACC*          = 037H;
+
+    PERFSEL_XIP_MAIN1_ACC_CONT* = 03AH;
+    PERFSEL_XIP_MAIN1_ACC*      = 03BH;
+    PERFSEL_XIP_MAIN0_ACC_CONT* = 03EH;
+    PERFSEL_XIP_MAIN0_ACC*      = 03FH;
+
+    PERFSEL_ROM_ACC_CONT*       = 042H;
+    PERFSEL_ROM_ACC*            = 043H;
+
 
     (* == UART0, UART1 == *)
     (* datasheet 12.1.8, p958 *)
@@ -1037,6 +1073,7 @@ MODULE MCU2;
     (* == PIO0, PIO1, PIO2 == *)
     (* datasheet 11.7, p925 *)
     (* offsets from PIO0_BASE, PIO1_BASE, PIO2_BASE *)
+    PIO_Offset*                   = PIO1_BASE - PIO0_BASE;
     PIO_CTRL_Offset*              = 0000H;
     PIO_FSTAT_Offset*             = 0004H;
     PIO_FDEBUG_Offset*            = 0008H;
@@ -1061,12 +1098,13 @@ MODULE MCU2;
       (* block offset *)
       PIO_INSTR_MEM_Offset* = 4;
 
-    PIO_SM0_CLKDIV_Offset*       = 00C8H;
-    PIO_SM0_EXECCTRL_Offset*     = 00CCH;
-    PIO_SM0_SHIFTCTRL_Offset*    = 00D0H;
-    PIO_SM0_ADDR_Offset*         = 00D4H;
-    PIO_SM0_INSTR_Offset*        = 00D8H;
-    PIO_SM0_PINCTRL_Offset*      = 00DCH;
+    PIO_SM0_Offset*               = 00C8H;
+    PIO_SM0_CLKDIV_Offset*        = PIO_SM0_Offset;
+    PIO_SM0_EXECCTRL_Offset*      = 00CCH;
+    PIO_SM0_SHIFTCTRL_Offset*     = 00D0H;
+    PIO_SM0_ADDR_Offset*          = 00D4H;
+    PIO_SM0_INSTR_Offset*         = 00D8H;
+    PIO_SM0_PINCTRL_Offset*       = 00DCH;
       (* SM0 .. SM3 *)
       (* block offset *)
       PIO_SM_Offset* = 018H;
@@ -1285,76 +1323,85 @@ MODULE MCU2;
 
     (* IRQ numbers *)
     (* datasheet 3.2, p83 *)
-    PPB_NVIC_TIMER0_IRQ_0*      = 0;
-    PPB_NVIC_TIMER0_IRQ_1*      = 1;
-    PPB_NVIC_TIMER0_IRQ_2*      = 2;
-    PPB_NVIC_TIMER0_IRQ_3*      = 3;
-    PPB_NVIC_TIMER1_IRQ_0*      = 4;
-    PPB_NVIC_TIMER2_IRQ_1*      = 5;
-    PPB_NVIC_TIMER3_IRQ_2*      = 6;
-    PPB_NVIC_TIMER4_IRQ_3*      = 7;
-    PPB_NVIC_PWM_IRQ_WRAP_0*    = 8;
-    PPB_NVIC_PWM_IRQ_WRAP_1*    = 9;
-    PPB_NVIC_DMA_IRQ_0*         = 10;
-    PPB_NVIC_DMA_IRQ_1*         = 11;
-    PPB_NVIC_DMA_IRQ_2*         = 12;
-    PPB_NVIC_DMA_IRQ_3*         = 13;
-    PPB_NVIC_USBCTRL_IRQ*       = 14;
-    PPB_NVIC_PIO0_IRQ_0*        = 15;
-    PPB_NVIC_PIO0_IRQ_1*        = 16;
-    PPB_NVIC_PIO1_IRQ_0*        = 17;
-    PPB_NVIC_PIO1_IRQ_1*        = 18;
-    PPB_NVIC_PIO2_IRQ_0*        = 19;
-    PPB_NVIC_PIO2_IRQ_1*        = 20;
-    PPB_NVIC_IO_IRQ_BANK0*      = 21; (* core local *)
-    PPB_NVIC_IO_IRQ_BANK0_NS*   = 22; (* core local *)
-    PPB_NVIC_IO_IRQ_QSPI*       = 23; (* core local *)
-    PPB_NVIC_IO_IRQ_QSPI_NS*    = 24; (* core local *)
-    PPB_NVIC_SIO_IRQ_FIFO*      = 25; (* core local *)
-    PPB_NVIC_SIO_IRQ_BELL*      = 26; (* core local *)
-    PPB_NVIC_SIO_IRQ_FIFO_NS*   = 27; (* core local *)
-    PPB_NVIC_SIO_IRQ_BELL_NS*   = 28; (* core local *)
-    PPB_NVIC_SIO_IRQ_MTIMECMP*  = 29; (* core local *)
-    PPB_NVIC_CLOCKS_IRQ*        = 30;
-    PPB_NVIC_SPI0_IRQ*          = 31;
-    PPB_NVIC_SPI1_IRQ*          = 32;
-    PPB_NVIC_UART0_IRQ*         = 33;
-    PPB_NVIC_UART1_IRQ*         = 34;
-    PPB_NVIC_ADC_IRQ_FIFO*      = 35;
-    PPB_NVIC_I2C0_IRQ*          = 36;
-    PPB_NVIC_I2C1_IRQ*          = 37;
-    PPB_NVIC_OTP_IRQ*           = 38;
-    PPB_NVIC_TRNG_IRQ*          = 39;
-    PPB_NVIC_PROC0_IRQ_CTI*     = 40;
-    PPB_NVIC_PROC1_IRQ_CTI*     = 41;
-    PPB_NVIC_PLL_SYS_IRQ*       = 42;
-    PPB_NVIC_PLL_USB_IRQ*       = 43;
-    PPB_NVIC_POWMAN_IRQ_POW*    = 44;
-    PPB_NVIC_POWMAN_IRQ_TIMER*  = 45;
-    PPB_NVIC_SPAREIRQ_IRQ0*     = 46;
-    PPB_NVIC_SPAREIRQ_IRQ1*     = 47;
-    PPB_NVIC_SPAREIRQ_IRQ2*     = 48;
-    PPB_NVIC_SPAREIRQ_IRQ3*     = 49;
-    PPB_NVIC_SPAREIRQ_IRQ4*     = 50;
-    PPB_NVIC_SPAREIRQ_IRQ5*     = 51;
+    PPB_TIMER0_IRQ_0*      = 0;
+    PPB_TIMER0_IRQ_1*      = 1;
+    PPB_TIMER0_IRQ_2*      = 2;
+    PPB_TIMER0_IRQ_3*      = 3;
+    PPB_TIMER1_IRQ_0*      = 4;
+    PPB_TIMER2_IRQ_1*      = 5;
+    PPB_TIMER3_IRQ_2*      = 6;
+    PPB_TIMER4_IRQ_3*      = 7;
+    PPB_PWM_IRQ_WRAP_0*    = 8;
+    PPB_PWM_IRQ_WRAP_1*    = 9;
+    PPB_DMA_IRQ_0*         = 10;
+    PPB_DMA_IRQ_1*         = 11;
+    PPB_DMA_IRQ_2*         = 12;
+    PPB_DMA_IRQ_3*         = 13;
+    PPB_USBCTRL_IRQ*       = 14;
+    PPB_PIO0_IRQ_0*        = 15;
+    PPB_PIO0_IRQ_1*        = 16;
+    PPB_PIO1_IRQ_0*        = 17;
+    PPB_PIO1_IRQ_1*        = 18;
+    PPB_PIO2_IRQ_0*        = 19;
+    PPB_PIO2_IRQ_1*        = 20;
+    PPB_IO_IRQ_BANK0*      = 21; (* core local *)
+    PPB_IO_IRQ_BANK0_NS*   = 22; (* core local *)
+    PPB_IO_IRQ_QSPI*       = 23; (* core local *)
+    PPB_IO_IRQ_QSPI_NS*    = 24; (* core local *)
+    PPB_SIO_IRQ_FIFO*      = 25; (* core local *)
+    PPB_SIO_IRQ_BELL*      = 26; (* core local *)
+    PPB_SIO_IRQ_FIFO_NS*   = 27; (* core local *)
+    PPB_SIO_IRQ_BELL_NS*   = 28; (* core local *)
+    PPB_SIO_IRQ_MTIMECMP*  = 29; (* core local *)
+    PPB_CLOCKS_IRQ*        = 30;
+    PPB_SPI0_IRQ*          = 31;
+    PPB_SPI1_IRQ*          = 32;
+    PPB_UART0_IRQ*         = 33;
+    PPB_UART1_IRQ*         = 34;
+    PPB_ADC_IRQ_FIFO*      = 35;
+    PPB_I2C0_IRQ*          = 36;
+    PPB_I2C1_IRQ*          = 37;
+    PPB_OTP_IRQ*           = 38;
+    PPB_TRNG_IRQ*          = 39;
+    PPB_PROC0_IRQ_CTI*     = 40;
+    PPB_PROC1_IRQ_CTI*     = 41;
+    PPB_PLL_SYS_IRQ*       = 42;
+    PPB_PLL_USB_IRQ*       = 43;
+    PPB_POWMAN_IRQ_POW*    = 44;
+    PPB_POWMAN_IRQ_TIMER*  = 45;
+    PPB_SPAREIRQ_IRQ0*     = 46;
+    PPB_SPAREIRQ_IRQ1*     = 47;
+    PPB_SPAREIRQ_IRQ2*     = 48;
+    PPB_SPAREIRQ_IRQ3*     = 49;
+    PPB_SPAREIRQ_IRQ4*     = 50;
+    PPB_SPAREIRQ_IRQ5*     = 51;
 
     (* IRQ exception numbers *)
     (* exception number = IRQ number + PPB_IRQ_BASE *)
     PPB_IRQ_BASE* = 16;
 
     (* exception numbers *)
-    PPB_NVIC_NMI_Exc*           = 2;
-    PPB_NVIC_HardFault_Exc*     = 3;
-    PPB_NVIC_MemMgmtFault_Exc*  = 4;
-    PPB_NVIC_BusFault_Exc*      = 5;
-    PPB_NVIC_UsageFault_Exc*    = 6;
-    PPB_NVIC_SecureFault_Exc*   = 7;
-    PPB_NVIC_SVC_Exc*           = 11;
-    PPB_NVIC_DebugMon_Exc*      = 12;
-    PPB_NVIC_PendSV_Exc*        = 14;
-    PPB_NVIC_SysTick_Exc*       = 15;
+    PPB_NMI_Exc*           = 2;
+    PPB_HardFault_Exc*     = 3;
+    PPB_MemMgmtFault_Exc*  = 4;
+    PPB_BusFault_Exc*      = 5;
+    PPB_UsageFault_Exc*    = 6;
+    PPB_SecureFault_Exc*   = 7;
+    PPB_SVC_Exc*           = 11;
+    PPB_DebugMon_Exc*      = 12;
+    PPB_PendSV_Exc*        = 14;
+    PPB_SysTick_Exc*       = 15;
 
-    PPB_NVIC_SysExc*  = {3, 4, 5, 6, 7, 11, 14, 15};
+    PPB_SysExc*  = {3, 4, 5, 6, 7, 11, 14, 15};
+
+    PPB_ExcPrio0* = 000H; (* 0000 0000 *)
+    PPB_ExcPrio1* = 020H; (* 0010 0000 *)
+    PPB_ExcPrio2* = 040H; (* 0100 0000 *)
+    PPB_ExcPrio3* = 060H; (* 0110 0000 *)
+    PPB_ExcPrio4* = 080H; (* 1000 0000 *)
+    PPB_ExcPrio5* = 0A0H; (* 1010 0000 *)
+    PPB_ExcPrio6* = 0C0H; (* 1100 0000 *)
+    PPB_ExcPrio7* = 0E0H; (* 1110 0000 *)
 
     (* vector table *)
     VectorTableSize*            = 272; (* bytes, 16 sys exceptions + 52 interrupts, one word each *)

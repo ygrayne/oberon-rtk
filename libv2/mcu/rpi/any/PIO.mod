@@ -1,12 +1,12 @@
 MODULE PIO;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
   --
-  PIO device
-  Rudimentary implementation as of now, to get the example program running.
+  PIO devices
+  First-cut implementation as of now, to get the example program running.
   See https://oberon-rtk.org/examples/piosquare/
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -17,10 +17,13 @@ MODULE PIO;
   CONST
     PIO0* = 0;
     PIO1* = 1;
+    PIO2* = 1;
     SM0* = 0;
     SM1* = 1;
     SM2* = 2;
     SM3* = 3;
+    NumPIO* = MCU.NumPIO;
+    PIOs = {PIO0 .. NumPIO - 1};
     NumStateMachines = 4;
     MaxNumInstr* = 32;
 
@@ -84,18 +87,16 @@ MODULE PIO;
     VAR pioBase, i: INTEGER; smBase: ARRAY NumStateMachines OF INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.HeapOverflow);
-    ASSERT(pioNo IN {PIO0, PIO1});
+    ASSERT(pioNo IN PIOs);
     dev.pioNo := pioNo;
-    CASE pioNo OF
-      PIO0: pioBase := MCU.PIO0_Base; dev.mcuDevNo := MCU.RESETS_PIO0
-    | PIO1: pioBase := MCU.PIO1_Base; dev.mcuDevNo := MCU.RESETS_PIO1
-    END;
+    dev.mcuDevNo := MCU.RESETS_PIO0 + pioNo;
+    pioBase := MCU.PIO0_BASE + (pioNo * MCU.PIO_Offset);
     dev.CTRL := pioBase + MCU.PIO_CTRL_Offset;
-    dev.INSTR_MEM := pioBase + MCU.PIO_INSTR_MEM_Base_Offset;
-    smBase[0] := pioBase + MCU.PIO_SM0_Base_Offset;
-    smBase[1] := pioBase + MCU.PIO_SM1_Base_Offset;
-    smBase[2] := pioBase + MCU.PIO_SM2_Base_Offset;
-    smBase[3] := pioBase + MCU.PIO_SM3_Base_Offset;
+    dev.INSTR_MEM := pioBase + MCU.PIO_INSTR_MEM0_Offset;
+    smBase[0] := pioBase + MCU.PIO_SM0_Offset;
+    smBase[1] := smBase[0] + MCU.PIO_SM_Offset;
+    smBase[2] := smBase[1] + MCU.PIO_SM_Offset;;
+    smBase[3] := smBase[2] + MCU.PIO_SM_Offset;
     i := 0;
     WHILE i < NumStateMachines DO
       dev.SM[i].CLKDIV := smBase[i] + MCU.PIO_SM_CLKDIV_Offset;
@@ -111,8 +112,7 @@ MODULE PIO;
 
   PROCEDURE Configure*(dev: Device);
   BEGIN
-    StartUp.ReleaseReset(dev.mcuDevNo);
-    StartUp.AwaitReleaseDone(dev.mcuDevNo);
+    StartUp.ReleaseReset(dev.mcuDevNo)
   END Configure;
 
 

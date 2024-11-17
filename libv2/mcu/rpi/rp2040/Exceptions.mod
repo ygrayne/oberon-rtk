@@ -107,7 +107,7 @@ MODULE Exceptions;
     CONST SHPR0 = MCU.PPB_SHPR1 - 04H;
     VAR addr, x: INTEGER;
   BEGIN
-    ASSERT(excNo IN MCU.PPB_NVIC_SysExc, Errors.PreCond);
+    ASSERT(excNo IN MCU.PPB_SysExc, Errors.PreCond);
     prio := prio MOD 0100H;
     addr := SHPR0 + (excNo DIV 4) * 4;
     SYSTEM.GET(addr, x);
@@ -120,7 +120,7 @@ MODULE Exceptions;
     CONST SHPR0 = MCU.PPB_SHPR1 - 04H;
     VAR addr: INTEGER;
   BEGIN
-    ASSERT(excNo IN MCU.PPB_NVIC_SysExc, Errors.PreCond);
+    ASSERT(excNo IN MCU.PPB_SysExc, Errors.PreCond);
     addr := SHPR0 + (excNo DIV 4) * 4;
     SYSTEM.GET(addr, prio);
     prio := LSR(prio, (excNo MOD 4) * 8);

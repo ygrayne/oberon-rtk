@@ -17,14 +17,14 @@ MODULE Errors;
 
     (* MCU fault codes *)
     (* all *)
-    NMI*          = -MCU.PPB_NVIC_NMI_Exc;
-    HardFault*    = -MCU.PPB_NVIC_HardFault_Exc;
+    NMI*          = -MCU.PPB_NMI_Exc;
+    HardFault*    = -MCU.PPB_HardFault_Exc;
     (* M33 only *)
-    MemMgmtFault* = -MCU.PPB_NVIC_MemMgmtFault_Exc;
-    BusFault*     = -MCU.PPB_NVIC_BusFault_Exc;
-    UsageFault*   = -MCU.PPB_NVIC_UsageFault_Exc;
-    SecureFault*  = -MCU.PPB_NVIC_SecureFault_Exc;
-    DebugMon*     = -MCU.PPB_NVIC_DebugMon_Exc;
+    MemMgmtFault* = -MCU.PPB_MemMgmtFault_Exc;
+    BusFault*     = -MCU.PPB_BusFault_Exc;
+    UsageFault*   = -MCU.PPB_UsageFault_Exc;
+    SecureFault*  = -MCU.PPB_SecureFault_Exc;
+    DebugMon*     = -MCU.PPB_DebugMon_Exc;
 
     (* Astrobe error codes, see Error.mod *)
     FirstAstrobeCode = 1;
@@ -47,7 +47,7 @@ MODULE Errors;
     StorageError* = 111;
     UsageError* = 112;
     DeviceError* = 113;
-    ResourceMissing* = 114;
+    BadResourceData* = 114;
     NotSupported* = 115;
     NotImplemented* = 116;
     NumThreads* = 117;
@@ -109,8 +109,8 @@ MODULE Errors;
           msg := "storage error"
       | UsageError:
           msg := "usage error"
-      | ResourceMissing:
-          msg := "resource missing or faulty"
+      | BadResourceData:
+          msg := "program resource data inconsistent"
       | NotSupported:
           msg := "functionality not supported"
       | NotImplemented:

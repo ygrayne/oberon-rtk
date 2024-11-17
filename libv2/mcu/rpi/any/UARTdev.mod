@@ -135,7 +135,7 @@ MODULE UARTdev;
     ASSERT(uartNo IN UARTs);
     dev.uartNo := uartNo;
     dev.devNo := MCU.RESETS_UART0 + uartNo;
-    dev.intNo := MCU.PPB_NVIC_UART0_IRQ + uartNo;
+    dev.intNo := MCU.PPB_UART0_IRQ + uartNo;
     base      := MCU.UART0_BASE + (uartNo * MCU.UART_Offset);
     dev.CR    := base + MCU.UART_CR_Offset;
     dev.IBRD  := base + MCU.UART_IBRD_Offset;

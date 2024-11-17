@@ -1,6 +1,6 @@
 MODULE SPIdev;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
   --
   SPI device (master mode, Motorola SPI only)
   * initialisation of SPI device data structure
@@ -32,7 +32,7 @@ MODULE SPIdev;
   * clkRate (max) = 24 MHz
   * clkRate (min) = 739 Hz
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

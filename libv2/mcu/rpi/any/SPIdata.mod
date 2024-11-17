@@ -1,6 +1,6 @@
 MODULE SPIdata;
 (**
-  Oberon RTK Framework
+  Oberon RTK Framework v2
   --
   SPI data device driver
   * put and get data (only 8 bits data size (BYTE) transfers implemented as of now)
@@ -9,7 +9,7 @@ MODULE SPIdata;
   * busy waiting (blocking)
   * MSB first only for now (hw does not support LSB first)
   --
-  MCU: Cortex-M0+ RP2040, tested on Pico
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2024 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -132,6 +132,3 @@ END SPIdata.
     END
   END GetBytes;
 *)
-
-
-

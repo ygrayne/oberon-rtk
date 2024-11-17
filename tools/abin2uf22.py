@@ -96,6 +96,8 @@ UF2_META_BLOCK_END    = struct.pack("<L", 0xAB123579)
 msp = struct.unpack("<L", idata[0:4])[0]
 entry = struct.unpack("<L", idata[4:8])[0]
 
+# meta = open("boot2.bin", "wb")
+
 if args.verbose:
     if msp >= SRAM_ADDR and msp < MAX_SRAM_ADDR: msg0 = "(in SRAM range)"
     else: msg0 = "(NOT in SRAM range)"
@@ -106,20 +108,20 @@ if args.verbose:
 
 try:
     with open(ofn, "wb") as ofile:
-        # E10 meta data block
-        ofile.write(UF2_BLOCK_BEGIN)
-        ofile.write(UF2_MAGIC_BEGIN)
-        ofile.write(UF2_FLAGS)
-        ofile.write(UF2_ADDR_E10)
-        ofile.write(UF2_DATASIZE)
-        ofile.write(UF2_BLOCKNO_E10)
-        ofile.write(UF2_NUMBLOCKS_E10)
-        ofile.write(UF2_FAMID_E10)
-        for _ in range(0x20, 0x120):
-            ofile.write(struct.pack("B", 0xEF))
-        for _ in range(0x120, 0x1FC):
-            ofile.write(struct.pack("B", 0))
-        ofile.write(UF2_MAGIC_END)
+        # # E10 meta data block
+        # ofile.write(UF2_BLOCK_BEGIN)
+        # ofile.write(UF2_MAGIC_BEGIN)
+        # ofile.write(UF2_FLAGS)
+        # ofile.write(UF2_ADDR_E10)
+        # ofile.write(UF2_DATASIZE)
+        # ofile.write(UF2_BLOCKNO_E10)
+        # ofile.write(UF2_NUMBLOCKS_E10)
+        # ofile.write(UF2_FAMID_E10)
+        # for _ in range(0x20, 0x120):
+        #     ofile.write(struct.pack("B", 0xEF))
+        # for _ in range(0x120, 0x1FC):
+        #     ofile.write(struct.pack("B", 0))
+        # ofile.write(UF2_MAGIC_END)
 
         # meta data block
         ofile.write(UF2_BLOCK_BEGIN)
@@ -140,6 +142,16 @@ try:
         for _ in range(0x3C, 0x1FC):
             ofile.write(struct.pack("B", 0))
         ofile.write(UF2_MAGIC_END)
+
+        # meta.write(UF2_META_BLOCK_BEGIN)
+        # meta.write(UF2_META_IMAGE_DEF)
+        # meta.write(UF2_META_VECT_TABLE)
+        # meta.write(struct.pack("<L", CODE_ADDR))
+        # meta.write(UF2_META_LAST_ITEM)
+        # meta.write(UF2_META_LINK_SELF)
+        # meta.write(UF2_META_BLOCK_END)
+        # for _ in range(0x1C, 0x100):
+        #     meta.write(struct.pack("B", 0))
 
         # code & resources blocks
         for offs, block, addr in zip(range(0, len(idata), 256), range(1, numblocks, 1), range(CODE_ADDR, MAX_CODE_ADDR, 256)):
