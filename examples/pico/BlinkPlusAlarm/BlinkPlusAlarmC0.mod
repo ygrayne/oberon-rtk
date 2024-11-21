@@ -2,7 +2,6 @@ MODULE BlinkPlusAlarmC0;
 (**
   Oberon RTK Framework
   Example program, multi-threaded, multi-core
-  Description: https://oberon-rtk.org/examples/blinkplusalarm/
   --
   Program for core 1: 'BlinkPlusAlarmC1'
   Requires kernel v2.
@@ -74,4 +73,3 @@ MODULE BlinkPlusAlarmC0;
 BEGIN
   run
 END BlinkPlusAlarmC0.
-

@@ -4,7 +4,6 @@ MODULE PIO;
   --
   PIO device
   Rudimentary implementation as of now, to get the example program running.
-  See https://oberon-rtk.org/examples/piosquare/
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --

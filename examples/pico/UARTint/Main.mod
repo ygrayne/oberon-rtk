@@ -3,7 +3,6 @@ MODULE Main;
   Oberon RTK Framework
   --
   Main module
-  For example program: https://oberon-rtk.org/examples/uartint/
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --

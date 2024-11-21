@@ -2,7 +2,6 @@ MODULE MessagingC0;
 (**
   Oberon RTK Framework
   Example program, multi-threaded, multi-core
-  Description: https://oberon-rtk.org/examples/messaging/
   --
   Program for core 0: this module
   Program for core 1: 'MessagingC1'

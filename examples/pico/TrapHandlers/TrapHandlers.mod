@@ -1,8 +1,8 @@
 MODULE TrapHandlers;
 (**
   Oberon RTK Framework
+  --
   Example program, single-threaded, one core
-  Description & instructions: https://oberon-rtk.org/examples/traphandlers/
   --
   MCU: Cortex-M0+ RP2040
   Board: Pico

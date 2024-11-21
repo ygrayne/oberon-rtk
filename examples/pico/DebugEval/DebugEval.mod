@@ -2,7 +2,6 @@ MODULE DebugEval;
 (**
   Oberon RTK Framework
   Example program, multi-threaded, single-core
-  Description: https://oberon-rtk.org/examples/debugeval/
   --
   MCU: RP2040
   Board: Pico

@@ -2,7 +2,6 @@ MODULE BlinkPlusAlarmC1;
 (**
   Oberon RTK Framework
   Example program, multi-threaded, multi-core
-  Description: https://oberon-rtk.org/examples/blinkplusalarm/
   --
   See module 'BlinkPlusAlarmC0'
   Uncomment 'Run' in the module init section to run this program alone on core 0.
@@ -120,4 +119,3 @@ MODULE BlinkPlusAlarmC1;
 BEGIN
   (*Run*)
 END BlinkPlusAlarmC1.
-

@@ -2,7 +2,6 @@ MODULE TestWrap;
 (**
   Oberon RTK Framework
   Boundary wrap test program, single-threaded, one core
-  See https://oberon-rtk.org/examples/taskeval/
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
@@ -54,4 +53,3 @@ MODULE TestWrap;
 BEGIN
   run
 END TestWrap.
-

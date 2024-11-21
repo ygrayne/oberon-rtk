@@ -2,7 +2,6 @@ MODULE AlarmEval;
 (**
   Oberon RTK Framework
   Example program, single-threaded, one core
-  Description & instructions: https://oberon-rtk.org/examples/alarmeval/
   --
   MCU: Cortex-M0+ RP2040
   Board: Pico
@@ -244,4 +243,3 @@ MODULE AlarmEval;
 BEGIN
   run
 END AlarmEval.
-

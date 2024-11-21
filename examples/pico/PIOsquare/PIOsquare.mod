@@ -3,7 +3,6 @@ MODULE PIOsquare;
   Oberon RTK Framework
   --
   Example program, without kernel, one core
-  Description: https://oberon-rtk.org/examples/piosquare/
   --
   MCU: Cortex-M0+ RP2040
   Board: Pico

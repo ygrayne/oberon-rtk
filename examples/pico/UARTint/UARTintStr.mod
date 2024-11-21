@@ -3,7 +3,6 @@ MODULE UARTintStr;
   Oberon RTK Framework
   --
   UART string output device driver, using interrupts
-  For example program: https://oberon-rtk.org/examples/uartint/
   --
   Copyright (c) 2024 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/

@@ -3,7 +3,7 @@ MODULE BlinkPlusC0;
   Oberon RTK Framework
   --
   Example program, multi-core
-  Description: refer to https://oberon-rtk.org/examples/blinkplus/
+  Description: refer to https://oberon-rtk.org/examples/v2/blinkplus/
   --
   Core 1 program module: BlinkPlusC1
   --

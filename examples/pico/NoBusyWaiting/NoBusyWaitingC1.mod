@@ -2,7 +2,6 @@ MODULE NoBusyWaitingC1;
 (**
   Oberon RTK Framework
   Example program, multi-threaded, multi-core
-  Description: https://oberon-rtk.org/examples/nobusywating/
   --
   See module 'NoBusyWaitingC0'
   Uncomment 'Run' in the module init section to run this program alone on core 0.

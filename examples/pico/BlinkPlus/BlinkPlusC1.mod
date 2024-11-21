@@ -2,7 +2,6 @@ MODULE BlinkPlusC1;
 (**
   Oberon RTK Framework
   Example program, multi-core
-  Description: refer to https://oberon-rtk.org/examples/blinkplus/
   --
   See module 'BlinkPlusC0'
   Uncomment 'Run' in the module init section to run this program alone on core 0.

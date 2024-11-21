@@ -3,7 +3,8 @@ MODULE Main;
   Oberon RTK Framework v2
   --
   Main module
-  Custom version for example program NoBusyWaiting, https://oberon-rtk.org/examples/nobusywaiting
+  Custom version for example program NoBusyWaiting,
+  https://oberon-rtk.org/examples/v2/nobusywaiting
   --
   MCU: RP2040, RP2350
   Board: Pico, Pico2

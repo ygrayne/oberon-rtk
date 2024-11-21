@@ -4,7 +4,6 @@ MODULE UARTkstr;
   --
   UART string device driver for kernel use
   --
-  Variant for example: https://oberon-rtk.org/examples/readterminal/
   Includes
   * the GPIO pins for performance and behaviour testing and measuring
   * delays in the interrupt handler

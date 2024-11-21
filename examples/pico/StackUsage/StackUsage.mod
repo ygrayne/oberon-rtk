@@ -2,7 +2,6 @@ MODULE StackUsage;
 (**
   Oberon RTK Framework
   Example program, multi-threaded, single-core
-  Description: https://oberon-rtk.org/examples/stackusage/
   --
   MCU: RP2040
   Board: Pico

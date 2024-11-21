@@ -3,7 +3,6 @@ MODULE StringBufOut;
   Oberon RTK Framework
   --
   Example program, multi-threaded, one core
-  Description: https://oberon-rtk.org/examples/stringbufout/
   --
   MCU: Cortex-M0+ RP2040
   Board: Pico
@@ -103,4 +102,3 @@ MODULE StringBufOut;
 BEGIN
   run
 END StringBufOut.
-

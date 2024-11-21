@@ -3,7 +3,6 @@ MODULE UARTint;
   Oberon RTK Framework
   --
   Example program, multi-threaded, one core
-  Description: https://oberon-rtk.org/examples/uartint/
   --
   MCU: Cortex-M0+ RP2040
   Board: Pico
@@ -98,4 +97,3 @@ MODULE UARTint;
 BEGIN
   run
 END UARTint.
-

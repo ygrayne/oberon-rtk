@@ -3,7 +3,6 @@ MODULE RTCds3234;
   Oberon RTK Framework
   --
   SPI driver for Maxim DS3234 real-time clock
-  For example program SPIrtc: https://oberon-rtk.org/examples/spirtc/
   --
   Not thread-safe to use from different cores.
   Day of the week is not used.
@@ -165,5 +164,3 @@ MODULE RTCds3234;
   END Install;
 
 END RTCds3234.
-
-

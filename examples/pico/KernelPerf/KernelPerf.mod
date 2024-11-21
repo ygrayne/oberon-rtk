@@ -3,7 +3,6 @@ MODULE KernelPerf;
   Oberon RTK Framework
   --
   Example program, multi-threaded, one core
-  Description: https://oberon-rtk.org/examples/kernelperf/
   --
   MCU: Cortex-M0+ RP2040
   Board: Pico

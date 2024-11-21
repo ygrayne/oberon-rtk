@@ -1,8 +1,8 @@
 MODULE TaskEval;
 (**
   Oberon RTK Framework
+  --
   Example program, single-threaded, one core
-  Description & instructions: https://oberon-rtk.org/examples/taskeval/
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
@@ -164,4 +164,3 @@ MODULE TaskEval;
 BEGIN
   IF PrintQueue THEN run0 ELSE run1 END
 END TaskEval.
-

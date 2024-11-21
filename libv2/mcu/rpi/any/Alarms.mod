@@ -2,7 +2,7 @@ MODULE Alarms;
 (**
   Oberon RTK Framework
   * schedule handler procedures for the timer's four alarms
-  * test version, basis for the library version
+  * see: https://oberon-rtk.org/examples/alarmtest/
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
@@ -31,20 +31,18 @@ MODULE Alarms;
       intNo: INTEGER;
       timeAddr: INTEGER;
       vectAddr: INTEGER;
-      armProc: ArmProc;
       margin: INTEGER;
       time*, timeRun*: INTEGER
     END;
 
 
-  PROCEDURE Init*(dev: Device; alarmNo: INTEGER; armProc: ArmProc; cached: BOOLEAN);
+  PROCEDURE Init*(dev: Device; alarmNo: INTEGER; cached: BOOLEAN);
     CONST VectorAddrSize = 4;
     VAR vtor: INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
     ASSERT(alarmNo IN Alarms, Errors.PreCond);
     dev.alarmNo := alarmNo;
-    dev.armProc := armProc;
     IF cached THEN dev.margin := MarginCached ELSE dev.margin := MarginUncached END;
     dev.intNo := Exceptions.TIMER_IRQ_0 + alarmNo;
     dev.timeAddr := MCU.TIMER_ALARM + (alarmNo * MCU.TIMER_ALARM_Offset);
@@ -53,17 +51,7 @@ MODULE Alarms;
   END Init;
 
 
-  PROCEDURE ArmRaw*(dev: Device; proc: PROCEDURE; time: INTEGER);
-  BEGIN
-    INCL(SYSTEM.VAL(SET, proc), 0); (* thumb code *)
-    dev.time := time;
-    dev.timeRun := time;
-    SYSTEM.PUT(dev.vectAddr, proc);
-    SYSTEM.PUT(dev.timeAddr, time)
-  END ArmRaw;
-
-
-  PROCEDURE ArmRetime*(dev: Device; proc: PROCEDURE; time: INTEGER);
+  PROCEDURE Arm*(dev: Device; proc: PROCEDURE; time: INTEGER);
     VAR now: INTEGER;
   BEGIN
     INCL(SYSTEM.VAL(SET, proc), 0); (* thumb code *)
@@ -77,47 +65,18 @@ MODULE Alarms;
     SYSTEM.PUT(dev.vectAddr, proc);
     SYSTEM.PUT(dev.timeAddr, time);
     SYSTEM.EMITH(MCU.CPSIE)
-  END ArmRetime;
-
-
-  PROCEDURE ArmDirect*(dev: Device; proc: PROCEDURE; time: INTEGER);
-    VAR now: INTEGER; p: PROCEDURE;
-  BEGIN
-    p := proc;
-    INCL(SYSTEM.VAL(SET, proc), 0); (* thumb code *)
-    dev.time := time;
-    SYSTEM.EMITH(MCU.CPSID);
-    SYSTEM.GET(MCU.TIMER_TIMERAWL, now);
-    IF time - now > dev.margin THEN
-      dev.timeRun := time;
-      SYSTEM.PUT(dev.vectAddr, proc);
-      SYSTEM.PUT(dev.timeAddr, time);
-      SYSTEM.EMITH(MCU.CPSIE)
-    ELSE
-      SYSTEM.EMITH(MCU.CPSIE);
-      dev.timeRun := now;
-      p
-    END
-  END ArmDirect;
-
-
-  PROCEDURE Arm*(dev: Device; proc: PROCEDURE; time: INTEGER);
-  BEGIN
-    dev.armProc(dev, proc, time)
   END Arm;
 
 
   PROCEDURE Rearm*(dev: Device; proc: PROCEDURE; delay: INTEGER);
   BEGIN
-    dev.armProc(dev, proc, dev.time + delay)
+    Arm(dev, proc, dev.time + delay)
   END Rearm;
 
 
   PROCEDURE Disarm*(dev: Device);
-    VAR en: SET;
   BEGIN
-    en := {dev.alarmNo}; (* compiler issue workaround v9.1 *)
-    SYSTEM.PUT(MCU.TIMER_ARMED + MCU.ASET, en) (* atomic *)
+    SYSTEM.PUT(MCU.TIMER_ARMED + MCU.ASET, {dev.alarmNo}) (* atomic *)
   END Disarm;
 
 
@@ -130,10 +89,8 @@ MODULE Alarms;
 
 
   PROCEDURE DeassertInt*(dev: Device);
-    VAR en: SET;
   BEGIN
-    en := {dev.alarmNo}; (* compiler issue workaround v9.1 *)
-    SYSTEM.PUT(MCU.TIMER_INTR + MCU.ACLR, en)  (* atomic *)
+    SYSTEM.PUT(MCU.TIMER_INTR + MCU.ACLR, {dev.alarmNo})  (* atomic *)
   END DeassertInt;
 
 
@@ -141,10 +98,9 @@ MODULE Alarms;
   (* must not change int prio while enabled *)
     VAR en: SET;
   BEGIN
-    en := {dev.alarmNo}; (* compiler issue workaround v9.1 *)
-    SYSTEM.PUT(MCU.TIMER_INTE + MCU.ASET, en);
+    SYSTEM.PUT(MCU.TIMER_INTE + MCU.ASET, {dev.alarmNo});
     DeassertInt(dev);
-    en := {dev.intNo}; (* compiler issue workaround v9.1 *)
+    en := {dev.intNo};
     Exceptions.ClearPendingInt(en);
     Exceptions.SetIntPrio(dev.intNo, prio);
     Exceptions.EnableInt(en)
@@ -154,12 +110,12 @@ MODULE Alarms;
   PROCEDURE Disable*(dev: Device);
     VAR en: SET;
   BEGIN
-    en := {dev.alarmNo}; (* compiler issue workaround v9.1 *)
-    SYSTEM.PUT(MCU.TIMER_INTE + MCU.ACLR, en);
+    SYSTEM.PUT(MCU.TIMER_INTE + MCU.ACLR, {dev.alarmNo});
     DeassertInt(dev);
-    en := {dev.intNo}; (* compiler issue workaround v9.1 *)
+    en := {dev.intNo};
     Exceptions.ClearPendingInt(en);
     Exceptions.DisableInt(en)
   END Disable;
 
 END Alarms.
+

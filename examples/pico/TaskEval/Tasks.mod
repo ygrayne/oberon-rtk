@@ -4,7 +4,6 @@ MODULE Tasks;
   Task scheduling and execution.
   --
   Test version, only core 0 is implemented, includes test and evaluation code.
-  See https://oberon-rtk.org/examples/taskeval/
   --
   MCU: Cortex-M0+ RP2040, tested on Pico
   --
@@ -263,4 +262,3 @@ MODULE Tasks;
   END Install;
 
 END Tasks.
-

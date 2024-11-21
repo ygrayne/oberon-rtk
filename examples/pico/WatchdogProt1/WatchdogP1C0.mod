@@ -1,9 +1,9 @@
 MODULE WatchdogP1C0;
 (**
   Oberon RTK Framework
+  --
   Example program, multi-threaded, dual-core
   Watchdog prototype/proof of concept
-  Description: https://oberon-rtk.org/examples/watchdogprot1/
   Core 1 program: WatchdogP1C1
   --
   MCU: RP2040
@@ -12,12 +12,18 @@ MODULE WatchdogP1C0;
   Copyright (c) 2024 Gray, gray@grayraven.org
 **)
 
-  IMPORT Main, Kernel, Out, MultiCore, SysMsg, Memory, Errors, GPIO, LED, Watchdog, MCU := MCU2, CoreOne := WatchdogP1C1;
+  IMPORT SYSTEM, Main, Kernel, Out, MultiCore, SysMsg, Memory, Errors, GPIO, LED, Watchdog, MCU := MCU2, CoreOne := WatchdogP1C1;
 
   CONST
     Core1 = 1;
     MillisecsPerTick  = 10;
     ThreadStackSize = 1024;
+
+    CTRL = MCU.WATCHDOG_CTRL;
+    REASON = MCU.WATCHDOG_REASON;
+    PSM_WDSEL = MCU.PSM_WDSEL;
+    RESETS_WDSEL = MCU.RESETS_WDSEL;
+
 
   VAR
     t0, t1, t2: Kernel.Thread;
@@ -29,6 +35,21 @@ MODULE WatchdogP1C0;
     Out.String("c"); Out.Int(cid, 0);
     Out.String("-t"); Out.Int(tid, 0);
   END writeThreadInfo;
+
+
+  PROCEDURE writeWatchdogStatus;
+    VAR ctrl, psmSel, resetsSel, reason: INTEGER;
+  BEGIN
+    SYSTEM.GET(CTRL, ctrl);
+    SYSTEM.GET(PSM_WDSEL, psmSel);
+    SYSTEM.GET(RESETS_WDSEL, resetsSel);
+    SYSTEM.GET(REASON, reason);
+    Out.Ln;
+    Out.Hex(ctrl, 12); Out.Bin(ctrl, 36); Out.Ln;
+    Out.Hex(psmSel, 12); Out.Bin(psmSel, 36); Out.Ln;
+    Out.Hex(resetsSel, 12); Out.Bin(resetsSel, 36); Out.Ln;
+    Out.Hex(reason, 12); Out.Ln
+  END writeWatchdogStatus;
 
 
   PROCEDURE t0c;
@@ -89,6 +110,8 @@ MODULE WatchdogP1C0;
   PROCEDURE run;
     VAR res: INTEGER;
   BEGIN
+    writeWatchdogStatus;
+
     MultiCore.InitCoreOne(CoreOne.Run, Memory.DataMem[Core1].stackStart, Memory.DataMem[Core1].dataStart);
 
     Kernel.Install(MillisecsPerTick);

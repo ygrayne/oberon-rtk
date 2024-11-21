@@ -2,7 +2,6 @@ MODULE AlarmTest;
 (**
   Oberon RTK Framework
   Example program, single-threaded, one core
-  Description & instructions: https://oberon-rtk.org/examples/alarmtest/
   --
   MCU: Cortex-M0+ RP2040
   Board: Pico
@@ -217,4 +216,3 @@ MODULE AlarmTest;
 BEGIN
   run
 END AlarmTest.
-

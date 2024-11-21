@@ -1,9 +1,9 @@
 MODULE WatchdogP1C1;
 (**
   Oberon RTK Framework
+  --
   Example program, multi-threaded, dual-core
   Watchdog prototype
-  Description: https://oberon-rtk.org/examples/watchdogprot1/
   Core 0 program: WatchdogP1C0
   --
   MCU: RP2040

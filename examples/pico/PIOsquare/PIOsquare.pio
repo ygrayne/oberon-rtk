@@ -2,7 +2,6 @@
   Oberon RTK Framework
   --
   PIO programs for example program PIOsquare.
-  See https://oberon-rtk.org/examples/piosquare/
 **/
 
     .program square_wave
@@ -18,4 +17,3 @@
       set pins 1 [1]
       set pins 0
       .wrap
-

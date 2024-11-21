@@ -3,7 +3,7 @@ MODULE NoBusyWaitingC0;
   Oberon RTK Framework v2
   --
   Example program, multi-threaded, multi-core
-  Description: https://oberon-rtk.org/examples/nobusywating/
+  Description: https://oberon-rtk.org/examples/v2/nobusywating/
   --
   Program for core 1: 'NoBusyWaitingC1'
   --
