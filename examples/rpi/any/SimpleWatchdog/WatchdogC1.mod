@@ -15,7 +15,7 @@ MODULE WatchdogC1;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Main, Kernel, Out, MultiCore, SysMsg, Errors, GPIO, LED, Watchdog, MCU := MCU2;
+  IMPORT SYSTEM, Main, Kernel, Out, MultiCore, Errors, GPIO, LED, Watchdog, MCU := MCU2;
 
   CONST
     MillisecsPerTick  = 10;
