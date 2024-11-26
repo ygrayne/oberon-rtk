@@ -104,8 +104,7 @@ MODULE NoBusyWaitingC1;
   PROCEDURE init;
   BEGIN
     NEW(timer); ASSERT(timer # NIL, Errors.HeapOverflow);
-    Timers.Init(timer, Timers.TIMER0);
-    Timers.Configure(timer)
+    Timers.Init(timer, Timers.TIMER0)
   END init;
 
 BEGIN

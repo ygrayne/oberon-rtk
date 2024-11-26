@@ -106,8 +106,7 @@ MODULE BlinkPlusRtkC1;
   PROCEDURE init;
   BEGIN
     NEW(Timer); ASSERT(Timer # NIL, Errors.HeapOverflow);
-    Timers.Init(Timer, Timers.TIMER0);
-    Timers.Configure(Timer)
+    Timers.Init(Timer, Timers.TIMER0)
   END init;
 
 BEGIN

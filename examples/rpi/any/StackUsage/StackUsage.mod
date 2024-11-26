@@ -127,7 +127,6 @@ MODULE StackUsage;
   BEGIN
     NEW(timer); ASSERT(timer # NIL, Errors.HeapOverflow);
     Timers.Init(timer, Timers.TIMER0);
-    Timers.Configure(timer);
     Timers.GetTimeL(timer, seed);
     Random.Seed(seed);
     i := 0;
