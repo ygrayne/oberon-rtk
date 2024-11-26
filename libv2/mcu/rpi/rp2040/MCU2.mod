@@ -264,6 +264,9 @@ MODULE MCU2;
     PSM_XOSC*       = 1;
     PSM_ROSC*       = 0;
 
+    PSM_ALL*        = {0 .. 16};
+    PSM_RESET*      = PSM_ALL - {PSM_ROSC, PSM_XOSC};
+
     (* == RESETS: sub-system resets == *)
     (* datasheet 2.14.3, p177 *)
     RESETS_RESET*       = RESETS_BASE;
@@ -621,12 +624,10 @@ MODULE MCU2;
     TIMER_TIMERAWL_Offset*  = 028H;
     TIMER_DBGPAUSE_Offset*  = 02CH;
     TIMER_PAUSE_Offset*     = 030H;
-    TIMER_LOCKED_Offset*    = 034H;
-    TIMER_SOURCE_Offset*    = 038H;
-    TIMER_INTR_Offset*      = 03CH;
-    TIMER_INTE_Offset*      = 040H;
-    TIMER_INTF_Offset*      = 044H;
-    TIMER_INTS_Offset*      = 048H;
+    TIMER_INTR_Offset*      = 034H;
+    TIMER_INTE_Offset*      = 038H;
+    TIMER_INTF_Offset*      = 03CH;
+    TIMER_INTS_Offset*      = 040H;
 
     (* == WATCHDOG == *)
     WATCHDOG_CTRL*      = WATCHDOG_BASE;
@@ -644,6 +645,8 @@ MODULE MCU2;
       WATCHDOG_SCRATCH_Offset* = 4;
 
     WATCHDOG_TICK*     = WATCHDOG_BASE + 02CH;
+
+    WATCHDOG_XLOADTIME* = 2; (* hw error correction factor *)
 
 
     (* == RTC == *)
@@ -893,7 +896,7 @@ MODULE MCU2;
       SIO_SPINLOCK_Offset* = 4;
 
 
-  (* ===== PPB: processor private bus ===== *)
+  (* ===== PPB: private peripheral bus ===== *)
 
     (* datasheet 2.4.8, p77 *)
     (* -- SysTick -- *)
@@ -1042,5 +1045,9 @@ MODULE MCU2;
 
     (* instruction sync *)
     ISB* = 0F3BF8F6FH;
+
+    (* disable/enable interrupts via PRIMASK *)
+    CPSIE* = 0B662H; (* enable:  1011 0110 0110 0010 *)
+    CPSID* = 0B672H; (* disable: 1011 0110 0111 0010 *)
 
  END MCU2.

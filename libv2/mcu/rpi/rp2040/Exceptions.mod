@@ -55,7 +55,7 @@ MODULE Exceptions;
   PROCEDURE* GetPendingInt*(intNo: INTEGER; VAR pend: BOOLEAN);
     VAR x: SET;
   BEGIN
-    SYSTEM.GET(MCU.PPB_NVIC_ISER0, x);
+    SYSTEM.GET(MCU.PPB_NVIC_ISPR0, x);
     pend := intNo IN x
   END GetPendingInt;
 

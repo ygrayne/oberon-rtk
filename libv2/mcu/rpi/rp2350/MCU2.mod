@@ -319,6 +319,10 @@ MODULE MCU2;
     PSM_OTP*          = 1;
     PSM_COLD*         = 0;
 
+    PSM_ALL*          = {0 .. 24};
+    PSM_RESET*        = PSM_ALL - {PSM_COLD, PSM_OTP, PSM_ROSC, PSM_XOSC};
+
+
     (* == RESETS: sub-system resets == *)
     (* datasheet 7.5.3, p494 *)
     RESETS_RESET*       = RESETS_BASE;
@@ -867,8 +871,8 @@ MODULE MCU2;
     (* == WATCHDOG == *)
     (* datasheet 12.9.7, p1181 *)
     WATCHDOG_CTRL*      = WATCHDOG_BASE;
-    WATCHDOG_LOAD*          = WATCHDOG_BASE + 004H;
-    WATCHDOG_REASON*        = WATCHDOG_BASE + 008H;
+    WATCHDOG_LOAD*      = WATCHDOG_BASE + 004H;
+    WATCHDOG_REASON*    = WATCHDOG_BASE + 008H;
 
     WATCHDOG_SCRATCH0*  = WATCHDOG_BASE + 00CH;
     WATCHDOG_SCRATCH1*  = WATCHDOG_BASE + 010H;
@@ -879,6 +883,8 @@ MODULE MCU2;
     WATCHDOG_SCRATCH6*  = WATCHDOG_BASE + 024H;
     WATCHDOG_SCRATCH7*  = WATCHDOG_BASE + 028H;
       WATCHDOG_SCRATCH_Offset* = 4;
+
+    WATCHDOG_XLOADTIME* = 1;
 
     (* == BOOTRAM == *)
     (* datasheet 4.3.1, p432 *)
@@ -920,7 +926,29 @@ MODULE MCU2;
 
     (* == POWMAN == *)
     (* datasheet 6.4, p446 *)
+    (* passcode [31:16] required: 05AFE *)
     POWMAN_BADPASSWD* = POWMAN_BASE;
+    POWMAN_WDSEL*     = POWMAN_BASE + 030H;
+    (* .. *)
+
+    (* no passcode required *)
+    POWMAN_SCRATCH0*  = POWMAN_BASE + 0B0H;
+    POWMAN_SCRATCH1*  = POWMAN_BASE + 0B4H;
+    POWMAN_SCRATCH2*  = POWMAN_BASE + 0B8H;
+    POWMAN_SCRATCH3*  = POWMAN_BASE + 0BCH;
+    POWMAN_SCRATCH4*  = POWMAN_BASE + 0C0H;
+    POWMAN_SCRATCH5*  = POWMAN_BASE + 0C4H;
+    POWMAN_SCRATCH6*  = POWMAN_BASE + 0C8H;
+    POWMAN_SCRATCH7*  = POWMAN_BASE + 0CCH;
+    POWMAN_BOOT0*     = POWMAN_BASE + 0D0H;
+    POWMAN_BOOT1*     = POWMAN_BASE + 0D4H;
+    POWMAN_BOOT2*     = POWMAN_BASE + 0D8H;
+    POWMAN_BOOT3*     = POWMAN_BASE + 0DCH;
+    POWMAN_INTR*      = POWMAN_BASE + 0E0H;
+    POWMAN_INTE*      = POWMAN_BASE + 0E4H;
+    POWMAN_INTF*      = POWMAN_BASE + 0E8H;
+    POWMAN_INTS*      = POWMAN_BASE + 0ECH;
+
     (* .. *)
 
     (* == TICKS == *)
@@ -1244,7 +1272,7 @@ MODULE MCU2;
     SIO_TMDS_POP_DOUBLE_L2*   = SIO_BASE + 001E4H;
 
 
-  (* ===== PPB: processor private bus ===== *)
+  (* ===== PPB: private peripheral bus ===== *)
 
     (* datasheet 3.7.5, p141 *)
     PPB_NONSEC_Offset*  = 020000H;
@@ -1543,7 +1571,7 @@ MODULE MCU2;
     ISB* = 0F3BF8F6FH;
 
     (* disable/enable interrupts via PRIMASK *)
-    CPSIE* = 0B662H; (* enable: 1011 0110 0110 0010 *)
+    CPSIE* = 0B662H; (* enable:  1011 0110 0110 0010 *)
     CPSID* = 0B672H; (* disable: 1011 0110 0111 0010 *)
 
 END MCU2.

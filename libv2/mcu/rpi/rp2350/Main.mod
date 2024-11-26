@@ -15,7 +15,7 @@ MODULE Main;
     (* ignore the "is not used" warnings... :) *)
     (* LinkOptions is the first import of Config *)
     Config, Clocks, Memory, RuntimeErrors,
-    RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr, MCU := MCU2, SYSTEM;
+    StartUp, RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr, MCU := MCU2, SYSTEM;
 
   CONST
     Baudrate0 = 38400; (* terminal 0 *)
@@ -118,9 +118,13 @@ MODULE Main;
     RuntimeErrorsOut.SetWriter(Core1, Terminals.Werr[1]);
     RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException);
 
+    (* FPU *)
     IF FPUenable THEN
       initFPU(FPUnonSecAccess, FPUtreatAsSec)
-    END
+    END;
+
+    (* let's get the timers symmetrical *)
+    StartUp.ReleaseReset(MCU.RESETS_TIMER1) (* TIMER0 is released by boot procedure *)
   END init;
 
 BEGIN

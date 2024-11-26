@@ -5,9 +5,10 @@ MODULE StartUp;
   Start-up control
   * power-on state machine (hardware controlled part)
   * reset controller (software controlled part)
-  Note: watchdog resets selecyion in 'Watchdog.mod'
+  * watchdog boot vector
+  * watchdog resets configs (psm, resets)
   --
-  MCU: RP2040, RP2350
+  MCU: RP2040
   --
   See
   * 'PSM_*' values in MCU2.mod for blocks to reset
@@ -19,17 +20,28 @@ MODULE StartUp;
 
   IMPORT SYSTEM, MCU := MCU2;
 
-  (* power on state machine *)
+  CONST
+    BootMagic = 0B007C0D3H;
 
-  PROCEDURE AwaitPowerOnResetDone*(which: INTEGER);
+
+  (* power on state machine PSM *)
+
+  PROCEDURE* AwaitPowerOnResetDone*(component: INTEGER);
     VAR x: SET;
   BEGIN
     REPEAT
       SYSTEM.GET(MCU.PSM_DONE, x)
-    UNTIL which IN x
+    UNTIL component IN x
   END AwaitPowerOnResetDone;
 
-  (* reset controller *)
+
+  PROCEDURE* SetWatchdogPowerOnResets*(components: SET);
+  BEGIN
+    SYSTEM.PUT(MCU.PSM_WDSEL, components)
+  END SetWatchdogPowerOnResets;
+
+
+  (* resets controller *)
 
   PROCEDURE* ReleaseReset*(devNo: INTEGER);
   (* release the reset of a device out of start-up *)
@@ -43,5 +55,22 @@ MODULE StartUp;
       UNTIL (devNo IN done)
     END
   END ReleaseReset;
+
+
+  PROCEDURE* SetWatchdogResetResets*(devices: SET);
+  BEGIN
+    SYSTEM.PUT(MCU.RESETS_WDSEL, devices)
+  END SetWatchdogResetResets;
+
+
+  (* watchdog *)
+
+  PROCEDURE* SetWatchdogBootVector*(stackPointer, entryPoint: INTEGER);
+  BEGIN
+    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH4, BootMagic);
+    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH5, BITS(entryPoint) / BITS(BootMagic));
+    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH6, stackPointer);
+    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH7, entryPoint)
+  END SetWatchdogBootVector;
 
 END StartUp.

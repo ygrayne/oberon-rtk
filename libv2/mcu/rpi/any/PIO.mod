@@ -3,8 +3,8 @@ MODULE PIO;
   Oberon RTK Framework v2
   --
   PIO devices
-  First-cut implementation as of now, to get the example program running.
-  See https://oberon-rtk.org/examples/piosquare/
+  First-cut implementation, to get the example program running.
+  See https://oberon-rtk.org/examples/v2/piosquare/
   --
   MCU: RP2040, RP2350
   --
@@ -116,19 +116,19 @@ MODULE PIO;
   END Configure;
 
 
-  PROCEDURE EnableStateMachines*(dev: Device; mask: SET);
+  PROCEDURE* EnableStateMachines*(dev: Device; mask: SET);
   BEGIN
     SYSTEM.PUT(dev.CTRL + MCU.ASET, mask * StateMachines)
   END EnableStateMachines;
 
 
-  PROCEDURE DisableStateMachines*(dev: Device; mask: SET);
+  PROCEDURE* DisableStateMachines*(dev: Device; mask: SET);
   BEGIN
     SYSTEM.PUT(dev.CTRL + MCU.ACLR, mask * StateMachines)
   END DisableStateMachines;
 
 
-  PROCEDURE RestartStateMachines*(dev: Device; mask: SET);
+  PROCEDURE* RestartStateMachines*(dev: Device; mask: SET);
   BEGIN
     mask := mask * StateMachines;
     mask := BITS(LSL(ORD(mask), CTRL_SM_RESTART0));
@@ -136,7 +136,7 @@ MODULE PIO;
   END RestartStateMachines;
 
 
-  PROCEDURE RestartClockDivs*(dev: Device; mask: SET);
+  PROCEDURE* RestartClockDivs*(dev: Device; mask: SET);
   BEGIN
     mask := mask * StateMachines;
     mask := BITS(LSL(ORD(mask), CTRL_CLKDIV_RESTART0));
@@ -144,7 +144,7 @@ MODULE PIO;
   END RestartClockDivs;
 
 
-  PROCEDURE PutCode*(dev: Device; code: ARRAY OF INTEGER; offset, numInstr: INTEGER);
+  PROCEDURE* PutCode*(dev: Device; code: ARRAY OF INTEGER; offset, numInstr: INTEGER);
     VAR i, regAddr: INTEGER;
   BEGIN
     ASSERT(offset + numInstr <= MaxNumInstr, Errors.ProgError);
@@ -157,7 +157,7 @@ MODULE PIO;
   END PutCode;
 
 
-  PROCEDURE ConfigPinsSet*(dev: Device; smNo: INTEGER; basePinNo, count: INTEGER);
+  PROCEDURE* ConfigPinsSet*(dev: Device; smNo: INTEGER; basePinNo, count: INTEGER);
     CONST ClearMask = {SM_PINCTRL_SET_BASE0 .. SM_PINCTRL_SET_BASE1, SM_PINCTRL_SET_COUNT0 .. SM_PINCTRL_SET_COUNT1};
     VAR x: INTEGER;
   BEGIN
@@ -167,7 +167,7 @@ MODULE PIO;
   END ConfigPinsSet;
 
 
-  PROCEDURE ConfigClockDiv*(dev: Device; smNo, int, frac: INTEGER);
+  PROCEDURE* ConfigClockDiv*(dev: Device; smNo, int, frac: INTEGER);
   (* int = 0 => works as int = 65536 *)
     VAR x: INTEGER;
   BEGIN
@@ -176,7 +176,7 @@ MODULE PIO;
   END ConfigClockDiv;
 
 
-  PROCEDURE ConfigWrap*(dev: Device; smNo: INTEGER; wrapBottom, wrapTop: INTEGER);
+  PROCEDURE* ConfigWrap*(dev: Device; smNo: INTEGER; wrapBottom, wrapTop: INTEGER);
     CONST ClearMask = {SM_EXECCTRL_WRAP_BOTTOM0 .. SM_EXECCTRL_WRAP_BOTTOM1, SM_EXECCTRL_WRAP_TOP0 .. SM_EXECCTRL_WRAP_TOP1};
     VAR x: INTEGER;
   BEGIN
@@ -186,7 +186,7 @@ MODULE PIO;
   END ConfigWrap;
 
 
-  PROCEDURE SetStartAddr*(dev: Device; smNo: INTEGER; addr: INTEGER);
+  PROCEDURE* SetStartAddr*(dev: Device; smNo: INTEGER; addr: INTEGER);
   BEGIN
     SYSTEM.PUT(dev.SM[smNo].INSTR, addr) (* JMP to addr *)
   END SetStartAddr;
