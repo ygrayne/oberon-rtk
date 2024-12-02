@@ -12,8 +12,8 @@ MODULE Messages;
   IMPORT SYSTEM, MCU := MCU2, Kernel, MultiCore, Config, Signals, Errors;
 
   CONST
-    BufferSize = Config.MessagesBufferSize;
-    MaxNumSndRcv = Config.MessagesMaxNumSndRcv;
+    BufferSize = 4;
+    MaxNumSndRcv = 4;
 
     NumCores = Config.NumCores;
 

@@ -16,7 +16,7 @@ MODULE UARTdev;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Errors, MCU := MCU2, StartUp, TextIO;
+  IMPORT SYSTEM, Errors, MCU := MCU2, StartUp, Clocks, TextIO;
 
   CONST
     UART0* = 0;
@@ -175,7 +175,7 @@ MODULE UARTdev;
     SYSTEM.PUT(dev.CR, {});
 
     (* baudrate *)
-    x := (MCU.PeriClkFreq * 8) DIV baudrate;
+    x := (Clocks.PeriClkFreq * 8) DIV baudrate;
     intDiv := LSR(x, 7);
     IF intDiv = 0 THEN
       intDiv := 1; fracDiv := 0

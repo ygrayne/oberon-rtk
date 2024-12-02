@@ -34,7 +34,6 @@ MODULE BlinkPlusC1;
   BEGIN
     NEW(timer); ASSERT(timer # NIL, Errors.HeapOverflow);
     Timers.Init(timer, Timers.TIMER1);
-    Timers.Configure(timer);
     Timers.SetTime(timer, 0, 0FFFFFFFFH - 10000000); (* force timeL roll-over after ten seconds *)
     Out.String("core 1"); Out.Ln;
     GPIO.Set({LED.Green});

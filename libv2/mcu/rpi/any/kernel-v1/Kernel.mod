@@ -16,11 +16,11 @@ MODULE Kernel;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Coroutines, Config, Memory, SysTick, MCU := MCU2, Errors;
+  IMPORT SYSTEM, Coroutines, Memory, SysTick, MCU := MCU2, Errors;
 
   CONST
-    MaxNumThreads* = Config.MaxNumThreads;
-    NumCores = Config.NumCores;
+    MaxNumThreads* = 16;
+    NumCores = MCU.NumCores;
 
     (* result codes *)
     OK* = 0;

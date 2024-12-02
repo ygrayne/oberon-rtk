@@ -33,7 +33,7 @@ MODULE RuntimeErrors;
     SYSTEM, LED, MCU := MCU2, Config, Memory;
 
   CONST
-    NumCores* = Config.NumCores;
+    NumCores* = MCU.NumCores;
     TraceDepth* = 7;
     MoreTracePoints* = -1;
     StackTraceNotLR = 0;

@@ -26,6 +26,11 @@ MODULE Clocks;
   IMPORT SYSTEM, MCU := MCU2, GPIO, StartUp;
 
   CONST
+    SysClkFreq*  = 125 * 1000000; (* from SYS PLL *)
+    RefClkFreq*  =  12 * 1000000; (* from USB PLL *)
+    PeriClkFreq* =  48 * 1000000; (* from USB PLL *)
+    SysTickFreq* =   1 * 1000000; (* via clock divider in ticks gen, from ref clock *)
+
     (* CLK_GPOUT0_CTRL *)
     CLK_GPOUT0_CTRL_ENABLE    = 11;
     CLK_GPOUT0_CTRL_AUXSRC_1  = 8;

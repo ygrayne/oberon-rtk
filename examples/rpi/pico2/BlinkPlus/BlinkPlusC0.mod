@@ -34,7 +34,6 @@ MODULE BlinkPlusC0;
     MultiCore.InitCoreOne(C1.Run, Memory.DataMem[Core1].stackStart, Memory.DataMem[Core1].dataStart);
     NEW(timer); ASSERT(timer # NIL, Errors.HeapOverflow);
     Timers.Init(timer, Timers.TIMER0);
-    Timers.Configure(timer);
     Timers.SetTime(timer, 0, 0FFFFFFFFH - 10000000); (* force timeL roll-over after ten seconds *)
     Out.String("core 0"); Out.Ln;
     Timers.GetTime(timer, timeH, before);

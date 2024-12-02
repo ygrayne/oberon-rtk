@@ -22,12 +22,6 @@ MODULE MCU2;
     NumGPIO*        = 30; (* QFN-60 package as on Pico2 *)
     NumInterrupts*  = 52;
 
-    (* as configured in Clocks.mod *)
-    SysClkFreq*  = 125 * 1000000; (* from SYS PLL *)
-    RefClkFreq*  =  12 * 1000000; (* from USB PLL *)
-    PeriClkFreq* =  48 * 1000000; (* from USB PLL *)
-    SysTickFreq* =   1 * 1000000; (* via clock divider in ticks gen, from ref clock *)
-
     (* atomic register access, datasheet 2.1.3, p26
     addr + 0000H: normal read write access
     addr + 1000H: atomic XOR on write
@@ -127,7 +121,7 @@ MODULE MCU2;
     SRAM4_BASE*           = 020040000H;
     SRAM8_BASE*           = 020080000H;
     SRAM9_BASE*           = 020081000H;
-    SRAM_HALF_BASE*       = SRAM4_BASE;
+    SRAM_MAIN_TOP*        = SRAM8_BASE;
     SRAM_EXT0*            = SRAM8_BASE;
     SRAM_EXT1*            = SRAM9_BASE;
 

@@ -11,9 +11,6 @@ import argparse
 class Command:
     _defs = {}
 
-    def __init__(self, cfg):
-        self._cfg = cfg
-
     @property
     def name(self):
         return self._defs['name']
@@ -51,6 +48,10 @@ class Command:
 
     def run(self, args):
         pass
+
+class CommandCfg(Command):
+    def __init__(self, cfg):
+        self._cfg = cfg
 
 class Parser(argparse.ArgumentParser):
     def __init__(self, prog):

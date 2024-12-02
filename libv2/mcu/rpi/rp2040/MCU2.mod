@@ -22,12 +22,6 @@ MODULE MCU2;
     NumGPIO*        = 30;
     NumInterrupts*  = 32;
 
-    (* as configured in Clocks.mod *)
-    SysClkFreq*  = 125 * 1000000; (* from SYS PLL *)
-    RefClkFreq*  =  48 * 1000000; (* from USB PLL *)
-    PeriClkFreq* =  48 * 1000000; (* from USB PLL *)
-    SysTickFreq* =   1 * 1000000; (* via clock divider in watchdog, from ref clock *)
-
     (* atomic register access, datasheet 2.1.2, p18
     addr + 0000H: normal read write access
     addr + 1000H: atomic XOR on write
@@ -99,9 +93,9 @@ MODULE MCU2;
 
     (* == SRAM == *)
     SRAM0_BASE*           = 020000000H;
-    SRAM_HALF_BASE*       = 020020000H;
     SRAM4_BASE*           = 020040000H;
     SRAM5_BASE*           = 020041000H;
+    SRAM_MAIN_TOP*        = SRAM4_BASE;
     SRAM_EXT0*            = SRAM4_BASE;
     SRAM_EXT1*            = SRAM5_BASE;
 

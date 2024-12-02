@@ -56,7 +56,6 @@ MODULE BlinkPlusC1;
   BEGIN
     NEW(Timer); ASSERT(Timer # NIL, Errors.HeapOverflow);
     Timers.Init(Timer, Timers.TIMER0);
-    Timers.Configure(Timer);
     Timers.SetTime(Timer, 0, 0FFFFFFFFH - 10000000); (* force timeL roll-over after ten seconds *)
   END initTimer;
 

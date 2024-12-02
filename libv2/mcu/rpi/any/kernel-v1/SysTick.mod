@@ -11,14 +11,14 @@ MODULE SysTick;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2;
+  IMPORT SYSTEM, MCU := MCU2, Clocks;
 
   CONST
     (* bits *)
     SYST_CSR_COUNTFLAG = 16;
     SYST_CSR_ENABLE = 0;
 
-    CountPerMillisecond = MCU.SysTickFreq DIV 1000;
+    CountPerMillisecond = Clocks.SysTickFreq DIV 1000;
 
 
   PROCEDURE Tick*(): BOOLEAN;

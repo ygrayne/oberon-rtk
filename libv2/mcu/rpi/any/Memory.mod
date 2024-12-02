@@ -16,8 +16,10 @@ MODULE Memory;
   IMPORT SYSTEM, MCU := MCU2, Config, MAU;
 
   CONST
-    NumCores = Config.NumCores;
-    MaxNumProcs = Config.MaxNumProcs;
+    NumCores = MCU.NumCores;
+    NumThreadStacks = 16;
+    CoreZeroMainStackSize = 1024;
+    CoreOneMainStackSize  = 1024;
 
   TYPE
     CoreHeap = RECORD
@@ -31,7 +33,7 @@ MODULE Memory;
     END;
 
     CoreStacks = RECORD
-      threadStacks: ARRAY MaxNumProcs OF Stack;
+      threadStacks: ARRAY NumThreadStacks OF Stack;
       loopStack: Stack;
       stacksBottom, stacksTop: INTEGER;
       stackCheckEnabled: BOOLEAN
@@ -234,10 +236,10 @@ MODULE Memory;
     heaps[Core1].heapLimit := Config.CoreOneHeapLimit;
 
     (* thread & loop stacks *)
-    stacks[Core0].stacksBottom := Config.CoreZeroStackStart - Config.CoreZeroMainStackSize;
+    stacks[Core0].stacksBottom := Config.CoreZeroStackStart - CoreZeroMainStackSize;
     stacks[Core0].stacksTop := Config.CoreZeroStackStart;
     stacks[Core0].stackCheckEnabled := FALSE;
-    stacks[Core1].stacksBottom := Config.CoreOneStackStart - Config.CoreOneMainStackSize;
+    stacks[Core1].stacksBottom := Config.CoreOneStackStart - CoreOneMainStackSize;
     stacks[Core1].stacksTop := Config.CoreOneStackStart;
     stacks[Core1].stackCheckEnabled := FALSE;
 
