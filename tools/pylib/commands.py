@@ -70,8 +70,9 @@ class Parser(argparse.ArgumentParser):
         if oargs is not {}:
             for oarg, odef in oargs.items():
                 self.add_argument(oflags[oarg], dest = oarg, **odef)
+        self.set_defaults(func = cmd_def.run)
 
-    def add_sub_command(self, cmd_name, cmd_def, cmd_run):
+    def add_sub_command(self, cmd_name, cmd_def):
         if self._subparser is None:
             self._subparser = self.add_subparsers(title = 'commands')
         cmdp = self._subparser.add_parser(name = cmd_name, help = cmd_def.help)
@@ -83,4 +84,4 @@ class Parser(argparse.ArgumentParser):
         if oargs is not {}:
             for oarg, odef in oargs.items():
                 cmdp.add_argument(oflags[oarg], dest = oarg, **odef)
-        cmdp.set_defaults(func = cmd_run)
+        cmdp.set_defaults(func = cmd_def.run)

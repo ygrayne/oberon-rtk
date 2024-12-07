@@ -65,6 +65,9 @@ class MainCmd(commands.Command):
         }
     }
 
+    def run(self, args):
+        print("{}: use a command, type '{} -h' for a list of commands".format(PROG_NAME, PROG_NAME))
+
 
 class RPcmd(commands.Command):
     """Common code for all sub-commands"""
@@ -100,6 +103,8 @@ class RPcmd(commands.Command):
                 else:
                     print("{}: cannot find drive {}".format(PROG_NAME, self._drive_name))
                     sys.exit(1)
+            else:
+                drive = ''
         self._drive = drive
 
     def _print_verbose(self):
@@ -377,14 +382,10 @@ def main():
     parser = commands.Parser(prog = PROG_NAME)
     parser.add_args(main_cmd)
     for cmd_name, cmd_def in cmds.items():
-        parser.add_sub_command(cmd_name, cmd_def, cmd_def.run)
+        parser.add_sub_command(cmd_name, cmd_def)
 
     args = parser.parse()
-    if hasattr(args, 'func'):
-        args.func(args)
-    else:
-        print("{}: use a command, type '{} -h' for a list of commands".format(PROG_NAME, PROG_NAME))
-        sys.exit(1)
+    args.func(args)
 
 if __name__ == '__main__':
     main()
