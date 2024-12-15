@@ -15,7 +15,8 @@ MODULE WatchdogC0;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Main, Kernel, Out, MultiCore, StartUp, Memory, Errors, GPIO, LED, Watchdog, MCU := MCU2, CoreOne := WatchdogC1;
+  IMPORT
+    SYSTEM, Main, Kernel, Out, MultiCore, StartUp, Memory, Errors, GPIO, LED, Watchdog, MCU := MCU2, CoreOne := WatchdogC1;
 
   CONST
     Core1 = 1;
@@ -31,7 +32,6 @@ MODULE WatchdogC0;
     PSM_WDSEL = MCU.PSM_WDSEL;
     RESETS_WDSEL = MCU.RESETS_WDSEL;
     SCRATCH0 = MCU.WATCHDOG_SCRATCH0;
-
 
   VAR
     t0, t1, t2: Kernel.Thread;

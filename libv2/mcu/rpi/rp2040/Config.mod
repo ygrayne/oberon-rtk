@@ -81,6 +81,9 @@ MODULE Config;
     CodeStart*: INTEGER;
     CodeEnd*: INTEGER;
 
+    (* Resources block at the end of the program *)
+    ResourceStart*: INTEGER;
+
     (* module data space *)
     ModuleDataStart*: INTEGER;
     ModuleDataEnd*: INTEGER;
@@ -96,9 +99,10 @@ MODULE Config;
     (* core 1, see also relevant CONSTs above *)
     CoreOneDataStart := CoreZeroDataEnd;
     CoreOneHeapStart := CoreOneDataStart + (CoreZeroHeapStart - CoreZeroDataStart);
-    (* code *)
+    (* code and resources *)
     CodeStart := LinkOptions.CodeStart;
     CodeEnd := LinkOptions.CodeEnd;
+    ResourceStart := LinkOptions.ResourceStart;
     (* module data *)
     ModuleDataStart := CoreZeroStackStart + 04H;
     ModuleDataEnd := CoreZeroDataEnd

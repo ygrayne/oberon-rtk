@@ -18,13 +18,13 @@ MODULE Memory;
   CONST
     NumCores = MCU.NumCores;
     NumThreadStacks = 16;
-    CoreZeroMainStackSize = 1024;
-    CoreOneMainStackSize  = 1024;
+    CoreZeroMainStackSize* = 1024;
+    CoreOneMainStackSize*  = 1024;
 
   TYPE
     CoreHeap = RECORD
       heapLimit: INTEGER;
-      heapTop: INTEGER;
+      heapTop: INTEGER
     END;
 
     Stack = RECORD

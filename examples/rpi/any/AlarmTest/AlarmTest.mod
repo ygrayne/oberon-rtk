@@ -201,7 +201,7 @@ MODULE AlarmTest;
 
   PROCEDURE run;
     CONST Prio = MCU.PPB_ExcPrio2;
-    VAR now, time, x: INTEGER;
+    VAR now, time: INTEGER;
   BEGIN
     initRuns;
     IF PreCacheProcs THEN

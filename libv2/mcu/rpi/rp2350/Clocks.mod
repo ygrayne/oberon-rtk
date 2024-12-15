@@ -23,7 +23,7 @@ MODULE Clocks;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, GPIO, StartUp;
+  IMPORT SYSTEM, MCU := MCU2;
 
   CONST
     SysClkFreq*  = 125 * 1000000; (* from SYS PLL *)
@@ -31,33 +31,18 @@ MODULE Clocks;
     PeriClkFreq* =  48 * 1000000; (* from USB PLL *)
     SysTickFreq* =   1 * 1000000; (* via clock divider in ticks gen, from ref clock *)
 
-    (* CLK_GPOUT0_CTRL *)
-    CLK_GPOUT0_CTRL_ENABLE    = 11;
-    CLK_GPOUT0_CTRL_AUXSRC_1  = 8;
-    CLK_GPOUT0_CTRL_AUXSRC_0  = 5;
-      GPOUT_PLLsys*   = 00H; (* reset value *)
-      GPOUT_PLLusb*   = 03H;
-      GPOUT_ROSC*     = 05H;
-      GPOUT_XOSC*     = 06H;
-      GPOUT_LPO*      = 07H;
-      GPOUT_ClkSys*   = 08H;
-      GPOUT_ClkUSB*   = 09H;
-      GPOUT_ClkADC*   = 0AH;
-      GPOUT_ClkRef*   = 0BH;
-      GPOUT_ClkPeri*  = 0CH;
-      GPOUT_ClkHSTX*  = 0DH;
-
     (* XOSC_CTRL bits & values *)
     XOSC_CTRL_ENABLE_1     = 23;
     XOSC_CTRL_ENABLE_0     = 12;
-      XOSC_Disable = 0D1EH;
       XOSC_Enable  = 0FABH;
     XOSC_CTRL_FREQ_RANGE_1 = 11;
     XOSC_CTRL_FREQ_RANGE_0 = 0;
       FREQ_RANGE_val_15 = 0AA0H;
+    (* unused
       FREQ_RANGE_val_30 = 0AA1H;
       FREQ_RANGE_val_60 = 0AA2H;
       FREQ_RANGE_val_100 = 0AA3H;
+    *)
 
     (* XOSC_STATUS bits *)
     XOSC_STATUS_STABLE = 31;
@@ -91,7 +76,9 @@ MODULE Clocks;
     PLL_USB_PRIM_POSTDIV2_0  = 12;
 
     (* CLK_PERI_CTRL bits *)
+    (* unused
     CLK_PERI_CTRL_ENABLED   = 28;
+    *)
     CLK_PERI_CTRL_ENABLE    = 11;
     CLK_PERI_CTRL_AUXSRC_1  = 7;
     CLK_PERI_CTRL_AUXSRC_0  = 5;
@@ -105,63 +92,25 @@ MODULE Clocks;
     TICKS_CTRL_EN = 0;
 
 
-  (* clk signal external monitoring *)
-  (* oscilloscopes rock! *)
-
-  PROCEDURE Monitor*(which: INTEGER);
-  (* on pin 21 using CLOCK GPOUT0 *)
-    CONST Pin = 21;
-    VAR x: INTEGER;
+  PROCEDURE* releaseReset(devNo: INTEGER);
+  (* release the reset of a device out of start-up *)
+    VAR done: SET;
   BEGIN
-    (* set up clock GPOUT0 *)
-    x := 0;
-    BFI(x, CLK_GPOUT0_CTRL_AUXSRC_1, CLK_GPOUT0_CTRL_AUXSRC_0, which);
-    SYSTEM.PUT(MCU.CLK_GPOUT0_CTRL, x);
-    SYSTEM.PUT(MCU.CLK_GPOUT0_CTRL + MCU.ASET, {CLK_GPOUT0_CTRL_ENABLE});
-    GPIO.SetFunction(Pin, MCU.IO_BANK0_Fclk)
-  END Monitor;
+    SYSTEM.GET(MCU.RESETS_DONE, done);
+    IF ~(devNo IN done) THEN
+      SYSTEM.PUT(MCU.RESETS_RESET + MCU.ACLR, {devNo});
+      REPEAT
+        SYSTEM.GET(MCU.RESETS_DONE, done);
+      UNTIL (devNo IN done)
+    END
+  END releaseReset;
 
-
-  (* clock gating *)
-  (* note: all clocks are enabled upon reset *)
-
-  PROCEDURE* EnableClockWake*(en0, en1: SET);
-  BEGIN
-    SYSTEM.PUT(MCU.CLK_WAKE_EN0 + MCU.ASET, en0);
-    SYSTEM.PUT(MCU.CLK_WAKE_EN1 + MCU.ASET, en1)
-  END EnableClockWake;
-
-  PROCEDURE* DisableClockWake*(en0, en1: SET);
-  BEGIN
-    SYSTEM.PUT(MCU.CLK_WAKE_EN0 + MCU.ACLR, en0);
-    SYSTEM.PUT(MCU.CLK_WAKE_EN1 + MCU.ACLR, en1)
-  END DisableClockWake;
-
-  PROCEDURE* EnableClockSleep*(en0, en1: SET);
-  BEGIN
-    SYSTEM.PUT(MCU.CLK_SLEEP_EN0 + MCU.ASET, en0);
-    SYSTEM.PUT(MCU.CLK_SLEEP_EN1 + MCU.ASET, en1)
-  END EnableClockSleep;
-
-  PROCEDURE* DisableClockSleep*(en0, en1: SET);
-  BEGIN
-    SYSTEM.PUT(MCU.CLK_SLEEP_EN0 + MCU.ACLR, en0);
-    SYSTEM.PUT(MCU.CLK_SLEEP_EN1 + MCU.ACLR, en1)
-  END DisableClockSleep;
-
-  PROCEDURE* GetEnabled*(VAR en0, en1: SET);
-  BEGIN
-    SYSTEM.GET(MCU.CLK_ENABLED0, en0);
-    SYSTEM.GET(MCU.CLK_ENABLED1, en1)
-  END GetEnabled;
-
-  (* start-up *)
 
   PROCEDURE startXOSC;
     VAR x: INTEGER;
   BEGIN
-    (* ensure register accessibility *)
-    StartUp.AwaitPowerOnResetDone(MCU.PSM_XOSC);
+    (* ensure register accessibility, ie. PSM done *)
+    REPEAT UNTIL SYSTEM.BIT(MCU.PSM_DONE, MCU.PSM_XOSC);
     (* set start-up delay *)
     SYSTEM.PUT(MCU.XOSC_STARTUP, 94); (* about 2 ms *)
     (* enable *)
@@ -178,7 +127,7 @@ MODULE Clocks;
   (* 125 MHz *)
     VAR x: INTEGER;
   BEGIN
-    StartUp.ReleaseReset(MCU.RESETS_PLL_SYS);
+    releaseReset(MCU.RESETS_PLL_SYS);
     (* set freq 125 MHz *)
     SYSTEM.PUT(MCU.PLL_SYS_FBDIV_INT, 125);
     (* power up VCO and PLL (note: clear bits) *)
@@ -202,7 +151,7 @@ MODULE Clocks;
   (* we'll also feed the reference clock with this PLL *)
     VAR x: INTEGER;
   BEGIN
-    StartUp.ReleaseReset(MCU.RESETS_PLL_USB);
+    releaseReset(MCU.RESETS_PLL_USB);
     (* set freq 48 MHz *)
     SYSTEM.PUT(MCU.PLL_USB_FBDIV_INT, 64);
     (* power up VCO and PLL (note: clear bits) *)

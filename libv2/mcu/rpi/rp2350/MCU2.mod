@@ -159,6 +159,20 @@ MODULE MCU2;
     CLK_GPOUT3_CTRL*      = CLOCKS_BASE + 024H;
     CLK_GPOUT3_DIV*       = CLOCKS_BASE + 028H;
     CLK_GPOUT3_SELECTED*  = CLOCKS_BASE + 02CH;
+
+    (* clock out sources *)
+    GPOUT_PLLsys*   = 00H; (* reset value *)
+    GPOUT_PLLusb*   = 03H;
+    GPOUT_ROSC*     = 05H;
+    GPOUT_XOSC*     = 06H;
+    GPOUT_LPO*      = 07H;
+    GPOUT_ClkSys*   = 08H;
+    GPOUT_ClkUSB*   = 09H;
+    GPOUT_ClkADC*   = 0AH;
+    GPOUT_ClkRef*   = 0BH;
+    GPOUT_ClkPeri*  = 0CH;
+    GPOUT_ClkHSTX*  = 0DH;
+
     (* clk_ref *)
     CLK_REF_CTRL*         = CLOCKS_BASE + 030H;
     CLK_REF_DIV*          = CLOCKS_BASE + 034H;

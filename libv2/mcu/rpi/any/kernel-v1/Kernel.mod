@@ -82,7 +82,7 @@ MODULE Kernel;
 
   (* ready queue *)
 
-  PROCEDURE slotIn(t: Thread; ctx: CoreContext);
+  PROCEDURE* slotIn(t: Thread; ctx: CoreContext);
   (* put into ready queue, prio sorted *)
     VAR t0, t1: Thread;
   BEGIN
@@ -135,20 +135,20 @@ MODULE Kernel;
   END Reallocate;
 
 
-  PROCEDURE Enable*(t: Thread);
+  PROCEDURE* Enable*(t: Thread);
   BEGIN
     ASSERT(t # NIL, Errors.PreCond);
     t.state := StateEnabled
   END Enable;
 
 
-  PROCEDURE SetPrio*(t: Thread; prio: INTEGER);
+  PROCEDURE* SetPrio*(t: Thread; prio: INTEGER);
   BEGIN
     t.prio := prio
   END SetPrio;
 
 
-  PROCEDURE SetPeriod*(t: Thread; period, startAfter: INTEGER);
+  PROCEDURE* SetPeriod*(t: Thread; period, startAfter: INTEGER);
   BEGIN
     t.period := period;
     t.ticker := startAfter
@@ -166,7 +166,7 @@ MODULE Kernel;
   END Next;
 
 
-  PROCEDURE NextQueued*(): Thread;
+  PROCEDURE* NextQueued*(): Thread;
     VAR cid: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
@@ -194,7 +194,7 @@ MODULE Kernel;
   END DelayMe;
 
 
-  PROCEDURE StartTimeout*(timeout: INTEGER);
+  PROCEDURE* StartTimeout*(timeout: INTEGER);
     VAR cid: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
@@ -227,7 +227,7 @@ MODULE Kernel;
   END AwaitDeviceFlags;
 
 
-  PROCEDURE CancelAwaitDeviceFlags*;
+  PROCEDURE* CancelAwaitDeviceFlags*;
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
@@ -236,7 +236,7 @@ MODULE Kernel;
   END CancelAwaitDeviceFlags;
 
 
-  PROCEDURE Trigger*(): INTEGER;
+  PROCEDURE* Trigger*(): INTEGER;
     VAR cid: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
@@ -244,7 +244,7 @@ MODULE Kernel;
   END Trigger;
 
 
-  PROCEDURE ChangePrio*(prio: INTEGER);
+  PROCEDURE* ChangePrio*(prio: INTEGER);
     VAR cid: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
@@ -252,7 +252,7 @@ MODULE Kernel;
   END ChangePrio;
 
 
-  PROCEDURE ChangePeriod*(period, startAfter: INTEGER);
+  PROCEDURE* ChangePeriod*(period, startAfter: INTEGER);
      VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
@@ -262,7 +262,7 @@ MODULE Kernel;
   END ChangePeriod;
 
 
-  PROCEDURE Ct*(): Thread;
+  PROCEDURE* Ct*(): Thread;
     VAR cid: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
@@ -270,7 +270,7 @@ MODULE Kernel;
   END Ct;
 
 
-  PROCEDURE Tid*(): INTEGER;
+  PROCEDURE* Tid*(): INTEGER;
     VAR cid: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
@@ -278,7 +278,7 @@ MODULE Kernel;
   END Tid;
 
 
-  PROCEDURE Prio*(t: Thread): INTEGER;
+  PROCEDURE* Prio*(t: Thread): INTEGER;
     RETURN t.prio
   END Prio;
 

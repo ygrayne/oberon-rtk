@@ -27,7 +27,7 @@ MODULE SignalSync;
   PROCEDURE writeThreadInfo(tid, cid: INTEGER);
   BEGIN
     Out.String("c"); Out.Int(cid, 0);
-    Out.String("-t"); Out.Int(tid, 0);
+    Out.String("-t"); Out.Int(tid, 0)
   END writeThreadInfo;
 
 

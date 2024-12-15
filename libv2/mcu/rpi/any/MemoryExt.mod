@@ -24,7 +24,7 @@ MODULE MemoryExt;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Config, ResData, Errors, Out;
+  IMPORT SYSTEM, MCU := MCU2, Config, ProgData;
 
   CONST
     NumCores = MCU.NumCores;
@@ -54,31 +54,12 @@ MODULE MemoryExt;
   END Allocate;
 
 
-  PROCEDURE getCopyEndAddr(procAddr: INTEGER; VAR nextProcAddr: INTEGER);
-    CONST ItemSize = 6;
-    VAR
-      r: ResData.Resource;
-      i, index, addr, resSize, numItems, recType: INTEGER;
+  PROCEDURE getCopyEndAddr(procAddr: INTEGER; VAR copyEndAddr: INTEGER);
+    VAR entry0, entry1: ProgData.Entry;
   BEGIN
-    ResData.Open(r, ".ref");
-    resSize := ResData.Size(r);
-    numItems := resSize DIV (ItemSize * 4);
-    i := 0;
-    index := 0;
-    nextProcAddr := 0;
-    WHILE i < numItems DO
-      ResData.GetInt(r, index, recType);
-      ResData.GetInt(r, index + 5, addr);
-      IF addr = procAddr THEN
-        ASSERT(recType # 0, Errors.ProgError); (* recType = 0 => module *)
-        ResData.GetInt(r, index + ItemSize, recType);
-        ResData.GetInt(r, index + ItemSize + 5, nextProcAddr);
-        ASSERT(recType # 0, Errors.BadResourceData);
-        ASSERT(nextProcAddr > procAddr, Errors.BadResourceData)
-      END;
-      index := index + ItemSize;
-      INC(i)
-    END
+    ProgData.FindEntry(procAddr, entry0);
+    ProgData.GetNextEntry(entry0, entry1);
+    copyEndAddr := entry1.codeAddr
   END getCopyEndAddr;
 
 
