@@ -2,20 +2,12 @@ MODULE Clocks;
 (**
   Oberon RTK Framework
   --
-  Clocks:
-  * initialisation at start-up (auto)
-  * clock monitor on pin 21
-  * clock-gating: enabling and disabling of specific clocks for power-savings
-  Remark: maybe split the clock init from other functions, so these can
-  only be loaded when needed.
+  Clocks configuration and initialisation at start-up.
   --
   MCU: RP2350
   --
-  Current configuration:
-  * clk_sys: 125 Mhz
-  * clk_ref: 12 Mhz
-  * clk_peri: 48 Mhz
-  * clk_tick: 1 Mhz
+  Note: implemented without importing 'StartUp', in order to make the
+  module configurable for programs.
   --
   Run 'python -m vcocalc -h' for PLL calculations.
   --
@@ -106,7 +98,7 @@ MODULE Clocks;
   END releaseReset;
 
 
-  PROCEDURE startXOSC;
+  PROCEDURE* startXOSC;
     VAR x: INTEGER;
   BEGIN
     (* ensure register accessibility, ie. PSM done *)

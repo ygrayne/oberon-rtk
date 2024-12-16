@@ -9,12 +9,6 @@ MODULE Clocks;
   Note: implemented without importing 'StartUp', in order to make the
   module configurable for programs.
   --
-  Current configuration:
-  * clk_sys: 125 Mhz
-  * clk_ref: 12 Mhz
-  * clk_peri: 48 Mhz
-  * clk_tick: 1 Mhz
-  --
   Run 'python -m vcocalc -h' for PLL calculations.
   --
   Copyright (c) 2023-2024 Gray gray@grayraven.org
@@ -25,7 +19,7 @@ MODULE Clocks;
 
   CONST
     SysClkFreq*  = 125 * 1000000; (* from SYS PLL *)
-    RefClkFreq*  =  48 * 1000000; (* from USB PLL *)
+    RefClkFreq*  =  12 * 1000000; (* from USB PLL *)
     PeriClkFreq* =  48 * 1000000; (* from USB PLL *)
     SysTickFreq* =   1 * 1000000; (* via clock divider in watchdog, from ref clock *)
 
@@ -140,15 +134,15 @@ MODULE Clocks;
     releaseReset(MCU.RESETS_PLL_USB);
     (* set freq 48 MHz *)
     SYSTEM.PUT(MCU.PLL_USB_FBDIV_INT, 64);
-    (* power up VCO and PLL *)
-    SYSTEM.PUT(MCU.PLL_USB_PWR + MCU.ACLR, {PLL_USB_PWR_VCOPD, PLL_USB_PWR_PD}); (* clear bits *)
+    (* power up VCO and PLL (note: clear bits) *)
+    SYSTEM.PUT(MCU.PLL_USB_PWR + MCU.ACLR, {PLL_USB_PWR_VCOPD, PLL_USB_PWR_PD});
     REPEAT UNTIL SYSTEM.BIT(MCU.PLL_USB_CS, PLL_USB_CS_LOCK);
     (* set post dividers *)
     x := 0;
     BFI(x, PLL_USB_PRIM_POSTDIV1_1, PLL_USB_PRIM_POSTDIV1_0, 4);
     BFI(x, PLL_USB_PRIM_POSTDIV2_1, PLL_USB_PRIM_POSTDIV2_0, 4);
     SYSTEM.PUT(MCU.PLL_USB_PRIM, x);
-    (* power up post dividers *)
+    (* power up post dividers (note: clear bits) *)
     SYSTEM.PUT(MCU.PLL_USB_PWR + MCU.ACLR, {PLL_USB_PWR_POSTDIVPD})
   END startUsbPLL;
 

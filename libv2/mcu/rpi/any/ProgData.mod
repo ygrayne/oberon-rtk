@@ -43,7 +43,16 @@ MODULE ProgData;
   20        010000344H    code address                    EntryAddrOffset
 
   Module block:
-
+  module 0 (type = 0)
+    procedure 1 (type = 1)
+    procedure 2 (type = 2)
+    ...
+    procedure .init (type = n)
+  module 1 (type = 0)
+    procedure 1 (type = 1)
+    procedure 2 (type = 2)
+    ...
+    procedure .init (type = n)
 
   Notes:
   * Entry  type:
