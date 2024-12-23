@@ -194,8 +194,11 @@ MODULE ProgData;
       modEntryAddr := 0;
       WHILE (entryAddr < progDataRes.dataEndAddr) & ~found DO
         SYSTEM.GET(entryAddr, etype);
-        SYSTEM.GET(entryAddr + NextEntryAddrOffset, ca);
-        found := codeAddr < ca;
+        found := entryAddr + NextEntryAddrOffset > progDataRes.dataEndAddr;
+        IF ~found THEN
+          SYSTEM.GET(entryAddr + NextEntryAddrOffset, ca);
+          found := codeAddr < ca
+        END;
         IF found THEN
           SYSTEM.GET(entryAddr + EntryAddrOffset, procEntry.codeAddr);
           procEntry.etype := etype;
@@ -232,12 +235,12 @@ MODULE ProgData;
     IF procEntry.entryAddr # 0 THEN
       GetEntryString(procEntry, procName);
     ELSE
-      procName := "UnknownProc"
+      procName := "Unknown"
     END;
     IF modEntry.entryAddr # 0 THEN
       GetEntryString(modEntry, modName)
     ELSE
-      modName := "UnknownMod"
+      modName := "Unknown"
     END
   END GetNames;
 
