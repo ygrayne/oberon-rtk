@@ -23,31 +23,57 @@ MODULE RuntimeErrorsOut;
     W: ARRAY NumCores OF TextIO.Writer;
 
 
+  PROCEDURE length(s: Name): INTEGER;
+    VAR l: INTEGER;
+  BEGIN
+    l := 0;
+    WHILE (l < LEN(s)) & (s[l] # 0X) DO INC(l) END;
+    RETURN l
+  END length;
+
+
+  PROCEDURE printTraceLine(W: TextIO.Writer; modName, procName: Name; addr, lineNo: INTEGER);
+    VAR l: INTEGER;
+  BEGIN
+    Texts.WriteString(W, "  "); Texts.WriteString(W, modName);
+    Texts.WriteString(W, "."); Texts.WriteString(W, procName);
+    l := length(modName) + length(procName) + 1;
+    Texts.WriteHex(W, addr, 36 - l);
+    IF lineNo > 0 THEN
+      Texts.WriteInt(W, lineNo, 6);
+    END;
+    Texts.WriteLn(W)
+  END printTraceLine;
+
+
+  PROCEDURE printAnnotation(W: TextIO.Writer; ann: INTEGER);
+  BEGIN
+    IF ann = RuntimeErrors.AnnNewContext THEN
+      Texts.WriteString(W, "  --- exc ---"); Texts.WriteLn(W)
+    END
+  END printAnnotation;
+
+
   PROCEDURE printStackTrace(W: TextIO.Writer; tr: RuntimeErrors.Trace);
     VAR
       i: INTEGER;
       moduleName, procName: Name;
-  BEGIN
+  BEGINú
     IF tr.count > 1 THEN
-      Texts.WriteString(W, "trace:"); Texts.WriteLn(W);
+      Texts.WriteString(W, "trace:"); Texts.WriteInt(W, tr.count, 6); Texts.WriteLn(W);
       i := 0;
-      ProgData.GetNames(tr.tp[i].address, moduleName, procName);
-      WHILE i < tr.count DO
-        Texts.WriteString(W, "  "); Texts.WriteString(W, moduleName); Texts.WriteString(W, "."); Texts.WriteString(W, procName);
-        Texts.WriteString(W, "  "); Texts.WriteHex(W, tr.tp[i].address, 0);
-        IF tr.tp[i].lineNo > 0 THEN
-          Texts.WriteString(W, "  "); Texts.WriteInt(W, tr.tp[i].lineNo, 4);
-        END;
-        Texts.WriteLn(W);
-        INC(i);
-        IF procName = ".init" THEN
-          moduleName := "start"; procName := "up"
-        ELSE
-          ProgData.GetNames(tr.tp[i].address, moduleName, procName)
-        END
+      WHILE (i < tr.count) & (procName # ".init") DO
+        printAnnotation(W, tr.tp[i].annotation);
+        ProgData.GetNames(tr.tp[i].address, moduleName, procName);
+        printTraceLine(W, moduleName, procName, tr.tp[i].address, tr.tp[i].lineNo);
+        INC(i)
       END;
-      IF tr.tp[i].address = RuntimeErrors.MoreTracePoints THEN
-        Texts.Write(W, " "); Texts.WriteString(W, "--- more ---"); Texts.WriteLn(W)
+      IF procName = ".init" THEN
+        moduleName := "Init"; procName := "sequence";
+        printTraceLine(W, moduleName, procName, tr.tp[i].address, tr.tp[i].lineNo);
+      END;
+      IF tr.more THEN
+        Texts.WriteString(W, "  --- more ---"); Texts.WriteLn(W)
       END
     ELSE
       Texts.WriteString(W, "no trace"); Texts.WriteLn(W)
@@ -66,25 +92,25 @@ MODULE RuntimeErrorsOut;
   PROCEDURE printStackedRegs(W: TextIO.Writer; stackedRegs: RuntimeErrors.StackedRegisters);
   BEGIN
     Texts.WriteString(W, "stacked registers:"); Texts.WriteLn(W);
-    regOut(W, "  r0:", stackedRegs.r0);
-    regOut(W, "  r1:", stackedRegs.r1);
-    regOut(W, "  r2:", stackedRegs.r2);
-    regOut(W, "  r3:", stackedRegs.r3);
-    regOut(W, " r12:", stackedRegs.r12);
-    regOut(W, "  lr:", stackedRegs.lr);
-    regOut(W, "  pc:", stackedRegs.pc);
-    regOut(W, "xpsr:", stackedRegs.xpsr);
-    regOut(W, "  sp:", stackedRegs.sp)
+    regOut(W, " r0:", stackedRegs.r0);
+    regOut(W, " r1:", stackedRegs.r1);
+    regOut(W, " r2:", stackedRegs.r2);
+    regOut(W, " r3:", stackedRegs.r3);
+    regOut(W, "r12:", stackedRegs.r12);
+    regOut(W, " lr:", stackedRegs.lr);
+    regOut(W, " pc:", stackedRegs.pc);
+    regOut(W, "psr:", stackedRegs.xpsr);
+    regOut(W, " sp:", stackedRegs.sp)
   END printStackedRegs;
 
 
   PROCEDURE printCurrentRegs(W: TextIO.Writer; currentRegs: RuntimeErrors.CurrentRegisters);
   BEGIN
     Texts.WriteString(W, "current registers:"); Texts.WriteLn(W);
-    regOut(W, "  sp:", currentRegs.sp);
-    regOut(W, "  lr:", currentRegs.lr);
-    regOut(W, "  pc:", currentRegs.pc);
-    regOut(W, "xpsr:", currentRegs.xpsr)
+    regOut(W, " sp:", currentRegs.sp);
+    regOut(W, " lr:", currentRegs.lr);
+    regOut(W, " pc:", currentRegs.pc);
+    regOut(W, "psr:", currentRegs.xpsr)
   END printCurrentRegs;
 
 
@@ -99,12 +125,19 @@ MODULE RuntimeErrorsOut;
         code := -er.code;
         core := er.core;
         address := er.address;
+        (*
+        address := er.trace.tp[0].address;
+        *)
         lineNo := NoValue;
     | RuntimeErrors.ErrorRec:
         code := er.code;
         core := er.core;
+        address := er.address;
+        lineNo := er.lineNo
+        (*
         address := er.trace.tp[0].address;
         lineNo := er.trace.tp[0].lineNo
+        *)
     END;
     Errors.GetExceptionType(code, msg);
     Texts.WriteString(W, "exception: "); Texts.WriteString(W, msg);
@@ -125,6 +158,7 @@ MODULE RuntimeErrorsOut;
         printStackedRegs(W, er.stackedRegs);
         printCurrentRegs(W, er.currentRegs)
     | RuntimeErrors.FaultRec:
+        printStackTrace(W, er.trace);
         printStackedRegs(W, er.stackedRegs);
         printCurrentRegs(W, er.currentRegs)
     END
