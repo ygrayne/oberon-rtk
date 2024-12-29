@@ -1,0 +1,90 @@
+.     0  010004750H              <Pad: 0>
+MODULE TestExc2;
+(**
+  Oberon RTK Framework v2
+  --
+  Example/test program
+  https://oberon-rtk.org/examples/v2/stacktrace
+  --
+  MCU: RP2040, RP2350
+  Board: Pico, Pico 2
+  --
+  Copyright (c) 2024 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2, Main;
+
+  PROCEDURE error;
+    VAR x: INTEGER;
+  BEGIN
+.     4  010004754H      0B500H  push    { lr }
+.     6  010004756H      0B081H  sub     sp,#4
+    x := 0;
+.     8  010004758H      02000H  movs    r0,#0
+.    10  01000475AH      09000H  str     r0,[sp]
+    x := x DIV x
+  END error;
+.    12  01000475CH      09800H  ldr     r0,[sp]
+.    14  01000475EH      09900H  ldr     r1,[sp]
+.    16  010004760H  0F1B10F00H  cmp.w   r1,#0
+.    20  010004764H      0DC01H  bgt.n   2 -> 26
+.    22  010004766H      0DF07H  svc     7
+.    24  010004768H      00015H  <LineNo: 21>
+.    26  01000476AH  0FB90F2F1H  sdiv.w  r2,r0,r1
+.    30  01000476EH  0FB020011H  mls.w   r0,r2,r1,r0
+.    34  010004772H  0EBA270D0H  sub.w   r0,r2,r0,lsr 31
+.    38  010004776H      09000H  str     r0,[sp]
+.    40  010004778H      0B001H  add     sp,#4
+.    42  01000477AH      0BD00H  pop     { pc }
+
+  PROCEDURE fault;
+    VAR x: INTEGER;
+  BEGIN
+.    44  01000477CH      0B500H  push    { lr }
+.    46  01000477EH      0B081H  sub     sp,#4
+    x := MCU.PPB_NVIC_ISER0 + 1;
+.    48  010004780H  0F8DF000CH  ldr.w   r0,[pc,#12] -> 64
+.    52  010004784H      09000H  str     r0,[sp]
+    SYSTEM.PUT(x, x)
+  END fault;
+.    54  010004786H      09800H  ldr     r0,[sp]
+.    56  010004788H      09900H  ldr     r1,[sp]
+.    58  01000478AH      06001H  str     r1,[r0]
+.    60  01000478CH      0B001H  add     sp,#4
+.    62  01000478EH      0BD00H  pop     { pc }
+.    64  010004790H  0E000E101H  <Const:  -536813311>
+
+  PROCEDURE p0;
+  BEGIN
+.    68  010004794H      0B500H  push    { lr }
+    SYSTEM.LDREG(12, 0A0B0C0DH);
+.    70  010004796H  0F8DFC00CH  ldr.w   r12,[pc,#12] -> 84
+    (*error*)
+    fault
+  END p0;
+.    74  01000479AH  0F7FFFFEFH  bl.w    -34 -> 44
+.    78  01000479EH      0E000H  b       0 -> 82
+.    80  0100047A0H      00023H  <LineNo: 35>
+.    82  0100047A2H      0BD00H  pop     { pc }
+.    84  0100047A4H  00A0B0C0DH  <Const:  168496141>
+
+  PROCEDURE run;
+  BEGIN
+.    88  0100047A8H      0B500H  push    { lr }
+    p0
+  END run;
+.    90  0100047AAH  0F7FFFFF3H  bl.w    -26 -> 68
+.    94  0100047AEH      0E000H  b       0 -> 98
+.    96  0100047B0H      00028H  <LineNo: 40>
+.    98  0100047B2H      0BD00H  pop     { pc }
+
+BEGIN
+.   100  0100047B4H      0B500H  push    { lr }
+  run
+END TestExc2Ãº.
+.   102  0100047B6H  0F7FFFFF7H  bl.w    -18 -> 88
+.   106  0100047BAH      0E000H  b       0 -> 110
+.   108  0100047BCH      0002CH  <LineNo: 44>
+.   110  0100047BEH      0BD00H  pop     { pc }
+ 

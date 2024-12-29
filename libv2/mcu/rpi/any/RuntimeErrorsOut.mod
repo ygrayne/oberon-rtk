@@ -13,8 +13,9 @@ MODULE RuntimeErrorsOut;
   IMPORT RuntimeErrors, TextIO, Texts, Errors, ProgData;
 
   CONST
-    NoValue = -1;
     NumCores = RuntimeErrors.NumCores;
+    ExcRecTypeError = RuntimeErrors.ExcRecTypeError;
+    ExcRecTypeFault = RuntimeErrors.ExcRecTypeFault;
 
   TYPE
     Name = ProgData.EntryString;
@@ -92,14 +93,14 @@ MODULE RuntimeErrorsOut;
   PROCEDURE printStackedRegs(W: TextIO.Writer; stackedRegs: RuntimeErrors.StackedRegisters);
   BEGIN
     Texts.WriteString(W, "stacked registers:"); Texts.WriteLn(W);
-    regOut(W, " r0:", stackedRegs.r0);
-    regOut(W, " r1:", stackedRegs.r1);
-    regOut(W, " r2:", stackedRegs.r2);
-    regOut(W, " r3:", stackedRegs.r3);
-    regOut(W, "r12:", stackedRegs.r12);
-    regOut(W, " lr:", stackedRegs.lr);
-    regOut(W, " pc:", stackedRegs.pc);
     regOut(W, "psr:", stackedRegs.xpsr);
+    regOut(W, " pc:", stackedRegs.pc);
+    regOut(W, " lr:", stackedRegs.lr);
+    regOut(W, "r12:", stackedRegs.r12);
+    regOut(W, " r3:", stackedRegs.r3);
+    regOut(W, " r2:", stackedRegs.r2);
+    regOut(W, " r1:", stackedRegs.r1);
+    regOut(W, " r0:", stackedRegs.r0);
     regOut(W, " sp:", stackedRegs.sp)
   END printStackedRegs;
 
@@ -120,48 +121,31 @@ MODULE RuntimeErrorsOut;
       moduleName, procName: Name;
       msg: Errors.String;
   BEGIN
-    CASE er OF
-      RuntimeErrors.FaultRec:
-        code := -er.code;
-        core := er.core;
-        address := er.address;
-        (*
-        address := er.trace.tp[0].address;
-        *)
-        lineNo := NoValue;
-    | RuntimeErrors.ErrorRec:
-        code := er.code;
-        core := er.core;
-        address := er.address;
-        lineNo := er.lineNo
-        (*
-        address := er.trace.tp[0].address;
-        lineNo := er.trace.tp[0].lineNo
-        *)
+    ASSERT(er.excType IN {ExcRecTypeError, ExcRecTypeFault}, Errors.ProgError);
+    IF er.excType = ExcRecTypeFault THEN
+      code := -er.code
+    ELSE
+      code := er.code
     END;
+    core := er.core;
+    address := er.address;
+    lineNo := er.lineNo;
     Errors.GetExceptionType(code, msg);
     Texts.WriteString(W, "exception: "); Texts.WriteString(W, msg);
     Errors.Msg(code, msg);
-    Texts.Write(W, " "); Texts.WriteInt(W, code, 0); Texts.WriteString(W, " core: ");
+    Texts.Write(W, " "); Texts.WriteInt(W, ABS(code), 0); Texts.WriteString(W, " core: ");
     Texts.WriteInt(W, core, 0); Texts.WriteLn(W);
     Texts.WriteString(W, msg); Texts.WriteLn(W);
     ProgData.GetNames(address, moduleName, procName);
     Texts.WriteString(W, moduleName); Texts.Write(W, "."); Texts.WriteString(W, procName);
-    Texts.WriteString(W, "  a: "); Texts.WriteHex(W, address, 0);
-    IF lineNo # NoValue THEN
+    Texts.WriteString(W, "  addr: "); Texts.WriteHex(W, address, 0);
+    IF lineNo > 0 THEN
       Texts.WriteString(W, "  ln: "); Texts.WriteInt(W, lineNo, 0)
     END;
     Texts.WriteLn(W);
-    CASE er OF
-      RuntimeErrors.ErrorRec:
-        printStackTrace(W, er.trace);
-        printStackedRegs(W, er.stackedRegs);
-        printCurrentRegs(W, er.currentRegs)
-    | RuntimeErrors.FaultRec:
-        printStackTrace(W, er.trace);
-        printStackedRegs(W, er.stackedRegs);
-        printCurrentRegs(W, er.currentRegs)
-    END
+    printStackTrace(W, er.trace);
+    printStackedRegs(W, er.stackedRegs);
+    printCurrentRegs(W, er.currentRegs)
   END PrintException;
 
 

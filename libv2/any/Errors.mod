@@ -64,15 +64,17 @@ MODULE Errors;
     IF code = NMI THEN
       msg := "NMI"
     ELSIF code = HardFault THEN
-      msg := "hard fault"
+      msg := "HardFault"
     ELSIF code = MemMgmtFault THEN
-      msg := "memory management fault"
+      msg := "MemManageFault"
     ELSIF code = BusFault THEN
-      msg := "bus fault"
+      msg := "BusFault"
     ELSIF code = UsageFault THEN
-      msg := "usage fault"
+      msg := "UsageFault"
     ELSIF code = SecureFault THEN
-      msg := "secure fault"
+      msg := "SecureFault"
+    ELSIF code = DebugMon THEN
+      msg := "DebugFault"
     ELSE
       msg := "missing exception handler"
     END

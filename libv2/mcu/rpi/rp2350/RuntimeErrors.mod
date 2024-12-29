@@ -5,8 +5,8 @@ MODULE RuntimeErrors;
   Exception handling: run-time errors and faults
   Multi-core
   --
-  Error: run-time errors, including ASSERT, triggered by SVC calls
-  Fault: hardware faults, triggered by MCU
+  Error: run-time errors, including ASSERT, triggered by SVC calls in software
+  Fault: hardware faults, triggered by MCU hardware
   --
   MCU: RP2350
   --
@@ -14,7 +14,7 @@ MODULE RuntimeErrors;
     * for Secure, privileged code
     * implications of other MOs to be identified
   --
-  Note, no printing is done here, since we don't know if there's
+  Note: no terminal output is done here, since we don't know if there's
   even a terminal connected out in the wild, and if there's an
   operator seeing the messages. All error and fault data is collected,
   and passed to an installable handler, which then can print, or just log
@@ -30,11 +30,14 @@ MODULE RuntimeErrors;
 **)
 
   IMPORT
-    SYSTEM, LED, MCU := MCU2, Config, Memory, Out;
+    SYSTEM, LED, MCU := MCU2, Config, Memory;
 
   CONST
     NumCores* = MCU.NumCores;
     TraceDepth* = 16;
+    ExcRecTypeError* = 0;
+    ExcRecTypeFault* = 1;
+
     AnnNone* = 0;
     AnnNewContext* = -1;
     StackTraceNotLR = 0;
@@ -57,25 +60,6 @@ MODULE RuntimeErrors;
     LR = 14;
     PC = 15;
 
-  (*
-    offsets if handler is compiled as normal procedure:
-    +36 +52   lower end of stack frame of interrupted proc with stack alignment
-    +32 +48   lower end of stack frame of interrupted proc without stack alignment
-        from here down, stacked by hardware (8 words)
-    +28 +44   xPSR
-    +24 +40   PC  = handler return address
-    +20 +36   LR  = interrupted procs's LR
-    +16 +32   R12
-    +12 +28   R3
-    +8  +24   R2
-    +4  +20   R1
-     0  +16   R0 <= stackFrameAddr
-        from here down, pushed by handler prologue
-        +12   LR  = EXC_RETURN
-        +8    local var of handler
-        +4    local var of handler
-        SP => local var of handler
-  *)
 
     (* PPB_FPCCR bits *)
     FPCCR_TS  = 26;
@@ -117,33 +101,19 @@ MODULE RuntimeErrors;
       sp*, lr*, pc*, xpsr*: INTEGER
     END;
 
-    (* note/todo: depending on the final design decision, 'StackedRegisters'
-    and 'CurrentRegisters' can be put into 'ExceptionRec' *)
-
     ExceptionRec* = RECORD
       code*: INTEGER; (* error or fault code *)
       core*: INTEGER; (* MCU core *)
-    END;
-
-    FaultRec* = RECORD(ExceptionRec)
       address*: INTEGER;
       lineNo*: INTEGER;
       trace*: Trace;
       stackedRegs*: StackedRegisters;
-      currentRegs*: CurrentRegisters
-    END;
-
-    ErrorRec* = RECORD(ExceptionRec)
-      address*: INTEGER;
-      lineNo*: INTEGER;
-      trace*: Trace;
-      stackedRegs*: StackedRegisters;
-      currentRegs*: CurrentRegisters
+      currentRegs*: CurrentRegisters;
+      excType*: INTEGER
     END;
 
     Exception = RECORD
-      faultRec: FaultRec;
-      errorRec: ErrorRec;
+      excRec: ExceptionRec;
       handleException: PROCEDURE(cpuId: INTEGER; er: ExceptionRec);
       haltOn, stacktraceOn: BOOLEAN
     END;
@@ -172,6 +142,14 @@ MODULE RuntimeErrors;
   PROCEDURE isBL(codeAddr: INTEGER): BOOLEAN;
   (* from Astrobe library *)
   (* check if the instruction at 'codeAddr' is a BL instruction: [31:27] = 11110 *)
+  (* note how the 32 bit code is stored as two 16 bit values:
+      addr[x]   = [31:16]
+      addr[x+2] = [15:0]
+    since we have little endian encoding, it's physically:
+      addr[x]   = [23:16][31:24]
+      addr[x+2] = [7:0][15:8]
+    but the load instruction takes care of *that* conversion.
+  *)
     VAR instr: INTEGER;
   BEGIN
     getHalfWord(codeAddr, instr);
@@ -203,7 +181,7 @@ MODULE RuntimeErrors;
         IF isBL(lr - 4) OR isBLX(lr - 2) THEN
           getHalfWord(lr, nextInstr);
           (* if stack trace is enabled there is a B,0 instruction (0E0000H)
-          that skips the line number after the BL instruction *)
+          that skips the line number after the BL or BLX instruction *)
           IF nextInstr = 0E000H THEN
             res := StackTraceLineNo
           ELSE
@@ -243,7 +221,7 @@ MODULE RuntimeErrors;
   END traceStart;
 
 
-  PROCEDURE extractError(stackframeBase: INTEGER; VAR errorRec: ErrorRec);
+  PROCEDURE extractError(stackframeBase: INTEGER; VAR errorRec: ExceptionRec);
   (* collect error data, fill-in initial trace point *)
     VAR tp: TracePoint; addr, lineNo: INTEGER;
   BEGIN
@@ -261,7 +239,7 @@ MODULE RuntimeErrors;
   END extractError;
 
 
-  PROCEDURE* extractFault(stackframeBase: INTEGER; VAR faultRec: FaultRec);
+  PROCEDURE* extractFault(stackframeBase: INTEGER; VAR faultRec: ExceptionRec);
   (* collect fault data, fill-in initial trace point *)
     VAR tp: TracePoint; addr: INTEGER;
   BEGIN
@@ -319,7 +297,7 @@ MODULE RuntimeErrors;
     RETURN isBase
   END isBaseOfStackframe;
 
-
+(* debug version: prints stack dump
   PROCEDURE Stacktrace*(stackAddr: INTEGER; VAR trace: Trace);
     VAR
       lr, stackVal, res, traceStart0, retAddr, sa, sv: INTEGER;
@@ -355,9 +333,6 @@ MODULE RuntimeErrors;
 
         INC(stackAddr, 4);
         traceStart0 := traceStart(stackAddr, stackVal); (* stackVal = EXC_RETURN from stack *)
-        (*
-        Out.Hex(stackAddr, 10); Out.Hex(traceStart0, 12); Out.Ln;
-        *)
 
         (* debug begin *)
         WHILE sa < traceStart0 DO
@@ -386,6 +361,45 @@ MODULE RuntimeErrors;
       SYSTEM.GET(stackAddr, stackVal)
     END
   END Stacktrace;
+*)
+
+  PROCEDURE Stacktrace*(stackAddr: INTEGER; VAR trace: Trace);
+    VAR
+      lr, stackVal, res, retAddr: INTEGER;
+      tp: TracePoint;
+  BEGIN
+    trace.more := FALSE;
+    SYSTEM.GET(stackAddr, stackVal);
+    CLEAR(tp);
+    WHILE (stackAddr # stackVal) & (trace.count <= TraceDepth) DO
+      IF ~isBaseOfStackframe(stackAddr + 4, stackVal) THEN
+        getLR(stackAddr, lr, res);
+        IF res > StackTraceNotLR THEN
+          tp.address := lr - 4;
+          IF res = StackTraceLineNo THEN
+            getHalfWord(lr + 2, tp.lineNo)
+          END;
+        END;
+        INC(stackAddr, 4)
+      ELSE
+        INC(stackAddr, 4);
+        SYSTEM.GET(stackAddr + PCoffset, retAddr);
+        tp.address := retAddr;
+        tp.annotation := AnnNewContext;
+        stackAddr := traceStart(stackAddr, stackVal); (* stackVal = EXC_RETURN from stack *)
+      END;
+      IF tp.address # 0 THEN (* tp is valid *)
+        IF trace.count < TraceDepth THEN
+          trace.tp[trace.count] := tp;
+          INC(trace.count);
+          CLEAR(tp)
+        ELSE
+          trace.more := TRUE
+        END
+      END;
+      SYSTEM.GET(stackAddr, stackVal)
+    END
+  END Stacktrace;
 
 
   PROCEDURE errorHandler;
@@ -394,20 +408,21 @@ MODULE RuntimeErrors;
     VAR stackframeAddr, cid, excReturn: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
-    exc[cid].errorRec.currentRegs.pc := SYSTEM.REG(PC);
-    exc[cid].errorRec.currentRegs.sp := SYSTEM.REG(SP);
-    exc[cid].errorRec.currentRegs.lr := SYSTEM.REG(LR);
+    exc[cid].excRec.currentRegs.pc := SYSTEM.REG(PC);
+    exc[cid].excRec.currentRegs.sp := SYSTEM.REG(SP);
+    exc[cid].excRec.currentRegs.lr := SYSTEM.REG(LR);
     SYSTEM.EMIT(MCU.MRS_R11_XPSR);
-    exc[cid].errorRec.currentRegs.xpsr := SYSTEM.REG(11);
+    exc[cid].excRec.currentRegs.xpsr := SYSTEM.REG(11);
     excReturn := SYSTEM.REG(LR);
-    exc[cid].errorRec.core := cid;
+    exc[cid].excRec.core := cid;
     stackframeAddr := stackframeBase(SYSTEM.REG(SP) + 16, excReturn); (* SP: + 16 for lr, stackframeAddr, cid, exc_return *)
-    readRegs(stackframeAddr, exc[cid].errorRec.stackedRegs);
-    extractError(stackframeAddr, exc[cid].errorRec);
+    readRegs(stackframeAddr, exc[cid].excRec.stackedRegs);
+    extractError(stackframeAddr, exc[cid].excRec);
     IF exc[cid].stacktraceOn THEN
-      Stacktrace(traceStart(stackframeAddr, excReturn), exc[cid].errorRec.trace)
+      Stacktrace(traceStart(stackframeAddr, excReturn), exc[cid].excRec.trace)
     END;
-    exc[cid].handleException(cid, exc[cid].errorRec);
+    exc[cid].excRec.excType := ExcRecTypeError;
+    exc[cid].handleException(cid, exc[cid].excRec);
     (*ASSERT(FALSE);*)  (* trigger hard fault for testing *)
     HALT(cid)
   END errorHandler;
@@ -419,20 +434,21 @@ MODULE RuntimeErrors;
     VAR stackframeAddr, cid, excReturn: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
-    exc[cid].faultRec.currentRegs.pc := SYSTEM.REG(PC);
-    exc[cid].faultRec.currentRegs.sp := SYSTEM.REG(SP);
-    exc[cid].faultRec.currentRegs.lr := SYSTEM.REG(LR);
+    exc[cid].excRec.currentRegs.pc := SYSTEM.REG(PC);
+    exc[cid].excRec.currentRegs.sp := SYSTEM.REG(SP);
+    exc[cid].excRec.currentRegs.lr := SYSTEM.REG(LR);
     SYSTEM.EMIT(MCU.MRS_R11_XPSR);
-    exc[cid].faultRec.currentRegs.xpsr := SYSTEM.REG(11);
+    exc[cid].excRec.currentRegs.xpsr := SYSTEM.REG(11);
     excReturn := SYSTEM.REG(LR);
-    exc[cid].faultRec.core := cid;
+    exc[cid].excRec.core := cid;
     stackframeAddr := stackframeBase(SYSTEM.REG(SP) + 16, excReturn); (* SP: + 16 for lr, stackframeAddr, cid, exc_return *)
-    readRegs(stackframeAddr, exc[cid].faultRec.stackedRegs);
-    extractFault(stackframeAddr, exc[cid].faultRec);
+    readRegs(stackframeAddr, exc[cid].excRec.stackedRegs);
+    extractFault(stackframeAddr, exc[cid].excRec);
     IF exc[cid].stacktraceOn THEN
-      Stacktrace(traceStart(stackframeAddr, excReturn), exc[cid].faultRec.trace)
+      Stacktrace(traceStart(stackframeAddr, excReturn), exc[cid].excRec.trace)
     END;
-    exc[cid].handleException(cid, exc[cid].faultRec);
+    exc[cid].excRec.excType := ExcRecTypeFault;
+    exc[cid].handleException(cid, exc[cid].excRec);
     HALT(cid)
   END faultHandler;
 
@@ -453,11 +469,11 @@ MODULE RuntimeErrors;
   END SetStacktraceOn;
 
 
-  PROCEDURE* install(vectAddr: INTEGER; p: PROCEDURE);
+  PROCEDURE* installHandler(vectAddr: INTEGER; p: PROCEDURE);
   BEGIN
     INCL(SYSTEM.VAL(SET, p), 0); (* thumb code *)
     SYSTEM.PUT(vectAddr, p)
-  END install;
+  END installHandler;
 
 
   PROCEDURE* ledOnAndHalt(cid: INTEGER; er: ExceptionRec);
@@ -486,17 +502,17 @@ MODULE RuntimeErrors;
       (* initialise vector table *)
       vectorTableBase := Memory.DataMem[i].dataStart;
       vectorTableTop := vectorTableBase + MCU.VectorTableSize;
-      install(vectorTableBase + MCU.NMIhandlerOffset, faultHandler);
-      install(vectorTableBase + MCU.HardFaultHandlerOffset, faultHandler);
-      install(vectorTableBase + MCU.MemMgmtFaultHandlerOffset, faultHandler);
-      install(vectorTableBase + MCU.BusFaultHandlerOffset, faultHandler);
-      install(vectorTableBase + MCU.UsageFaultHandlerOffset, faultHandler);
-      install(vectorTableBase + MCU.SecureFaultHandlerOffset, faultHandler);
-      install(vectorTableBase + MCU.SVChandlerOffset, errorHandler);
-      install(vectorTableBase + MCU.DebugMonitorOffset, faultHandler);
+      installHandler(vectorTableBase + MCU.NMIhandlerOffset, faultHandler);
+      installHandler(vectorTableBase + MCU.HardFaultHandlerOffset, faultHandler);
+      installHandler(vectorTableBase + MCU.MemMgmtFaultHandlerOffset, faultHandler);
+      installHandler(vectorTableBase + MCU.BusFaultHandlerOffset, faultHandler);
+      installHandler(vectorTableBase + MCU.UsageFaultHandlerOffset, faultHandler);
+      installHandler(vectorTableBase + MCU.SecureFaultHandlerOffset, faultHandler);
+      installHandler(vectorTableBase + MCU.SVChandlerOffset, errorHandler);
+      installHandler(vectorTableBase + MCU.DebugMonitorOffset, faultHandler);
       addr := vectorTableBase + MCU.PendSVhandlerOffset;
       WHILE addr < vectorTableTop DO
-        install(addr, faultHandler); INC(addr, 4)
+        installHandler(addr, faultHandler); INC(addr, 4)
       END;
       INC(i)
     END;
