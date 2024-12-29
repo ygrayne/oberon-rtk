@@ -42,4 +42,4 @@ MODULE TestExc2;
 
 BEGIN
   run
-END TestExc2ú.
+END TestExc2.
