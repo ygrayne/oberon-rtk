@@ -15,7 +15,7 @@ MODULE Config;
   * https://oberon-rtk.org/lib/rp-any/config/
   * the Astrobe config files for specific settings
   --
-  Copyright (c) 2023-2024 Gray, gray@grayraven.org
+  Copyright (c) 2023-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
   --
   Memory map SRAM:

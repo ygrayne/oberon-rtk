@@ -9,7 +9,7 @@ MODULE Watchdog;
   Counting tick is set and initialised in module Clocks to 1 MHz.
   Note the necessary correction factor of 2 for the RP2040.
   --
-  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
   --
   Reset behaviour, as read from code.

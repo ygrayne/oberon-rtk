@@ -15,7 +15,7 @@ MODULE Bootrom;
     proc variables contain the actual proc address
     => adjust bootrom function addresses by -1
   --
-  Copyright (c) 2024 Gray, gray@grayraven.org
+  Copyright (c) 2024-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

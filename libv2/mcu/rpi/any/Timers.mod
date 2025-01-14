@@ -17,7 +17,7 @@ MODULE Timers;
     * TIMER0: by boot procedure (RP2040, RP2350)
     * TIMER1: by Main.mod (RP2350)
   --
-  Copyright (c) 2023-2024 Gray, gray@grayraven.org
+  Copyright (c) 2023-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

@@ -6,7 +6,7 @@ MODULE Out;
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2020-2024 Gray gray@grayraven.org
+  Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
@@ -16,7 +16,7 @@ MODULE Out;
     NumTerminals = 2;
 
   VAR
-    W: ARRAY NumTerminals OF TextIO.Writer; (* module var ok: read only *)
+    W*: ARRAY NumTerminals OF TextIO.Writer; (* module var ok: read only *)
 
 
   PROCEDURE Open*(W0, W1: TextIO.Writer);

@@ -10,7 +10,7 @@ MODULE Texts;
   * blocking
   * non-blocking (using the kernel)
   --
-  Copyright (c) 2020 - 2024 Gray gray@grayraven.org
+  Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

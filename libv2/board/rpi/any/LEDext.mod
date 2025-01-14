@@ -14,24 +14,20 @@ MODULE LEDext;
     GPIO.Clear({LEDext.LED0}),
     GPIO.Toggle({LEDext.LED0})
   * Direct, avoiding procedure calls, eg. for leaf procedures:
-    SYSTEM.PUT(LEDext.SET, {LEDext.LED0}),
-    SYSTEM.PUT(LEDext.CLR, {LEDext.LED0}),
-    SYSTEM.PUT(LEDext.XOR, {LEDext.LED0})
+    SYSTEM.PUT(LEDext.LSET, {LEDext.LED0}),
+    SYSTEM.PUT(LEDext.LCLR, {LEDext.LED0}),
+    SYSTEM.PUT(LEDext.LXOR, {LEDext.LED0})
   * A set of LEDs can be set on or off with one call.
   --
-  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
   IMPORT GPIO, MCU := MCU2;
 
   CONST
+    (* LED on the board *)
     LEDpinNoPico = 25;
-    (*
-    LEDpinNo0 = 2;
-    LEDpinNo1 = 3;
-    LEDpinNo2 = 6;
-    LEDpinNo3 = 7;
-    *)
+    (* wired LEDs *)
     LEDpinNo0 = 27;
     LEDpinNo1 = 28;
     LEDpinNo2 = 26;

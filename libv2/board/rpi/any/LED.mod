@@ -17,7 +17,7 @@ MODULE LED;
     SYSTEM.PUT(LED.LCLR, {LED.Pico}),
     SYSTEM.PUT(LED.LXOR, {LED.Pico})
   --
-  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

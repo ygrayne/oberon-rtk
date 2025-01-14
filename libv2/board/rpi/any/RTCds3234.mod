@@ -10,7 +10,7 @@ MODULE RTCds3234;
   MCU: RP2040, RP2350
   Board: Pico, Pico2
   --
-  Copyright (c) 2024 Gray gray@grayraven.org
+  Copyright (c) 2024-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

@@ -6,7 +6,7 @@ MODULE GPIO;
   --
   MCU: RP2040
   --
-  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
@@ -219,6 +219,7 @@ MODULE GPIO;
   BEGIN
     StartUp.ReleaseReset(MCU.RESETS_IO_BANK0);
     StartUp.ReleaseReset(MCU.RESETS_PADS_BANK0);
+    (* for RP2350 compatibility *)
     i := 0;
     WHILE i < MCU.NumGPIO DO
       DisableInput(i);

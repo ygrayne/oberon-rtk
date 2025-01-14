@@ -6,7 +6,7 @@ MODULE Signals;
   --
   Based on Programming in Modula-2, N. Wirth, 3rd edition, 1985
   --
-  Copyright (c) 2020-2024 Gray, gray@grayraven.org
+  Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

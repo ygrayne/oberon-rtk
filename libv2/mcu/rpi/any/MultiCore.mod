@@ -7,7 +7,7 @@ MODULE MultiCore;
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2023-2024 Gray gray@grayraven.org
+  Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
