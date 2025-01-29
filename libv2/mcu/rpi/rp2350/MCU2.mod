@@ -6,7 +6,7 @@ MODULE MCU2;
   --
   MCU: RP2350, Pico2
   --
-  Copyright (c) 2024 Gray gray@grayraven.org
+  Copyright (c) 2024-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
@@ -1573,6 +1573,7 @@ MODULE MCU2;
     (* write special regs MSR *)
     (* 0F38 B 88 09H r11(B) PSP(09) *)
     MSR_PSP_R11* = 0F38B8809H;  (* move r11 to PSP *)
+    MSR_MSP_R11* = 0F38B8808H;  (* move r11 to MSP *)
     MSR_CTL_R11* = 0F38B8814H;  (* move r11 to CONTROL *)
 
     (* instruction sync *)

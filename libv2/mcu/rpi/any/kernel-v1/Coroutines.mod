@@ -6,7 +6,7 @@ MODULE Coroutines;
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2020-2024 Gray, gray@grayraven.org
+  Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
@@ -29,9 +29,8 @@ MODULE Coroutines;
     ASSERT(cor # NIL, Errors.PreCond);
     (* set up the stack memory for the initial 'Transfer' to 'cor' *)
     cor.sp := cor.stAddr + cor.stSize;
-    (* put own address to mark top of stack for stack trace *)
+    (* skip top value = stack seal, see module Memory*)
     DEC(cor.sp, 4);
-    SYSTEM.PUT(cor.sp, cor.sp);
     (* put 'lr' *)
     DEC(cor.sp, 4);
     SYSTEM.PUT(cor.sp, cor.proc);
@@ -66,7 +65,7 @@ MODULE Coroutines;
 
 
   PROCEDURE Transfer*(f, t: Coroutine);
-    CONST SP = 13;
+    CONST SP = 13; LR = 14;
   BEGIN
     (* enter "as" f, f's stack in use *)
     (* prologue: push caller's 'lr' and parameters 'f' and 't' onto f's stack *)
@@ -81,7 +80,7 @@ MODULE Coroutines;
     (* now t's stack in use *)
     (* stack: 0: 'f', +4: 't', +8: 'lr' *)
     (* note: meaning of 'f' and 't' as per the procedure call when transferring AWAY from 't' *)
-
+    SYSTEM.LDREG(LR, 0); (* get clean stack trace -- overkill? :) *)
     (* epilogue: adjust stack by +8, pop 'lr' from stack into 'pc' *)
     (* continue "as" t with 'lr' as 'pc' value *)
     (* Se sa. Voila. *)

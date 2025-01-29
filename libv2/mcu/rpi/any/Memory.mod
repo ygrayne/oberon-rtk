@@ -7,7 +7,7 @@ MODULE Memory;
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2023-2024 Gray, gray@grayraven.org
+  Copyright (c) 2023-2025 Gray, gray@grayraven.org
   Portions copyright (c) 2012-2021 CFB Software, https://www.astrobe.com
   Used with permission.
   Please refer to the licensing conditions as defined at the end of this file.
@@ -18,8 +18,10 @@ MODULE Memory;
   CONST
     NumCores = MCU.NumCores;
     NumThreadStacks = 16;
-    CoreZeroMainStackSize* = 1024;
-    CoreOneMainStackSize*  = 1024;
+    CoreZeroMainStackSize* = 2048; (* default, see SetMainStackSize below *)
+    CoreOneMainStackSize*  = 2048;
+
+    StackSeal* = 0FEF5EDA5H;
 
   TYPE
     CoreHeap = RECORD
@@ -125,6 +127,7 @@ MODULE Memory;
     END
   END checkStackUsage;
 
+
   PROCEDURE CheckLoopStackUsage*(VAR size, used: INTEGER);
     VAR cid, addr, limit, unused: INTEGER;
   BEGIN
@@ -157,6 +160,7 @@ MODULE Memory;
       limit := heaps[cid].heapTop
     END;
     IF stacks[cid].stacksBottom - stkSize > limit THEN
+      SYSTEM.PUT(stacks[cid].stacksBottom - 4, StackSeal);
       DEC(stacks[cid].stacksBottom, stkSize);
       stkAddr := stacks[cid].stacksBottom
     ELSE
@@ -203,20 +207,36 @@ MODULE Memory;
   END EnableStackCheck;
 
 
-  PROCEDURE ResetMainStack*(cid, numAddr: INTEGER);
-  (* to do: also reset main stack pointer to top *)
-  (* clear out the main stack from kernel loop to get clean stack traces *)
-    VAR i, addr: INTEGER;
+  PROCEDURE* ResetMainStack*;
+  (* set MSP to top of stack memory from kernel loopc *)
+  (* clear out the top of the main stack to get clean stack traces *)
+    CONST R11 = 11;
+    VAR cid, addr: INTEGER;
   BEGIN
-    addr := DataMem[cid].stackStart - 4;
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    addr := DataMem[cid].stackStart;
+    SYSTEM.LDREG(R11, addr);
+    SYSTEM.EMIT(MCU.MSR_MSP_R11); (* move r11 to msp *)
+    (*
+    DEC(addr, 4); (* leave top-most value alone: stack seal *)
     i := 0;
-    WHILE i < numAddr DO
+    WHILE i < 256 DO
       SYSTEM.PUT(addr, 0);
       INC(i); DEC(addr, 4)
     END
+    *)
   END ResetMainStack;
 
-  (* === init === *)
+  (* === init and config === *)
+
+  PROCEDURE* SetMainStackSize*(core0mainStackSize, core1mainStackSize: INTEGER);
+  (* must be used before Kernel.Install *)
+    CONST Core0 = 0; Core1 = 1;
+  BEGIN
+    stacks[Core0].stacksBottom := Config.CoreZeroStackStart - core0mainStackSize;
+    stacks[Core1].stacksBottom := Config.CoreOneStackStart - core1mainStackSize;
+  END SetMainStackSize;
+
 
   PROCEDURE init;
     CONST Core0 = 0; Core1 = 1;
@@ -243,9 +263,9 @@ MODULE Memory;
     stacks[Core1].stacksTop := Config.CoreOneStackStart;
     stacks[Core1].stackCheckEnabled := FALSE;
 
-    (* init main stacks for stack trace: mark top *)
-    SYSTEM.PUT(DataMem[Core0].stackStart, DataMem[Core0].stackStart);
-    SYSTEM.PUT(DataMem[Core1].stackStart, DataMem[Core1].stackStart)
+    (* mark top of main stack (0FEF5EDA5H) *)
+    SYSTEM.PUT(DataMem[Core0].stackStart, StackSeal);
+    SYSTEM.PUT(DataMem[Core1].stackStart, StackSeal)
   END init;
 
 BEGIN
@@ -253,7 +273,7 @@ BEGIN
 END Memory.
 
 (**
-  Copyright (c) 2023-2024 Gray, gray@grayraven.org
+  Copyright (c) 2023-2025 Gray, gray@grayraven.org
   Copyright (c) 2012-2021 CFB Software, https://www.astrobe.com
 
   Redistribution and use in source and binary forms, with or without

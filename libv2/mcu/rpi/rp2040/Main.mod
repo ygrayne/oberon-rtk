@@ -6,12 +6,12 @@ MODULE Main;
   --
   MCU: RP2040
   --
-  Copyright (c) 2023 - 2024 Gray gray@grayraven.org
+  Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
   IMPORT
-    (* the first row of modules "auto-init", keep their order in the list *)
+    (* the first row of imports "auto-init", keep their order in the list *)
     (* ignore the "is not used" warnings... :) *)
     (* LinkOptions is the first import of Config *)
     Config, Clocks, Memory, RuntimeErrors,
@@ -65,19 +65,18 @@ MODULE Main;
     Terminals.InitUART(UART1, uartCfg, Baudrate1, uartDev1);
     Terminals.Open(TERM1, uartDev1, UARTstr.PutString, UARTstr.GetString);
 
-    (* init Out and In to use the string buffers or terminals *)
+    (* init Out and In to use the terminals *)
     Out.Open(Terminals.W[0], Terminals.W[1]);
     In.Open(Terminals.R[0], Terminals.R[1]);
 
     (* init run-time error printing *)
-    (* error output on core 0 to terminal 0 *)
     (* use error output writer *)
+    (* error output on core 0 to terminal 0 *)
     Terminals.OpenErr(TERM0, UARTstr.PutString);
     RuntimeErrorsOut.SetWriter(Core0, Terminals.Werr[0]);
     RuntimeErrors.SetHandler(Core0, RuntimeErrorsOut.HandleException);
 
     (* error output on core 1 to terminal 1 *)
-    (* use error output writer *)
     Terminals.OpenErr(TERM1, UARTstr.PutString);
     RuntimeErrorsOut.SetWriter(Core1, Terminals.Werr[1]);
     RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException)

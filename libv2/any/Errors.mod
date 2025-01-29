@@ -4,7 +4,7 @@ MODULE Errors;
   --
   Definition of fault and error codes and corresponding message strings.
   --
-  Copyright (c) 2019-2024 Gray, gray@grayraven.org
+  Copyright (c) 2019-2025 Gray, gray@grayraven.org
 **)
 
   IMPORT Error, MCU := MCU2;
@@ -25,6 +25,12 @@ MODULE Errors;
     UsageFault*   = -MCU.PPB_UsageFault_Exc;
     SecureFault*  = -MCU.PPB_SecureFault_Exc;
     DebugMon*     = -MCU.PPB_DebugMon_Exc;
+
+    (* exception types *)
+    ExcTypeErrorHandler* = 0;
+    ExcTypeErrorThread* = 1;
+    ExcTypeFaultHandler* = 2;
+    ExcTypeFaultThread* = 3;
 
     (* Astrobe error codes, see Error.mod *)
     FirstAstrobeCode = 1;
@@ -128,21 +134,28 @@ MODULE Errors;
   END errorMessage;
 
 
-  PROCEDURE Msg*(code: INTEGER; VAR msg: String);
+  PROCEDURE GetExceptionMsg*(code: INTEGER; VAR msg: String);
   BEGIN
     IF code < 0 THEN
       faultMessage(code, msg)
     ELSE
       errorMessage(code, msg)
     END
-  END Msg;
+  END GetExceptionMsg;
 
-  PROCEDURE GetExceptionType*(code: INTEGER; VAR msg: String);
+
+  PROCEDURE GetExceptionType*(excType: INTEGER; VAR msg: String);
   BEGIN
-    IF code < 0 THEN
-      msg := "mcu fault"
+    IF excType = ExcTypeErrorHandler THEN
+      msg := "run-time error in handler mode"
+    ELSIF excType = ExcTypeErrorThread THEN
+      msg := "run-time error in thread mode"
+    ELSIF excType = ExcTypeFaultHandler THEN
+      msg := "MCU fault in handler mode"
+    ELSIF excType = ExcTypeFaultThread THEN
+      msg := "MCU fault in thread mode"
     ELSE
-      msg := "run-time error"
+      msg := "unknown exception"
     END
   END GetExceptionType;
 

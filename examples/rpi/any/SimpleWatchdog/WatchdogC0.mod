@@ -16,7 +16,8 @@ MODULE WatchdogC0;
 **)
 
   IMPORT
-    SYSTEM, Main, Kernel, Out, MultiCore, StartUp, Memory, Errors, GPIO, LED, Watchdog, MCU := MCU2, CoreOne := WatchdogC1;
+    SYSTEM, Main, Kernel, Out, MultiCore, StartUp, Memory, Errors,
+    GPIO, LED, Watchdog, MCU := MCU2, CoreOne := WatchdogC1;
 
   CONST
     Core1 = 1;

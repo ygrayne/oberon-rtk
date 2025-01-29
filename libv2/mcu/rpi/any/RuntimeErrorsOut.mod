@@ -6,16 +6,15 @@ MODULE RuntimeErrorsOut;
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2020-2024 Gray, gray@grayraven.org
+  Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT RuntimeErrors, TextIO, Texts, Errors, ProgData;
+  IMPORT
+    RuntimeErrors, TextIO, Texts, Errors, ProgData, Memory;
 
   CONST
     NumCores = RuntimeErrors.NumCores;
-    ExcRecTypeError = RuntimeErrors.ExcRecTypeError;
-    ExcRecTypeFault = RuntimeErrors.ExcRecTypeFault;
 
   TYPE
     Name = ProgData.EntryString;
@@ -24,24 +23,29 @@ MODULE RuntimeErrorsOut;
     W: ARRAY NumCores OF TextIO.Writer;
 
 
-  PROCEDURE length(s: Name): INTEGER;
+  PROCEDURE nameLength(s: Name): INTEGER;
     VAR l: INTEGER;
   BEGIN
     l := 0;
     WHILE (l < LEN(s)) & (s[l] # 0X) DO INC(l) END;
     RETURN l
-  END length;
+  END nameLength;
 
 
-  PROCEDURE printTraceLine(W: TextIO.Writer; modName, procName: Name; addr, lineNo: INTEGER);
+  PROCEDURE printTraceLine(W: TextIO.Writer; modName, procName: Name; addr, lineNo, stkAddr: INTEGER);
     VAR l: INTEGER;
   BEGIN
     Texts.WriteString(W, "  "); Texts.WriteString(W, modName);
     Texts.WriteString(W, "."); Texts.WriteString(W, procName);
-    l := length(modName) + length(procName) + 1;
+    l := nameLength(modName) + nameLength(procName) + 1;
     Texts.WriteHex(W, addr, 36 - l);
     IF lineNo > 0 THEN
       Texts.WriteInt(W, lineNo, 6);
+    ELSE
+      Texts.WriteString(W, "      ")
+    END;
+    IF stkAddr > 0 THEN
+      Texts.WriteHex(W, stkAddr, 12);
     END;
     Texts.WriteLn(W)
   END printTraceLine;
@@ -49,29 +53,33 @@ MODULE RuntimeErrorsOut;
 
   PROCEDURE printAnnotation(W: TextIO.Writer; ann: INTEGER);
   BEGIN
-    IF ann = RuntimeErrors.AnnNewContext THEN
+    IF ann = RuntimeErrors.AnnStackframe THEN
       Texts.WriteString(W, "  --- exc ---"); Texts.WriteLn(W)
     END
   END printAnnotation;
 
 
-  PROCEDURE printStackTrace(W: TextIO.Writer; tr: RuntimeErrors.Trace);
+  PROCEDURE PrintStacktrace*(W: TextIO.Writer; tr: RuntimeErrors.Trace; cid: INTEGER);
     VAR
-      i: INTEGER;
+      i, modEntryAddr, procEntryAddr, topMainStackEntry: INTEGER;
       moduleName, procName: Name;
-  BEGINú
+      tp: RuntimeErrors.TracePoint;
+  BEGIN
     IF tr.count > 1 THEN
-      Texts.WriteString(W, "trace:"); Texts.WriteInt(W, tr.count, 6); Texts.WriteLn(W);
+      Texts.WriteString(W, "trace:"); Texts.WriteLn(W);
       i := 0;
-      WHILE (i < tr.count) & (procName # ".init") DO
-        printAnnotation(W, tr.tp[i].annotation);
-        ProgData.GetNames(tr.tp[i].address, moduleName, procName);
-        printTraceLine(W, moduleName, procName, tr.tp[i].address, tr.tp[i].lineNo);
+      topMainStackEntry := Memory.DataMem[cid].stackStart - 4;
+      WHILE i < tr.count DO
+        tp := tr.tp[i];
+        printAnnotation(W, tp.annotation);
+        IF tp.stackAddr < topMainStackEntry THEN
+          ProgData.FindProcEntries(tp.address, modEntryAddr, procEntryAddr);
+          ProgData.GetNames(modEntryAddr, procEntryAddr, moduleName, procName);
+        ELSE
+          moduleName := "Startup"; procName := "Sequence";
+        END;
+        printTraceLine(W, moduleName, procName, tp.address, tp.lineNo, tp.stackAddr);
         INC(i)
-      END;
-      IF procName = ".init" THEN
-        moduleName := "Init"; procName := "sequence";
-        printTraceLine(W, moduleName, procName, tr.tp[i].address, tr.tp[i].lineNo);
       END;
       IF tr.more THEN
         Texts.WriteString(W, "  --- more ---"); Texts.WriteLn(W)
@@ -79,71 +87,64 @@ MODULE RuntimeErrorsOut;
     ELSE
       Texts.WriteString(W, "no trace"); Texts.WriteLn(W)
     END
-  END printStackTrace;
+  END PrintStacktrace;
 
 
-  PROCEDURE regOut(W: TextIO.Writer; label: ARRAY OF CHAR; value: INTEGER);
+  PROCEDURE printReg(W: TextIO.Writer; label: ARRAY OF CHAR; value: INTEGER);
   BEGIN
     Texts.Write(W, " "); Texts.WriteString(W, label);
-    Texts.WriteHex(W, value, 10); (*Out.Bin(value, 37);*)
+    Texts.WriteHex(W, value, 10);
     Texts.WriteLn(W)
-  END regOut;
+  END printReg;
 
 
   PROCEDURE printStackedRegs(W: TextIO.Writer; stackedRegs: RuntimeErrors.StackedRegisters);
   BEGIN
     Texts.WriteString(W, "stacked registers:"); Texts.WriteLn(W);
-    regOut(W, "psr:", stackedRegs.xpsr);
-    regOut(W, " pc:", stackedRegs.pc);
-    regOut(W, " lr:", stackedRegs.lr);
-    regOut(W, "r12:", stackedRegs.r12);
-    regOut(W, " r3:", stackedRegs.r3);
-    regOut(W, " r2:", stackedRegs.r2);
-    regOut(W, " r1:", stackedRegs.r1);
-    regOut(W, " r0:", stackedRegs.r0);
-    regOut(W, " sp:", stackedRegs.sp)
+    printReg(W, "psr:", stackedRegs.xpsr);
+    printReg(W, " pc:", stackedRegs.pc);
+    printReg(W, " lr:", stackedRegs.lr);
+    printReg(W, "r12:", stackedRegs.r12);
+    printReg(W, " r3:", stackedRegs.r3);
+    printReg(W, " r2:", stackedRegs.r2);
+    printReg(W, " r1:", stackedRegs.r1);
+    printReg(W, " r0:", stackedRegs.r0);
+    printReg(W, " sp:", stackedRegs.sp)
   END printStackedRegs;
 
 
   PROCEDURE printCurrentRegs(W: TextIO.Writer; currentRegs: RuntimeErrors.CurrentRegisters);
   BEGIN
     Texts.WriteString(W, "current registers:"); Texts.WriteLn(W);
-    regOut(W, " sp:", currentRegs.sp);
-    regOut(W, " lr:", currentRegs.lr);
-    regOut(W, " pc:", currentRegs.pc);
-    regOut(W, "psr:", currentRegs.xpsr)
+    printReg(W, " sp:", currentRegs.sp);
+    printReg(W, " lr:", currentRegs.lr);
+    printReg(W, " pc:", currentRegs.pc);
+    printReg(W, "psr:", currentRegs.xpsr)
   END printCurrentRegs;
 
 
   PROCEDURE PrintException*(W: TextIO.Writer; er: RuntimeErrors.ExceptionRec);
     VAR
-      code, core, address, lineNo: INTEGER;
+      modEntryAddr, procEntryAddr: INTEGER;
       moduleName, procName: Name;
       msg: Errors.String;
   BEGIN
-    ASSERT(er.excType IN {ExcRecTypeError, ExcRecTypeFault}, Errors.ProgError);
-    IF er.excType = ExcRecTypeFault THEN
-      code := -er.code
-    ELSE
-      code := er.code
-    END;
-    core := er.core;
-    address := er.address;
-    lineNo := er.lineNo;
-    Errors.GetExceptionType(code, msg);
-    Texts.WriteString(W, "exception: "); Texts.WriteString(W, msg);
-    Errors.Msg(code, msg);
-    Texts.Write(W, " "); Texts.WriteInt(W, ABS(code), 0); Texts.WriteString(W, " core: ");
-    Texts.WriteInt(W, core, 0); Texts.WriteLn(W);
+    Errors.GetExceptionType(er.excType, msg);
+    Texts.WriteString(W, msg);
+    Texts.WriteString(W, ": "); Texts.WriteInt(W, ABS(er.code), 0);
+    Texts.WriteString(W, " core: ");
+    Texts.WriteInt(W, er.core, 0); Texts.WriteLn(W);
+    Errors.GetExceptionMsg(er.code, msg);
     Texts.WriteString(W, msg); Texts.WriteLn(W);
-    ProgData.GetNames(address, moduleName, procName);
+    ProgData.FindProcEntries(er.address, modEntryAddr, procEntryAddr);
+    ProgData.GetNames(modEntryAddr, procEntryAddr, moduleName, procName);
     Texts.WriteString(W, moduleName); Texts.Write(W, "."); Texts.WriteString(W, procName);
-    Texts.WriteString(W, "  addr: "); Texts.WriteHex(W, address, 0);
-    IF lineNo > 0 THEN
-      Texts.WriteString(W, "  ln: "); Texts.WriteInt(W, lineNo, 0)
+    Texts.WriteString(W, "  addr: "); Texts.WriteHex(W, er.address, 0);
+    IF er.lineNo > 0 THEN
+      Texts.WriteString(W, "  ln: "); Texts.WriteInt(W, er.lineNo, 0)
     END;
     Texts.WriteLn(W);
-    printStackTrace(W, er.trace);
+    PrintStacktrace(W, er.trace, er.core);
     printStackedRegs(W, er.stackedRegs);
     printCurrentRegs(W, er.currentRegs)
   END PrintException;
@@ -151,15 +152,16 @@ MODULE RuntimeErrorsOut;
 
   (* RuntimeErrors-compatible handler *)
 
-  PROCEDURE HandleException*(cpuId: INTEGER;  er: RuntimeErrors.ExceptionRec);
+  PROCEDURE HandleException*(er: RuntimeErrors.ExceptionRec);
   BEGIN
-    ASSERT(cpuId < NumCores, Errors.PreCond);
-    PrintException(W[cpuId], er)
+    IF er.core < NumCores THEN
+      PrintException(W[er.core], er)
+    END
   END HandleException;
 
   (* plug a writer *)
 
-  PROCEDURE SetWriter*(coreId: INTEGER; Wr: TextIO.Writer);
+  PROCEDURE* SetWriter*(coreId: INTEGER; Wr: TextIO.Writer);
   BEGIN
     ASSERT(coreId < NumCores, Errors.PreCond);
     W[coreId] := Wr

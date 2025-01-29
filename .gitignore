@@ -31,6 +31,7 @@
 !/examples/pico/DebugEval/rdb/*.lst
 
 !/examples/rpi/any/Stacktrace/*.elst
+!/examples/rpi/any/Stacktrace2/*.elst
 
 /lib/mcu/m0/rp2040/_debug
 /lib/mcu/m0/rp2040/_keep

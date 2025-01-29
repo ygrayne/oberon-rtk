@@ -12,7 +12,7 @@ MODULE Kernel;
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2020-2024 Gray gray@grayraven.org
+  Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
@@ -288,7 +288,7 @@ MODULE Kernel;
     VAR tid, cid: INTEGER; t, t0: Thread; ctx: CoreContext; devFlags: SET;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
-    Memory.ResetMainStack(cid, 128); (* for clean stack traces in main stack *)
+    Memory.ResetMainStack; (* for clean stack traces in main stack *)
     ctx := coreCon[cid];
     ctx.Ct := NIL;
     REPEAT
@@ -378,6 +378,7 @@ MODULE Kernel;
     SYSTEM.EMIT(MCU.MSR_CTL_R11);
     SYSTEM.EMIT(MCU.ISB);
     (* from here, we use the PSP *)
+    (* still in main stack memory *)
     SysTick.Enable;
     Coroutines.Transfer(coreCon[cid].jump, coreCon[cid].loop)
     (* we'll not return here *)

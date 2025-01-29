@@ -7,6 +7,9 @@ MODULE ProgData;
   --
   MCU: RP2040, RP2350
   --
+  Copyright (c) 2024-2025 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+  --
   Structure:
   resource header -- at Config.ResourceStart
   entry
@@ -61,15 +64,14 @@ MODULE ProgData;
   * Entry string is terminated by a null char.
   * Hence max string length is (4 x 4) - 1 = 15 chars
   * Entry string memory addresses can contain garbage, but this is always separated
-    by a null char, for example:
+    by a null char from the entry string, for example:
     0696E692EH  ".ini"
     072610074H  "t"     <= null char here: '0074'
     064644174H  "tAdd"  <= garbage
     000736572H  "res"
   * Resource name is not null-terminated.
-  --
-  Copyright (c) 2024 Gray, gray@grayraven.org
-  https://oberon-rtk.org/licences/
+  * The last entry is always the program's '.init' procedure. Any 'bl.w' address beyond the
+    .inits code address cannot be identified, namely in the start-up sequence.
 **)
 
   IMPORT SYSTEM, Config;
@@ -103,12 +105,101 @@ MODULE ProgData;
       size: INTEGER
     END;
 
-    Entry* = RECORD
-      entryAddr: INTEGER;
-      etype: INTEGER;
-      codeAddr*: INTEGER
-    END;
+    VAR
+      progDataRes: ProgDataRes;
 
+
+  PROCEDURE FindEntry*(codeAddr: INTEGER; VAR entryAddr: INTEGER);
+    VAR ca: INTEGER; found: BOOLEAN;
+  BEGIN
+    entryAddr := 0;
+    IF progDataRes.resAddr # 0 THEN
+      found := FALSE;
+      entryAddr := progDataRes.dataBeginAddr;
+      WHILE (entryAddr < progDataRes.dataEndAddr) & ~found DO
+        found := entryAddr + NextEntryAddrOffset > progDataRes.dataEndAddr; (* at last entry *)
+        IF ~found THEN
+          SYSTEM.GET(entryAddr + NextEntryAddrOffset, ca);
+          found := codeAddr < ca
+        END;
+        IF ~found THEN
+          entryAddr := entryAddr + EntrySize
+        END
+      END
+    END
+  END FindEntry;
+
+
+  PROCEDURE GetNextEntry*(thisEntryAddr: INTEGER; VAR nextEntryAddr: INTEGER);
+  BEGIN
+    nextEntryAddr := 0;
+    IF thisEntryAddr + NextEntryAddrOffset < progDataRes.dataEndAddr THEN
+      nextEntryAddr := thisEntryAddr + EntrySize
+    END
+  END GetNextEntry;
+
+
+  PROCEDURE FindProcEntries*(codeAddr: INTEGER; VAR modEntryAddr, procEntryAddr: INTEGER);
+  (* will return '.init' of the program for all 'codeAddr' >= .init's code address *)
+  (* this is a limitation of the available program meta data *)
+    VAR entryAddr, etype, ca: INTEGER; found: BOOLEAN;
+  BEGIN
+    IF progDataRes.resAddr # 0 THEN
+      found := FALSE;
+      entryAddr := progDataRes.dataBeginAddr;
+      modEntryAddr := 0; procEntryAddr := 0;
+      WHILE (entryAddr < progDataRes.dataEndAddr) & ~found DO
+        found := entryAddr + NextEntryAddrOffset > progDataRes.dataEndAddr; (* at last entry *)
+        IF ~found THEN
+          SYSTEM.GET(entryAddr + NextEntryAddrOffset, ca);
+          found := codeAddr < ca
+        END;
+        SYSTEM.GET(entryAddr, etype);
+        IF found THEN
+          procEntryAddr := entryAddr;
+        ELSIF etype = EntryTypeModule THEN
+          modEntryAddr := entryAddr
+        END;
+        entryAddr := entryAddr + EntrySize
+      END
+    END
+  END FindProcEntries;
+
+
+  PROCEDURE GetCodeAddr*(entryAddr: INTEGER; VAR codeAddr: INTEGER);
+  BEGIN
+    SYSTEM.GET(entryAddr + EntryAddrOffset, codeAddr)
+  END GetCodeAddr;
+
+
+  PROCEDURE GetString*(entryAddr: INTEGER; VAR s: EntryString);
+    VAR stringAddr, i: INTEGER; b: BYTE;
+  BEGIN
+    stringAddr := entryAddr + EntryStringOffset;
+    i := 0;
+    WHILE i < EntryStringLen DO
+      SYSTEM.GET(stringAddr + i, b);
+      s[i] := CHR(b);
+      INC(i)
+    END
+  END GetString;
+
+
+  PROCEDURE GetNames*(modEntryAddr, procEntryAddr: INTEGER; VAR modName, procName: EntryString);
+  BEGIN
+    IF procEntryAddr # 0 THEN
+      GetString(procEntryAddr, procName);
+    ELSE
+      procName := "Unknown"
+    END;
+    IF modEntryAddr # 0 THEN
+      GetString(modEntryAddr, modName)
+    ELSE
+      modName := "Unknown"
+    END
+  END GetNames;
+
+  (* -- init -- *)
 
   PROCEDURE* getResName(resAddr: INTEGER; VAR name: ResName);
     VAR i, nameAddr: INTEGER; s: ARRAY 4 OF CHAR;
@@ -149,99 +240,6 @@ MODULE ProgData;
     END
   END getProgDataRes;
 
-
-  PROCEDURE FindEntry*(codeAddr: INTEGER; VAR entry: Entry);
-    VAR progDataRes: ProgDataRes; entryAddr, ca: INTEGER; found: BOOLEAN;
-  BEGIN
-    CLEAR(entry);
-    getProgDataRes(progDataRes);
-    IF progDataRes.resAddr # 0 THEN
-      found := FALSE;
-      entryAddr := progDataRes.dataBeginAddr;
-      WHILE (entryAddr < progDataRes.dataEndAddr) & ~found DO
-        SYSTEM.GET(entryAddr + EntryAddrOffset + EntrySize, ca);
-        found := codeAddr < ca;
-        IF found THEN
-          SYSTEM.GET(entryAddr, entry.etype);
-          SYSTEM.GET(entryAddr + EntryAddrOffset, entry.codeAddr);
-          entry.entryAddr := entryAddr
-        ELSE
-          entryAddr := entryAddr + EntrySize
-        END
-      END
-    END
-  END FindEntry;
-
-
-  PROCEDURE GetNextEntry*(this: Entry; VAR next: Entry);
-    VAR entryAddr: INTEGER;
-  BEGIN
-    entryAddr := this.entryAddr + EntrySize;
-    next.entryAddr := entryAddr;
-    SYSTEM.GET(entryAddr, next.etype);
-    SYSTEM.GET(entryAddr + EntryAddrOffset, next.codeAddr)
-  END GetNextEntry;
-
-
-  PROCEDURE FindProcEntries*(codeAddr: INTEGER; VAR modEntry, procEntry: Entry);
-    VAR progDataRes: ProgDataRes; entryAddr, ca, etype, modEntryAddr: INTEGER; found: BOOLEAN;
-  BEGIN
-    CLEAR(procEntry); CLEAR(modEntry);
-    getProgDataRes(progDataRes);
-    IF progDataRes.resAddr # 0 THEN
-      found := FALSE;
-      entryAddr := progDataRes.dataBeginAddr;
-      modEntryAddr := 0;
-      WHILE (entryAddr < progDataRes.dataEndAddr) & ~found DO
-        SYSTEM.GET(entryAddr, etype);
-        found := entryAddr + NextEntryAddrOffset > progDataRes.dataEndAddr;
-        IF ~found THEN
-          SYSTEM.GET(entryAddr + NextEntryAddrOffset, ca);
-          found := codeAddr < ca
-        END;
-        IF found THEN
-          SYSTEM.GET(entryAddr + EntryAddrOffset, procEntry.codeAddr);
-          procEntry.etype := etype;
-          procEntry.entryAddr := entryAddr;
-          modEntry.etype := EntryTypeModule;
-          SYSTEM.GET(modEntryAddr + EntryAddrOffset, modEntry.codeAddr);
-          modEntry.entryAddr := modEntryAddr;
-        ELSIF etype = EntryTypeModule THEN
-          modEntryAddr := entryAddr
-        END;
-        entryAddr := entryAddr + EntrySize
-      END
-    END
-  END FindProcEntries;
-
-
-  PROCEDURE GetEntryString*(entry: Entry; VAR s: EntryString);
-    VAR stringAddr, i: INTEGER; b: BYTE;
-  BEGIN
-    stringAddr := entry.entryAddr + EntryStringOffset;
-    i := 0;
-    WHILE i < EntryStringLen DO
-      SYSTEM.GET(stringAddr + i, b);
-      s[i] := CHR(b);
-      INC(i)
-    END
-  END GetEntryString;
-
-
-  PROCEDURE GetNames*(codeAddr: INTEGER; VAR modName, procName: EntryString);
-    VAR procEntry, modEntry: Entry;
-  BEGIN
-    FindProcEntries(codeAddr, modEntry, procEntry);
-    IF procEntry.entryAddr # 0 THEN
-      GetEntryString(procEntry, procName);
-    ELSE
-      procName := "Unknown"
-    END;
-    IF modEntry.entryAddr # 0 THEN
-      GetEntryString(modEntry, modName)
-    ELSE
-      modName := "Unknown"
-    END
-  END GetNames;
-
+BEGIN
+  getProgDataRes(progDataRes)
 END ProgData.

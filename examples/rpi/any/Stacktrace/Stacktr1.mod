@@ -1,4 +1,4 @@
-MODULE TestExc1;
+MODULE Stacktr1;
 (**
   Oberon RTK Framework v2
   --
@@ -8,19 +8,21 @@ MODULE TestExc1;
   MCU: RP2040, RP2350
   Board: Pico, Pico 2
   --
-  Copyright (c) 2024 Gray gray@grayraven.org
+  Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Main, Out, Exceptions;
+  IMPORT SYSTEM, MCU := MCU2, Main, Exceptions, Memory, MultiCore, Out;
 
   CONST
     IntNo0 = MCU.PPB_SPAREIRQ_IRQ0;
     IntNo1 = MCU.PPB_SPAREIRQ_IRQ1;
+    Core1 = 1;
 
-    TestCase = 1;
+  VAR
+    p: PROCEDURE;
 
-  PROCEDURE fault;
+  PROCEDURE* fault;
   (* trigger MCU fault *)
     VAR x: INTEGER;
   BEGIN
@@ -28,7 +30,7 @@ MODULE TestExc1;
     SYSTEM.PUT(x, x)
   END fault;
 
-  PROCEDURE error;
+  PROCEDURE* error;
   (* trigger runtime error *)
     VAR x: INTEGER;
   BEGIN
@@ -36,10 +38,12 @@ MODULE TestExc1;
   END error;
 
   PROCEDURE i2;
+    VAR cid: INTEGER;
   BEGIN
-    IF TestCase = 1 THEN
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    IF cid = 0 THEN
       fault
-    ELSIF TestCase = 2 THEN
+    ELSE
       error
     END
   END i2;
@@ -54,25 +58,22 @@ MODULE TestExc1;
     i1
   END i0;
 
-  PROCEDURE h2a;
-  END h2a;
-
   PROCEDURE h2;
-    VAR x: INTEGER;
   BEGIN
-    x := 0;
-    h2a;
-    (* set int pending *)
-    SYSTEM.PUT(MCU.PPB_NVIC_ISPR0 + ((IntNo1 DIV 32) * 4), {IntNo1 MOD 32});
-    x := 0;
+    (* set int for i0 pending *)
+    SYSTEM.PUT(MCU.PPB_NVIC_ISPR0 + ((IntNo1 DIV 32) * 4), {IntNo1 MOD 32})
   END h2;
 
   PROCEDURE h1;
   (* FPU operation to test correct stack trace on RP2350 *)
-    VAR r: REAL;
+  (* on core 0 only: FPU on core 1 not enabled *)
+    VAR r: REAL; cid: INTEGER;
   BEGIN
-    r := 1.0;
-    r := r / r;
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    r := 1.0; (* avoid false positives on core 1 *)
+    IF cid = 0 THEN
+      r := r / r
+    END;
     h2
   END h1;
 
@@ -82,40 +83,44 @@ MODULE TestExc1;
   END h0;
 
   PROCEDURE p1a;
-  END p1a;
-
-  PROCEDURE p1b;
-  END p1b;
-
-  PROCEDURE p1;
     VAR x: INTEGER;
   BEGIN
-    x := 0;
-    p1a;
-    (* set int pending *)
+    x := 42
+  END p1a;
+
+  PROCEDURE p1;
+    VAR y: INTEGER;
+  BEGIN
+    y := 13;
+    y := 4;
+    (* set int for h0 pending *)
     SYSTEM.PUT(MCU.PPB_NVIC_ISPR0 + ((IntNo0 DIV 32) * 4), {IntNo0 MOD 32});
-    x := 0;
-    p1b
+    (* y := 42; *)
+    p1a
   END p1;
 
   PROCEDURE p0;
   BEGIN
-    SYSTEM.LDREG(12, 0A0B0C0DH);
+    SYSTEM.LDREG(12, 0A0B0C0DH); (* marker *)
     p1
   END p0;
 
   PROCEDURE run;
+    VAR x: INTEGER;
   BEGIN
-    Out.Ln; Out.String("TestCase = "); Out.Int(TestCase, 0); Out.Ln;
+    x := Memory.DataMem[0].stackStart;
+    Out.Hex(x, 12); Out.Ln;
     Exceptions.InstallIntHandler(IntNo0, h0);
     Exceptions.SetIntPrio(IntNo0, MCU.PPB_ExcPrio4);
     Exceptions.EnableInt(IntNo0);
     Exceptions.InstallIntHandler(IntNo1, i0);
     Exceptions.SetIntPrio(IntNo1, MCU.PPB_ExcPrio2);
     Exceptions.EnableInt(IntNo1);
-    p0
+    p
   END run;
 
 BEGIN
+  p := p0;
+  MultiCore.InitCoreOne(run, Memory.DataMem[Core1].stackStart, Memory.DataMem[Core1].dataStart);
   run
-END TestExc1.
+END Stacktr1.

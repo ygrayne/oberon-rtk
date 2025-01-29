@@ -5,8 +5,8 @@ MODULE RuntimeErrors;
   Exception handling: run-time errors and faults
   Multi-core
   --
-  Error: run-time errors, including ASSERT, triggered by SVC calls in software
-  Fault: hardware faults, triggered by MCU hardware
+  * Error: run-time errors, including ASSERT, triggered by SVC calls in software
+  * Fault: hardware faults, triggered by MCU hardware
   --
   MCU: RP2040
   --
@@ -19,23 +19,21 @@ MODULE RuntimeErrors;
   See module RuntimeErrorsOut for a corresponding handler and print
   functions.
   --
-  Copyright (c) 2020-2024 Gray, gray@grayraven.org
+  Copyright (c) 2020-2025 Gray, gray@grayraven.org
   Portions copyright (c) 2008-2023 CFB Software, https://www.astrobe.com
   Used with permission.
   Please refer to the licensing conditions as defined at the end of this file.
 **)
 
   IMPORT
-    SYSTEM, LED, MCU := MCU2, Config, Memory;
+    SYSTEM, LED, MCU := MCU2, Config, Memory, Errors;
 
   CONST
     NumCores* = MCU.NumCores;
     TraceDepth* = 16;
-    ExcRecTypeError* = 0;
-    ExcRecTypeFault* = 1;
 
     AnnNone* = 0;
-    AnnNewContext* = -1;
+    AnnStackframe* = -1;
 
     StackTraceNotLR = 0;
     StackTraceLineNo = 1;
@@ -43,8 +41,10 @@ MODULE RuntimeErrors;
 
     ErrorLed = LED.Pico;
 
-    (* stack frame sizes and register offsets from stacked r0 *)
+    (* stack context size *)
     StateContextSize = 8 * 4;
+
+    (* register offsets from stacked r0 *)
     PSRoffset = 28;
     PCoffset = 24;
     LRoffset = 20;
@@ -54,9 +54,8 @@ MODULE RuntimeErrors;
     LR = 14;
     PC = 15;
 
-
     (* EXC_RETURN bits *)
-    (*EXC_RET_Mode  = 3;*)  (* = 1: thread mode, faulty code was running in thread mode *)
+    EXC_RET_Mode  = 3;  (* = 1: thread mode, faulty code was running in thread mode *)
     EXC_RET_SPSEL = 2;  (* = 1: PSP used for stacking *)
 
 
@@ -64,6 +63,7 @@ MODULE RuntimeErrors;
     TracePoint* = RECORD
       address*: INTEGER;
       lineNo*: INTEGER;
+      stackAddr*: INTEGER;
       annotation*: INTEGER
     END;
 
@@ -82,24 +82,27 @@ MODULE RuntimeErrors;
       sp*, lr*, pc*, xpsr*: INTEGER
     END;
 
+    (* data collected for an error/fault *)
     ExceptionRec* = RECORD
-      code*: INTEGER; (* error or fault code *)
-      core*: INTEGER; (* MCU core *)
-      address*: INTEGER;
-      lineNo*: INTEGER;
-      trace*: Trace;
-      stackedRegs*: StackedRegisters;
-      currentRegs*: CurrentRegisters;
-      excType*: INTEGER
+      code*: INTEGER;     (* error or fault code *)
+      core*: INTEGER;     (* MCU core *)
+      address*: INTEGER;  (* error/fault code address *)
+      lineNo*: INTEGER;   (* error source code line no, if available *)
+      excType*: INTEGER;  (* type of exception: error or fault, handler or thread mode *)
+      trace*: Trace;      (* stack trace *)
+      stackedRegs*: StackedRegisters; (* register values as stacked my hrdware *)
+      currentRegs*: CurrentRegisters  (* register values when error/fault handler begins *)
     END;
 
+    (* installable handler for one error/fault exception *)
+    ExceptionHandler* = PROCEDURE(er: ExceptionRec);
+
+    (* error/fault exception instance data for one core *)
     Exception = RECORD
       excRec: ExceptionRec;
-      handleException: PROCEDURE(cpuId: INTEGER; er: ExceptionRec);
+      handleException: ExceptionHandler;
       haltOn, stacktraceOn: BOOLEAN
     END;
-
-    ExceptionHandler* = PROCEDURE(cpuId: INTEGER; er: ExceptionRec);
 
 
   VAR
@@ -138,12 +141,16 @@ MODULE RuntimeErrors;
   END isBL;
 
   PROCEDURE isBLX(codeAddr: INTEGER): BOOLEAN;
-  (* from Astrobe library *)
+  (* from Astrobe library, modified *)
   (* check if the instruction at 'codeAddr' is a BLX instruction: 010001111rrrr000 *)
+    CONST
+      BLXmask = 0FF87H; (* 1111 1111 1000 0111 *)
+      BLXval  = 04780H; (* 0100 0111 1000 0000 *)
     VAR instr: INTEGER;
   BEGIN
     getHalfWord(codeAddr, instr);
-    RETURN (BFX(instr, 15, 7) = 08FH) & (BFX(instr, 2, 0) = 0)
+    RETURN BITS(instr) * BITS(BLXmask) = BITS(BLXval)
+    (*RETURN (BFX(instr, 15, 7) = 08FH) & (BFX(instr, 2, 0) = 0)*)
   END isBLX;
 
   PROCEDURE getLR(stackAddr: INTEGER; VAR lr, res: INTEGER);
@@ -184,8 +191,68 @@ MODULE RuntimeErrors;
   END HALT;
 
 
+  PROCEDURE* threadMode(excRetVal: INTEGER): BOOLEAN;
+    RETURN EXC_RET_Mode IN BITS(excRetVal)
+  END threadMode;
+
+
+  PROCEDURE extractError(stackframeBase, excRetVal: INTEGER; VAR errorRec: ExceptionRec; VAR tp: TracePoint);
+  (* collect error data, create initial trace point *)
+    VAR addr, lineNo: INTEGER;
+  BEGIN
+    SYSTEM.GET(stackframeBase + PCoffset, addr); (* return address for exc handler (PC on stack) *)
+    getHalfWord(addr, lineNo); (* source code line number *)
+    DEC(addr, 2); (* address of SVC instruction = error address *)
+    getHalfWord(addr, errorRec.code); (* SCV instruction *)
+    errorRec.code := BFX(errorRec.code, 7, 0); (* error code *)
+    errorRec.lineNo := lineNo;
+    errorRec.address := addr;
+    tp.address := addr;
+    tp.lineNo := lineNo;
+    tp.stackAddr := stackframeBase + PCoffset;
+    IF threadMode(excRetVal) THEN
+      errorRec.excType := Errors.ExcTypeErrorThread
+    ELSE
+      errorRec.excType := Errors.ExcTypeErrorHandler
+    END
+  END extractError;
+
+
+  PROCEDURE extractFault(stackframeBase, excRetVal: INTEGER; VAR faultRec: ExceptionRec; VAR tp: TracePoint);
+  (* collect fault data, create initial trace point *)
+    VAR addr: INTEGER;
+  BEGIN
+    SYSTEM.GET(stackframeBase + PCoffset, addr);
+    SYSTEM.EMIT(MCU.MRS_R11_IPSR);
+    faultRec.code := -SYSTEM.REG(11);
+    faultRec.lineNo := 0;
+    faultRec.address := addr;
+    tp.address := addr;
+    tp.lineNo := 0;
+    tp.stackAddr := stackframeBase + PCoffset;
+    IF threadMode(excRetVal) THEN
+      faultRec.excType := Errors.ExcTypeFaultThread
+    ELSE
+      faultRec.excType := Errors.ExcTypeFaultHandler
+    END
+  END extractFault;
+
+
+  PROCEDURE* readRegs(stackframeBase: INTEGER; VAR stackedRegs: StackedRegisters);
+  BEGIN
+    SYSTEM.GET(stackframeBase, stackedRegs.r0);
+    SYSTEM.GET(stackframeBase + 4, stackedRegs.r1);
+    SYSTEM.GET(stackframeBase + 8, stackedRegs.r2);
+    SYSTEM.GET(stackframeBase + 12, stackedRegs.r3);
+    SYSTEM.GET(stackframeBase + 16, stackedRegs.r12);
+    SYSTEM.GET(stackframeBase + 20, stackedRegs.lr);
+    SYSTEM.GET(stackframeBase + 24, stackedRegs.pc);
+    SYSTEM.GET(stackframeBase + 28, stackedRegs.xpsr);
+    stackedRegs.sp := stackframeBase
+  END readRegs;
+
+
   PROCEDURE* traceStart(stackframeBase: INTEGER): INTEGER;
-  (* from stacked r0 *)
     CONST StackAlign = 9; (* in stacked PSR *)
     VAR addr: INTEGER;
   BEGIN
@@ -197,169 +264,92 @@ MODULE RuntimeErrors;
   END traceStart;
 
 
-  PROCEDURE extractError(stackframeBase: INTEGER; VAR errorRec: ExceptionRec);
-  (* collect error data, fill-in initial trace point *)
-    VAR tp: TracePoint; addr, lineNo: INTEGER;
+  PROCEDURE* stackframeBase(excRetAddr: INTEGER): INTEGER;
+    VAR addr, excRetVal: INTEGER;
   BEGIN
-    SYSTEM.GET(stackframeBase + PCoffset, addr); (* return address for exc handler (PC on stack) *)
-    getHalfWord(addr, lineNo); (* source code line number *)
-    DEC(addr, 2); (* address of SVC instruction = error address *)
-    getHalfWord(addr, errorRec.code); (* SCV instruction *)
-    errorRec.code := BFX(errorRec.code, 7, 0); (* error code *)
-    errorRec.lineNo := lineNo;
-    errorRec.address := addr;
-    tp.address := addr;
-    tp.lineNo := lineNo;
-    errorRec.trace.tp[0] := tp;
-    errorRec.trace.count := 1
-  END extractError;
-
-
-  PROCEDURE* extractFault(stackframeBase: INTEGER; VAR faultRec: ExceptionRec);
-  (* collect fault data, fill-in initial trace point *)
-    VAR tp: TracePoint; addr: INTEGER;
-  BEGIN
-    SYSTEM.GET(stackframeBase + PCoffset, addr);
-    SYSTEM.EMIT(MCU.MRS_R11_IPSR);
-    faultRec.code := SYSTEM.REG(11);
-    faultRec.lineNo := 0;
-    faultRec.address := addr;
-    tp.address := addr;
-    tp.lineNo := 0;
-    faultRec.trace.tp[0] := tp;
-    faultRec.trace.count := 1
-  END extractFault;
-
-
-  PROCEDURE* readRegs(stackFrameBase: INTEGER; VAR stackedRegs: StackedRegisters);
-  BEGIN
-    SYSTEM.GET(stackFrameBase, stackedRegs.r0);
-    SYSTEM.GET(stackFrameBase + 4, stackedRegs.r1);
-    SYSTEM.GET(stackFrameBase + 8, stackedRegs.r2);
-    SYSTEM.GET(stackFrameBase + 12, stackedRegs.r3);
-    SYSTEM.GET(stackFrameBase + 16, stackedRegs.r12);
-    SYSTEM.GET(stackFrameBase + 20, stackedRegs.lr);
-    SYSTEM.GET(stackFrameBase + 24, stackedRegs.pc);
-    SYSTEM.GET(stackFrameBase + 28, stackedRegs.xpsr);
-    stackedRegs.sp := stackFrameBase
-  END readRegs;
-
-
-  PROCEDURE* stackframeBase(stackAddr, excReturn: INTEGER): INTEGER;
-  (* address of stacked R0 *)
-    VAR addr: INTEGER;
-  BEGIN
-    IF EXC_RET_SPSEL IN BITS(excReturn) THEN (* PSP used for stacking *)
+    SYSTEM.GET(excRetAddr, excRetVal);
+    IF EXC_RET_SPSEL IN BITS(excRetVal) THEN (* PSP used for stacking *)
       SYSTEM.EMIT(MCU.MRS_R11_PSP);
       addr := SYSTEM.REG(11)
     ELSE (* MSP used *)
-      addr := stackAddr
+      addr := excRetAddr + 4;
     END
     RETURN addr
   END stackframeBase;
 
 
-  PROCEDURE isBaseOfStackframe(stackAddr, stackVal: INTEGER): BOOLEAN;
-    VAR isBase: BOOLEAN; lr, res: INTEGER;
+  PROCEDURE getAddr(VAR stackAddr: INTEGER; VAR isStackFrame: BOOLEAN);
+    CONST R11 = 11; ExcRetMask = 0FFFFFFF3H; ExcRetVal = 0FFFFFFF1H;
+    VAR stackVal, lr, res, cid: INTEGER;
   BEGIN
-    isBase := FALSE;
-    IF (BFX(stackVal, 31, 4) = 0FFFFFFFH) THEN
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    isStackFrame := FALSE;
+    SYSTEM.GET(stackAddr, stackVal);
+    IF BITS(stackVal) * BITS(ExcRetMask) = BITS(ExcRetVal) THEN
+      (* if a potential EXC_RETURN value *)
+      SYSTEM.GET(stackAddr + 4, stackVal);
+      IF stackVal = Memory.StackSeal THEN
+        (* at top of main stack: we have an EXC_RETURN value with 'PSP used for stacking' *)
+        (* switch stacks, point to stacked regs on process stack *)
+          SYSTEM.EMIT(MCU.MRS_R11_PSP);
+        stackAddr := SYSTEM.REG(R11);
+        isStackFrame := TRUE
+      ELSE
+        (* point to potential stack frame on main stack*)
+        INC(stackAddr, 4);
+      (* stacked value at LRoffset must be either a valid LR value... *)
       getLR(stackAddr + LRoffset, lr, res);
-      isBase := res > StackTraceNotLR
-    END
-    RETURN isBase
-  END isBaseOfStackframe;
-
-(* debug version: prints stack dump
-  PROCEDURE Stacktrace*(stackAddr: INTEGER; VAR trace: Trace);
-    VAR
-      lr, stackVal, res, traceStart0, retAddr, sa, sv: INTEGER;
-      tp: TracePoint;
-  BEGIN
-    trace.more := FALSE;
-    SYSTEM.GET(stackAddr, stackVal);
-    CLEAR(tp);
-    WHILE (stackAddr # stackVal) & (trace.count <= TraceDepth) DO
-      IF ~isBaseOfStackframe(stackAddr + 4, stackVal) THEN
-        (* debug begin *)
-        Out.Hex(stackAddr, 12); Out.Hex(stackVal, 12);
-        (* debug end *)
-        getLR(stackAddr, lr, res);
-        IF res > StackTraceNotLR THEN
-          (* debug begin *)
-          Out.Hex(lr - 4, 12);
-          (* debug end *)
-          tp.address := lr - 4;
-          IF res = StackTraceLineNo THEN
-            getHalfWord(lr + 2, tp.lineNo)
-          END;
-        END;
-        (* debug begin *)
-        Out.Ln;
-        (* debug end *)
-        INC(stackAddr, 4)
-      ELSE
-        (* debug begin *)
-        sa := stackAddr;
-        sv := stackVal;
-        (* debug end *)
-
-        INC(stackAddr, 4);
-        traceStart0 := traceStart(stackAddr);
-
-        (* debug begin *)
-        WHILE sa < traceStart0 DO
-          Out.String("> "); Out.Hex(sa, 12); Out.Hex(sv, 12); Out.Ln;
-          INC(sa, 4);
-          SYSTEM.GET(sa, sv)
-        END;
-        (* debug end *)
-
-        SYSTEM.GET(stackAddr + PCoffset, retAddr);
-        tp.address := retAddr;
-        tp.annotation := AnnNewContext;
-        stackAddr := traceStart0
-      END;
-
-      IF tp.address # 0 THEN (* tp is valid *)
-        IF trace.count < TraceDepth THEN
-          trace.tp[trace.count] := tp;
-          INC(trace.count);
-          CLEAR(tp)
-        ELSE
-          trace.more := TRUE
+      isStackFrame := res > StackTraceNotLR;
+      (* ... or an EXC_RETURN value *)
+      IF ~isStackFrame THEN
+          SYSTEM.GET(stackAddr + LRoffset, stackVal);
+          isStackFrame := BITS(stackVal) * BITS(ExcRetMask) = BITS(ExcRetVal)
         END
-      END;
-
-      SYSTEM.GET(stackAddr, stackVal)
+      END
     END
-  END Stacktrace;
-*)
+  END getAddr;
 
-  PROCEDURE Stacktrace*(stackAddr: INTEGER; VAR trace: Trace);
+
+  PROCEDURE stacktrace(stackAddr: INTEGER; VAR trace: Trace);
     VAR
-      lr, stackVal, res, retAddr: INTEGER;
-      tp: TracePoint;
+      stackVal, retAddr, res, lr, traceDepth: INTEGER;
+      (* addr, val: INTEGER; (* debug *) *)
+      tp: TracePoint; isStackFrame: BOOLEAN;
   BEGIN
-    trace.more := FALSE;
-    SYSTEM.GET(stackAddr, stackVal);
     CLEAR(tp);
-    WHILE (stackAddr # stackVal) & (trace.count <= TraceDepth) DO
-      IF ~isBaseOfStackframe(stackAddr + 4, stackVal) THEN
+    traceDepth := LEN(trace.tp);
+    SYSTEM.GET(stackAddr, stackVal);
+    WHILE (stackVal # Memory.StackSeal) & (trace.count <= TraceDepth) DO
+      (* debug *)
+      (* Out.Hex(stackAddr, 13); Out.Hex(stackVal, 13); Out.Ln; *)
+      (* debug end *)
+      getAddr(stackAddr, isStackFrame);
+      IF isStackFrame THEN
+        SYSTEM.GET(stackAddr + PCoffset, retAddr);
+        tp.address := retAddr;
+        tp.annotation := AnnStackframe;
+        tp.stackAddr := stackAddr;
+        (* addr := stackAddr; (* debug *) *)
+        stackAddr := traceStart(stackAddr);
+        (* debug: print stack dump *)
+        (*
+        WHILE addr < stackAddr DO
+          SYSTEM.GET(addr, val);
+          Out.String("> "); Out.Hex(addr, 13); Out.Hex(val, 13); Out.Ln;
+          INC(addr, 4)
+        END
+        *)
+        (* debug end *)
+      ELSE
         getLR(stackAddr, lr, res);
         IF res > StackTraceNotLR THEN
           tp.address := lr - 4;
+          tp.stackAddr := stackAddr;
           IF res = StackTraceLineNo THEN
             getHalfWord(lr + 2, tp.lineNo)
-          END;
+          END
         END;
         INC(stackAddr, 4)
-      ELSE
-        INC(stackAddr, 4);
-        SYSTEM.GET(stackAddr + PCoffset, retAddr);
-        tp.address := retAddr;
-        tp.annotation := AnnNewContext;
-        stackAddr := traceStart(stackAddr)
       END;
       IF tp.address # 0 THEN (* tp is valid *)
         IF trace.count < TraceDepth THEN
@@ -372,31 +362,42 @@ MODULE RuntimeErrors;
       END;
       SYSTEM.GET(stackAddr, stackVal)
     END
-  END Stacktrace;
+  END stacktrace;
+
+
+  PROCEDURE* initTrace(VAR tr: Trace; tp: TracePoint);
+  BEGIN
+    tr.tp[0] := tp;
+    tr.count := 1;
+    tr.more := FALSE
+  END initTrace;
 
 
   PROCEDURE errorHandler;
   (* via compiler-inserted SVC instruction *)
   (* in main stack *)
-    VAR stackframeAddr, cid, excReturn: INTEGER;
+    VAR
+      stackframeAddr, traceStartAddr, excRetVal, cid: INTEGER;
+      tp: TracePoint; cr: CurrentRegisters;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
-    exc[cid].excRec.currentRegs.pc := SYSTEM.REG(PC);
-    exc[cid].excRec.currentRegs.sp := SYSTEM.REG(SP);
-    exc[cid].excRec.currentRegs.lr := SYSTEM.REG(LR);
+    cr.pc := SYSTEM.REG(PC);
+    cr.sp := SYSTEM.REG(SP);
+    cr.lr := SYSTEM.REG(LR);
     SYSTEM.EMIT(MCU.MRS_R11_XPSR);
-    exc[cid].excRec.currentRegs.xpsr := SYSTEM.REG(11);
-    excReturn := SYSTEM.REG(LR);
+    cr.xpsr := SYSTEM.REG(11);
+    exc[cid].excRec.currentRegs := cr;
     exc[cid].excRec.core := cid;
-    stackframeAddr := stackframeBase(SYSTEM.REG(SP) + 16, excReturn); (* SP: + 16 for lr, stackframeAddr, cid, exc_return *)
+    excRetVal := SYSTEM.REG(LR);
+    stackframeAddr := stackframeBase(SYSTEM.REG(SP) + 48); (* SP + 48: addr of EXC_RETURN on stack *)
     readRegs(stackframeAddr, exc[cid].excRec.stackedRegs);
-    extractError(stackframeAddr, exc[cid].excRec);
+    extractError(stackframeAddr, excRetVal, exc[cid].excRec, tp);
     IF exc[cid].stacktraceOn THEN
-      Stacktrace(traceStart(stackframeAddr), exc[cid].excRec.trace)
+      traceStartAddr := traceStart(stackframeAddr);
+      initTrace(exc[cid].excRec.trace, tp);
+      stacktrace(traceStartAddr, exc[cid].excRec.trace)
     END;
-    exc[cid].excRec.excType := ExcRecTypeError;
-    exc[cid].handleException(cid, exc[cid].excRec);
-    (*ASSERT(FALSE);*)  (* trigger hard fault for testing *)
+    exc[cid].handleException(exc[cid].excRec);
     HALT(cid)
   END errorHandler;
 
@@ -404,26 +405,40 @@ MODULE RuntimeErrors;
   PROCEDURE faultHandler;
   (* via MCU hardware-generated exception *)
   (* in main stack *)
-    VAR stackframeAddr, cid, excReturn: INTEGER;
+    VAR
+      stackframeAddr, traceStartAddr, excRetVal, cid: INTEGER;
+      tp: TracePoint; cr: CurrentRegisters;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
-    exc[cid].excRec.currentRegs.pc := SYSTEM.REG(PC);
-    exc[cid].excRec.currentRegs.sp := SYSTEM.REG(SP);
-    exc[cid].excRec.currentRegs.lr := SYSTEM.REG(LR);
+    cr.pc := SYSTEM.REG(PC);
+    cr.sp := SYSTEM.REG(SP);
+    cr.lr := SYSTEM.REG(LR);
     SYSTEM.EMIT(MCU.MRS_R11_XPSR);
-    exc[cid].excRec.currentRegs.xpsr := SYSTEM.REG(11);
-    excReturn := SYSTEM.REG(LR);
+    cr.xpsr := SYSTEM.REG(11);
+    exc[cid].excRec.currentRegs := cr;
     exc[cid].excRec.core := cid;
-    stackframeAddr := stackframeBase(SYSTEM.REG(SP) + 16, excReturn); (* SP: + 16 for lr, stackframeAddr, cid, exc_return *)
+    excRetVal := SYSTEM.REG(LR);
+    stackframeAddr := stackframeBase(SYSTEM.REG(SP) + 48); (* SP + 48: addr of EXC_RETURN on stack *)
     readRegs(stackframeAddr, exc[cid].excRec.stackedRegs);
-    extractFault(stackframeAddr, exc[cid].excRec);
+    extractFault(stackframeAddr, excRetVal, exc[cid].excRec, tp);
     IF exc[cid].stacktraceOn THEN
-      Stacktrace(traceStart(stackframeAddr), exc[cid].excRec.trace)
+      traceStartAddr := traceStart(stackframeAddr);
+      initTrace(exc[cid].excRec.trace, tp);
+      stacktrace(traceStartAddr, exc[cid].excRec.trace)
     END;
-    exc[cid].excRec.excType := ExcRecTypeFault;
-    exc[cid].handleException(cid, exc[cid].excRec);
+    exc[cid].handleException(exc[cid].excRec);
     HALT(cid)
   END faultHandler;
+
+
+  PROCEDURE Stacktrace*(VAR tr: Trace);
+  (* experimental *)
+  BEGIN
+    tr.count := 0;
+    tr.more := FALSE;
+    CLEAR(tr.tp);
+    stacktrace(SYSTEM.REG(SP) + 8, tr)
+  END Stacktrace;
 
 
   PROCEDURE* SetHandler*(cpuId: INTEGER; eh: ExceptionHandler);
@@ -451,10 +466,10 @@ MODULE RuntimeErrors;
   END installHandler;
 
 
-  PROCEDURE* ledOnAndHalt(cid: INTEGER; er: ExceptionRec);
+  PROCEDURE* ledOnAndHalt(er: ExceptionRec);
   (* simplistic default handler *)
   BEGIN
-    SYSTEM.PUT(LED.LSET, ErrorLed);
+    SYSTEM.PUT(LED.LSET, {ErrorLed});
     REPEAT UNTIL FALSE (* HALT in any case *)
   END ledOnAndHalt;
 
@@ -465,21 +480,22 @@ MODULE RuntimeErrors;
   BEGIN
     i := 0;
     WHILE i < NumCores DO
-      (* mark top of main stack *)
-      SYSTEM.PUT(Memory.DataMem[i].stackStart, Memory.DataMem[i].stackStart);
-
       (* set core 0 VTOR register to core 0 SRAM bottom *)
       IF i = Core0 THEN
-        (* VTOR of other cores will be set by core wake-up sequence *)
+        (* VTOR of other cores will be set by core 1 wake-up sequence *)
         SYSTEM.PUT(MCU.PPB_VTOR, Memory.DataMem[Core0].dataStart)
       END;
 
       (* initialise vector table *)
+      (* install handlers for all errors and faults as implemented in the MCU *)
       vectorTableBase := Memory.DataMem[i].dataStart;
       vectorTableTop := vectorTableBase + MCU.VectorTableSize;
       installHandler(vectorTableBase + MCU.NMIhandlerOffset, faultHandler);
       installHandler(vectorTableBase + MCU.HardFaultHandlerOffset, faultHandler);
       installHandler(vectorTableBase + MCU.SVChandlerOffset, errorHandler);
+
+      (* install faultHandler across the rest of the vector table *)
+      (* will catch any exception with a missing handler *)
       addr := vectorTableBase + MCU.PendSVhandlerOffset;
       WHILE addr < vectorTableTop DO
         installHandler(addr, faultHandler); INC(addr, 4)
@@ -503,7 +519,7 @@ END RuntimeErrors.
 
 
 (**
-  Copyright (c) 2020-2024 Gray, gray@grayraven.org
+  Copyright (c) 2020-2025 Gray, gray@grayraven.org
   Copyright (c) 2008-2023 CFB Software, https://www.astrobe.com
 
   Redistribution and use in source and binary forms, with or without

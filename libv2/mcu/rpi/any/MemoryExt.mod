@@ -20,7 +20,7 @@ MODULE MemoryExt;
   MCU: RP2040, RP2350
   Boards: Pico, Pico2
   --
-  Copyright (c) 2024 Gray, gray@grayraven.org
+  Copyright (c) 2024-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
@@ -55,17 +55,17 @@ MODULE MemoryExt;
 
 
   PROCEDURE getCopyEndAddr(procAddr: INTEGER; VAR copyEndAddr: INTEGER);
-    VAR entry0, entry1: ProgData.Entry;
+    VAR entryAddr0, entryAddr1: INTEGER;
   BEGIN
-    ProgData.FindEntry(procAddr, entry0);
-    ProgData.GetNextEntry(entry0, entry1);
-    copyEndAddr := entry1.codeAddr
+    ProgData.FindEntry(procAddr, entryAddr0);
+    ProgData.GetNextEntry(entryAddr0, entryAddr1);
+    ProgData.GetCodeAddr(entryAddr1, copyEndAddr)
   END getCopyEndAddr;
 
 
   PROCEDURE CopyProc*(procAddr: INTEGER; VAR toAddr: INTEGER);
-  (* Copy a procedure to extended memory *)
-  (* Includes any data blocks after the instructions *)
+  (* copy a procedure to extended memory *)
+  (* includes any data blocks after the instructions *)
     VAR procSize: INTEGER;
   BEGIN
     getCopyEndAddr(procAddr, toAddr);
@@ -80,8 +80,8 @@ MODULE MemoryExt;
 
 
   PROCEDURE CacheProc*(procAddr: INTEGER);
-  (* Read a procedure to load it into flash memory cache *)
-  (* Includes any data blocks after the instructions *)
+  (* read a procedure to load it into flash memory cache *)
+  (* includes any data blocks after the instructions *)
     VAR instr, toAddr: INTEGER;
   BEGIN
     getCopyEndAddr(procAddr, toAddr);

@@ -6,16 +6,16 @@ MODULE Main;
   --
   MCU: RP2350
   --
-  Copyright (c) 2023 - 2024 Gray gray@grayraven.org
+  Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
   IMPORT
-    (* the first row of modules "auto-init", keep their order in the list *)
+    (* the first row of imports "auto-init", keep their order in the list *)
     (* ignore the "is not used" warnings... :) *)
     (* LinkOptions is the first import of Config *)
     Config, Clocks, Memory, RuntimeErrors,
-    StartUp, RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr, MCU := MCU2, SYSTEM;
+    StartUp, RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr, MCU := MCU2, FPUctrl;
 
   CONST
     Baudrate0 = 38400; (* terminal 0 *)
@@ -31,24 +31,9 @@ MODULE Main;
     UART1_TxPinNo = 4;
     UART1_RxPinNo = 5;
 
-    FPUenable = TRUE;
     FPUnonSecAccess = FALSE; (* enable for secure access only for now *)
     FPUtreatAsSec = FALSE;
 
-    (* PPB_CPACR bits & values *)
-    CPACR_FPU_1 = 23;
-    CPACR_FPU_0 = 20;
-      FPU_NoAccess   = 00H; (* 0000, disabled *)
-      FPU_PrivAccess = 05H; (* 0101, priviledged code access *)
-      FPU_AllAccess  = 0FH; (* 1111, all code access *)
-
-    (* PPB_NSACR bits and values *)
-    NSACR_FPU_1 = 23;
-    NSACR_FPU_0 = 20;
-      (* values as for PPB_CPACR *)
-
-    (* PPB_FPCCR bits *)
-    FPCCR_TS = 26;
 
   PROCEDURE configPins(txPinNo, rxPinNo: INTEGER);
     VAR padCfg: GPIO.PadCfg;
@@ -62,24 +47,6 @@ MODULE Main;
     GPIO.SetFunction(txPinNo, MCU.IO_BANK0_Fuart);
     GPIO.SetFunction(rxPinNo, MCU.IO_BANK0_Fuart)
   END configPins;
-
-
-  PROCEDURE* initFPU(nonSecAccess, treatAsSec: BOOLEAN);
-    VAR x: INTEGER;
-  BEGIN
-    x := 0;
-    BFI(x, CPACR_FPU_1, CPACR_FPU_0, FPU_AllAccess);
-    SYSTEM.PUT(MCU.PPB_CPACR, x);
-    IF nonSecAccess THEN
-      SYSTEM.PUT(MCU.PPB_NSACR, x)
-      (* not sure if NS alias of CPACR needs to be set too *)
-    END;
-    IF treatAsSec THEN
-      SYSTEM.GET(MCU.PPB_FPCCR, x);
-      BFI(x, FPCCR_TS, 1);
-      SYSTEM.PUT(MCU.PPB_FPCCR, x)
-    END
-  END initFPU;
 
 
   PROCEDURE init;
@@ -106,25 +73,23 @@ MODULE Main;
     In.Open(Terminals.R[0], Terminals.R[1]);
 
     (* init run-time error printing *)
-    (* error output on core 0 to terminal 0 *)
     (* use error output writer *)
+    (* error output on core 0 to terminal 0 *)
     Terminals.OpenErr(TERM0, UARTstr.PutString);
     RuntimeErrorsOut.SetWriter(Core0, Terminals.Werr[0]);
     RuntimeErrors.SetHandler(Core0, RuntimeErrorsOut.HandleException);
 
     (* error output on core 1 to terminal 1 *)
-    (* use error output writer *)
     Terminals.OpenErr(TERM1, UARTstr.PutString);
     RuntimeErrorsOut.SetWriter(Core1, Terminals.Werr[1]);
     RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException);
 
-    (* FPU *)
-    IF FPUenable THEN
-      initFPU(FPUnonSecAccess, FPUtreatAsSec)
-    END;
+    (* FPU: core 0 only; FPU for core 1 needs to be initialised from core 1 *)
+    FPUctrl.Init(FPUnonSecAccess, FPUtreatAsSec);
 
     (* let's get the timers symmetrical *)
-    StartUp.ReleaseReset(MCU.RESETS_TIMER1) (* TIMER0 is released by boot procedure *)
+    (* TIMER0 is released by boot procedure *)
+    StartUp.ReleaseReset(MCU.RESETS_TIMER1)
   END init;
 
 BEGIN

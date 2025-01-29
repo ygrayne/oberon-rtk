@@ -15,8 +15,8 @@ MODULE MultiCore;
 
   CONST
     (* fifo bits *)
-    ST_ROE = 3;
-    ST_WOF = 2;
+    (* ST_ROE = 3; *)
+    (* ST_WOF = 2; *)
     ST_RDY = 1;
     ST_VLD = 0;
 
