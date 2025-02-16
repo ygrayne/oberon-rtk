@@ -904,6 +904,8 @@ MODULE MCU2;
 
   (* ===== PPB: private peripheral bus ===== *)
 
+    (* *** begin of SCS: System Control Space *** *)
+
     (* datasheet 2.4.8, p77 *)
     (* -- SysTick -- *)
     PPB_SYST_CSR*     = PPB_BASE + 0E010H;
@@ -1015,6 +1017,7 @@ MODULE MCU2;
     PPB_MPU_RBAR*     = PPB_BASE + 0ED9CH;
     PPB_MPU_RASR*     = PPB_BASE + 0EDA0H;
 
+  (* *** end of SCS *** *)
 
   (* ===== CPU registers ===== *)
     (* CONTROL special register *)
@@ -1052,9 +1055,15 @@ MODULE MCU2;
 
     (* instruction sync *)
     ISB* = 0F3BF8F6FH;
+    DSB* = 0F3BF8F4FH;
 
     (* disable/enable interrupts via PRIMASK *)
     CPSIE* = 0B662H; (* enable:  1011 0110 0110 0010 *)
     CPSID* = 0B672H; (* disable: 1011 0110 0111 0010 *)
+
+    (* SVC *)
+    (* SVCinstr = 'SVC' + SVCvalue *)
+    SVC* = 0DF00H;
+
 
  END MCU2.

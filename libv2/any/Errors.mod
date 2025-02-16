@@ -14,6 +14,7 @@ MODULE Errors;
     OK* = 0;
     NoError* = 0;
     NotOK* = 1;
+    MaxErrNo* = 63;
 
     (* MCU fault codes *)
     (* all *)
@@ -38,26 +39,26 @@ MODULE Errors;
     LastAstrobeCode  = 25;
 
     (* RTK error/assert codes *)
-    FirstRTKcode = 100;
-    Trace* = 100;
-    PreCond* = 101;
-    PostCond* = 102;
-    ConsCheck* = 103;
-    ProgError* = 104;
-    BufferOverflow* = 105;
-    BufferEmpty* = 106;
-    Timing* = 107;
-    HeapOverflow* = 108;
-    StackOverflow* = 109;
-    StorageOverflow* = 110;
-    StorageError* = 111;
-    UsageError* = 112;
-    DeviceError* = 113;
-    BadResourceData* = 114;
-    NotSupported* = 115;
-    NotImplemented* = 116;
-    NumThreads* = 117;
-    LastRTKcode = 117;
+    FirstRTKcode = 32;
+    Trace* = 33;
+    PreCond* = 34;
+    PostCond* = 35;
+    ConsCheck* = 36;
+    ProgError* = 37;
+    BufferOverflow* = 38;
+    BufferEmpty* = 39;
+    Timing* = 40;
+    HeapOverflow* = 41;
+    StackOverflow* = 42;
+    StorageOverflow* = 43;
+    StorageError* = 44;
+    UsageError* = 45;
+    DeviceError* = 46;
+    BadResourceData* = 47;
+    NotSupported* = 48;
+    NotImplemented* = 49;
+    NumThreads* = 50;
+    LastRTKcode = 50;
 
     Config* = ProgError; (* legacy *)
 

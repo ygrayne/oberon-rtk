@@ -12,9 +12,8 @@ MODULE Stacktr0;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Main, Memory, MultiCore, Out (*, RuntimeErrors, RuntimeErrorsOut*);
-
-  CONST Core1 = 1;
+  IMPORT
+    SYSTEM, MCU := MCU2, Main, Memory, MultiCore, InitCoreOne, Out;
 
   VAR p: PROCEDURE;
 
@@ -38,9 +37,9 @@ MODULE Stacktr0;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     IF cid = 0 THEN
-      fault
-    ELSE
       error
+    ELSE
+      fault
     END
   END p2;
 
@@ -73,6 +72,6 @@ MODULE Stacktr0;
 
 BEGIN
   p := p0;
-  MultiCore.InitCoreOne(run, Memory.DataMem[Core1].stackStart, Memory.DataMem[Core1].dataStart);
+  MultiCore.StartCoreOne(run, InitCoreOne.Init);
   run
 END Stacktr0.

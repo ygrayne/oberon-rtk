@@ -4,6 +4,9 @@ MODULE Exceptions;
   --
   Exception management
   --
+  Note: these procedures must be used on the core whose SCS registers
+  and vector table shall be addressed.
+  --
   MCU: RP2350
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
@@ -30,7 +33,8 @@ MODULE Exceptions;
   PROCEDURE* iset(intNo, ireg: INTEGER);
   BEGIN
     ASSERT(intNo < MCU.NumInterrupts, Errors.ProgError);
-    SYSTEM.PUT(ireg + ((intNo DIV 32) * 4), {intNo MOD 32})
+    SYSTEM.PUT(ireg + ((intNo DIV 32) * 4), {intNo MOD 32});
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
   END iset;
 
   PROCEDURE* iget(intNo, ireg: INTEGER; VAR value: BOOLEAN);
@@ -88,7 +92,8 @@ MODULE Exceptions;
     addr := MCU.PPB_NVIC_IPR0 + ((intNo DIV 4) * 4);
     SYSTEM.GET(addr, x);
     x := x + LSL(prio, (intNo MOD 4) * 8);
-    SYSTEM.PUT(addr, x)
+    SYSTEM.PUT(addr, x);
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
   END SetIntPrio;
 
 
@@ -124,7 +129,8 @@ MODULE Exceptions;
     addr := SHPR0 + (excNo DIV 4) * 4;
     SYSTEM.GET(addr, x);
     x := x + LSL(prio, (excNo MOD 4) * 8);
-    SYSTEM.PUT(addr, x)
+    SYSTEM.PUT(addr, x);
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
   END SetSysExcPrio;
 
 

@@ -76,7 +76,7 @@ MODULE RuntimeErrorsOut;
           ProgData.FindProcEntries(tp.address, modEntryAddr, procEntryAddr);
           ProgData.GetNames(modEntryAddr, procEntryAddr, moduleName, procName);
         ELSE
-          moduleName := "Startup"; procName := "Sequence";
+          moduleName := "start"; procName := "sequence";
         END;
         printTraceLine(W, moduleName, procName, tp.address, tp.lineNo, tp.stackAddr);
         INC(i)

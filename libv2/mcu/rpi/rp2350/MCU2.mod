@@ -1311,7 +1311,10 @@ MODULE MCU2;
     PPB_FP_CTRL*      = PPB_BASE + 02000H;
     (* .. *)
 
+  (* *** begin of SCS: System Control Space *** *)
+
     (* -- implementation control block -- *)
+
     PPB_ICTR*         = PPB_BASE + 0E004H;
     PPB_ACTLR*        = PPB_BASE + 0E008H;
 
@@ -1325,8 +1328,8 @@ MODULE MCU2;
     PPB_NVIC_ISER0*   = PPB_BASE + 0E100H;
     PPB_NVIC_ISER1*   = PPB_BASE + 0E104H;
 
-    PPB_NVIC_ICER0*    = PPB_BASE + 0E180H;
-    PPB_NVIC_ICER1*    = PPB_BASE + 0E184H;
+    PPB_NVIC_ICER0*   = PPB_BASE + 0E180H;
+    PPB_NVIC_ICER1*   = PPB_BASE + 0E184H;
 
     PPB_NVIC_ISPR0*   = PPB_BASE + 0E200H;
     PPB_NVIC_ISPR1*   = PPB_BASE + 0E204H;
@@ -1519,6 +1522,8 @@ MODULE MCU2;
     PPB_DDEVARCH*     = PPB_BASE + 0EFBCH;
     (* .. *)
 
+  (* *** end of SCS *** *)
+
     (* -- TPIU trace port identification unit -- *)
     (* 040000H *)
 
@@ -1576,11 +1581,16 @@ MODULE MCU2;
     MSR_MSP_R11* = 0F38B8808H;  (* move r11 to MSP *)
     MSR_CTL_R11* = 0F38B8814H;  (* move r11 to CONTROL *)
 
-    (* instruction sync *)
+    (* instruction & data sync *)
     ISB* = 0F3BF8F6FH;
+    DSB* = 0F3BF8F4FH;
 
     (* disable/enable interrupts via PRIMASK *)
     CPSIE* = 0B662H; (* enable:  1011 0110 0110 0010 *)
     CPSID* = 0B672H; (* disable: 1011 0110 0111 0010 *)
+
+    (* SVC *)
+    (* SVCinstr = 'SVC' + SVCvalue *)
+    SVC* = 0DF00H;
 
 END MCU2.

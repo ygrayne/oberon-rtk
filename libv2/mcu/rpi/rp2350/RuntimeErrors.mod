@@ -14,6 +14,10 @@ MODULE RuntimeErrors;
     * for Secure, privileged code
     * implications of other MOs to be identified
   --
+  IMPORTANT:
+    * 'EnableFaults' needs to called from the core whose faults shall be enabled.
+    * See modules InitCoreOne and MultiCore.
+  --
   Note: no terminal output is done here, since we don't know if there's
   even a terminal connected out in the wild, and if there's an
   operator seeing the messages. All error and fault data is collected,
@@ -30,7 +34,7 @@ MODULE RuntimeErrors;
 **)
 
   IMPORT
-    SYSTEM, LED, MCU := MCU2, Config, Memory, Errors, Out;
+    SYSTEM, LED, MCU := MCU2, Config, Memory, Errors;
 
   CONST
     NumCores* = MCU.NumCores;
@@ -346,7 +350,9 @@ MODULE RuntimeErrors;
     SYSTEM.GET(stackAddr, stackVal);
     WHILE (stackVal # Memory.StackSeal) & (trace.count <= traceDepth) DO
       (* debug *)
-      (* Out.Hex(stackAddr, 13); Out.Hex(stackVal, 13); Out.Ln; *)
+      (*
+      Out.Hex(stackAddr, 13); Out.Hex(stackVal, 13); Out.Ln;
+      *)
       (* debug end *)
       getAddr(stackAddr, excRetVal, isStackFrame);
       IF isStackFrame THEN
@@ -398,7 +404,7 @@ MODULE RuntimeErrors;
   END initTrace;
 
 
-  PROCEDURE errorHandler;
+  PROCEDURE ErrorHandler*;
   (* via compiler-inserted SVC instruction *)
   (* in main stack *)
     VAR
@@ -424,10 +430,10 @@ MODULE RuntimeErrors;
     END;
     exc[cid].handleException(exc[cid].excRec);
     HALT(cid)
-  END errorHandler;
+  END ErrorHandler;
 
 
-  PROCEDURE faultHandler;
+  PROCEDURE FaultHandler*;
   (* via MCU hardware-generated exception *)
   (* in main stack *)
     VAR
@@ -453,7 +459,7 @@ MODULE RuntimeErrors;
     END;
     exc[cid].handleException(exc[cid].excRec);
     HALT(cid)
-  END faultHandler;
+  END FaultHandler;
 
 
   PROCEDURE Stacktrace*(VAR tr: Trace);
@@ -481,7 +487,6 @@ MODULE RuntimeErrors;
     exc[cpuId].stacktraceOn := on
   END SetStacktraceOn;
 
-
   PROCEDURE* installHandler(vectAddr: INTEGER; p: PROCEDURE);
   BEGIN
     INCL(SYSTEM.VAL(SET, p), 0); (* thumb code *)
@@ -497,9 +502,20 @@ MODULE RuntimeErrors;
   END ledOnAndHalt;
 
 
-  PROCEDURE init;
+  PROCEDURE EnableFaults*;
+  (* call from code running on core 0 AND on core 1*)
+    VAR x: SET;
+  BEGIN
+    SYSTEM.GET(MCU.PPB_SHCSR, x);
+    x := x + {MEMFAULTENA, BUSFAULTENA, USGFAULTENA, SECUREFAULTENA};
+    SYSTEM.PUT(MCU.PPB_SHCSR, x);
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
+  END EnableFaults;
+
+
+  PROCEDURE Init*;
     CONST Core0 = 0;
-    VAR i, x, addr, vectorTableBase, vectorTableTop: INTEGER;
+    VAR i, addr, vectorTableBase, vectorTableTop: INTEGER;
   BEGIN
     i := 0;
     WHILE i < NumCores DO
@@ -513,29 +529,24 @@ MODULE RuntimeErrors;
       (* initialise vector table *)
       (* install handlers for all errors and faults as implemented in the MCU *)
       vectorTableBase := Memory.DataMem[i].dataStart; (* VTOR *)
-      vectorTableTop := vectorTableBase + MCU.VectorTableSize;
-      installHandler(vectorTableBase + MCU.NMIhandlerOffset, faultHandler);
-      installHandler(vectorTableBase + MCU.HardFaultHandlerOffset, faultHandler);
-      installHandler(vectorTableBase + MCU.MemMgmtFaultHandlerOffset, faultHandler);
-      installHandler(vectorTableBase + MCU.BusFaultHandlerOffset, faultHandler);
-      installHandler(vectorTableBase + MCU.UsageFaultHandlerOffset, faultHandler);
-      installHandler(vectorTableBase + MCU.SecureFaultHandlerOffset, faultHandler);
-      installHandler(vectorTableBase + MCU.SVChandlerOffset, errorHandler);
-      installHandler(vectorTableBase + MCU.DebugMonitorOffset, faultHandler);
+      installHandler(vectorTableBase + MCU.NMIhandlerOffset, FaultHandler);
+      installHandler(vectorTableBase + MCU.HardFaultHandlerOffset, FaultHandler);
+      installHandler(vectorTableBase + MCU.MemMgmtFaultHandlerOffset, FaultHandler);
+      installHandler(vectorTableBase + MCU.BusFaultHandlerOffset, FaultHandler);
+      installHandler(vectorTableBase + MCU.UsageFaultHandlerOffset, FaultHandler);
+      installHandler(vectorTableBase + MCU.SecureFaultHandlerOffset, FaultHandler);
+      installHandler(vectorTableBase + MCU.SVChandlerOffset, ErrorHandler);
+      installHandler(vectorTableBase + MCU.DebugMonitorOffset, FaultHandler);
 
-      (* install faultHandler across the rest of the vector table *)
+      (* install FaultHandler across the rest of the vector table *)
       (* will catch any exception with a missing handler *)
+      vectorTableTop := vectorTableBase + MCU.VectorTableSize;
       addr := vectorTableBase + MCU.PendSVhandlerOffset;
       WHILE addr < vectorTableTop DO
-        installHandler(addr, faultHandler); INC(addr, 4)
+        installHandler(addr, FaultHandler); INC(addr, 4)
       END;
       INC(i)
     END;
-
-    (* enable MCU faults *)
-    SYSTEM.GET(MCU.PPB_SHCSR, x);
-    x := x + ORD({MEMFAULTENA, BUSFAULTENA, USGFAULTENA, SECUREFAULTENA});
-    SYSTEM.PUT(MCU.PPB_SHCSR, x);
 
     (* default options *)
     i := 0;
@@ -545,10 +556,10 @@ MODULE RuntimeErrors;
       exc[i].stacktraceOn := TRUE;
       INC(i)
     END;
-  END init;
+  END Init;
 
 BEGIN
-  init
+  Init
 END RuntimeErrors.
 
 
@@ -577,4 +588,3 @@ END RuntimeErrors.
   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
   EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **)
-

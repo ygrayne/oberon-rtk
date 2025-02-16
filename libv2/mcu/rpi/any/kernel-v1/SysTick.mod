@@ -21,18 +21,18 @@ MODULE SysTick;
     CountPerMillisecond = Clocks.SysTickFreq DIV 1000;
 
 
-  PROCEDURE Tick*(): BOOLEAN;
+  PROCEDURE* Tick*(): BOOLEAN;
     RETURN SYSTEM.BIT(MCU.PPB_SYST_CSR, SYST_CSR_COUNTFLAG)
   END Tick;
 
 
-  PROCEDURE Enable*;
+  PROCEDURE* Enable*;
   BEGIN
     SYSTEM.PUT(MCU.PPB_SYST_CSR, {SYST_CSR_ENABLE})
   END Enable;
 
 
-  PROCEDURE Init*(millisecondsPerTick: INTEGER);
+  PROCEDURE* Init*(millisecondsPerTick: INTEGER);
     VAR cntReload: INTEGER;
   BEGIN
     cntReload := millisecondsPerTick * CountPerMillisecond - 1;

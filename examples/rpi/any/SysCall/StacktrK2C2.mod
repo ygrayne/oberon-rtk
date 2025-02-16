@@ -3,7 +3,7 @@ MODULE StacktrK2C2;
   Oberon RTK Framework v2
   --
   Example/test program
-  https://oberon-rtk.org/examples/v2/stacktrace
+  https://oberon-rtk.org/examples/v2/syscall
   --
   MCU: RP2040, RP2350
   Board: Pico, Pico 2
@@ -13,7 +13,7 @@ MODULE StacktrK2C2;
 **)
 
   IMPORT
-    SYSTEM, MCU := MCU2, Main, Kernel, MultiCore, InitCoreOne, Errors, Exceptions, Memory, Out;
+    SYSTEM, MCU := MCU2, Main, Kernel, MultiCore, InitCoreOne, Errors, Exceptions, SysCall;
 
   CONST
     IntNo0 = MCU.PPB_SPAREIRQ_IRQ0;
@@ -21,6 +21,9 @@ MODULE StacktrK2C2;
 
     ThreadStackSize = 1024;
     MillisecsPerTick = 10;
+
+    SVCinstIRQ0 = MCU.SVC + SysCall.SVCvalIRQ0;
+    SVCinstIRQ1 = MCU.SVC + SysCall.SVCvalIRQ1;
 
   VAR
     p: PROCEDURE;
@@ -33,20 +36,15 @@ MODULE StacktrK2C2;
   END i0;
 
   PROCEDURE* h0[0];
-    VAR x: INTEGER;
   BEGIN
-    x := 13;
     (* set int for i0 pending *)
-    SYSTEM.PUT(MCU.PPB_NVIC_ISPR0 + ((IntNo1 DIV 32) * 4), {IntNo1 MOD 32});
-    (*SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)*)
-    (*x := 17*)
+    SYSTEM.EMITH(SVCinstIRQ1);
   END h0;
 
-  PROCEDURE* p1;
+  PROCEDURE p1;
   BEGIN
     (* set int for h0 pending *)
-    SYSTEM.PUT(MCU.PPB_NVIC_ISPR0 + ((IntNo0 DIV 32) * 4), {IntNo0 MOD 32});
-    (*SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)*)
+    SYSTEM.EMITH(SVCinstIRQ0)
   END p1;
 
   PROCEDURE p0;
@@ -71,20 +69,18 @@ MODULE StacktrK2C2;
   PROCEDURE run0;
     VAR
       t0: Kernel.Thread;
-      x, tid0: INTEGER;
+      res, tid0: INTEGER;
   BEGIN
     (* in main stack *)
-    x := MultiCore.CPUid();
-    x := Memory.DataMem[x].stackStart;
-    Out.Hex(x, 12); Out.Ln;
     Exceptions.InstallIntHandler(IntNo0, h0);
     Exceptions.SetIntPrio(IntNo0, MCU.PPB_ExcPrio4);
     Exceptions.EnableInt(IntNo0);
     Exceptions.InstallIntHandler(IntNo1, i0);
     Exceptions.SetIntPrio(IntNo1, MCU.PPB_ExcPrio2);
     Exceptions.EnableInt(IntNo1);
+    SysCall.Init;
     Kernel.Install(MillisecsPerTick);
-    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, x); ASSERT(x = Kernel.OK, Errors.ProgError);
+    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.ProgError);
     Kernel.SetPeriod(t0, 1000, 0); Kernel.Enable(t0);
     (* threads will use their stacks, exceptions will use main stack *)
     Kernel.Run (* will reset MSP to top *)

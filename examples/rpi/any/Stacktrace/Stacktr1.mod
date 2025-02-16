@@ -12,12 +12,12 @@ MODULE Stacktr1;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Main, Exceptions, Memory, MultiCore, Out;
+  IMPORT
+    SYSTEM, MCU := MCU2, Main, Exceptions, Memory, MultiCore, InitCoreOne, Out;
 
   CONST
     IntNo0 = MCU.PPB_SPAREIRQ_IRQ0;
     IntNo1 = MCU.PPB_SPAREIRQ_IRQ1;
-    Core1 = 1;
 
   VAR
     p: PROCEDURE;
@@ -42,9 +42,9 @@ MODULE Stacktr1;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     IF cid = 0 THEN
-      fault
-    ELSE
       error
+    ELSE
+      fault
     END
   END i2;
 
@@ -61,7 +61,8 @@ MODULE Stacktr1;
   PROCEDURE h2;
   BEGIN
     (* set int for i0 pending *)
-    SYSTEM.PUT(MCU.PPB_NVIC_ISPR0 + ((IntNo1 DIV 32) * 4), {IntNo1 MOD 32})
+    SYSTEM.PUT(MCU.PPB_NVIC_ISPR0 + ((IntNo1 DIV 32) * 4), {IntNo1 MOD 32});
+    (*SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)*)
   END h2;
 
   PROCEDURE h1;
@@ -92,10 +93,9 @@ MODULE Stacktr1;
     VAR y: INTEGER;
   BEGIN
     y := 13;
-    y := 4;
     (* set int for h0 pending *)
     SYSTEM.PUT(MCU.PPB_NVIC_ISPR0 + ((IntNo0 DIV 32) * 4), {IntNo0 MOD 32});
-    (* y := 42; *)
+    (*SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB);*)
     p1a
   END p1;
 
@@ -121,6 +121,6 @@ MODULE Stacktr1;
 
 BEGIN
   p := p0;
-  MultiCore.InitCoreOne(run, Memory.DataMem[Core1].stackStart, Memory.DataMem[Core1].dataStart);
+  MultiCore.StartCoreOne(run, InitCoreOne.Init);
   run
 END Stacktr1.

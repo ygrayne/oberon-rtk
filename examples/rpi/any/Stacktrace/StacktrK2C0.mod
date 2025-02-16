@@ -12,13 +12,13 @@ MODULE StacktrK2C0;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Main, Kernel, MultiCore, Errors, Memory, Out;
+  IMPORT
+    SYSTEM, MCU := MCU2, Main, Kernel, MultiCore, InitCoreOne, Errors, Memory, Out;
 
 
   CONST
     ThreadStackSize = 1024;
     MillisecsPerTick = 10;
-    Core1 = 1;
 
   VAR
     p: PROCEDURE;
@@ -93,6 +93,6 @@ MODULE StacktrK2C0;
 
 BEGIN
   p := p0;
-  MultiCore.InitCoreOne(run0, Memory.DataMem[Core1].stackStart, Memory.DataMem[Core1].dataStart);
+  MultiCore.StartCoreOne(run0, InitCoreOne.Init);
   run0
 END StacktrK2C0.

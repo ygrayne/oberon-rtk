@@ -11,7 +11,7 @@ MODULE MultiCore;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2;
+  IMPORT SYSTEM, MCU := MCU2, Memory;
 
   CONST
     (* fifo bits *)
@@ -25,6 +25,8 @@ MODULE MultiCore;
   TYPE
     FifoValue* = ARRAY 4 OF BYTE; (* compatible with any 4-byte data structure, incl. basic types *)
 
+  VAR
+    runInit, runStart: PROCEDURE;
 
   PROCEDURE* CPUid*(): INTEGER;
     VAR x: INTEGER;
@@ -71,7 +73,7 @@ MODULE MultiCore;
   PROCEDURE InitCoreOne*(startProc: PROCEDURE; stkPtr, vtor: INTEGER);
   (* get core 1 initially up and running *)
   (* core 1 is WFE-ing in its bootloader, awaiting the sequence below in the FIFO *)
-    VAR cmd: ARRAY 6 OF INTEGER; i: INTEGER; x: INTEGER;
+    VAR cmd: ARRAY 6 OF INTEGER; i, x: INTEGER;
   BEGIN
     cmd[0] := 0; cmd[1] := 0; cmd[2] := 1; (* magic numbers *)
     cmd[3] := vtor; cmd[4] := stkPtr;
@@ -96,5 +98,23 @@ MODULE MultiCore;
       END
     UNTIL i = LEN(cmd)
   END InitCoreOne;
+
+
+  PROCEDURE init;
+  BEGIN
+    IF runInit # NIL THEN
+      runInit
+    END;
+    runStart
+  END init;
+
+
+  PROCEDURE StartCoreOne*(startProc, initProc: PROCEDURE);
+    CONST Core1 = 1;
+  BEGIN
+    runInit := initProc;
+    runStart := startProc;
+    InitCoreOne(init, Memory.DataMem[Core1].stackStart, Memory.DataMem[Core1].dataStart)
+  END StartCoreOne;
 
 END MultiCore.

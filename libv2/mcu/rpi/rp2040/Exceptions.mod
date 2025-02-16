@@ -4,6 +4,9 @@ MODULE Exceptions;
   --
   Exception management
   --
+  Note: these procedures must be used on the core whose SCS registers
+  and vector table shall be addressed.
+  --
   MCU: RP2040
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
@@ -28,7 +31,8 @@ MODULE Exceptions;
 
   PROCEDURE* EnableInt*(intNo: INTEGER);
   BEGIN
-    SYSTEM.PUT(MCU.PPB_NVIC_ISER0, {intNo})
+    SYSTEM.PUT(MCU.PPB_NVIC_ISER0, {intNo});
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
   END EnableInt;
 
 
@@ -42,13 +46,15 @@ MODULE Exceptions;
 
   PROCEDURE* DisableInt*(intNo: INTEGER);
   BEGIN
-    SYSTEM.PUT(MCU.PPB_NVIC_ICER0, {intNo})
+    SYSTEM.PUT(MCU.PPB_NVIC_ICER0, {intNo});
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
   END DisableInt;
 
 
   PROCEDURE* SetPendingInt*(intNo: INTEGER);
   BEGIN
-    SYSTEM.PUT(MCU.PPB_NVIC_ISPR0, {intNo})
+    SYSTEM.PUT(MCU.PPB_NVIC_ISPR0, {intNo});
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
   END SetPendingInt;
 
 
@@ -62,7 +68,8 @@ MODULE Exceptions;
 
   PROCEDURE* ClearPendingInt*(intNo: INTEGER);
   BEGIN
-    SYSTEM.PUT(MCU.PPB_NVIC_ICPR0, {intNo})
+    SYSTEM.PUT(MCU.PPB_NVIC_ICPR0, {intNo});
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
   END ClearPendingInt;
 
 
@@ -76,7 +83,8 @@ MODULE Exceptions;
     addr := MCU.PPB_NVIC_IPR0 + ((intNo DIV 4) * 4);
     SYSTEM.GET(addr, x);
     x := x + LSL(prio, (intNo MOD 4) * 8);
-    SYSTEM.PUT(addr, x)
+    SYSTEM.PUT(addr, x);
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
   END SetIntPrio;
 
 
@@ -112,7 +120,8 @@ MODULE Exceptions;
     addr := SHPR0 + (excNo DIV 4) * 4;
     SYSTEM.GET(addr, x);
     x := x + LSL(prio, (excNo MOD 4) * 8);
-    SYSTEM.PUT(addr, x)
+    SYSTEM.PUT(addr, x);
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
   END SetSysExcPrio;
 
 

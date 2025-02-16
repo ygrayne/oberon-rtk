@@ -4,6 +4,9 @@ MODULE Main;
   --
   Main module
   --
+  Is always initialised on core 0, hence cannot set any registers on the PPB of core 1.
+  See module InitCoreOne.
+  --
   MCU: RP2350
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org
@@ -84,7 +87,9 @@ MODULE Main;
     RuntimeErrorsOut.SetWriter(Core1, Terminals.Werr[1]);
     RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException);
 
-    (* FPU: core 0 only; FPU for core 1 needs to be initialised from core 1 *)
+    (* core 0 init *)
+    (* see module InitCoreOne for core 1 *)
+    RuntimeErrors.EnableFaults;
     FPUctrl.Init(FPUnonSecAccess, FPUtreatAsSec);
 
     (* let's get the timers symmetrical *)

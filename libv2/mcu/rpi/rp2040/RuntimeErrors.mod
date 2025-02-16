@@ -26,7 +26,7 @@ MODULE RuntimeErrors;
 **)
 
   IMPORT
-    SYSTEM, LED, MCU := MCU2, Config, Memory, Errors;
+    SYSTEM, LED, MCU := MCU2, Config, Memory, Errors, Out;
 
   CONST
     NumCores* = MCU.NumCores;
@@ -321,7 +321,9 @@ MODULE RuntimeErrors;
     SYSTEM.GET(stackAddr, stackVal);
     WHILE (stackVal # Memory.StackSeal) & (trace.count <= TraceDepth) DO
       (* debug *)
-      (* Out.Hex(stackAddr, 13); Out.Hex(stackVal, 13); Out.Ln; *)
+      (*
+      Out.Hex(stackAddr, 13); Out.Hex(stackVal, 13); Out.Ln;
+      *)
       (* debug end *)
       getAddr(stackAddr, isStackFrame);
       IF isStackFrame THEN
@@ -373,7 +375,7 @@ MODULE RuntimeErrors;
   END initTrace;
 
 
-  PROCEDURE errorHandler;
+  PROCEDURE ErrorHandler*;
   (* via compiler-inserted SVC instruction *)
   (* in main stack *)
     VAR
@@ -399,10 +401,10 @@ MODULE RuntimeErrors;
     END;
     exc[cid].handleException(exc[cid].excRec);
     HALT(cid)
-  END errorHandler;
+  END ErrorHandler;
 
 
-  PROCEDURE faultHandler;
+  PROCEDURE FaultHandler*;
   (* via MCU hardware-generated exception *)
   (* in main stack *)
     VAR
@@ -428,7 +430,7 @@ MODULE RuntimeErrors;
     END;
     exc[cid].handleException(exc[cid].excRec);
     HALT(cid)
-  END faultHandler;
+  END FaultHandler;
 
 
   PROCEDURE Stacktrace*(VAR tr: Trace);
@@ -474,7 +476,7 @@ MODULE RuntimeErrors;
   END ledOnAndHalt;
 
 
-  PROCEDURE init;
+  PROCEDURE Init*;
     CONST Core0 = 0;
     VAR i, addr, vectorTableBase, vectorTableTop: INTEGER;
   BEGIN
@@ -490,15 +492,15 @@ MODULE RuntimeErrors;
       (* install handlers for all errors and faults as implemented in the MCU *)
       vectorTableBase := Memory.DataMem[i].dataStart;
       vectorTableTop := vectorTableBase + MCU.VectorTableSize;
-      installHandler(vectorTableBase + MCU.NMIhandlerOffset, faultHandler);
-      installHandler(vectorTableBase + MCU.HardFaultHandlerOffset, faultHandler);
-      installHandler(vectorTableBase + MCU.SVChandlerOffset, errorHandler);
+      installHandler(vectorTableBase + MCU.NMIhandlerOffset, FaultHandler);
+      installHandler(vectorTableBase + MCU.HardFaultHandlerOffset, FaultHandler);
+      installHandler(vectorTableBase + MCU.SVChandlerOffset, ErrorHandler);
 
       (* install faultHandler across the rest of the vector table *)
       (* will catch any exception with a missing handler *)
       addr := vectorTableBase + MCU.PendSVhandlerOffset;
       WHILE addr < vectorTableTop DO
-        installHandler(addr, faultHandler); INC(addr, 4)
+        installHandler(addr, FaultHandler); INC(addr, 4)
       END;
       INC(i)
     END;
@@ -511,10 +513,10 @@ MODULE RuntimeErrors;
       exc[i].stacktraceOn := TRUE;
       INC(i)
     END;
-  END init;
+  END Init;
 
 BEGIN
-  init
+  Init
 END RuntimeErrors.
 
 

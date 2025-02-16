@@ -1,9 +1,9 @@
-MODULE StacktrK2C1;
+MODULE Stacktr1;
 (**
   Oberon RTK Framework v2
   --
   Example/test program
-  https://oberon-rtk.org/examples/v2/stacktrace
+  https://oberon-rtk.org/examples/v2/syscall
   --
   MCU: RP2040, RP2350
   Board: Pico, Pico 2
@@ -12,15 +12,14 @@ MODULE StacktrK2C1;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT
-    SYSTEM, MCU := MCU2, Main, Kernel, MultiCore, InitCoreOne, Errors, Exceptions, Memory, Out;
+  IMPORT SYSTEM, MCU := MCU2, Main, Exceptions, MultiCore, InitCoreOne, SysCall;
 
   CONST
     IntNo0 = MCU.PPB_SPAREIRQ_IRQ0;
     IntNo1 = MCU.PPB_SPAREIRQ_IRQ1;
 
-    ThreadStackSize = 1024;
-    MillisecsPerTick = 10;
+    SVCinstIRQ0 = MCU.SVC + SysCall.SVCvalIRQ0;
+    SVCinstIRQ1 = MCU.SVC + SysCall.SVCvalIRQ1;
 
   VAR
     p: PROCEDURE;
@@ -64,8 +63,7 @@ MODULE StacktrK2C1;
   PROCEDURE h2;
   BEGIN
     (* set int for i0 pending *)
-    SYSTEM.PUT(MCU.PPB_NVIC_ISPR0 + ((IntNo1 DIV 32) * 4), {IntNo1 MOD 32});
-    (*SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)*)
+    SYSTEM.EMITH(SVCinstIRQ1)
   END h2;
 
   PROCEDURE h1;
@@ -74,10 +72,8 @@ MODULE StacktrK2C1;
     VAR r: REAL; cid: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
-    r := 1.0; (* avoid false positives on core 1 *)
-    IF cid = 0 THEN
-      r := r / r
-    END;
+    r := 1.0;
+    r := r / r;
     h2
   END h1;
 
@@ -93,10 +89,11 @@ MODULE StacktrK2C1;
   END p1a;
 
   PROCEDURE p1;
+    VAR y: INTEGER;
   BEGIN
+    y := 13;
     (* set int for h0 pending *)
-    SYSTEM.PUT(MCU.PPB_NVIC_ISPR0 + ((IntNo0 DIV 32) * 4), {IntNo0 MOD 32});
-    (*SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB);*)
+    SYSTEM.EMITH(SVCinstIRQ0);
     p1a
   END p1;
 
@@ -108,42 +105,18 @@ MODULE StacktrK2C1;
 
   PROCEDURE run;
   BEGIN
-    p
-  END run;
-
-  PROCEDURE t0c;
-  BEGIN
-    REPEAT
-      run;
-      Kernel.Next
-    UNTIL FALSE
-  END t0c;
-
-  PROCEDURE run0;
-    VAR
-      t0: Kernel.Thread;
-      cid, mainStackTop, res, tid0: INTEGER;
-  BEGIN
-    (* in main stack *)
-    cid := MultiCore.CPUid();
-    mainStackTop := Memory.DataMem[cid].stackStart;
-    Out.Hex(mainStackTop, 12); Out.Ln;
     Exceptions.InstallIntHandler(IntNo0, h0);
     Exceptions.SetIntPrio(IntNo0, MCU.PPB_ExcPrio4);
     Exceptions.EnableInt(IntNo0);
     Exceptions.InstallIntHandler(IntNo1, i0);
     Exceptions.SetIntPrio(IntNo1, MCU.PPB_ExcPrio2);
     Exceptions.EnableInt(IntNo1);
-    Kernel.Install(MillisecsPerTick);
-    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.ProgError);
-    Kernel.SetPeriod(t0, 1000, 0); Kernel.Enable(t0);
-    (* threads will use in their stacks, exceptions will use main stack *)
-    Kernel.Run (* resets MSP to top *)
-    (* we'll not return here *)
-  END run0;
+    SysCall.Init;
+    p
+  END run;
 
 BEGIN
   p := p0;
-  MultiCore.StartCoreOne(run0, InitCoreOne.Init);
-  run0
-END StacktrK2C1.
+  MultiCore.StartCoreOne(run, InitCoreOne.Init);
+  run
+END Stacktr1.

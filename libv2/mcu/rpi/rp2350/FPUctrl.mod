@@ -4,6 +4,10 @@ MODULE FPUctrl;
   --
   FPU control/mgmt
   --
+  IMPORTANT:
+    * 'Init' needs to called from the core whose FPU shall be initialised/enabled.
+    * See modules InitCoreOne and MultiCore.
+  --
   MCU: RP2350
   --
   Copyright (c) 2024-2025 Gray gray@grayraven.org
@@ -46,7 +50,8 @@ MODULE FPUctrl;
       SYSTEM.GET(MCU.PPB_FPCCR, x);
       BFI(x, FPCCR_TS, 1);
       SYSTEM.PUT(MCU.PPB_FPCCR, x)
-    END
+    END;
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
   END Init;
 
 END FPUctrl.
