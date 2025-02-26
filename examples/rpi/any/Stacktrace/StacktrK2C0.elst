@@ -1,4 +1,7 @@
-.     0  010005470H              <Pad: 0>
+. <mcu:  rp2350>
+. <prog: C:\Users\gray\Projects\Oberon\WORK\oberon-rtk\examples\rpi\any\Stacktrace\StacktrK2C0.mod>
+
+.     0  010005400H              <Pad: 0>
 MODULE StacktrK2C0;
 (**
   Oberon RTK Framework v2
@@ -28,228 +31,228 @@ MODULE StacktrK2C0;
   (* trigger MCU fault *)
     VAR x: INTEGER;
   BEGIN
-.     4  010005474H      0B500H  push      { lr }
-.     6  010005476H      0B081H  sub       sp,#4
+.     4  010005404H      0B500H  push      { lr }
+.     6  010005406H      0B081H  sub       sp,#4
     x := MCU.PPB_NVIC_ISER0 + 1;
-.     8  010005478H  0F8DF000CH  ldr.w     r0,[pc,#12] -> 24
-.    12  01000547CH      09000H  str       r0,[sp]
+.     8  010005408H  0F8DF000CH  ldr.w     r0,[pc,#12] -> 24
+.    12  01000540CH      09000H  str       r0,[sp]
     SYSTEM.PUT(x, x)
   END fault;
-.    14  01000547EH      09800H  ldr       r0,[sp]
-.    16  010005480H      09900H  ldr       r1,[sp]
-.    18  010005482H      06001H  str       r1,[r0]
-.    20  010005484H      0B001H  add       sp,#4
-.    22  010005486H      0BD00H  pop       { pc }
-.    24  010005488H  0E000E101H  <Const:  -536813311>
+.    14  01000540EH      09800H  ldr       r0,[sp]
+.    16  010005410H      09900H  ldr       r1,[sp]
+.    18  010005412H      06001H  str       r1,[r0]
+.    20  010005414H      0B001H  add       sp,#4
+.    22  010005416H      0BD00H  pop       { pc }
+.    24  010005418H  0E000E101H  <Const:  -536813311>
 
   PROCEDURE error;
   (* trigger runtime error *)
     VAR x: INTEGER;
   BEGIN
-.    28  01000548CH      0B500H  push      { lr }
-.    30  01000548EH      0B081H  sub       sp,#4
+.    28  01000541CH      0B500H  push      { lr }
+.    30  01000541EH      0B081H  sub       sp,#4
     x := 0; x := x DIV x
-.    32  010005490H      02000H  movs      r0,#0
-.    34  010005492H      09000H  str       r0,[sp]
+.    32  010005420H      02000H  movs      r0,#0
+.    34  010005422H      09000H  str       r0,[sp]
   END error;
-.    36  010005494H      09800H  ldr       r0,[sp]
-.    38  010005496H      09900H  ldr       r1,[sp]
-.    40  010005498H  0F1B10F00H  cmp.w     r1,#0
-.    44  01000549CH      0DC01H  bgt.n     2 -> 50
-.    46  01000549EH      0DF07H  svc       7
-.    48  0100054A0H      00026H  <LineNo: 38>
-.    50  0100054A2H  0FB90F2F1H  sdiv.w    r2,r0,r1
-.    54  0100054A6H  0FB020011H  mls.w     r0,r2,r1,r0
-.    58  0100054AAH  0EBA270D0H  sub.w     r0,r2,r0,lsr 31
-.    62  0100054AEH      09000H  str       r0,[sp]
-.    64  0100054B0H      0B001H  add       sp,#4
-.    66  0100054B2H      0BD00H  pop       { pc }
+.    36  010005424H      09800H  ldr       r0,[sp]
+.    38  010005426H      09900H  ldr       r1,[sp]
+.    40  010005428H  0F1B10F00H  cmp.w     r1,#0
+.    44  01000542CH      0DC01H  bgt.n     2 -> 50
+.    46  01000542EH      0DF07H  svc       7
+.    48  010005430H      00026H  <LineNo: 38>
+.    50  010005432H  0FB90F2F1H  sdiv.w    r2,r0,r1
+.    54  010005436H  0FB020011H  mls.w     r0,r2,r1,r0
+.    58  01000543AH  0EBA270D0H  sub.w     r0,r2,r0,lsr 31
+.    62  01000543EH      09000H  str       r0,[sp]
+.    64  010005440H      0B001H  add       sp,#4
+.    66  010005442H      0BD00H  pop       { pc }
 
   PROCEDURE p2;
     VAR cid: INTEGER;
   BEGIN
-.    68  0100054B4H      0B500H  push      { lr }
-.    70  0100054B6H      0B081H  sub       sp,#4
+.    68  010005444H      0B500H  push      { lr }
+.    70  010005446H      0B081H  sub       sp,#4
     SYSTEM.GET(MCU.SIO_CPUID, cid);
-.    72  0100054B8H  0F04F4050H  mov.w     r0,#0D0000000H
-.    76  0100054BCH      06801H  ldr       r1,[r0]
-.    78  0100054BEH      09100H  str       r1,[sp]
+.    72  010005448H  0F04F4050H  mov.w     r0,#0D0000000H
+.    76  01000544CH      06801H  ldr       r1,[r0]
+.    78  01000544EH      09100H  str       r1,[sp]
     IF cid = 0 THEN
-.    80  0100054C0H      09800H  ldr       r0,[sp]
-.    82  0100054C2H      02800H  cmp       r0,#0
-.    84  0100054C4H  0F0408006H  bne.w     12 -> 100
+.    80  010005450H      09800H  ldr       r0,[sp]
+.    82  010005452H      02800H  cmp       r0,#0
+.    84  010005454H  0F0408006H  bne.w     12 -> 100
       fault
     ELSE
-.    88  0100054C8H  0F7FFFFD4H  bl.w      -88 -> 4
-.    92  0100054CCH      0E000H  b         0 -> 96
-.    94  0100054CEH      0002EH  <LineNo: 46>
+.    88  010005458H  0F7FFFFD4H  bl.w      -88 -> 4
+.    92  01000545CH      0E000H  b         0 -> 96
+.    94  01000545EH      0002EH  <LineNo: 46>
       error
-.    96  0100054D0H  0F000B804H  b.w       8 -> 108
+.    96  010005460H  0F000B804H  b.w       8 -> 108
     END
-.   100  0100054D4H  0F7FFFFDAH  bl.w      -76 -> 28
-.   104  0100054D8H      0E000H  b         0 -> 108
-.   106  0100054DAH      00030H  <LineNo: 48>
+.   100  010005464H  0F7FFFFDAH  bl.w      -76 -> 28
+.   104  010005468H      0E000H  b         0 -> 108
+.   106  01000546AH      00030H  <LineNo: 48>
   END p2;
-.   108  0100054DCH      0B001H  add       sp,#4
-.   110  0100054DEH      0BD00H  pop       { pc }
+.   108  01000546CH      0B001H  add       sp,#4
+.   110  01000546EH      0BD00H  pop       { pc }
 
   PROCEDURE p1;
   BEGIN
-.   112  0100054E0H      0B500H  push      { lr }
+.   112  010005470H      0B500H  push      { lr }
     p2
   END p1;
-.   114  0100054E2H  0F7FFFFE7H  bl.w      -50 -> 68
-.   118  0100054E6H      0E000H  b         0 -> 122
-.   120  0100054E8H      00036H  <LineNo: 54>
-.   122  0100054EAH      0BD00H  pop       { pc }
+.   114  010005472H  0F7FFFFE7H  bl.w      -50 -> 68
+.   118  010005476H      0E000H  b         0 -> 122
+.   120  010005478H      00036H  <LineNo: 54>
+.   122  01000547AH      0BD00H  pop       { pc }
 
   PROCEDURE p0;
     CONST R12 = 12;
   BEGIN
-.   124  0100054ECH      0B500H  push      { lr }
+.   124  01000547CH      0B500H  push      { lr }
     SYSTEM.LDREG(R12, 0A0B0C0DH); (* marker *)
-.   126  0100054EEH  0F8DFC00CH  ldr.w     r12,[pc,#12] -> 140
+.   126  01000547EH  0F8DFC00CH  ldr.w     r12,[pc,#12] -> 140
     p1
   END p0;
-.   130  0100054F2H  0F7FFFFF5H  bl.w      -22 -> 112
-.   134  0100054F6H      0E000H  b         0 -> 138
-.   136  0100054F8H      0003DH  <LineNo: 61>
-.   138  0100054FAH      0BD00H  pop       { pc }
-.   140  0100054FCH  00A0B0C0DH  <Const:  168496141>
+.   130  010005482H  0F7FFFFF5H  bl.w      -22 -> 112
+.   134  010005486H      0E000H  b         0 -> 138
+.   136  010005488H      0003DH  <LineNo: 61>
+.   138  01000548AH      0BD00H  pop       { pc }
+.   140  01000548CH  00A0B0C0DH  <Const:  168496141>
 
   PROCEDURE run;
   BEGIN
-.   144  010005500H      0B500H  push      { lr }
+.   144  010005490H      0B500H  push      { lr }
     p
   END run;
-.   146  010005502H  0F8DF0018H  ldr.w     r0,[pc,#24] -> 172
-.   150  010005506H      06800H  ldr       r0,[r0]
-.   152  010005508H  0F1B00F00H  cmp.w     r0,#0
-.   156  01000550CH      0D101H  bne.n     2 -> 162
-.   158  01000550EH      0DF05H  svc       5
-.   160  010005510H      00042H  <LineNo: 66>
-.   162  010005512H      03001H  adds      r0,#1
-.   164  010005514H      04780H  blx       r0
-.   166  010005516H      0E000H  b         0 -> 170
-.   168  010005518H      00042H  <LineNo: 66>
-.   170  01000551AH      0BD00H  pop       { pc }
-.   172  01000551CH  02003FB38H  <Global: StacktrK2C0 data>
+.   146  010005492H  0F8DF0018H  ldr.w     r0,[pc,#24] -> 172
+.   150  010005496H      06800H  ldr       r0,[r0]
+.   152  010005498H  0F1B00F00H  cmp.w     r0,#0
+.   156  01000549CH      0D101H  bne.n     2 -> 162
+.   158  01000549EH      0DF05H  svc       5
+.   160  0100054A0H      00042H  <LineNo: 66>
+.   162  0100054A2H      03001H  adds      r0,#1
+.   164  0100054A4H      04780H  blx       r0
+.   166  0100054A6H      0E000H  b         0 -> 170
+.   168  0100054A8H      00042H  <LineNo: 66>
+.   170  0100054AAH      0BD00H  pop       { pc }
+.   172  0100054ACH  02003FB38H  <Global: StacktrK2C0 data>
 
   PROCEDURE t0c;
   BEGIN
-.   176  010005520H      0B500H  push      { lr }
+.   176  0100054B0H      0B500H  push      { lr }
     REPEAT
       run;
-.   178  010005522H  0F7FFFFEDH  bl.w      -38 -> 144
-.   182  010005526H      0E000H  b         0 -> 186
-.   184  010005528H      00048H  <LineNo: 72>
+.   178  0100054B2H  0F7FFFFEDH  bl.w      -38 -> 144
+.   182  0100054B6H      0E000H  b         0 -> 186
+.   184  0100054B8H      00048H  <LineNo: 72>
       Kernel.Next
     UNTIL FALSE
-.   186  01000552AH  0F7FFFB4DH  bl.w      Ext Proc #9
-.   190  01000552EH      0E000H  b         0 -> 194
-.   192  010005530H      00049H  <LineNo: 73>
+.   186  0100054BAH  0F7FFFB4DH  bl.w      Ext Proc #9
+.   190  0100054BEH      0E000H  b         0 -> 194
+.   192  0100054C0H      00049H  <LineNo: 73>
   END t0c;
-.   194  010005532H      04280H  cmp       r0,r0
-.   196  010005534H  0F43FAFF5H  beq.w     -22 -> 178
-.   200  010005538H      0BD00H  pop       { pc }
-.   202  01000553AH      0BF00H  nop       
+.   194  0100054C2H      04280H  cmp       r0,r0
+.   196  0100054C4H  0F43FAFF5H  beq.w     -22 -> 178
+.   200  0100054C8H      0BD00H  pop       { pc }
+.   202  0100054CAH      0BF00H  nop       
 
   PROCEDURE run0;
     VAR
       t0: Kernel.Thread;
       x, tid0: INTEGER;
   BEGIN
-.   204  01000553CH      0B500H  push      { lr }
-.   206  01000553EH      0B083H  sub       sp,#12
+.   204  0100054CCH      0B500H  push      { lr }
+.   206  0100054CEH      0B083H  sub       sp,#12
     (* in main stack *)
     x := MultiCore.CPUid();
-.   208  010005540H  0F7FFFEA6H  bl.w      Ext Proc #1
-.   212  010005544H      0E000H  b         0 -> 216
-.   214  010005546H      00053H  <LineNo: 83>
-.   216  010005548H      09001H  str       r0,[sp,#4]
+.   208  0100054D0H  0F7FFFEA6H  bl.w      Ext Proc #1
+.   212  0100054D4H      0E000H  b         0 -> 216
+.   214  0100054D6H      00053H  <LineNo: 83>
+.   216  0100054D8H      09001H  str       r0,[sp,#4]
     x := Memory.DataMem[x].stackStart;
-.   218  01000554AH      09801H  ldr       r0,[sp,#4]
-.   220  01000554CH      02802H  cmp       r0,#2
-.   222  01000554EH      0D301H  bcc.n     2 -> 228
-.   224  010005550H      0DF01H  svc       1
-.   226  010005552H      00054H  <LineNo: 84>
-.   228  010005554H  0F8DF1074H  ldr.w     r1,[pc,#116] -> 348
-.   232  010005558H      000C2H  lsls      r2,r0,#3
-.   234  01000555AH  0EB020001H  add.w     r0,r2,r1
-.   238  01000555EH      06800H  ldr       r0,[r0]
-.   240  010005560H      09001H  str       r0,[sp,#4]
+.   218  0100054DAH      09801H  ldr       r0,[sp,#4]
+.   220  0100054DCH      02802H  cmp       r0,#2
+.   222  0100054DEH      0D301H  bcc.n     2 -> 228
+.   224  0100054E0H      0DF01H  svc       1
+.   226  0100054E2H      00054H  <LineNo: 84>
+.   228  0100054E4H  0F8DF1074H  ldr.w     r1,[pc,#116] -> 348
+.   232  0100054E8H      000C2H  lsls      r2,r0,#3
+.   234  0100054EAH  0EB020001H  add.w     r0,r2,r1
+.   238  0100054EEH      06800H  ldr       r0,[r0]
+.   240  0100054F0H      09001H  str       r0,[sp,#4]
     Out.Hex(x, 12); Out.Ln;
-.   242  010005562H      09801H  ldr       r0,[sp,#4]
-.   244  010005564H      0210CH  movs      r1,#12
-.   246  010005566H  0F7FDF88FH  bl.w      Ext Proc #7
-.   250  01000556AH      0E000H  b         0 -> 254
-.   252  01000556CH      00055H  <LineNo: 85>
-.   254  01000556EH  0F7FDF855H  bl.w      Ext Proc #5
-.   258  010005572H      0E000H  b         0 -> 262
-.   260  010005574H      00055H  <LineNo: 85>
+.   242  0100054F2H      09801H  ldr       r0,[sp,#4]
+.   244  0100054F4H      0210CH  movs      r1,#12
+.   246  0100054F6H  0F7FEFEEFH  bl.w      Ext Proc #7
+.   250  0100054FAH      0E000H  b         0 -> 254
+.   252  0100054FCH      00055H  <LineNo: 85>
+.   254  0100054FEH  0F7FEFEB5H  bl.w      Ext Proc #5
+.   258  010005502H      0E000H  b         0 -> 262
+.   260  010005504H      00055H  <LineNo: 85>
     Kernel.Install(MillisecsPerTick);
-.   262  010005576H      0200AH  movs      r0,#10
-.   264  010005578H  0F7FFFD7AH  bl.w      Ext Proc #24
-.   268  01000557CH      0E000H  b         0 -> 272
-.   270  01000557EH      00056H  <LineNo: 86>
+.   262  010005506H      0200AH  movs      r0,#10
+.   264  010005508H  0F7FFFD7AH  bl.w      Ext Proc #24
+.   268  01000550CH      0E000H  b         0 -> 272
+.   270  01000550EH      00056H  <LineNo: 86>
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, x); ASSERT(x = Kernel.OK, Errors.ProgError);
-.   272  010005580H  0F2AF0064H  adr.w     r0,pc,#-100 -> 176
-.   276  010005584H  0F2404100H  movw      r1,#1024
-.   280  010005588H      0466AH  mov       r2,sp
-.   282  01000558AH  0F11D0308H  adds.w    r3,sp,#8
-.   286  01000558EH  0F11D0404H  adds.w    r4,sp,#4
-.   290  010005592H  0F7FFFA7DH  bl.w      Ext Proc #4
-.   294  010005596H      0E000H  b         0 -> 298
-.   296  010005598H      00057H  <LineNo: 87>
-.   298  01000559AH      09801H  ldr       r0,[sp,#4]
-.   300  01000559CH      02800H  cmp       r0,#0
-.   302  01000559EH      0D001H  beq.n     2 -> 308
-.   304  0100055A0H      0DF25H  svc       37
-.   306  0100055A2H      00057H  <LineNo: 87>
+.   272  010005510H  0F2AF0064H  adr.w     r0,pc,#-100 -> 176
+.   276  010005514H  0F2404100H  movw      r1,#1024
+.   280  010005518H      0466AH  mov       r2,sp
+.   282  01000551AH  0F11D0308H  adds.w    r3,sp,#8
+.   286  01000551EH  0F11D0404H  adds.w    r4,sp,#4
+.   290  010005522H  0F7FFFA7DH  bl.w      Ext Proc #4
+.   294  010005526H      0E000H  b         0 -> 298
+.   296  010005528H      00057H  <LineNo: 87>
+.   298  01000552AH      09801H  ldr       r0,[sp,#4]
+.   300  01000552CH      02800H  cmp       r0,#0
+.   302  01000552EH      0D001H  beq.n     2 -> 308
+.   304  010005530H      0DF25H  svc       37
+.   306  010005532H      00057H  <LineNo: 87>
     Kernel.SetPeriod(t0, 1000, 0); Kernel.Enable(t0);
-.   308  0100055A4H      09800H  ldr       r0,[sp]
-.   310  0100055A6H  0F24031E8H  movw      r1,#1000
-.   314  0100055AAH      02200H  movs      r2,#0
-.   316  0100055ACH  0F7FFFB08H  bl.w      Ext Proc #8
-.   320  0100055B0H      0E000H  b         0 -> 324
-.   322  0100055B2H      00058H  <LineNo: 88>
-.   324  0100055B4H      09800H  ldr       r0,[sp]
-.   326  0100055B6H  0F7FFFAF7H  bl.w      Ext Proc #6
-.   330  0100055BAH      0E000H  b         0 -> 334
-.   332  0100055BCH      00058H  <LineNo: 88>
+.   308  010005534H      09800H  ldr       r0,[sp]
+.   310  010005536H  0F24031E8H  movw      r1,#1000
+.   314  01000553AH      02200H  movs      r2,#0
+.   316  01000553CH  0F7FFFB08H  bl.w      Ext Proc #8
+.   320  010005540H      0E000H  b         0 -> 324
+.   322  010005542H      00058H  <LineNo: 88>
+.   324  010005544H      09800H  ldr       r0,[sp]
+.   326  010005546H  0F7FFFAF7H  bl.w      Ext Proc #6
+.   330  01000554AH      0E000H  b         0 -> 334
+.   332  01000554CH      00058H  <LineNo: 88>
     (* threads will use in their stacks, exceptions will use main stack *)
     Kernel.Run (* resets MSP to top *)
     (* we'll not return here *)
   END run0;
-.   334  0100055BEH  0F7FFFD23H  bl.w      Ext Proc #23
-.   338  0100055C2H      0E000H  b         0 -> 342
-.   340  0100055C4H      0005AH  <LineNo: 90>
-.   342  0100055C6H      0B003H  add       sp,#12
-.   344  0100055C8H      0BD00H  pop       { pc }
-.   346  0100055CAH      0BF00H  nop       
-.   348  0100055CCH  02003FF84H  <Global: Memory data>
+.   334  01000554EH  0F7FFFD23H  bl.w      Ext Proc #23
+.   338  010005552H      0E000H  b         0 -> 342
+.   340  010005554H      0005AH  <LineNo: 90>
+.   342  010005556H      0B003H  add       sp,#12
+.   344  010005558H      0BD00H  pop       { pc }
+.   346  01000555AH      0BF00H  nop       
+.   348  01000555CH  02003FF84H  <Global: Memory data>
 
 BEGIN
-.   352  0100055D0H      0B500H  push      { lr }
+.   352  010005560H      0B500H  push      { lr }
   p := p0;
-.   354  0100055D2H      0BF00H  nop       
-.   356  0100055D4H  0F2AF00ECH  adr.w     r0,pc,#-236 -> 124
-.   360  0100055D8H  0F8DF1024H  ldr.w     r1,[pc,#36] -> 400
-.   364  0100055DCH      06008H  str       r0,[r1]
+.   354  010005562H      0BF00H  nop       
+.   356  010005564H  0F2AF00ECH  adr.w     r0,pc,#-236 -> 124
+.   360  010005568H  0F8DF1024H  ldr.w     r1,[pc,#36] -> 400
+.   364  01000556CH      06008H  str       r0,[r1]
   MultiCore.StartCoreOne(run0, InitCoreOne.Init);
-.   366  0100055DEH      0BF00H  nop       
-.   368  0100055E0H  0F2AF00A8H  adr.w     r0,pc,#-168 -> 204
-.   372  0100055E4H  0F8DF1014H  ldr.w     r1,[pc,#20] -> 396
-.   376  0100055E8H  0F7FFFF12H  bl.w      Ext Proc #8
-.   380  0100055ECH      0E000H  b         0 -> 384
-.   382  0100055EEH      00060H  <LineNo: 96>
+.   366  01000556EH      0BF00H  nop       
+.   368  010005570H  0F2AF00A8H  adr.w     r0,pc,#-168 -> 204
+.   372  010005574H  0F8DF1014H  ldr.w     r1,[pc,#20] -> 396
+.   376  010005578H  0F7FFFF12H  bl.w      Ext Proc #8
+.   380  01000557CH      0E000H  b         0 -> 384
+.   382  01000557EH      00060H  <LineNo: 96>
   run0
 END StacktrK2C0.
-.   384  0100055F0H  0F7FFFFA4H  bl.w      -184 -> 204
-.   388  0100055F4H      0E000H  b         0 -> 392
-.   390  0100055F6H      00061H  <LineNo: 97>
-.   392  0100055F8H      0BD00H  pop       { pc }
-.   394  0100055FAH      0BF00H  nop       
-.   396  0100055FCH  010005454H  <Global: InitCoreOne code>
-.   400  010005600H  02003FB38H  <Global: StacktrK2C0 data>
+.   384  010005580H  0F7FFFFA4H  bl.w      -184 -> 204
+.   388  010005584H      0E000H  b         0 -> 392
+.   390  010005586H      00061H  <LineNo: 97>
+.   392  010005588H      0BD00H  pop       { pc }
+.   394  01000558AH      0BF00H  nop       
+.   396  01000558CH  0100053E4H  <Global: InitCoreOne code>
+.   400  010005590H  02003FB38H  <Global: StacktrK2C0 data>
  

@@ -407,6 +407,7 @@ MODULE RuntimeErrors;
   PROCEDURE ErrorHandler*;
   (* via compiler-inserted SVC instruction *)
   (* in main stack *)
+    CONST R11 = 11;
     VAR
       stackframeAddr, traceStartAddr, excRetVal, cid: INTEGER;
       tp: TracePoint; cr: CurrentRegisters;
@@ -416,7 +417,7 @@ MODULE RuntimeErrors;
     cr.sp := SYSTEM.REG(SP);
     cr.lr := SYSTEM.REG(LR);
     SYSTEM.EMIT(MCU.MRS_R11_XPSR);
-    cr.xpsr := SYSTEM.REG(11);
+    cr.xpsr := SYSTEM.REG(R11);
     exc[cid].excRec.currentRegs := cr;
     exc[cid].excRec.core := cid;
     excRetVal := SYSTEM.REG(LR);
@@ -436,6 +437,7 @@ MODULE RuntimeErrors;
   PROCEDURE FaultHandler*;
   (* via MCU hardware-generated exception *)
   (* in main stack *)
+    CONST R11 = 11;
     VAR
       stackframeAddr, traceStartAddr, excRetVal, cid: INTEGER;
       tp: TracePoint; cr: CurrentRegisters;
@@ -445,7 +447,7 @@ MODULE RuntimeErrors;
     cr.sp := SYSTEM.REG(SP);
     cr.lr := SYSTEM.REG(LR);
     SYSTEM.EMIT(MCU.MRS_R11_XPSR);
-    cr.xpsr := SYSTEM.REG(11);
+    cr.xpsr := SYSTEM.REG(R11);
     exc[cid].excRec.currentRegs := cr;
     exc[cid].excRec.core := cid;
     excRetVal := SYSTEM.REG(LR);

@@ -3,7 +3,6 @@ MODULE MultiCore;
   Oberon RTK Framework v2
   --
   Multi-core handling
-  Very basic :)
   --
   MCU: RP2040, RP2350
   --
@@ -49,13 +48,11 @@ MODULE MultiCore;
 
 
   PROCEDURE* Valid*(): BOOLEAN;
-  BEGIN
     RETURN SYSTEM.BIT(MCU.SIO_FIFO_ST, ST_VLD)
   END Valid;
 
 
   PROCEDURE* Ready*(): BOOLEAN;
-  BEGIN
     RETURN SYSTEM.BIT(MCU.SIO_FIFO_ST, ST_RDY)
   END Ready;
 
