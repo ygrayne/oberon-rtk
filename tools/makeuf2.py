@@ -3,11 +3,13 @@
 # Translate an Astrobe .bin file to UF2 format for Pico or Pico 2.
 # Optionally copy to Pico's "virtual drive".
 # --
+# Supported platforms: Windows, macOS
+# --
 # Run python -m makeuf2 -h for help.
 # Run python -m makeuf2 rp2040 -h for help with command 'rp2040'
 # Run python -m makeuf2 rp2350 -h for help with command 'rp2350'
 # --
-# Copyright (c) 2023-2024 Gray, gray@graraven.org
+# Copyright (c) 2023-2025 Gray, gray@graraven.org
 # https://oberon-rtk.org/licences/
 
 # The accompanying 'boot2.uf2' binary is
@@ -89,19 +91,21 @@ class RPcmd(commands.Command):
         self._prog_max_addr = XIP_BASE + flash_size
 
     def _get_drive(self, args):
-        drive = args.drive
+        drive = args.drive            
         if drive is not None:
+            if sys.platform == 'darwin':
+                drive = '/Volumes/' + drive
             if not Path(drive).exists():
-                print("{}: cannot find drive {} ({})".format(PROG_NAME, drive, self._drive_name))
+                print("{}: cannot find {} ({})".format(PROG_NAME, drive, self._drive_name))
                 sys.exit(1)
         else:
             if args.upload:
                 drive = find_drive(self._drive_name)
                 if drive != '':
-                    print("{}: drive {} is {}".format(PROG_NAME, self._drive_name, drive))
+                    print("{}: drive/volume {} is {}".format(PROG_NAME, self._drive_name, drive))
                     assert(Path(drive).exists())
                 else:
-                    print("{}: cannot find drive {}".format(PROG_NAME, self._drive_name))
+                    print("{}: cannot find {}".format(PROG_NAME, self._drive_name))
                     sys.exit(1)
             else:
                 drive = ''
@@ -131,7 +135,7 @@ class RP2040(RPcmd):
         'oargs': {
             'drive': {
                 'flags': ['-d'],
-                'help': 'upload drive, eg. E:',
+                'help': 'upload drive or volume, eg. E: (Windows) or RPI-RP2 (macOs)',
             },
             'boot2_file': {
                 'flags': ['-b'],
@@ -144,7 +148,7 @@ class RP2040(RPcmd):
             },
             'upload': {
                 'flags': ['-u'],
-                'help': 'upload to drive \'RP2040\' (\'-d\' takes precedence), experimental',
+                'help': 'upload to \'RP2040\' (\'-d\' takes precedence)',
                 'action': 'store_true'
             }
         }
@@ -174,7 +178,7 @@ class RP2040(RPcmd):
         self._get_drive(args)
         if self._drive != '':
             self._uf2_file.copy(self._drive)
-            print("UF2 binary {} installed on drive {}.".format(self._uf2_file.file.name, self._drive))
+            print("UF2 binary {} installed on {}.".format(self._uf2_file.file.name, self._drive))
 
 
 class RP2350(RPcmd):
@@ -190,7 +194,7 @@ class RP2350(RPcmd):
         'oargs': {
             'drive': {
                 'flags': ['-d'],
-                'help': 'upload drive, eg. E:'
+                'help': 'upload drive or volume, eg. E: (Windows) or RPI-RP2 (macOS)'
             },
             'flash_size': {
                 'flags': ['-f'],
@@ -199,7 +203,7 @@ class RP2350(RPcmd):
             },
             'upload': {
                 'flags': ['-u'],
-                'help': 'upload to drive \'RP2350\' (\'-d\' takes precedence), experimental',
+                'help': 'upload to \'RP2350\' (\'-d\' takes precedence)',
                 'action': 'store_true'
             }
         }
@@ -224,7 +228,7 @@ class RP2350(RPcmd):
         self._get_drive(args)
         if self._drive != '':
             self._uf2_file.copy(self._drive)
-            print("UF2 binary {} installed on drive {}.".format(self._uf2_file.file.name, self._drive))
+            print("UF2 binary {} installed on {}.".format(self._uf2_file.file.name, self._drive))
 
 
 ## files
@@ -240,6 +244,7 @@ class InFile:
         try:
             with self._file.open('rb') as bfile:
                 self._data = bfile.read()
+                print(len(self._data))
         except:
             print("{}: cannot read {}".format(PROG_NAME, self._file))
             sys.exit(1)
@@ -277,10 +282,6 @@ class UF2file:
     def file(self):
         return self._file
 
-    # @property
-    # def name(self):
-    #     return self._file.name
-
     def open(self):
         try:
             self._fd = self._file.open('wb')
@@ -295,7 +296,7 @@ class UF2file:
         try:
             shutil.copy(self._file, dest)
         except:
-            print("{}: cannot upload {} to target drive {}.".format(PROG_NAME, self._file.name, dest))
+            print("{}: cannot upload {} to {}.".format(PROG_NAME, self._file.name, dest))
             sys.exit(1)
 
     def add_boot_block(self, data, num_blocks):
@@ -361,16 +362,31 @@ from string import ascii_uppercase
 import subprocess
 
 def find_drive(drive_name):
-    for drive_letter in ascii_uppercase:
-        drive_id = drive_letter + ':'
-        if Path(drive_id).exists():
-            v = subprocess.check_output(["cmd", "/c vol " + drive_id])
-            if drive_name in str(v):
-                return drive_id
-    return ""
+    platform = sys.platform
+    if platform == 'win32':
+        for drive_letter in ascii_uppercase:
+            drive_id = drive_letter + ':'
+            if Path(drive_id).exists():
+                v = subprocess.check_output(['cmd', '/c vol ' + drive_id])
+                if drive_name in str(v):
+                    return drive_id
+        return ''
+    elif platform == 'darwin':
+        drive_id = Path('/Volumes/' + drive_name)
+        if drive_id.exists():
+            return drive_id
+        else:
+            return ''
+    else:
+        raise AssertionError    
 
 ## main
 def main():
+
+    platform = sys.platform
+    if platform != 'darwin' and platform != 'windows':
+        print(f"{platform} is not supported.")
+        sys.exit(1)
 
     cmds = {
         'rp2040': RP2040(),
