@@ -1,0 +1,5 @@
+# Specify filepatterns you want to assign special attributes.
+
+text=auto
+
+*.mod text eol=crlf

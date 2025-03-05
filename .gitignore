@@ -6,6 +6,7 @@
 
 # add .gitgnore
 !.gitignore
+!.gitattributes
 
 # add dirs
 !/lib/
