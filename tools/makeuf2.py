@@ -23,6 +23,9 @@ from pathlib import Path
 import pylib.commands as commands
 
 ## constants
+WINDOWS = 'win32'
+MACOS = 'darwin'
+
 PROG_NAME = 'makeuf2'
 BOOT2_FILE_NAME = 'boot2.uf2'
 
@@ -93,7 +96,7 @@ class RPcmd(commands.Command):
     def _get_drive(self, args):
         drive = args.drive            
         if drive is not None:
-            if sys.platform == 'darwin':
+            if sys.platform == MACOS:
                 drive = '/Volumes/' + drive
             if not Path(drive).exists():
                 print("{}: cannot find {} ({})".format(PROG_NAME, drive, self._drive_name))
@@ -244,7 +247,7 @@ class InFile:
         try:
             with self._file.open('rb') as bfile:
                 self._data = bfile.read()
-                print(len(self._data))
+                # print(len(self._data))
         except:
             print("{}: cannot read {}".format(PROG_NAME, self._file))
             sys.exit(1)
@@ -363,7 +366,7 @@ import subprocess
 
 def find_drive(drive_name):
     platform = sys.platform
-    if platform == 'win32':
+    if platform == WINDOWS:
         for drive_letter in ascii_uppercase:
             drive_id = drive_letter + ':'
             if Path(drive_id).exists():
@@ -371,7 +374,7 @@ def find_drive(drive_name):
                 if drive_name in str(v):
                     return drive_id
         return ''
-    elif platform == 'darwin':
+    elif platform == MACOS:
         drive_id = Path('/Volumes/' + drive_name)
         if drive_id.exists():
             return drive_id
@@ -384,7 +387,7 @@ def find_drive(drive_name):
 def main():
 
     platform = sys.platform
-    if platform != 'darwin' and platform != 'windows':
+    if platform != MACOS and platform != WINDOWS:
         print(f"{platform} is not supported.")
         sys.exit(1)
 
