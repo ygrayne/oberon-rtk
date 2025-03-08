@@ -4,11 +4,9 @@
 # --
 # Run with option -h for help.
 # --
-# Put into a directory on $PYTHONPATH, and run as
-# 'python -m  pio2o ...'
-# No idea if that's the right way, but it works.
+# Binary 'pioasm' must be on the $PATH.
 # --
-# Copyright (c) 2024 Gray, gray@graraven.org
+# Copyright (c) 2024-2025 Gray, gray@graraven.org
 # https://oberon-rtk.org/licences/
 
 
@@ -94,8 +92,10 @@ def extract_pio_data(c_lines, prog_names):
             #print(def_el)
             if def_el[1].endswith("_wrap_target"):
                 pio_data[p]["wrap_target"] = def_el[2]
-            else:
+            elif def_el[1].endswith("_wrap"):
                 pio_data[p]['wrap'] = def_el[2]
+            elif def_el[1].endswith("_pio_version"):
+                pio_data[p]['pio_version'] = def_el[2]
             # print(programs)
         elif line.startswith("static const uint16_t"):
             copy_code = True
@@ -124,7 +124,7 @@ def write_oberon_file(file, mod_name, pio_lines, pio_data):
             for line in pio_lines:
                 modf.write(line + "\n")
             modf.write("**)\n\n")
-            modf.write("  PROCEDURE GetCode*(progName: ARRAY OF CHAR; VAR code: ARRAY OF INTEGER; VAR numInstr, wrapTarget, wrap: INTEGER);\n")
+            modf.write("  PROCEDURE GetCode*(progName: ARRAY OF CHAR; VAR code: ARRAY OF INTEGER; VAR numInstr, wrapTarget, wrap, pioVersion: INTEGER);\n")
             modf.write("  BEGIN\n")
             p = 0
             num_progs = len(pio_data)
@@ -141,7 +141,8 @@ def write_oberon_file(file, mod_name, pio_lines, pio_data):
                     ix = ix + 1
                 modf.write("      numInstr := " + str(ix) + ";\n")
                 modf.write("      wrapTarget := " + p['wrap_target'] + ";\n")
-                modf.write("      wrap := " + p['wrap'] + "\n")
+                modf.write("      wrap := " + p['wrap'] + ";\n")
+                modf.write("      pioVersion := " + p['pio_version'] + "\n")
                 prog_num = prog_num + 1
                 if prog_num == num_progs:
                     modf.write("    END;\n")
@@ -248,7 +249,7 @@ def main():
         print("Error: could not create output file {}".format(mod_file))
         sys.exit()
 
-    print("pio2o has created Oberon module " + mod_name + " in " + str(outf_base.parent))
+    print(f"pio2o has created Oberon module {mod_name} ({mod_file}) in {str(outf_base.parent)}")
     sys.exit(0)
 
 if __name__ == '__main__':

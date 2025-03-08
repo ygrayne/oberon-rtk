@@ -46,7 +46,7 @@ MODULE PIOsquare;
     VAR
       pioDev: PIO.Device;
       code: ARRAY PIO.MaxNumInstr OF INTEGER;
-      numInstr, wrap, wrapTarget, offset: INTEGER;
+      numInstr, wrap, wrapTarget, pioVersion, offset: INTEGER;
   BEGIN
     Out.String("init"); Out.Ln;
 
@@ -61,13 +61,13 @@ MODULE PIOsquare;
 
     (* get and load PIO code *)
     offset := 0;
-    PIOsquarePio.GetCode(PIOprog0, code, numInstr, wrapTarget, wrap);
+    PIOsquarePio.GetCode(PIOprog0, code, numInstr, wrapTarget, wrap, pioVersion);
     PIO.PutCode(pioDev, code, offset, numInstr);
     PIO.ConfigWrap(pioDev, SM0, wrapTarget, wrap);
     PIO.SetStartAddr(pioDev, SM0, offset);
 
     offset := offset + numInstr;
-    PIOsquarePio.GetCode(PIOprog1, code, numInstr, wrapTarget, wrap);
+    PIOsquarePio.GetCode(PIOprog1, code, numInstr, wrapTarget, wrap, pioVersion);
     PIO.PutCode(pioDev, code, offset, numInstr);
     PIO.ConfigWrap(pioDev, SM1, wrapTarget + offset, wrap + offset);
     PIO.SetStartAddr(pioDev, SM1, offset);
