@@ -15,6 +15,10 @@ import sys, json
 import subprocess
 from pathlib import PurePath
 
+# supported platforms
+WINDOWS = 'win32'
+MACOS = 'darwin'
+
 # define PIO block delimiter keywords
 PIOBEGIN = "PIOBEGIN"
 PIOEND = "PIOEND"
@@ -98,44 +102,53 @@ def extract_pio_data_json(pio_data_json):
 
 def write_oberon_file(file, mod_name, pio_lines, pio_data):
 # from pio_data
+    if sys.platform == WINDOWS:
+        eol = '\n'
+    else:
+        eol = '\r\n'
+
     try:
         with open(file, "w") as modf:
-            modf.write("MODULE " + mod_name + ";\r\n")
-            modf.write("(**\r\n")
-            modf.write("  Oberon RTK Framework\r\n")
-            modf.write("  Generated module from PIO assembly code.\r\n")
-            modf.write("  Assembly programs:\r\n")
+            modf.write(f"MODULE {mod_name};{eol}")
+            modf.write(f"(**{eol}")
+            modf.write(f"  Oberon RTK Framework{eol}")
+            modf.write(f"  Generated module from PIO assembly code.{eol}")
+            modf.write(f"  Assembly programs:{eol}")
             for line in pio_lines:
-                modf.write(line + "\r\n")
-            modf.write("**)\r\n\r\n")
-            modf.write("  PROCEDURE GetCode*(progName: ARRAY OF CHAR; VAR code: ARRAY OF INTEGER; VAR numInstr, wrapTarget, wrap: INTEGER);\r\n")
-            modf.write("  BEGIN\r\n")
+                modf.write(f"{line}{eol}")
+            modf.write(f"**){eol}{eol}")
+            modf.write(f"  PROCEDURE GetCode*(progName: ARRAY OF CHAR; VAR code: ARRAY OF INTEGER; VAR numInstr, wrapTarget, wrap: INTEGER);{eol}")
+            modf.write(f"  BEGIN{eol}")
             p = 0
             num_progs = len(pio_data)
             prog_num = 0
             for p in pio_data:
                 if prog_num == 0:
-                    modf.write("    IF progName = \"" + p['prog_name'] + "\" THEN\r\n")
+                    modf.write(f"    IF progName = \"{p['prog_name']}\" THEN{eol}")
                 else:
-                    modf.write("    ELSIF progName = \"" + p['prog_name'] + "\" THEN\r\n")
+                    modf.write(f"    ELSIF progName = \"{p['prog_name']}\" THEN{eol}")
                 ix = 0
                 for c in p['code']:
-                    modf.write("      code[" + str(ix) + "] := ")
-                    modf.write(c + ";\r\n")
+                    modf.write(f"      code[{str(ix)}] := {c};{eol}")
                     ix = ix + 1
-                modf.write("      numInstr := " + str(ix) + ";\r\n")
-                modf.write("      wrapTarget := " + p['wrap_target'] + ";\r\n")
-                modf.write("      wrap := " + p['wrap'] + ";\r\n")
+                modf.write(f"      numInstr := {str(ix)};{eol}")
+                modf.write(f"      wrapTarget := {p['wrap_target']};{eol}")
+                modf.write(f"      wrap := {p['wrap']}{eol}")
                 prog_num = prog_num + 1
                 if prog_num == num_progs:
-                    modf.write("    END;\r\n")
-            modf.write("  END GetCode;\r\n")
-            modf.write("END " + mod_name + ".\r\n")
+                    modf.write(f"    END;{eol}")
+            modf.write(f"  END GetCode;{eol}")
+            modf.write(f"END {mod_name}.{eol}")
             return True
     except:
         return False
 
 def main():
+    # platform check
+    if sys.platform != MACOS and sys.platform != WINDOWS:
+        print(f"{platform} is not supported.")
+        sys.exit(1)
+
     # arguments
     import argparse
     parser = argparse.ArgumentParser(
