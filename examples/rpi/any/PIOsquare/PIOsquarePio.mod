@@ -18,7 +18,7 @@ MODULE PIOsquarePio;
       .wrap
 **)
 
-  PROCEDURE GetCode*(progName: ARRAY OF CHAR; VAR code: ARRAY OF INTEGER; VAR numInstr, wrapTarget, wrap, pioVersion: INTEGER);
+  PROCEDURE GetCode*(progName: ARRAY OF CHAR; VAR code: ARRAY OF INTEGER; VAR numInstr, wrapTarget, wrap: INTEGER);
   BEGIN
     IF progName = "square_wave" THEN
       code[0] := 0E081H;
@@ -28,7 +28,6 @@ MODULE PIOsquarePio;
       numInstr := 4;
       wrapTarget := 0;
       wrap := 3;
-      pioVersion := 0
     ELSIF progName = "square_wave_asym" THEN
       code[0] := 0E081H;
       code[1] := 0E101H;
@@ -36,7 +35,6 @@ MODULE PIOsquarePio;
       numInstr := 3;
       wrapTarget := 1;
       wrap := 2;
-      pioVersion := 0
     END;
   END GetCode;
 END PIOsquarePio.

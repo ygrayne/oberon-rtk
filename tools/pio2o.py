@@ -5,12 +5,13 @@
 # Run with option -h for help.
 # --
 # Binary 'pioasm' must be on the $PATH.
+# Tested on Windows and macOS.
 # --
 # Copyright (c) 2024-2025 Gray, gray@graraven.org
 # https://oberon-rtk.org/licences/
 
 
-import sys
+import sys, json
 import subprocess
 from pathlib import PurePath
 
@@ -19,7 +20,7 @@ PIOBEGIN = "PIOBEGIN"
 PIOEND = "PIOEND"
 
 def read_file_lines(file):
-# in_lines: a list of lines as strings
+# in_ln: a list of lines as strings
     try:
         with open(file, "r") as inf:
             in_ln = [line for line in inf.readlines()]
@@ -77,40 +78,23 @@ def extract_pio_lines(in_lines, inf_ext):
                 prog_names.append(line_el[1])
     return pio_lines, prog_names
 
-def extract_pio_data(c_lines, prog_names):
-# pio_data: a list of dictionaries, one per program, from pioasm output as c_lines
-    pio_data = []
-    for prog_name in prog_names:
-        pio_data.append({"prog_name": prog_name})
 
-    p = 0; copy_code = False
-    for c_line in c_lines:
-        line = c_line.strip()
-        if line.startswith("#define"):
-            #print(line)
-            def_el = line.split()
-            #print(def_el)
-            if def_el[1].endswith("_wrap_target"):
-                pio_data[p]["wrap_target"] = def_el[2]
-            elif def_el[1].endswith("_wrap"):
-                pio_data[p]['wrap'] = def_el[2]
-            elif def_el[1].endswith("_pio_version"):
-                pio_data[p]['pio_version'] = def_el[2]
-            # print(programs)
-        elif line.startswith("static const uint16_t"):
-            copy_code = True
-            pio_data[p]["code"] = []
-        elif copy_code and line.startswith("};"):
-            copy_code = False
-            p = p + 1
-        elif copy_code:
-            if not line.startswith("//"):
-                line_el = line.split(", ")
-                #print(line_el)
-                hex_code = line_el[0].replace("0x", "0").upper() + "H"
-                #print(hex_code)
-                pio_data[p]["code"].append(hex_code)
+def extract_pio_data_json(pio_data_json):
+    pio_data = []
+    programs = pio_data_json['programs']
+    i = 0
+    for p in programs:
+        pio_data.append({})
+        pio_data[i]['prog_name'] = p['name']
+        pio_data[i]['wrap_target'] = str(p['wrapTarget'])
+        pio_data[i]['wrap'] = str(p['wrap'])
+        pio_data[i]['code'] = []
+        for instr in p['instructions']:
+            pio_data[i]['code'].append(f"0{instr['hex']}H")
+        i = i + 1
+    # print(pio_data)
     return pio_data
+
 
 def write_oberon_file(file, mod_name, pio_lines, pio_data):
 # from pio_data
@@ -124,7 +108,7 @@ def write_oberon_file(file, mod_name, pio_lines, pio_data):
             for line in pio_lines:
                 modf.write(line + "\n")
             modf.write("**)\n\n")
-            modf.write("  PROCEDURE GetCode*(progName: ARRAY OF CHAR; VAR code: ARRAY OF INTEGER; VAR numInstr, wrapTarget, wrap, pioVersion: INTEGER);\n")
+            modf.write("  PROCEDURE GetCode*(progName: ARRAY OF CHAR; VAR code: ARRAY OF INTEGER; VAR numInstr, wrapTarget, wrap: INTEGER);\n")
             modf.write("  BEGIN\n")
             p = 0
             num_progs = len(pio_data)
@@ -142,7 +126,6 @@ def write_oberon_file(file, mod_name, pio_lines, pio_data):
                 modf.write("      numInstr := " + str(ix) + ";\n")
                 modf.write("      wrapTarget := " + p['wrap_target'] + ";\n")
                 modf.write("      wrap := " + p['wrap'] + ";\n")
-                modf.write("      pioVersion := " + p['pio_version'] + "\n")
                 prog_num = prog_num + 1
                 if prog_num == num_progs:
                     modf.write("    END;\n")
@@ -159,18 +142,24 @@ def main():
         prog = 'pio2o',
         description = """Create an Oberon module for PIO assembly code. 'pioasm' is used to assemble the
             PIO code, which then can be accessed from the Oberon module.""" ,
-        epilog = """PIO source code can be extracted from an Oberon module (.mod),
+        epilog = f"""PIO source code can be extracted from an Oberon module (.mod),
             or read from a separate file (.pio). In the Oberon module, place
-            the code inside a comment and keywords {} and {}.""".format(PIOBEGIN, PIOEND))
-    parser.add_argument('-v', '--verbose', action='store_true', dest='verbose', help="print feedback")
+            the code inside a comment and keywords {PIOBEGIN} and {PIOEND}.""")
+    parser.add_argument('--verbose', action='store_true', dest='verbose', help="print feedback")
     parser.add_argument('-o', dest='module', help="output module name (Oberon)")
+    parser.add_argument('-v', dest='version', help="pioasm version (0 or 1, default: 0)")
     parser.add_argument('ifn', help="input file (.mod or .pio)")
 
     args = parser.parse_args()
-    if args.module == None:
+    if args.module is None:
         mod_name = str(PurePath(args.ifn).stem) + "Pio"
     else:
         mod_name = args.module
+
+    if args.version is None:
+        version = 0
+    else:
+        version = args.version
 
     # the files
     outf_base = PurePath(args.ifn)
@@ -178,31 +167,33 @@ def main():
     tmpf_stem = str(outf_base.stem) + ".pio"
     pio_file = outf_base.with_name("_" + tmpf_stem + ".pio")
     c_file = outf_base.with_name("_" + tmpf_stem + ".h")
+    json_file = outf_base.with_name("_" + tmpf_stem + ".json")
     mod_file = outf_base.with_name(mod_name + ".mod")
 
     if inf_ext != ".mod" and inf_ext != ".pio":
-        print("Error: input file must be '.mod' or '.pio': {}".format(args.ifn))
+        print(f"Error: input file must be '.mod' or '.pio': {args.ifn}")
         sys.exit()
 
     if args.verbose:
-        print("Output module name: {}".format(mod_name))
-        print("Input file: {}".format(outf_base))
-        print("Output file: {}".format(mod_file))
+        print(f"Output module name: {mod_name}")
+        print(f"Input file: {outf_base}")
+        print(f"Output file: {mod_file}")
+        print(f"'pioasm' version: {version}")
 
     in_lines = read_file_lines(args.ifn)
     if in_lines == []:
-        print("Error: could not open and read input file {}".format(args.ifn))
+        print(f"Error: could not open and read input file {args.ifn}")
         sys.exit()
 
     if args.verbose:
-        print("Extracting PIO assembly source from {}...".format(args.ifn))
+        print(f"Extracting PIO assembly source from {args.ifn}...")
 
     pio_lines, prog_names = extract_pio_lines(in_lines, inf_ext)
     if pio_lines == []:
-        print("Error: no {} .. {} block found in input file {}".format(PIOBEGIN, PIOEND, args.ifn))
+        print(f"Error: no {PIOBEGIN} .. {PIOEND} block found in input file {args.ifn}")
         sys.exit()
     if prog_names == []:
-        print("Error: no PIO programs found in input file {}".format(args.ifn))
+        print(f"Error: no PIO programs found in input file {args.ifn}")
         sys.exit()
 
     if args.verbose:
@@ -211,42 +202,40 @@ def main():
 
     # create PIO assembly input file for piasm
     if args.verbose:
-        print("Writing 'pioasm' input file {}...".format(pio_file))
+        print(f"Writing 'pioasm' input file {pio_file}...")
 
     ok = write_file_lines(pio_file, pio_lines)
     if not ok:
-        print("Error: could not write 'pioasm' input file {}".format(pio_file))
+        print(f"Error: could not write 'pioasm' input file {pio_file}")
         sys.exit()
 
     # run piasm
     if args.verbose:
         print("Running 'pioasm' assembler...")
 
-    ext_prog = "pioasm -o c-sdk".split() + [pio_file] + [c_file]
+    ext_prog = "pioasm -o json -v".split() + [f'{version}'] + [pio_file] + [json_file]
     done = subprocess.run(ext_prog)
     if done.returncode != 0:
-        print("Error: 'pioasm' found problems"); sys.exit()
-
-    # read piasm output (c-sdk format)
-    c_lines = read_file_lines(c_file)
-    if c_lines == []:
-        print("Error: could not read 'pioasm' output file {}.".format(c_file))
+        print("Error: 'pioasm' found problems");
         sys.exit()
 
-    # extract data from piasm output
-    if args.verbose:
-        print("Extracting PIO program data from 'pioasm' output file {}...".format(c_file))
+    # read piasm output (json format)
+    json_lines = read_file_lines(json_file)
+    pio_data_json = json.loads("".join(json_lines))
 
-    pio_data = extract_pio_data(c_lines, prog_names)
+    if args.verbose:
+        print(f"Reading PIO program data from 'pioasm' output file {json_file}...")
+
+    pio_data2 = extract_pio_data_json(pio_data_json)
 
     # create Oberon module
     if args.verbose:
-        print("Writing Oberon module file {}...".format(mod_file))
+        print(f"Writing Oberon module file {mod_file}...")
 
-    ok = write_oberon_file(mod_file, mod_name, pio_lines, pio_data)
+    ok = write_oberon_file(mod_file, mod_name, pio_lines, pio_data2)
 
     if not ok:
-        print("Error: could not create output file {}".format(mod_file))
+        print(f"Error: could not create output file {mod_file}")
         sys.exit()
 
     print(f"pio2o has created Oberon module {mod_name} ({mod_file}) in {str(outf_base.parent)}")

@@ -3,3 +3,7 @@
 text=auto
 
 *.mod text eol=crlf
+
+*.bin binary
+*.elf binary
+*.uf2 binary
