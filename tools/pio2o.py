@@ -100,37 +100,37 @@ def write_oberon_file(file, mod_name, pio_lines, pio_data):
 # from pio_data
     try:
         with open(file, "w") as modf:
-            modf.write("MODULE " + mod_name + ";\n")
-            modf.write("(**\n")
-            modf.write("  Oberon RTK Framework\n")
-            modf.write("  Generated module from PIO assembly code.\n")
-            modf.write("  Assembly programs:\n")
+            modf.write("MODULE " + mod_name + ";\r\n")
+            modf.write("(**\r\n")
+            modf.write("  Oberon RTK Framework\r\n")
+            modf.write("  Generated module from PIO assembly code.\r\n")
+            modf.write("  Assembly programs:\r\n")
             for line in pio_lines:
-                modf.write(line + "\n")
-            modf.write("**)\n\n")
-            modf.write("  PROCEDURE GetCode*(progName: ARRAY OF CHAR; VAR code: ARRAY OF INTEGER; VAR numInstr, wrapTarget, wrap: INTEGER);\n")
-            modf.write("  BEGIN\n")
+                modf.write(line + "\r\n")
+            modf.write("**)\r\n\r\n")
+            modf.write("  PROCEDURE GetCode*(progName: ARRAY OF CHAR; VAR code: ARRAY OF INTEGER; VAR numInstr, wrapTarget, wrap: INTEGER);\r\n")
+            modf.write("  BEGIN\r\n")
             p = 0
             num_progs = len(pio_data)
             prog_num = 0
             for p in pio_data:
                 if prog_num == 0:
-                    modf.write("    IF progName = \"" + p['prog_name'] + "\" THEN\n")
+                    modf.write("    IF progName = \"" + p['prog_name'] + "\" THEN\r\n")
                 else:
-                    modf.write("    ELSIF progName = \"" + p['prog_name'] + "\" THEN\n")
+                    modf.write("    ELSIF progName = \"" + p['prog_name'] + "\" THEN\r\n")
                 ix = 0
                 for c in p['code']:
                     modf.write("      code[" + str(ix) + "] := ")
-                    modf.write(c + ";\n")
+                    modf.write(c + ";\r\n")
                     ix = ix + 1
-                modf.write("      numInstr := " + str(ix) + ";\n")
-                modf.write("      wrapTarget := " + p['wrap_target'] + ";\n")
-                modf.write("      wrap := " + p['wrap'] + ";\n")
+                modf.write("      numInstr := " + str(ix) + ";\r\n")
+                modf.write("      wrapTarget := " + p['wrap_target'] + ";\r\n")
+                modf.write("      wrap := " + p['wrap'] + ";\r\n")
                 prog_num = prog_num + 1
                 if prog_num == num_progs:
-                    modf.write("    END;\n")
-            modf.write("  END GetCode;\n")
-            modf.write("END " + mod_name + ".\n")
+                    modf.write("    END;\r\n")
+            modf.write("  END GetCode;\r\n")
+            modf.write("END " + mod_name + ".\r\n")
             return True
     except:
         return False
