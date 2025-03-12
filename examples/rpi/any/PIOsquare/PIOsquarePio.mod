@@ -53,7 +53,7 @@ MODULE PIOsquarePio;
       i := prog.pubSymbols.numLocals;
       WHILE i < PIO.NumDefs DO;
         CLEAR(prog.pubSymbols.local[i]); INC(i)
-      END;
+      END
     ELSIF progName = "square_wave_asym" THEN
       prog.name := "square_wave_asym";
       prog.wrapTarget := 1;
@@ -80,7 +80,7 @@ MODULE PIOsquarePio;
       i := prog.pubSymbols.numLocals;
       WHILE i < PIO.NumDefs DO;
         CLEAR(prog.pubSymbols.local[i]); INC(i)
-      END;
+      END
     END
   END GetCode;
 END PIOsquarePio.

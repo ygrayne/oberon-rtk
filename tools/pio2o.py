@@ -167,7 +167,7 @@ def write_oberon_file(file, mod_name, pio_lines, pio_data):
                 modf.write(f"      i := prog.pubSymbols.numLocals;{eol}")
                 modf.write(f"      WHILE i < PIO.NumDefs DO;{eol}")
                 modf.write(f"        CLEAR(prog.pubSymbols.local[i]); INC(i){eol}")
-                modf.write(f"      END;{eol}")
+                modf.write(f"      END{eol}")
             modf.write(f"    END{eol}")
             modf.write(f"  END GetCode;{eol}")
             modf.write(f"END {mod_name}.{eol}")
