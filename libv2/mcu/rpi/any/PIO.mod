@@ -65,6 +65,9 @@ MODULE PIO;
     SM_EXECCTRL_WRAP_BOTTOM1  = 11;
     SM_EXECCTRL_WRAP_BOTTOM0  = 7;
 
+    NameLength = 32;
+    NumDefs* = 8;
+
   TYPE
     StateMachineRegs* = RECORD
       CLKDIV: INTEGER;
@@ -80,6 +83,43 @@ MODULE PIO;
       mcuDevNo: INTEGER;
       CTRL, INSTR_MEM: INTEGER;
       SM: ARRAY NumStateMachines OF StateMachineRegs
+    END;
+
+    (* PIO program data *)
+    ProgName* = ARRAY NameLength OF CHAR;
+    SymbolName* = ARRAY NameLength OF CHAR;
+    LabelName* = ARRAY NameLength OF CHAR;
+
+    PublicSymbol* = RECORD
+      name*: SymbolName;
+      value*: INTEGER
+    END;
+
+    PublicLabel* = RECORD
+      name*: LabelName;
+      value*: INTEGER
+    END;
+
+    Program* = RECORD
+      name*: ProgName;
+      wrapTarget*: INTEGER;
+      wrap*: INTEGER;
+      origin*: INTEGER;
+      sideset*: RECORD
+        size*: INTEGER;
+        optional*: BOOLEAN;
+        pindirs*: BOOLEAN
+      END;
+      instr*: ARRAY MaxNumInstr OF INTEGER;
+      numInstr*: INTEGER;
+      pubLabels*: ARRAY NumDefs OF PublicLabel; (* only valid of numPubLabels > 0 *)
+      numPubLabels*: INTEGER;
+      pubSymbols*: RECORD (* .define PUBLIC *)
+        global*: ARRAY NumDefs OF PublicSymbol; (* only valid if numGlobals > 0 *)
+        local*: ARRAY NumDefs OF PublicSymbol; (* only valid if numLocals > 0 *)
+        numGlobals*: INTEGER;
+        numLocals*: INTEGER
+      END
     END;
 
 

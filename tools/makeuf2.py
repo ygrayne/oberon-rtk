@@ -105,7 +105,7 @@ class RPcmd(commands.Command):
             if args.upload:
                 drive = find_drive(self._drive_name)
                 if drive != '':
-                    print("{}: drive/volume {} is {}".format(PROG_NAME, self._drive_name, drive))
+                    print("Drive/volume '{}' is '{}'".format(self._drive_name, drive))
                     assert(Path(drive).exists())
                 else:
                     print("{}: cannot find {}".format(PROG_NAME, self._drive_name))
