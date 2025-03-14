@@ -146,7 +146,7 @@ def write_oberon_file(file, mod_name, pio_lines, pio_data):
                 modf.write(f"      prog.numPubLabels := {len(p['publicLabels'])};{eol}")
                 i = 0
                 for name, value in p['publicSymbols']['global'].items():
-                    modf.write(f"      prog.pubSymbols.global[{i}].name := \"{nname}\";{eol}")
+                    modf.write(f"      prog.pubSymbols.global[{i}].name := \"{name}\";{eol}")
                     modf.write(f"      prog.pubSymbols.global[{i}].value := {value};{eol}")
                     i = i + 1
                 modf.write(f"      prog.pubSymbols.numGlobals := {len(p['publicSymbols']['global'])};{eol}")
