@@ -6,9 +6,8 @@
 # --
 # Put into a directory on $PYTHONPATH, and run as
 # 'python -m  makeelf ...'
-# No idea if that's the right way, but it works.
 # --
-# Copyright (c) 2024 Gray, gray@graraven.org
+# Copyright (c) 2024-2025 Gray, gray@graraven.org
 # https://oberon-rtk.org/licences/
 
 # The accompanying 'boot2.bin' binary is

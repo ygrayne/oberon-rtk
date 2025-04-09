@@ -1,14 +1,14 @@
-## ignore all
+## ignore
 /*
-
-## really all
 *.*
+_*
 
-# add .gitgnore
+# add .git stuff
 !.gitignore
 !.gitattributes
 
 # add dirs
+!/**/v*.*
 !/lib/
 !/libv2/
 !/examples/
@@ -22,23 +22,18 @@
 !/tools/pylib/*.py
 !/changes/
 
-!/examples/pico/
-!/examples/pico/DebugEval/
-!/examples/pico/DebugEval/*.lst
-!/examples/pico/DebugEval/*.asm
-!/examples/pico/DebugEval/rdb/
-!/examples/pico/DebugEval/rdb/*.elst
-!/examples/pico/DebugEval/rdb/*.easm
-!/examples/pico/DebugEval/rdb/*.lst
+!/examples/v1.0/pico/
+!/examples/v1.0/pico/DebugEval/
+!/examples/v1.0/pico/DebugEval/*.lst
+!/examples/v1.0/pico/DebugEval/*.asm
+!/examples/v1.0/pico/DebugEval/rdb/
+!/examples/v1.0/pico/DebugEval/rdb/*.elst
+!/examples/v1.0/pico/DebugEval/rdb/*.easm
+!/examples/v1.0/pico/DebugEval/rdb/*.lst
 
 !/examples/rpi/any/Stacktrace/*.elst
 
-/lib/mcu/m0/rp2040/_debug
-/lib/mcu/m0/rp2040/_keep
-/lib/mcu/m0/rp2040/kernel-v1/_keep
-/**/_*
-
-# add some files
+# add files
 !*.ini
 !*.mod
 !*.md
