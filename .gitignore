@@ -31,7 +31,7 @@ _*
 !/examples/v1.0/pico/DebugEval/rdb/*.easm
 !/examples/v1.0/pico/DebugEval/rdb/*.lst
 
-!/examples/rpi/any/Stacktrace/*.elst
+!/examples/v2.0/rpi/any/Stacktrace/*.elst
 
 # add files
 !*.ini
