@@ -284,6 +284,7 @@ MODULE MCU2;
     RESETS_UART1*       = 23;
     RESETS_UART0*       = 22;
     RESETS_TIMER0*      = 21;
+    RESETS_TBMAN*       = 20;
     RESETS_SYSINFO*     = 19;
     RESETS_SYSCFG*      = 18;
     RESETS_SPI1*        = 17;
@@ -687,6 +688,8 @@ MODULE MCU2;
     VREG_AND_CHIP_RESET_BOD*        = VREG_AND_CHIP_RESET_BASE + 04H;
     VREG_AND_CHIP_RESET_CHIP_RESET* = VREG_AND_CHIP_RESET_BASE + 08H;
 
+    CHIP_RESET* = VREG_AND_CHIP_RESET_CHIP_RESET;
+
     (* == TBMAN == *)
     (* datasheet 2.22.1, p307 *)
     TBMAN_PLATFORM* = TBMAN_BASE;
@@ -986,7 +989,7 @@ MODULE MCU2;
     PPB_ExcPrio4* = 080H; (* 1000 0000 *)
     PPB_ExcPrio6* = 0C0H; (* 1100 0000 *)
 
-    VectorTableSize*            = 192; (* bytes, 16 sys exceptions + 32 interrupts, one word each *)
+    VectorTableSize*            = 192; (* bytes: 16 sys exceptions + 32 interrupts, one word each *)
     ResetHandlerOffset*         = 004H;
     NMIhandlerOffset*           = 008H;
     HardFaultHandlerOffset*     = 00CH;
@@ -994,7 +997,7 @@ MODULE MCU2;
     PendSVhandlerOffset*        = 038H;
     SysTickHandlerOffset*       = 03CH;
 
-    (* -- SCB -- *)
+    (* -- SCB system control block -- *)
     PPB_CPUID*        = PPB_BASE + 0ED00H;
     PPB_ICSR*         = PPB_BASE + 0ED04H;
     PPB_VTOR*         = PPB_BASE + 0ED08H;
@@ -1010,7 +1013,7 @@ MODULE MCU2;
 
     PPB_SHCSR*        = PPB_BASE + 0ED24H;
 
-    (* -- MPU -- *)
+    (* -- MPU memory protection unit -- *)
     PPB_MPU_TYPE*     = PPB_BASE + 0ED90H;
     PPB_MPU_CTRL*     = PPB_BASE + 0ED94H;
     PPB_MPU_RNR*      = PPB_BASE + 0ED98H;

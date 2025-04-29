@@ -1,6 +1,6 @@
 MODULE Coroutines;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework v2.1
   --
   Simple coroutines
   --
@@ -17,7 +17,7 @@ MODULE Coroutines;
     Coroutine* = POINTER TO CoroutineDesc;
     CoroutineDesc* = RECORD
       sp: INTEGER; (* stored stack pointer when transferring *)
-      proc: PROC; (* the courtine's code *)
+      proc: PROC; (* the coroutine's code *)
       stAddr: INTEGER; (* stack address *)
       stSize: INTEGER; (* stack size *)
       id: INTEGER; (* useful for debugging *)

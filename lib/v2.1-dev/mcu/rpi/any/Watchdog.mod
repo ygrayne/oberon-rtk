@@ -42,7 +42,7 @@ MODULE Watchdog;
 
 
   [1] ie. 500 ms with a 1 MHz timer tick
-  [2] ie. all set but ROSC and XOSC. With bit PSM_RESETS in PSM_WDSEL set,
+  [2] ie. all set but PSM_ROSC and PSM_XOSC. With bit PSM_RESETS in PSM_WDSEL set,
       all devices as per RESETS_WDSEL are also reset, even with RESETS_WDSEL = 0H
   [3] ie. all set but PSM_COLD
 
@@ -92,8 +92,10 @@ MODULE Watchdog;
 
 
   PROCEDURE* SetLoadTime*(time: INTEGER); (* milliseconds *)
+    CONST MaxLoad = 0FFFFFFH;
   BEGIN
     load := MCU.WATCHDOG_XLOADTIME * time * 1000;
+    IF load > MaxLoad THEN load := MaxLoad END;
     SYSTEM.PUT(MCU.WATCHDOG_LOAD, load)
   END SetLoadTime;
 
@@ -130,6 +132,15 @@ MODULE Watchdog;
     addr := MCU.WATCHDOG_SCRATCH0 + (regNo * MCU.WATCHDOG_SCRATCH_Offset);
     SYSTEM.PUT(addr, value)
   END SetScratchReg;
+
+
+  PROCEDURE* GetScratchReg*(regNo: INTEGER; VAR value: INTEGER);
+    VAR addr: INTEGER;
+  BEGIN
+    ASSERT(regNo IN ScratchRegs);
+    addr := MCU.WATCHDOG_SCRATCH0 + (regNo * MCU.WATCHDOG_SCRATCH_Offset);
+    SYSTEM.GET(addr, value)
+  END GetScratchReg;
 
 
   PROCEDURE init;

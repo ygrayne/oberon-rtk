@@ -1,8 +1,8 @@
 MODULE RuntimeErrorsOut;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework v2.1
   --
-  Human-readable output for exceptions.
+  Human-readable output for run-time errors.
   --
   MCU: RP2040, RP2350
   --
@@ -11,16 +11,13 @@ MODULE RuntimeErrorsOut;
 **)
 
   IMPORT
-    RuntimeErrors, TextIO, Texts, Errors, ProgData, Memory;
+    RuntimeErrors, Stacktrace, MultiCore, TextIO, Texts, Errors, ProgData, Memory;
 
-  CONST
-    NumCores = RuntimeErrors.NumCores;
+  CONST NumCores = RuntimeErrors.NumCores;
 
-  TYPE
-    Name = ProgData.EntryString;
+  TYPE Name = ProgData.EntryString;
 
-  VAR
-    W: ARRAY NumCores OF TextIO.Writer;
+  VAR W: ARRAY NumCores OF TextIO.Writer;
 
 
   PROCEDURE nameLength(s: Name): INTEGER;
@@ -53,26 +50,25 @@ MODULE RuntimeErrorsOut;
 
   PROCEDURE printAnnotation(W: TextIO.Writer; ann: INTEGER);
   BEGIN
-    IF ann = RuntimeErrors.AnnStackframe THEN
+    IF ann = Stacktrace.AnnStackframe THEN
       Texts.WriteString(W, "  --- exc ---"); Texts.WriteLn(W)
     END
   END printAnnotation;
 
 
-  PROCEDURE PrintStacktrace*(W: TextIO.Writer; tr: RuntimeErrors.Trace; cid: INTEGER);
+  PROCEDURE PrintStacktrace*(W: TextIO.Writer; tr: Stacktrace.Trace; stackTopAddr: INTEGER);
     VAR
-      i, modEntryAddr, procEntryAddr, topMainStackEntry: INTEGER;
+      i, modEntryAddr, procEntryAddr: INTEGER;
       moduleName, procName: Name;
-      tp: RuntimeErrors.TracePoint;
+      tp: Stacktrace.TracePoint;
   BEGIN
     IF tr.count > 1 THEN
       Texts.WriteString(W, "trace:"); Texts.WriteLn(W);
       i := 0;
-      topMainStackEntry := Memory.DataMem[cid].stackStart - 4;
       WHILE i < tr.count DO
         tp := tr.tp[i];
         printAnnotation(W, tp.annotation);
-        IF tp.stackAddr < topMainStackEntry THEN
+        IF tp.stackAddr < stackTopAddr THEN
           ProgData.FindProcEntries(tp.address, modEntryAddr, procEntryAddr);
           ProgData.GetNames(modEntryAddr, procEntryAddr, moduleName, procName);
         ELSE
@@ -98,7 +94,7 @@ MODULE RuntimeErrorsOut;
   END printReg;
 
 
-  PROCEDURE printStackedRegs(W: TextIO.Writer; stackedRegs: RuntimeErrors.StackedRegisters);
+  PROCEDURE PrintStackedRegs*(W: TextIO.Writer; stackedRegs: Stacktrace.StackedRegs);
   BEGIN
     Texts.WriteString(W, "stacked registers:"); Texts.WriteLn(W);
     printReg(W, "psr:", stackedRegs.xpsr);
@@ -110,56 +106,49 @@ MODULE RuntimeErrorsOut;
     printReg(W, " r1:", stackedRegs.r1);
     printReg(W, " r0:", stackedRegs.r0);
     printReg(W, " sp:", stackedRegs.sp)
-  END printStackedRegs;
+  END PrintStackedRegs;
 
 
-  PROCEDURE printCurrentRegs(W: TextIO.Writer; currentRegs: RuntimeErrors.CurrentRegisters);
-  BEGIN
-    Texts.WriteString(W, "current registers:"); Texts.WriteLn(W);
-    printReg(W, " sp:", currentRegs.sp);
-    printReg(W, " lr:", currentRegs.lr);
-    printReg(W, " pc:", currentRegs.pc);
-    printReg(W, "psr:", currentRegs.xpsr)
-  END printCurrentRegs;
-
-
-  PROCEDURE PrintException*(W: TextIO.Writer; er: RuntimeErrors.ExceptionRec);
+  PROCEDURE PrintError*(W: TextIO.Writer; er: RuntimeErrors.ErrorDesc);
     VAR
       modEntryAddr, procEntryAddr: INTEGER;
       moduleName, procName: Name;
       msg: Errors.String;
   BEGIN
-    Errors.GetExceptionType(er.excType, msg);
+    Errors.GetErrorType(er.errType, msg);
     Texts.WriteString(W, msg);
-    Texts.WriteString(W, ": "); Texts.WriteInt(W, ABS(er.code), 0);
+    Texts.WriteString(W, ": "); Texts.WriteInt(W, ABS(er.errCode), 0);
     Texts.WriteString(W, " core: ");
     Texts.WriteInt(W, er.core, 0); Texts.WriteLn(W);
-    Errors.GetExceptionMsg(er.code, msg);
+    Errors.GetErrorMsg(er.errType, er.errCode, msg);
     Texts.WriteString(W, msg); Texts.WriteLn(W);
-    ProgData.FindProcEntries(er.address, modEntryAddr, procEntryAddr);
+    ProgData.FindProcEntries(er.errAddr, modEntryAddr, procEntryAddr);
     ProgData.GetNames(modEntryAddr, procEntryAddr, moduleName, procName);
     Texts.WriteString(W, moduleName); Texts.Write(W, "."); Texts.WriteString(W, procName);
-    Texts.WriteString(W, "  addr: "); Texts.WriteHex(W, er.address, 0);
-    IF er.lineNo > 0 THEN
-      Texts.WriteString(W, "  ln: "); Texts.WriteInt(W, er.lineNo, 0)
+    Texts.WriteString(W, "  addr: "); Texts.WriteHex(W, er.errAddr, 0);
+    IF er.errLineNo > 0 THEN
+      Texts.WriteString(W, "  line: "); Texts.WriteInt(W, er.errLineNo, 0)
     END;
-    Texts.WriteLn(W);
-    PrintStacktrace(W, er.trace, er.core);
-    printStackedRegs(W, er.stackedRegs);
-    printCurrentRegs(W, er.currentRegs)
-  END PrintException;
+    Texts.WriteLn(W)
+  END PrintError;
 
 
   (* RuntimeErrors-compatible handler *)
 
-  PROCEDURE HandleException*(er: RuntimeErrors.ExceptionRec);
+  PROCEDURE ErrorHandler*[0];
+  (* print error data and halt *)
+    VAR cid: INTEGER; trace: Stacktrace.Trace; regs: Stacktrace.StackedRegs;
   BEGIN
-    IF er.core < NumCores THEN
-      PrintException(W[er.core], er)
-    END
-  END HandleException;
+    cid := MultiCore.CPUid();
+    Stacktrace.CreateTrace(RuntimeErrors.ErrorRec[cid], trace);
+    Stacktrace.ReadRegisters(RuntimeErrors.ErrorRec[cid], regs);
+    PrintError(W[cid], RuntimeErrors.ErrorRec[cid]);
+    PrintStackedRegs(W[cid], regs);
+    PrintStacktrace(W[cid], trace, Memory.DataMem[cid].stackStart - 4);
+    REPEAT UNTIL FALSE
+  END ErrorHandler;
 
-  (* plug a writer *)
+  (* plug a writer to use for error output *)
 
   PROCEDURE* SetWriter*(coreId: INTEGER; Wr: TextIO.Writer);
   BEGIN

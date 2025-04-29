@@ -1,6 +1,6 @@
 MODULE Kernel;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework v2.1
   --
   Multi-threading kernel v1
   --
@@ -16,7 +16,7 @@ MODULE Kernel;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Coroutines, Memory, SysTick, MCU := MCU2, Errors;
+  IMPORT SYSTEM, Coroutines, Memory, SysTick, MCU := MCU2, Errors, StartUp;
 
   CONST
     MaxNumThreads* = 16;
@@ -39,10 +39,20 @@ MODULE Kernel;
     TrigDelay* = 2;
     TrigDevice* = 3;
 
+    (* Restart codes *)
+    RestartCold* = StartUp.RestartCold;
+    RestartFlashUpdate* = StartUp.RestartFlashUpdate;
+    RestartWatchdogTimer* = StartUp.RestartWatchdogTimer;
+    RestartWatchdogForce* = StartUp.RestartWatchdogForce;
+
+    (* status scratch register *)
+    StatusScratchRegAddr = MCU.WATCHDOG_SCRATCH3;
+
     (* loop *)
     LoopStackSize = 256; (* bytes *)
     LoopCorId = -1;
 
+    (* scheduler slow motion factor (debugging) *)
     SloMo = 1;
 
 
@@ -58,7 +68,7 @@ MODULE Kernel;
       devAddr: INTEGER;
       devFlagsSet, devFlagsClr: SET;
       cor: Coroutines.Coroutine;
-      retCode: INTEGER;
+      trigCode, restartCode: INTEGER;
       next*: Thread
     END;
 
@@ -126,7 +136,7 @@ MODULE Kernel;
   BEGIN
     res := Failed;
     IF t.state = StateSuspended THEN
-      t.prio := 1;
+      t.prio := DefaultPrio;
       t.period := 0; t.delay := 0;
       t.devAddr := 0;
       Coroutines.Allocate(t.cor, proc);
@@ -135,24 +145,12 @@ MODULE Kernel;
   END Reallocate;
 
 
+
   PROCEDURE* Enable*(t: Thread);
   BEGIN
     ASSERT(t # NIL, Errors.PreCond);
     t.state := StateEnabled
   END Enable;
-
-
-  PROCEDURE* SetPrio*(t: Thread; prio: INTEGER);
-  BEGIN
-    t.prio := prio
-  END SetPrio;
-
-
-  PROCEDURE* SetPeriod*(t: Thread; period, startAfter: INTEGER);
-  BEGIN
-    t.period := period;
-    t.ticker := startAfter
-  END SetPeriod;
 
 
   (* in-process api *)
@@ -240,26 +238,34 @@ MODULE Kernel;
     VAR cid: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
-    RETURN coreCon[cid].Ct.retCode
+    RETURN coreCon[cid].Ct.trigCode
   END Trigger;
 
 
-  PROCEDURE* ChangePrio*(prio: INTEGER);
+  PROCEDURE* GetRestartCode*(VAR restartCode: INTEGER);
+   VAR cid: INTEGER;
+  BEGIN
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    restartCode := coreCon[cid].Ct.restartCode
+  END GetRestartCode;
+
+
+  PROCEDURE* SetPrio*(prio: INTEGER);
     VAR cid: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     coreCon[cid].Ct.prio := prio
-  END ChangePrio;
+  END SetPrio;
 
 
-  PROCEDURE* ChangePeriod*(period, startAfter: INTEGER);
+  PROCEDURE* SetPeriod*(period, startAfter: INTEGER);
      VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     ctx := coreCon[cid];
-    ctx.Ct.period := period;
-    ctx.Ct.ticker := startAfter
-  END ChangePeriod;
+    ctx.Ct.period := period * ctx.loopPeriod;
+    ctx.Ct.ticker := startAfter * ctx.loopPeriod
+  END SetPeriod;
 
 
   PROCEDURE* Ct*(): Thread;
@@ -298,7 +304,7 @@ MODULE Kernel;
           t := ctx.threads[tid];
           t0 := NIL;
           IF t.state = StateEnabled THEN
-            t.retCode := TrigNone;
+            t.trigCode := TrigNone;
             IF (t.delay <= 0) & (t.period = 0) & (t.devAddr = 0) THEN (* no triggers *)
               t0 := t;
             ELSE
@@ -306,7 +312,7 @@ MODULE Kernel;
                 DEC(t.ticker, ctx.loopPeriod);
                 IF t.ticker <= 0 THEN
                   t.ticker := t.ticker + t.period;
-                  t.retCode := TrigPeriod
+                  t.trigCode := TrigPeriod
                   (* don't slot in here *)
                 END
               END;
@@ -314,7 +320,7 @@ MODULE Kernel;
                 DEC(t.delay, ctx.loopPeriod);
                 IF t.delay <= 0 THEN
                   t0 := t;
-                  t.retCode := TrigDelay
+                  t.trigCode := TrigDelay
                 END
               END;
               IF t.devAddr # 0 THEN (* waiting for device flags *)
@@ -322,10 +328,10 @@ MODULE Kernel;
                 IF (t.devFlagsSet * devFlags # {}) OR (devFlags * t.devFlagsClr # t.devFlagsClr) THEN
                   t0 := t;
                   t.devAddr := 0;
-                  t.retCode := TrigDevice
+                  t.trigCode := TrigDevice
                 END
               END;
-              IF t.retCode = TrigPeriod THEN (* see above *)
+              IF t.trigCode = TrigPeriod THEN (* see above *)
                 IF (t.delay <= 0) & (t.devAddr = 0) THEN (* delay and device flags take precedence *)
                   t0 := t
                 END
@@ -386,8 +392,16 @@ MODULE Kernel;
 
   (* installation *)
 
+  (*
+  PROCEDURE setStatusCode(cid, code: INTEGER);
+  BEGIN
+    SYSTEM.PUT(StatusScratchRegAddr + MCU.ACLR, LSL(0FFFFH, cid * 16));
+    SYSTEM.PUT(StatusScratchRegAddr + MCU.ASET, LSL(code, cid * 16))
+  END setStatusCode;
+  *)
+
   PROCEDURE Install*(millisecsPerTick: INTEGER);
-    VAR i, stkAddr: INTEGER; cid: INTEGER; ctx: CoreContext;
+    VAR i, stkAddr, cid, restartCode: INTEGER; ctx: CoreContext;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
 
@@ -404,12 +418,15 @@ MODULE Kernel;
     Coroutines.Init(ctx.loop, stkAddr, LoopStackSize, LoopCorId);
     Coroutines.Allocate(ctx.loop, loopc);
 
+    StartUp.GetRestartEntryCode(cid, restartCode);
+
     (* allocate the data structures for all threads and their coroutines *)
     (* don't yet allocate the stacks *)
     i := 0;
     WHILE i < MaxNumThreads DO
       NEW(ctx.threads[i]); ASSERT(ctx.threads[i] # NIL, Errors.HeapOverflow);
       ctx.threads[i].state := StateSuspended;
+      ctx.threads[i].restartCode := restartCode;
       ctx.threads[i].tid := i;
       NEW(ctx.threads[i].cor); ASSERT(ctx.threads[i].cor # NIL, Errors.HeapOverflow);
       INC(i)

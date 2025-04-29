@@ -6,7 +6,8 @@ MODULE StartUp;
   * power-on state machine (hardware controlled part)
   * reset controller (software controlled part)
   * watchdog boot vector
-  * watchdog resets configs (psm, resets)
+  * watchdog reset configs (psm, resets)
+  * restart entry mode
   --
   MCU: RP2040
   --
@@ -21,10 +22,20 @@ MODULE StartUp;
   IMPORT SYSTEM, MCU := MCU2;
 
   CONST
-    BootMagic = 0B007C0D3H;
+    BootMagic0 = 0B007C0D3H;
+    BootMagic1 = 04FF83F2DH;
 
+    (* restart codes *)
+    RestartCold* = 0;
+    RestartFlashUpdate* = 1;
+    RestartWatchdogTimer* = 2;
+    RestartWatchdogForce* = 3;
 
-  (* power on state machine PSM *)
+    (* WATCHDOG_REASON values *)
+    WATCHDOG_REASON_FORCE* = 2;
+    WATCHDOG_REASON_TIMER* = 1;
+
+  (* -- power on state machine PSM -- *)
 
   PROCEDURE* AwaitPowerOnResetDone*(component: INTEGER);
     VAR x: SET;
@@ -35,42 +46,55 @@ MODULE StartUp;
   END AwaitPowerOnResetDone;
 
 
-  PROCEDURE* SetWatchdogPowerOnResets*(components: SET);
+  PROCEDURE* SetPowerOnWatchdogResets*(components: SET);
   BEGIN
     SYSTEM.PUT(MCU.PSM_WDSEL, components)
-  END SetWatchdogPowerOnResets;
+  END SetPowerOnWatchdogResets;
 
 
-  (* resets controller *)
+  (* -- resets controller -- *)
 
-  PROCEDURE* ReleaseReset*(devNo: INTEGER);
-  (* release the reset of a device out of start-up *)
+  PROCEDURE* ReleaseResets*(devices: SET);
+  (* release the reset of set of device out of start-up *)
     VAR done: SET;
   BEGIN
     SYSTEM.GET(MCU.RESETS_DONE, done);
-    IF ~(devNo IN done) THEN
-      SYSTEM.PUT(MCU.RESETS_RESET + MCU.ACLR, {devNo});
-      REPEAT
-        SYSTEM.GET(MCU.RESETS_DONE, done);
-      UNTIL (devNo IN done)
+    devices := devices - done;
+    SYSTEM.PUT(MCU.RESETS_RESET + MCU.ACLR, devices);
+    WHILE done * devices # devices DO
+      SYSTEM.GET(MCU.RESETS_DONE, done)
     END
+  END ReleaseResets;
+
+
+  PROCEDURE ReleaseReset*(devNo: INTEGER); (* deprecated *)
+  BEGIN
+    ReleaseResets({devNo})
   END ReleaseReset;
 
 
-  PROCEDURE* SetWatchdogResetResets*(devices: SET);
+  PROCEDURE* SetResetWatchdogResets*(devices: SET);
   BEGIN
     SYSTEM.PUT(MCU.RESETS_WDSEL, devices)
-  END SetWatchdogResetResets;
+  END SetResetWatchdogResets;
 
 
-  (* watchdog *)
+  (* -- watchdog -- *)
 
   PROCEDURE* SetWatchdogBootVector*(stackPointer, entryPoint: INTEGER);
   BEGIN
-    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH4, BootMagic);
-    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH5, BITS(entryPoint) / BITS(BootMagic));
+    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH4, BootMagic0);
+    INCL(SYSTEM.VAL(SET, entryPoint), 0);
+    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH5, BITS(entryPoint) / BITS(BootMagic1));
     SYSTEM.PUT(MCU.WATCHDOG_SCRATCH6, stackPointer);
     SYSTEM.PUT(MCU.WATCHDOG_SCRATCH7, entryPoint)
   END SetWatchdogBootVector;
+
+
+  (* -- restart entry -- *)
+
+  PROCEDURE GetRestartEntryCode*(cid: INTEGER; VAR mode: INTEGER);
+
+  END GetRestartEntryCode;
 
 END StartUp.

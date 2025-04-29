@@ -11,9 +11,9 @@ MODULE InitCoreOne;
   https://oberon-rtk.org/licences/
 **)
 
-
   PROCEDURE Init*;
-  (* none *)
+  BEGIN
+    (* none for now *)
   END Init;
 
 END InitCoreOne.

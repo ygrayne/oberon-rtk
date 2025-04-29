@@ -18,14 +18,14 @@ MODULE Errors;
 
     (* MCU fault codes *)
     (* all *)
-    NMI*          = -MCU.PPB_NMI_Exc;
-    HardFault*    = -MCU.PPB_HardFault_Exc;
+    NMI*          = MCU.PPB_NMI_Exc;
+    HardFault*    = MCU.PPB_HardFault_Exc;
     (* M33 only *)
-    MemMgmtFault* = -MCU.PPB_MemMgmtFault_Exc;
-    BusFault*     = -MCU.PPB_BusFault_Exc;
-    UsageFault*   = -MCU.PPB_UsageFault_Exc;
-    SecureFault*  = -MCU.PPB_SecureFault_Exc;
-    DebugMon*     = -MCU.PPB_DebugMon_Exc;
+    MemMgmtFault* = MCU.PPB_MemMgmtFault_Exc;
+    BusFault*     = MCU.PPB_BusFault_Exc;
+    UsageFault*   = MCU.PPB_UsageFault_Exc;
+    SecureFault*  = MCU.PPB_SecureFault_Exc;
+    DebugMon*     = MCU.PPB_DebugMon_Exc;
 
     (* exception types *)
     ExcTypeErrorHandler* = 0;
@@ -135,17 +135,17 @@ MODULE Errors;
   END errorMessage;
 
 
-  PROCEDURE GetExceptionMsg*(code: INTEGER; VAR msg: String);
+  PROCEDURE GetErrorMsg*(errType, errCode: INTEGER; VAR msg: String);
   BEGIN
-    IF code < 0 THEN
-      faultMessage(code, msg)
+    IF errType >= 2 THEN
+      faultMessage(errCode, msg)
     ELSE
-      errorMessage(code, msg)
+      errorMessage(errCode, msg)
     END
-  END GetExceptionMsg;
+  END GetErrorMsg;
 
 
-  PROCEDURE GetExceptionType*(excType: INTEGER; VAR msg: String);
+  PROCEDURE GetErrorType*(excType: INTEGER; VAR msg: String);
   BEGIN
     IF excType = ExcTypeErrorHandler THEN
       msg := "run-time error in handler mode"
@@ -158,6 +158,6 @@ MODULE Errors;
     ELSE
       msg := "unknown exception"
     END
-  END GetExceptionType;
+  END GetErrorType;
 
 END Errors.

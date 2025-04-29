@@ -80,12 +80,12 @@ MODULE Main;
     (* error output on core 0 to terminal 0 *)
     Terminals.OpenErr(TERM0, UARTstr.PutString);
     RuntimeErrorsOut.SetWriter(Core0, Terminals.Werr[0]);
-    RuntimeErrors.SetHandler(Core0, RuntimeErrorsOut.HandleException);
+    (*RuntimeErrors.InstallErrorHandler(Core0, RuntimeErrorsOut.ErrorHandler);*)
 
     (* error output on core 1 to terminal 1 *)
     Terminals.OpenErr(TERM1, UARTstr.PutString);
     RuntimeErrorsOut.SetWriter(Core1, Terminals.Werr[1]);
-    RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException);
+    RuntimeErrors.InstallErrorHandler(Core1, RuntimeErrorsOut.ErrorHandler);
 
     (* core 0 init *)
     (* see module InitCoreOne for core 1 *)
@@ -94,7 +94,7 @@ MODULE Main;
 
     (* let's get the timers symmetrical *)
     (* TIMER0 is released by boot procedure *)
-    StartUp.ReleaseReset(MCU.RESETS_TIMER1)
+    StartUp.ReleaseResets({MCU.RESETS_TIMER1})
   END init;
 
 BEGIN

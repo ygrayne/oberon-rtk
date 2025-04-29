@@ -1,6 +1,6 @@
 MODULE Main;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework v2.1
   --
   Main module
   --
@@ -12,7 +12,7 @@ MODULE Main;
 
   IMPORT
     (* the first row of imports "auto-init", keep their order in the list *)
-    (* ignore the "is not used" warnings... :) *)
+    (* ignore the corresponding "is not used" warnings *)
     (* LinkOptions is the first import of Config *)
     Config, Clocks, Memory, RuntimeErrors,
     RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr, MCU := MCU2;
@@ -69,17 +69,18 @@ MODULE Main;
     Out.Open(Terminals.W[0], Terminals.W[1]);
     In.Open(Terminals.R[0], Terminals.R[1]);
 
-    (* init run-time error printing *)
+
+    (* init run-time error handling and printing *)
     (* use error output writer *)
     (* error output on core 0 to terminal 0 *)
     Terminals.OpenErr(TERM0, UARTstr.PutString);
     RuntimeErrorsOut.SetWriter(Core0, Terminals.Werr[0]);
-    RuntimeErrors.SetHandler(Core0, RuntimeErrorsOut.HandleException);
+    (*RuntimeErrors.InstallErrorHandler(Core0, RuntimeErrorsOut.ErrorHandler);*)
 
     (* error output on core 1 to terminal 1 *)
     Terminals.OpenErr(TERM1, UARTstr.PutString);
     RuntimeErrorsOut.SetWriter(Core1, Terminals.Werr[1]);
-    RuntimeErrors.SetHandler(Core1, RuntimeErrorsOut.HandleException)
+    RuntimeErrors.InstallErrorHandler(Core1, RuntimeErrorsOut.ErrorHandler)
   END init;
 
 BEGIN

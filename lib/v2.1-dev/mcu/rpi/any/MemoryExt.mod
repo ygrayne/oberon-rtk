@@ -63,17 +63,19 @@ MODULE MemoryExt;
   END getCopyEndAddr;
 
 
-  PROCEDURE CopyProc*(procAddr: INTEGER; VAR toAddr: INTEGER);
+  PROCEDURE CopyProc*(procAddr: INTEGER; VAR sramAddr: INTEGER);
   (* copy a procedure to extended memory *)
   (* includes any data blocks after the instructions *)
-    VAR procSize: INTEGER;
+    VAR procSize, procEndAddr: INTEGER;
   BEGIN
-    getCopyEndAddr(procAddr, toAddr);
-    IF toAddr # 0 THEN
-      procSize := toAddr - procAddr;
-      Allocate(toAddr, procSize);
-      IF toAddr # 0 THEN
-        SYSTEM.COPY(procAddr, toAddr, procSize DIV 4)
+    (* proc data in flash *)
+    getCopyEndAddr(procAddr, procEndAddr); (* in flash *)
+    IF procEndAddr # 0 THEN
+      procSize := procEndAddr - procAddr;
+      (* allocate and copy in SRAM *)
+      Allocate(sramAddr, procSize);
+      IF sramAddr # 0 THEN
+        SYSTEM.COPY(procAddr, sramAddr, procSize DIV 4)
       END
     END
   END CopyProc;

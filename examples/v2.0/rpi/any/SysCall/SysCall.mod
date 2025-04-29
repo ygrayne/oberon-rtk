@@ -66,14 +66,10 @@ MODULE SysCall;
 
 
   PROCEDURE Init*;
-    VAR p0, p1: PROCEDURE;
   BEGIN
-    (* prep vectors *)
-    p0 := svch; INCL(SYSTEM.VAL(SET, p0), 0);
-    p1 := RuntimeErrors.ErrorHandler; INCL(SYSTEM.VAL(SET, p1), 0);
     (* patch vector table *)
-    Exceptions.InstallSysExcHandler(MCU.PPB_SVC_Exc, p0);
-    Exceptions.InstallSysExcHandler(MCU.PPB_PendSV_Exc, p1)
+    Exceptions.InstallSysExcHandler(MCU.PPB_SVC_Exc, svch);
+    Exceptions.InstallSysExcHandler(MCU.PPB_PendSV_Exc, RuntimeErrors.ErrorHandler)
   END Init;
 
 END SysCall.

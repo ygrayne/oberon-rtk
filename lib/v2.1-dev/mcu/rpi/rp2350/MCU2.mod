@@ -40,6 +40,7 @@ MODULE MCU2;
     SRAM_BASE*          = 020000000H; (* see also "SRAM" below *)
 
     (* -- apb base addresses -- *)
+    (* atomic access *)
     SYSINFO_BASE*     = 040000000H;
     SYSCFG_BASE*      = 040008000H;
     CLOCKS_BASE*      = 040010000H;
@@ -79,6 +80,7 @@ MODULE MCU2;
     OTP_DATA_RAW_BASE*            = 040134000H;
     OTP_DATA_GUARDED_BASE*        = 040138000H;
     OTP_DATA_RAW_GUARDED_BASE*    = 04013C000H;
+    (* no atomic access for CORESIGHT_* registers *)
     CORESIGHT_PERIPH_BASE*        = 040140000H;
     CORESIGHT_ROMTABLE_BASE*      = 040140000H;
     CORESIGHT_AHB_AP_CORE0_BASE*  = 040142000H;
@@ -92,6 +94,7 @@ MODULE MCU2;
     TBMAN_BASE*                   = 040160000H;
 
     (* -- ahb base addresses -- *)
+    (* atomic access *)
     DMA_BASE*             = 050000000H;
     USBCTRL_BASE*         = 050100000H;
     USBCTRL_DPRAM_BASE*   = 050100000H;
@@ -367,6 +370,8 @@ MODULE MCU2;
     RESETS_DMA*         = 2;
     RESETS_BUSCTRL*     = 1;
     RESETS_ADC*         = 0;
+
+    RESETS_ALL*         = {0 .. 28};
 
     (* == IO_BANK0 == *)
     (* datasheet 9.11.1, p592 *)
@@ -938,6 +943,9 @@ MODULE MCU2;
     POWMAN_BADPASSWD* = POWMAN_BASE;
     POWMAN_WDSEL*     = POWMAN_BASE + 030H;
     (* .. *)
+    POWMAN_CHIP_RESET* = POWMAN_BASE + 02CH;
+
+    CHIP_RESET* = POWMAN_CHIP_RESET;
 
     (* no passcode required *)
     POWMAN_SCRATCH0*  = POWMAN_BASE + 0B0H;
@@ -948,10 +956,14 @@ MODULE MCU2;
     POWMAN_SCRATCH5*  = POWMAN_BASE + 0C4H;
     POWMAN_SCRATCH6*  = POWMAN_BASE + 0C8H;
     POWMAN_SCRATCH7*  = POWMAN_BASE + 0CCH;
+      POWMAN_SCRATCH_Offset* = 4;
+
     POWMAN_BOOT0*     = POWMAN_BASE + 0D0H;
     POWMAN_BOOT1*     = POWMAN_BASE + 0D4H;
     POWMAN_BOOT2*     = POWMAN_BASE + 0D8H;
     POWMAN_BOOT3*     = POWMAN_BASE + 0DCH;
+      POWMAN_BOOT_Offset* = 4;
+
     POWMAN_INTR*      = POWMAN_BASE + 0E0H;
     POWMAN_INTE*      = POWMAN_BASE + 0E4H;
     POWMAN_INTF*      = POWMAN_BASE + 0E8H;
@@ -1443,7 +1455,7 @@ MODULE MCU2;
     PPB_ExcPrio7* = 0E0H; (* 1110 0000 *)
 
     (* vector table *)
-    VectorTableSize*            = 272; (* bytes, 16 sys exceptions + 52 interrupts, one word each *)
+    VectorTableSize*            = 272; (* bytes: 16 sys exceptions + 52 interrupts, one word each *)
     ResetHandlerOffset*         = 004H;
     NMIhandlerOffset*           = 008H;
     HardFaultHandlerOffset*     = 00CH;
@@ -1456,7 +1468,7 @@ MODULE MCU2;
     PendSVhandlerOffset*        = 038H;
     SysTickHandlerOffset*       = 03CH;
 
-    (* -- SCB -- *)
+    (* -- SCB system control block -- *)
     (* 0ECFCH *)
     PPB_CPUID*        = PPB_BASE + 0ED00H;
     PPB_ICSR*         = PPB_BASE + 0ED04H;
@@ -1481,7 +1493,7 @@ MODULE MCU2;
     PPB_NSACR*        = PPB_BASE + 0ED8CH;
 
 
-    (* -- MPU -- *)
+    (* -- MPU memory protection unit -- *)
     PPB_MPU_TYPE*     = PPB_BASE + 0ED90H;
     PPB_MPU_CTRL*     = PPB_BASE + 0ED94H;
     PPB_MPU_RNR*      = PPB_BASE + 0ED98H;

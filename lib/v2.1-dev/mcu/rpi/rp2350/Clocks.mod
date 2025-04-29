@@ -89,11 +89,9 @@ MODULE Clocks;
     VAR done: SET;
   BEGIN
     SYSTEM.GET(MCU.RESETS_DONE, done);
-    IF ~(devNo IN done) THEN
-      SYSTEM.PUT(MCU.RESETS_RESET + MCU.ACLR, {devNo});
-      REPEAT
-        SYSTEM.GET(MCU.RESETS_DONE, done);
-      UNTIL (devNo IN done)
+    SYSTEM.PUT(MCU.RESETS_RESET + MCU.ACLR, {devNo});
+    WHILE ~(devNo IN done) DO
+      SYSTEM.GET(MCU.RESETS_DONE, done);
     END
   END releaseReset;
 
@@ -190,7 +188,7 @@ MODULE Clocks;
 
 
   PROCEDURE* startTicks;
-  (* 1 MHz, used for sys tick, timer, watchdog *)
+  (* 1 MHz, used for sys tick, timers, watchdog *)
   (* derived from clk_ref => divider = 12 *)
   CONST Divider = 12;
   BEGIN

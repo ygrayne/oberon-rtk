@@ -221,8 +221,7 @@ MODULE GPIO;
 
   PROCEDURE init;
   BEGIN
-    StartUp.ReleaseReset(MCU.RESETS_IO_BANK0);
-    StartUp.ReleaseReset(MCU.RESETS_PADS_BANK0)
+    StartUp.ReleaseResets({MCU.RESETS_IO_BANK0, MCU.RESETS_PADS_BANK0})
   END init;
 
 BEGIN
