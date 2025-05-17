@@ -8,10 +8,12 @@ MODULE WatchdogC0;
   --
   Core 1 program: WatchdogC1
   --
+  Note: does not (yet) use watchdog functionality provided by module Recovery.
+  --
   MCU: RP2040, RP2350
   Board: Pico, Pico2
   --
-  Copyright (c) 2024 Gray, gray@grayraven.org
+  Copyright (c) 2024-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
@@ -33,9 +35,6 @@ MODULE WatchdogC0;
     Core1OkFlag = 0;
     Core1FailFlag = 1;
 
-    PSM_WDSEL = MCU.PSM_WDSEL;
-    RESETS_WDSEL = MCU.RESETS_WDSEL;
-    SCRATCH0 = MCU.WATCHDOG_SCRATCH0;
 
   VAR
     t0, t1, t2: Kernel.Thread;
@@ -49,32 +48,6 @@ MODULE WatchdogC0;
     Out.String("c"); Out.Int(cid, 0);
     Out.String("-t"); Out.Int(tid, 0);
   END writeThreadInfo;
-
-
-  PROCEDURE writeWatchdogStatus;
-    VAR psmSel, resetsSel, restartCode, scratch: INTEGER;
-  BEGIN
-    Kernel.GetRestartCode(restartCode);
-    Out.String("restart code: "); Out.Int(restartCode, 0); Out.Ln;
-    IF restartCode = Kernel.RestartCold THEN
-      Out.String("restart:        COLD")
-    ELSIF restartCode = Kernel.RestartFlashUpdate THEN
-      Out.String("restart:        FLASH_UPDATE")
-    ELSIF restartCode = Kernel.RestartWatchdogTimer THEN
-      Out.String("restart:        TIMER (core 0)")
-    ELSIF restartCode = Kernel.RestartWatchdogForce THEN
-      Out.String("restart:        FORCE (core 1, via core 0")
-    ELSE
-      ASSERT(FALSE, Errors.ProgError)
-    END;
-    Out.Ln;
-    SYSTEM.GET(PSM_WDSEL, psmSel);
-    SYSTEM.GET(RESETS_WDSEL, resetsSel);
-    Out.String("PSM_WDSEL:     "); Out.Hex(psmSel, 10); Out.Bin(psmSel, 40); Out.Ln;
-    Out.String("RELEASE_WDSEL: "); Out.Hex(resetsSel, 10); Out.Bin(resetsSel, 40); Out.Ln;
-    SYSTEM.GET(SCRATCH0, scratch);
-    Out.String("SCRATCH0:      "); Out.Hex(scratch, 10); Out.Ln
-  END writeWatchdogStatus;
 
 
   PROCEDURE configTestCase;
@@ -116,7 +89,6 @@ MODULE WatchdogC0;
     tid := Kernel.Tid();
     configTestCase;
     Out.Ln; Out.String("*** reset ***"); Out.Ln;
-    writeWatchdogStatus;
     REPEAT
       writeThreadInfo(tid, cid);
       IF core1Fail THEN

@@ -27,11 +27,10 @@ MODULE SignalSync;
     sig: Signals.Signal;
 
 
-  PROCEDURE writeThreadInfo(tid, cid, restart: INTEGER);
+  PROCEDURE writeThreadInfo(tid, cid: INTEGER);
   BEGIN
     Out.String("c"); Out.Int(cid, 0);
-    Out.String("-t"); Out.Int(tid, 0);
-    Out.String(" r"); Out.Int(restart, 0)
+    Out.String("-t"); Out.Int(tid, 0)
   END writeThreadInfo;
 
 
@@ -47,31 +46,29 @@ MODULE SignalSync;
 
 
   PROCEDURE t1c;
-    VAR tid, cid, restart: INTEGER;
+    VAR tid, cid: INTEGER;
   BEGIN
-    Kernel.GetRestartCode(restart);
     cid := MultiCore.CPUid();
     tid := Kernel.Tid();
     REPEAT
-      writeThreadInfo(tid, cid, restart);
+      writeThreadInfo(tid, cid);
       Out.String(" await sig"); Out.Ln;
       Signals.Await(sig);
-      writeThreadInfo(tid, cid, restart);
+      writeThreadInfo(tid, cid);
       Out.String(" ==> sig"); Out.Ln
     UNTIL FALSE
   END t1c;
 
 
   PROCEDURE t3c;
-    VAR tid, cid, cnt, restart: INTEGER;
+    VAR tid, cid, cnt: INTEGER;
   BEGIN
-    Kernel.GetRestartCode(restart);
     Kernel.SetPeriod(T3period, T3period);
     cid := MultiCore.CPUid();
     tid := Kernel.Tid();
     cnt := 0;
     REPEAT
-      writeThreadInfo(tid, cid, restart);
+      writeThreadInfo(tid, cid);
       Signals.Send(sig);
       INC(cnt);
       Out.String(" <== sig "); Out.Int(cnt, 0); Out.Ln;

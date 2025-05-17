@@ -1,6 +1,6 @@
 MODULE RestartEvalC0;
 (**
-  Oberon RTK Framework v2.x
+  Oberon RTK Framework v2.1
   --
   Example program, multi-threaded, multi-core
   Evaluate different restart options and conditions.
@@ -133,7 +133,7 @@ MODULE RestartEvalC0;
       ELSIF scratch = 3 THEN (* run-time error *)
         IF cnt = 0 THEN
           GPIO.Set({LEDext.LED2});
-          Out.Ln; Out.String("runtime error: PPB_AIRCR reset"); Out.Ln
+          Out.Ln; Out.String("runtime error: error handler reset"); Out.Ln
         END;
         IF cnt = Cnt THEN
           SYSTEM.PUT(MCU.WATCHDOG_SCRATCH0, 1);

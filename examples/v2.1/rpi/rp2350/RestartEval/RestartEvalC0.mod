@@ -1,6 +1,6 @@
 MODULE RestartEvalC0;
 (**
-  Oberon RTK Framework v2.x
+  Oberon RTK Framework v2.1
   --
   Example program, multi-threaded, multi-core
   Evaluate different restart options and conditions.
@@ -79,19 +79,13 @@ MODULE RestartEvalC0;
     VAR
       i, tid, cid, cnt, x: INTEGER;
       watchdogReason, watchdogCtrl, chipReset, scratch, gpioOut, sramProcAddr, handlerStackAddr: INTEGER;
-      resetsResetsDone, clkEn0, clkEn1: INTEGER;
+      resetsResetsDone: INTEGER;
   BEGIN
     cid := MultiCore.CPUid();
     tid := Kernel.Tid();
     Kernel.SetPeriod(ThreadOnePeriod, 0);
     SYSTEM.GET(CHIP_RESET, chipReset);
     Out.String("CHIP_RESET       "); Out.Hex(chipReset, 12); Out.Ln;
-    (*
-    SYSTEM.GET(MCU.CLK_ENABLED0, clkEn0);
-    Out.String("CLK_ENABLED0     "); Out.Hex(clkEn0, 12); Out.Ln;
-    SYSTEM.GET(MCU.CLK_ENABLED1, clkEn1);
-    Out.String("CLK_ENABLED1     "); Out.Hex(clkEn1, 12); Out.Ln;
-    *)
     SYSTEM.GET(MCU.WATCHDOG_CTRL, watchdogCtrl);
     Out.String("WATCHDOG_CTRL    "); Out.Hex(watchdogCtrl, 12); Out.Ln;
     SYSTEM.GET(MCU.WATCHDOG_REASON, watchdogReason);
@@ -184,7 +178,7 @@ MODULE RestartEvalC0;
       ELSIF scratch = 4 THEN
         IF cnt = 0 THEN
           GPIO.Set({LEDext.LED3});
-          Out.Ln; Out.String("runtime error: reset via SVC "); Out.Ln
+          Out.Ln; Out.String("runtime error: error handler reset "); Out.Ln
         END;
         IF cnt = Cnt THEN
           SYSTEM.PUT(MCU.POWMAN_SCRATCH0, 1);
