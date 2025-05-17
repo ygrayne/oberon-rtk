@@ -16,7 +16,7 @@ MODULE Kernel;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Coroutines, Memory, SysTick, MCU := MCU2, Errors, StartUp;
+  IMPORT SYSTEM, Coroutines, Memory, SysTick, MCU := MCU2, Errors;
 
   CONST
     MaxNumThreads* = 16;
@@ -33,20 +33,12 @@ MODULE Kernel;
     StateEnabled = 0;    (* triggered: queued at next trigger event; queued at next scheduler run *)
     StateSuspended = 1;  (* must be (re-) enabled before it can run *)
 
-    (* thread trigger causes *)
+    (* thread trigger modes *)
     TrigNone* = 0;
     TrigPeriod* = 1;
     TrigDelay* = 2;
     TrigDevice* = 3;
 
-    (* Restart codes *)
-    RestartCold* = StartUp.RestartCold;
-    RestartFlashUpdate* = StartUp.RestartFlashUpdate;
-    RestartWatchdogTimer* = StartUp.RestartWatchdogTimer;
-    RestartWatchdogForce* = StartUp.RestartWatchdogForce;
-
-    (* status scratch register *)
-    StatusScratchRegAddr = MCU.WATCHDOG_SCRATCH3;
 
     (* loop *)
     LoopStackSize = 256; (* bytes *)
@@ -68,7 +60,7 @@ MODULE Kernel;
       devAddr: INTEGER;
       devFlagsSet, devFlagsClr: SET;
       cor: Coroutines.Coroutine;
-      trigCode, restartCode: INTEGER;
+      trigCode: INTEGER;
       next*: Thread
     END;
 
@@ -234,22 +226,6 @@ MODULE Kernel;
   END CancelAwaitDeviceFlags;
 
 
-  PROCEDURE* Trigger*(): INTEGER;
-    VAR cid: INTEGER;
-  BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
-    RETURN coreCon[cid].Ct.trigCode
-  END Trigger;
-
-
-  PROCEDURE* GetRestartCode*(VAR restartCode: INTEGER);
-   VAR cid: INTEGER;
-  BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
-    restartCode := coreCon[cid].Ct.restartCode
-  END GetRestartCode;
-
-
   PROCEDURE* SetPrio*(prio: INTEGER);
     VAR cid: INTEGER;
   BEGIN
@@ -258,7 +234,7 @@ MODULE Kernel;
   END SetPrio;
 
 
-  PROCEDURE* SetPeriod*(period, startAfter: INTEGER);
+  PROCEDURE* SetPeriod*(period, startAfter: INTEGER); (* as number of ticks *)
      VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
@@ -287,6 +263,14 @@ MODULE Kernel;
   PROCEDURE* Prio*(t: Thread): INTEGER;
     RETURN t.prio
   END Prio;
+
+
+  PROCEDURE* Trigger*(): INTEGER;
+    VAR cid: INTEGER;
+  BEGIN
+    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    RETURN coreCon[cid].Ct.trigCode
+  END Trigger;
 
   (* scheduler coroutine code *)
 
@@ -390,18 +374,11 @@ MODULE Kernel;
     (* we'll not return here *)
   END Run;
 
+
   (* installation *)
 
-  (*
-  PROCEDURE setStatusCode(cid, code: INTEGER);
-  BEGIN
-    SYSTEM.PUT(StatusScratchRegAddr + MCU.ACLR, LSL(0FFFFH, cid * 16));
-    SYSTEM.PUT(StatusScratchRegAddr + MCU.ASET, LSL(code, cid * 16))
-  END setStatusCode;
-  *)
-
   PROCEDURE Install*(millisecsPerTick: INTEGER);
-    VAR i, stkAddr, cid, restartCode: INTEGER; ctx: CoreContext;
+    VAR i, stkAddr, cid: INTEGER; ctx: CoreContext;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
 
@@ -418,20 +395,17 @@ MODULE Kernel;
     Coroutines.Init(ctx.loop, stkAddr, LoopStackSize, LoopCorId);
     Coroutines.Allocate(ctx.loop, loopc);
 
-    StartUp.GetRestartEntryCode(cid, restartCode);
-
     (* allocate the data structures for all threads and their coroutines *)
     (* don't yet allocate the stacks *)
     i := 0;
     WHILE i < MaxNumThreads DO
       NEW(ctx.threads[i]); ASSERT(ctx.threads[i] # NIL, Errors.HeapOverflow);
       ctx.threads[i].state := StateSuspended;
-      ctx.threads[i].restartCode := restartCode;
       ctx.threads[i].tid := i;
       NEW(ctx.threads[i].cor); ASSERT(ctx.threads[i].cor # NIL, Errors.HeapOverflow);
       INC(i)
     END;
-    (* start sys tick *)
+    (* configure sys tick *)
     SysTick.Init(millisecsPerTick * SloMo)
   END Install;
 

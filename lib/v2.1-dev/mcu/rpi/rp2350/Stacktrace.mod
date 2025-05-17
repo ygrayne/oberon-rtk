@@ -13,7 +13,7 @@ MODULE Stacktrace;
   Please refer to the licensing conditions as defined at the end of this file.
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Config, Memory, RuntimeErrors;
+  IMPORT SYSTEM, MCU := MCU2, Config, RuntimeErrors;
 
   CONST
     TraceDepth = 16;
@@ -37,6 +37,8 @@ MODULE Stacktrace;
     PSRoffset = 28;
     PCoffset = 24;
     LRoffset = 20;
+
+    StackSeal = 0FEF5EDA5H;
 
     (* PPB_FPCCR bits *)
     FPCCR_TS  = 26;
@@ -160,16 +162,15 @@ MODULE Stacktrace;
 
   PROCEDURE getAddr(VAR stackAddr, excRetVal: INTEGER; VAR isStackFrame: BOOLEAN);
     CONST R11 = 11; ExcRetMask = 0FFFFFF82H; ExcRetVal = 0FFFFFF80H;
-    VAR stackVal, lr, res, cid: INTEGER;
+    VAR stackVal, lr, res: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
     isStackFrame := FALSE;
     SYSTEM.GET(stackAddr, stackVal);
     IF BITS(stackVal) * BITS(ExcRetMask) = BITS(ExcRetVal) THEN
       (* if a potential EXC_RETURN value *)
       excRetVal := stackVal; (* only valid if 'isStackFrame' *)
       SYSTEM.GET(stackAddr + 4, stackVal);
-      IF stackVal = Memory.StackSeal THEN
+      IF stackVal = StackSeal THEN
         (* at top of main stack: we have an EXC_RETURN value with 'PSP used for stacking' *)
         (* switch stacks, point to stacked regs on process stack *)
         SYSTEM.EMIT(MCU.MRS_R11_PSP);
@@ -200,7 +201,7 @@ MODULE Stacktrace;
     CLEAR(tp);
     traceDepth := LEN(trace.tp);
     SYSTEM.GET(stackAddr, stackVal);
-    WHILE (stackVal # Memory.StackSeal) & (trace.count <= traceDepth) DO
+    WHILE (stackVal # StackSeal) & (trace.count <= traceDepth) DO
       (* debug *)
       (*
       Out.Hex(stackAddr, 13); Out.Hex(stackVal, 13); Out.Ln;

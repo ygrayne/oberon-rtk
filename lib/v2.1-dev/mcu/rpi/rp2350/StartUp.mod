@@ -35,16 +35,6 @@ MODULE StartUp;
     (* POWMAN [31:16] passcode *)
     POWMAN_PASSCODE = 05AFE0000H;
 
-    (* restart codes *)
-    RestartCold* = 0;
-    RestartFlashUpdate* = 1;
-    RestartWatchdogTimer* = 2;
-    RestartWatchdogForce* = 3;
-
-    (* WATCHDOG_REASON values *)
-    WATCHDOG_REASON_FORCE* = 2;
-    WATCHDOG_REASON_TIMER* = 1;
-
 
   (* -- power manager POWMAN-- *)
 
@@ -116,17 +106,10 @@ MODULE StartUp;
   PROCEDURE* SetWatchdogBootVector*(stackPointer, entryPoint: INTEGER);
   BEGIN
     SYSTEM.PUT(MCU.WATCHDOG_SCRATCH4, BootMagic0);
-    INCL(SYSTEM.VAL(SET, entryPoint), 0);
-    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH5, BITS(entryPoint) / BITS(BootMagic1));
+    INCL(SYSTEM.VAL(SET, entryPoint), 0); (* thumb code *)
+    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH5, BITS(entryPoint) / BITS(BootMagic1)); (* XOR *)
     SYSTEM.PUT(MCU.WATCHDOG_SCRATCH6, stackPointer);
     SYSTEM.PUT(MCU.WATCHDOG_SCRATCH7, entryPoint)
   END SetWatchdogBootVector;
-
-
-  (* -- restart entry -- *)
-
-  PROCEDURE GetRestartEntryCode*(cid: INTEGER; VAR mode: INTEGER);
-
-  END GetRestartEntryCode;
 
 END StartUp.

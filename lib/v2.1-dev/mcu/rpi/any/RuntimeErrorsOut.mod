@@ -11,7 +11,7 @@ MODULE RuntimeErrorsOut;
 **)
 
   IMPORT
-    RuntimeErrors, Stacktrace, MultiCore, TextIO, Texts, Errors, ProgData, Memory;
+    RuntimeErrors, Stacktrace, MultiCore, TextIO, Texts, Errors, ProgData, Config;
 
   CONST NumCores = RuntimeErrors.NumCores;
 
@@ -56,32 +56,35 @@ MODULE RuntimeErrorsOut;
   END printAnnotation;
 
 
-  PROCEDURE PrintStacktrace*(W: TextIO.Writer; tr: Stacktrace.Trace; stackTopAddr: INTEGER);
+  PROCEDURE PrintStacktrace*(tr: Stacktrace.Trace);
     VAR
-      i, modEntryAddr, procEntryAddr: INTEGER;
+      i, modEntryAddr, procEntryAddr, startSeqAddr: INTEGER;
       moduleName, procName: Name;
       tp: Stacktrace.TracePoint;
+      We: TextIO.Writer;
   BEGIN
+    We := W[MultiCore.CPUid()];
+    startSeqAddr := Config.ResourceStart - 8;
     IF tr.count > 1 THEN
-      Texts.WriteString(W, "trace:"); Texts.WriteLn(W);
+      Texts.WriteString(We, "trace:"); Texts.WriteLn(We);
       i := 0;
       WHILE i < tr.count DO
         tp := tr.tp[i];
-        printAnnotation(W, tp.annotation);
-        IF tp.stackAddr < stackTopAddr THEN
+        printAnnotation(We, tp.annotation);
+        IF tp.address # startSeqAddr THEN
           ProgData.FindProcEntries(tp.address, modEntryAddr, procEntryAddr);
           ProgData.GetNames(modEntryAddr, procEntryAddr, moduleName, procName);
         ELSE
           moduleName := "start"; procName := "sequence";
         END;
-        printTraceLine(W, moduleName, procName, tp.address, tp.lineNo, tp.stackAddr);
+        printTraceLine(We, moduleName, procName, tp.address, tp.lineNo, tp.stackAddr);
         INC(i)
       END;
       IF tr.more THEN
-        Texts.WriteString(W, "  --- more ---"); Texts.WriteLn(W)
+        Texts.WriteString(We, "  --- more ---"); Texts.WriteLn(We)
       END
     ELSE
-      Texts.WriteString(W, "no trace"); Texts.WriteLn(W)
+      Texts.WriteString(We, "no trace"); Texts.WriteLn(We)
     END
   END PrintStacktrace;
 
@@ -94,43 +97,62 @@ MODULE RuntimeErrorsOut;
   END printReg;
 
 
-  PROCEDURE PrintStackedRegs*(W: TextIO.Writer; stackedRegs: Stacktrace.StackedRegs);
+  PROCEDURE PrintStackedRegs*(stackedRegs: Stacktrace.StackedRegs);
+    VAR We: TextIO.Writer;
   BEGIN
-    Texts.WriteString(W, "stacked registers:"); Texts.WriteLn(W);
-    printReg(W, "psr:", stackedRegs.xpsr);
-    printReg(W, " pc:", stackedRegs.pc);
-    printReg(W, " lr:", stackedRegs.lr);
-    printReg(W, "r12:", stackedRegs.r12);
-    printReg(W, " r3:", stackedRegs.r3);
-    printReg(W, " r2:", stackedRegs.r2);
-    printReg(W, " r1:", stackedRegs.r1);
-    printReg(W, " r0:", stackedRegs.r0);
-    printReg(W, " sp:", stackedRegs.sp)
+    We := W[MultiCore.CPUid()];
+    Texts.WriteString(We, "stacked registers:"); Texts.WriteLn(We);
+    printReg(We, "xpsr:", stackedRegs.xpsr);
+    printReg(We, "  pc:", stackedRegs.pc);
+    printReg(We, "  lr:", stackedRegs.lr);
+    printReg(We, " r12:", stackedRegs.r12);
+    printReg(We, "  r3:", stackedRegs.r3);
+    printReg(We, "  r2:", stackedRegs.r2);
+    printReg(We, "  r1:", stackedRegs.r1);
+    printReg(We, "  r0:", stackedRegs.r0);
+    printReg(We, "  sp:", stackedRegs.sp)
   END PrintStackedRegs;
 
 
-  PROCEDURE PrintError*(W: TextIO.Writer; er: RuntimeErrors.ErrorDesc);
+  PROCEDURE PrintError*(er: RuntimeErrors.ErrorDesc);
     VAR
       modEntryAddr, procEntryAddr: INTEGER;
       moduleName, procName: Name;
       msg: Errors.String;
+      We: TextIO.Writer;
   BEGIN
+    We := W[MultiCore.CPUid()];
     Errors.GetErrorType(er.errType, msg);
-    Texts.WriteString(W, msg);
-    Texts.WriteString(W, ": "); Texts.WriteInt(W, ABS(er.errCode), 0);
-    Texts.WriteString(W, " core: ");
-    Texts.WriteInt(W, er.core, 0); Texts.WriteLn(W);
+    Texts.WriteString(We, msg);
+    Texts.WriteString(We, ": "); Texts.WriteInt(We, ABS(er.errCode), 0);
+    Texts.WriteString(We, " core: ");
+    Texts.WriteInt(We, er.core, 0); Texts.WriteLn(We);
     Errors.GetErrorMsg(er.errType, er.errCode, msg);
-    Texts.WriteString(W, msg); Texts.WriteLn(W);
+    Texts.WriteString(We, msg); Texts.WriteLn(We);
     ProgData.FindProcEntries(er.errAddr, modEntryAddr, procEntryAddr);
     ProgData.GetNames(modEntryAddr, procEntryAddr, moduleName, procName);
-    Texts.WriteString(W, moduleName); Texts.Write(W, "."); Texts.WriteString(W, procName);
-    Texts.WriteString(W, "  addr: "); Texts.WriteHex(W, er.errAddr, 0);
+    Texts.WriteString(We, moduleName); Texts.Write(We, "."); Texts.WriteString(We, procName);
+    Texts.WriteString(We, "  addr: "); Texts.WriteHex(We, er.errAddr, 0);
     IF er.errLineNo > 0 THEN
-      Texts.WriteString(W, "  line: "); Texts.WriteInt(W, er.errLineNo, 0)
+      Texts.WriteString(We, "  line: "); Texts.WriteInt(We, er.errLineNo, 0)
     END;
-    Texts.WriteLn(W)
+    Texts.WriteLn(We)
   END PrintError;
+
+
+  PROCEDURE PrintLogEntry*(er: RuntimeErrors.ErrorDesc);
+    VAR We: TextIO.Writer;
+  BEGIN
+    We := W[MultiCore.CPUid()];
+    Texts.WriteString(We, "run-time error:");
+    Texts.WriteInt(We, er.core, 2);
+    Texts.WriteInt(We, er.errType, 2);
+    Texts.WriteInt(We, er.errCode, 4);
+    Texts.WriteHex(We, er.errAddr, 10);
+    Texts.WriteInt(We, er.errLineNo, 6);
+    Texts.WriteLn(We);
+    REPEAT UNTIL FALSE
+  END PrintLogEntry;
 
 
   (* RuntimeErrors-compatible handler *)
@@ -142,18 +164,19 @@ MODULE RuntimeErrorsOut;
     cid := MultiCore.CPUid();
     Stacktrace.CreateTrace(RuntimeErrors.ErrorRec[cid], trace);
     Stacktrace.ReadRegisters(RuntimeErrors.ErrorRec[cid], regs);
-    PrintError(W[cid], RuntimeErrors.ErrorRec[cid]);
-    PrintStackedRegs(W[cid], regs);
-    PrintStacktrace(W[cid], trace, Memory.DataMem[cid].stackStart - 4);
+    PrintError(RuntimeErrors.ErrorRec[cid]);
+    PrintStackedRegs(regs);
+    PrintStacktrace(trace);
     REPEAT UNTIL FALSE
   END ErrorHandler;
 
+
   (* plug a writer to use for error output *)
 
-  PROCEDURE* SetWriter*(coreId: INTEGER; Wr: TextIO.Writer);
+  PROCEDURE* SetWriter*(cid: INTEGER; Wr: TextIO.Writer);
   BEGIN
-    ASSERT(coreId < NumCores, Errors.PreCond);
-    W[coreId] := Wr
+    ASSERT(cid < NumCores, Errors.PreCond);
+    W[cid] := Wr
   END SetWriter;
 
 END RuntimeErrorsOut.

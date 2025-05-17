@@ -296,5 +296,6 @@ MODULE RecoveryC0;
   END run;
 
 BEGIN
+  p := NIL;
   run
 END RecoveryC0.

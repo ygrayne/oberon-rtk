@@ -25,16 +25,6 @@ MODULE StartUp;
     BootMagic0 = 0B007C0D3H;
     BootMagic1 = 04FF83F2DH;
 
-    (* restart codes *)
-    RestartCold* = 0;
-    RestartFlashUpdate* = 1;
-    RestartWatchdogTimer* = 2;
-    RestartWatchdogForce* = 3;
-
-    (* WATCHDOG_REASON values *)
-    WATCHDOG_REASON_FORCE* = 2;
-    WATCHDOG_REASON_TIMER* = 1;
-
   (* -- power on state machine PSM -- *)
 
   PROCEDURE* AwaitPowerOnResetDone*(component: INTEGER);

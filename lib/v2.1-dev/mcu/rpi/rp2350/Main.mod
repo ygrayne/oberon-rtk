@@ -21,8 +21,8 @@ MODULE Main;
     StartUp, RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr, MCU := MCU2, FPUctrl;
 
   CONST
-    Baudrate0 = 38400; (* terminal 0 *)
-    Baudrate1 = 38400;
+    Baudrate0 = 230400; (* terminal 0 *)
+    Baudrate1 = 230400;
     Core0 = 0;
     Core1 = 1;
     TERM0 = Terminals.TERM0;
@@ -80,7 +80,7 @@ MODULE Main;
     (* error output on core 0 to terminal 0 *)
     Terminals.OpenErr(TERM0, UARTstr.PutString);
     RuntimeErrorsOut.SetWriter(Core0, Terminals.Werr[0]);
-    (*RuntimeErrors.InstallErrorHandler(Core0, RuntimeErrorsOut.ErrorHandler);*)
+    RuntimeErrors.InstallErrorHandler(Core0, RuntimeErrorsOut.ErrorHandler);
 
     (* error output on core 1 to terminal 1 *)
     Terminals.OpenErr(TERM1, UARTstr.PutString);

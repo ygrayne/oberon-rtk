@@ -75,7 +75,7 @@ MODULE Main;
     (* error output on core 0 to terminal 0 *)
     Terminals.OpenErr(TERM0, UARTstr.PutString);
     RuntimeErrorsOut.SetWriter(Core0, Terminals.Werr[0]);
-    (*RuntimeErrors.InstallErrorHandler(Core0, RuntimeErrorsOut.ErrorHandler);*)
+    RuntimeErrors.InstallErrorHandler(Core0, RuntimeErrorsOut.ErrorHandler);
 
     (* error output on core 1 to terminal 1 *)
     Terminals.OpenErr(TERM1, UARTstr.PutString);

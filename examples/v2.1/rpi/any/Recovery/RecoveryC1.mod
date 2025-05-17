@@ -59,8 +59,8 @@ MODULE RecoveryC1;
     REPEAT
       Kernel.Next;
       printThreadInfo(tid, cid);
-      Out.Int(TestCnt, 10); Out.Ln;
-      INC(TestCnt)
+      INC(TestCnt);
+      Out.Int(TestCnt, 10); Out.Ln
     UNTIL FALSE
   END t1c;
 

@@ -10,7 +10,7 @@ MODULE Coroutines;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Errors;
+  IMPORT SYSTEM, Errors, Out;
 
   TYPE
     PROC* = PROCEDURE;
@@ -20,10 +20,11 @@ MODULE Coroutines;
       proc: PROC; (* the coroutine's code *)
       stAddr: INTEGER; (* stack address *)
       stSize: INTEGER; (* stack size *)
-      id: INTEGER; (* useful for debugging *)
+      id: INTEGER (* same as thread id *)
     END;
 
-  PROCEDURE Reset*(cor: Coroutine);
+
+  PROCEDURE* Reset*(cor: Coroutine);
     VAR addr: SET;
   BEGIN
     ASSERT(cor # NIL, Errors.PreCond);
@@ -33,16 +34,14 @@ MODULE Coroutines;
     DEC(cor.sp, 4);
     (* put 'lr' *)
     DEC(cor.sp, 4);
-    SYSTEM.PUT(cor.sp, cor.proc);
-    SYSTEM.GET(cor.sp, addr);
+    addr := SYSTEM.VAL(SET, cor.proc);
     INCL(addr, 0); (* thumb bit *)
     SYSTEM.PUT(cor.sp, addr);
     (* keep slot for 't' *)
     DEC(cor.sp, 4);
-    (* put 'f' *)
+    (* put 'f', see 'Transfer' *)
     DEC(cor.sp, 4);
-    (* the following is only needed if 'cor' data is needed in the FIRST Transfer
-    SYSTEM.PUT(cor.sp, SYSTEM.VAL(INTEGER, cor)); *)
+    SYSTEM.PUT(cor.sp, SYSTEM.VAL(INTEGER, cor))
     (* initialised stack: with SP = 0: 'f' = 'cor', +4: don't care, +8: 'lr' *)
   END Reset;
 
@@ -55,7 +54,7 @@ MODULE Coroutines;
   END Allocate;
 
 
-  PROCEDURE Init*(cor: Coroutine; stAddr, stSize, id: INTEGER);
+  PROCEDURE* Init*(cor: Coroutine; stAddr, stSize, id: INTEGER);
   BEGIN
     ASSERT(cor # NIL, Errors.PreCond);
     cor.stAddr := stAddr;
@@ -65,12 +64,11 @@ MODULE Coroutines;
 
 
   PROCEDURE Transfer*(f, t: Coroutine);
-    CONST SP = 13; LR = 14;
+    CONST SP = 13; LR = 14; R12 = 12;
   BEGIN
     (* enter "as" f, f's stack in use *)
     (* prologue: push caller's 'lr' and parameters 'f' and 't' onto f's stack *)
     (* stack: 0: 'f', +4: 't', +8: 'lr' *)
-
     (* stack switching *)
     (* save f's SP *)
     f.sp := SYSTEM.REG(SP);
@@ -80,10 +78,12 @@ MODULE Coroutines;
     (* now t's stack in use *)
     (* stack: 0: 'f', +4: 't', +8: 'lr' *)
     (* note: meaning of 'f' and 't' as per the procedure call when transferring AWAY from 't' *)
+    (* ie. 'f' is the coroutine on the stack here that we transfer to *)
+    SYSTEM.LDREG(R12, f.id);
     SYSTEM.LDREG(LR, 0); (* get clean stack trace -- overkill? :) *)
     (* epilogue: adjust stack by +8, pop 'lr' from stack into 'pc' *)
     (* continue "as" t with 'lr' as 'pc' value *)
-    (* Se sa. Voila. *)
+    (* Voila. *)
   END Transfer;
 
 END Coroutines.

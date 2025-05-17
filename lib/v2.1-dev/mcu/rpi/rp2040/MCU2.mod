@@ -306,6 +306,8 @@ MODULE MCU2;
     RESETS_BUSCTRL*     = 1;
     RESETS_ADC*         = 0;
 
+    RESETS_ALL*         = {0 .. 24};
+
     (* == IO_BANK0 == *)
     (* datasheet 2.19.6.1, p243 *)
     IO_BANK0_GPIO0_STATUS*   = IO_BANK0_BASE;
@@ -654,6 +656,10 @@ MODULE MCU2;
     WATCHDOG_TICK*     = WATCHDOG_BASE + 02CH;
 
     WATCHDOG_XLOADTIME* = 2; (* hw error correction factor *)
+
+    (* WATCHDOG_REASON values *)
+    WATCHDOG_REASON_FORCE* = 2;
+    WATCHDOG_REASON_TIMER* = 1;
 
 
     (* == RTC == *)

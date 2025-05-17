@@ -27,11 +27,11 @@ MODULE Errors;
     SecureFault*  = MCU.PPB_SecureFault_Exc;
     DebugMon*     = MCU.PPB_DebugMon_Exc;
 
-    (* exception types *)
-    ExcTypeErrorHandler* = 0;
-    ExcTypeErrorThread* = 1;
-    ExcTypeFaultHandler* = 2;
-    ExcTypeFaultThread* = 3;
+    (* error types *)
+    ErrTypeErrorHandler* = 0;
+    ErrTypeErrorThread* = 1;
+    ErrTypeFaultHandler* = 2;
+    ErrTypeFaultThread* = 3;
 
     (* Astrobe error codes, see Error.mod *)
     FirstAstrobeCode = 1;
@@ -147,13 +147,13 @@ MODULE Errors;
 
   PROCEDURE GetErrorType*(excType: INTEGER; VAR msg: String);
   BEGIN
-    IF excType = ExcTypeErrorHandler THEN
+    IF excType = ErrTypeErrorHandler THEN
       msg := "run-time error in handler mode"
-    ELSIF excType = ExcTypeErrorThread THEN
+    ELSIF excType = ErrTypeErrorThread THEN
       msg := "run-time error in thread mode"
-    ELSIF excType = ExcTypeFaultHandler THEN
+    ELSIF excType = ErrTypeFaultHandler THEN
       msg := "MCU fault in handler mode"
-    ELSIF excType = ExcTypeFaultThread THEN
+    ELSIF excType = ErrTypeFaultThread THEN
       msg := "MCU fault in thread mode"
     ELSE
       msg := "unknown exception"

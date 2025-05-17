@@ -1,6 +1,6 @@
 # Oberon RTK Modules Library
 
-Versions lib/v1.0 and lib/v2.0
+Versions lib/v1.0, lib/v2.0, lib/2.1
 
 ```
 + lib
@@ -25,6 +25,7 @@ Versions lib/v1.0 and lib/v2.0
         + any: any rpi mcu
         + rp2040: RP2040
         + rp2350: RP2350
+  + v2.1: analogous to v2.0
 ```
 
 [https://oberon-rtk.org/docs/lib/](https://oberon-rtk.org/docs/lib/)

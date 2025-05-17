@@ -899,6 +899,10 @@ MODULE MCU2;
 
     WATCHDOG_XLOADTIME* = 1;
 
+    (* WATCHDOG_REASON values *)
+    WATCHDOG_REASON_FORCE* = 2;
+    WATCHDOG_REASON_TIMER* = 1;
+
     (* == BOOTRAM == *)
     (* datasheet 4.3.1, p432 *)
     BOOTRAM_WRITE_ONCE0*  = BOOTRAM_BASE + 0800H;
