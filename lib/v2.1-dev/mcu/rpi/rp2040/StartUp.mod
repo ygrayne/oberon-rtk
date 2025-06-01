@@ -80,11 +80,4 @@ MODULE StartUp;
     SYSTEM.PUT(MCU.WATCHDOG_SCRATCH7, entryPoint)
   END SetWatchdogBootVector;
 
-
-  (* -- restart entry -- *)
-
-  PROCEDURE GetRestartEntryCode*(cid: INTEGER; VAR mode: INTEGER);
-
-  END GetRestartEntryCode;
-
 END StartUp.

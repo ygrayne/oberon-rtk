@@ -7,6 +7,11 @@ _*
 !.gitignore
 !.gitattributes
 
+# no project-local framework lib dirs
+/**/rtk-lib-rp2040
+/**/rtk-lib-rp2350
+/**/rtk-lib
+
 # add dirs
 !/**/v*.*
 !/lib/

@@ -10,7 +10,7 @@ MODULE Coroutines;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Errors, Out;
+  IMPORT SYSTEM, Errors;
 
   TYPE
     PROC* = PROCEDURE;

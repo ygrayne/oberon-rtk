@@ -3,7 +3,7 @@
 # Declarative command definitions
 # Extend argparse.Parser to process the definitions
 # --
-# Copyright (c) 2024 Gray, gray@graraven.org
+# Copyright (c) 2024 - 2025 Gray, gray@graraven.org
 # https://oberon-rtk.org/licences/
 
 import argparse
