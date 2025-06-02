@@ -38,7 +38,7 @@ MODULE SPIdev;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Errors, MCU := MCU2, StartUp;
+  IMPORT SYSTEM, Errors, MCU := MCU2, StartUp, Clocks;
 
   CONST
     SPI0* = 0;
@@ -150,7 +150,7 @@ MODULE SPIdev;
 
     (* find/set serial clock rate *)
     (* preScale is an even integer between 2 and 254, inclusive *)
-    x := (MCU.PeriClkFreq * 8) DIV sclkRate;
+    x := (Clocks.PeriClkFreq * 8) DIV sclkRate;
     preScale := 2;
     WHILE (preScale < 255) & (preScale * 2048 <= x) DO
       INC(preScale, 2)
@@ -179,7 +179,7 @@ MODULE SPIdev;
     dev.txShift := cfg.txShift;
 
     (* record possible sclkRate band *)
-    dev.sclkRateMax := MCU.PeriClkFreq DIV preScale;
+    dev.sclkRateMax := Clocks.PeriClkFreq DIV preScale;
     dev.sclkRateMin := dev.sclkRateMax DIV 256;
   END Configure;
 
@@ -217,7 +217,7 @@ MODULE SPIdev;
     VAR cpsr, scr, x: INTEGER;
   BEGIN
     SYSTEM.GET(dev.CPSR, cpsr);
-    x := (MCU.PeriClkFreq * 8) DIV sclkRate;
+    x := (Clocks.PeriClkFreq * 8) DIV sclkRate;
     x := (x DIV (cpsr * 8)) - 1;
     scr := 255;
     WHILE (scr >= 0) & (scr > x) DO
