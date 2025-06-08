@@ -147,7 +147,8 @@ class UpdateCmd(commands.Command):
         if not libdir in cfg_file.path_directories:
             print(f"{PROG_NAME}: framework library directory {libdir} not found in config file (\'-l\')")
             if libdir.is_dir():
-                libdir.rmdir()
+                try: libdir.rmdir()
+                except: pass
             sys.exit(1)
 
         if not args.all:
@@ -273,6 +274,14 @@ class UpdateCmd(commands.Command):
         for f in removed_files:
             if f.suffix == '.mod' or f.name == BOOT2_BIN:
                 removed_modules.append(f)
+        if args.all: all_val = 'true'
+        else: all_val = 'false'
+        if file_pat == '': file_pat = 'none'
+        print(f"program module: {mod_f}")
+        print(f"config file: {cfg_f}")
+        print(f"Astrobe var: {avar}")
+        print(f"file pattern: {file_pat}")
+        print(f"'all' option: {all_val}")
         print(f'project lib: {cwd.name}{os.sep}{libdir.name}')
         print(f'modules updated: {len(existing_files):3d}')
         print(f'modules added:   {len(added_files):3d}')
@@ -504,7 +513,7 @@ class CfgFile:
             else:
                 dir_string = sps
             if avar_name != '' and avar_val == '':
-                print(f'{PROG_NAME}: {avar_name} is used in search path, but no value given (\'-p\')')
+                print(f'{PROG_NAME}: {avar_name} is used in search path, but no value given (\'-f\')')
                 sys.exit(1)
             if dir_string != '':
                 dir_path = Path(dir_string)

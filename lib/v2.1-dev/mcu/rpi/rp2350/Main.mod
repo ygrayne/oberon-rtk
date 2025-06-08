@@ -21,8 +21,8 @@ MODULE Main;
     StartUp, RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr, MCU := MCU2, FPUctrl;
 
   CONST
-    Baudrate0 = 230400; (* terminal 0 *)
-    Baudrate1 = 230400;
+    Baudrate0 = 38400; (* terminal 0 *)
+    Baudrate1 = 38400;
     Core0 = 0;
     Core1 = 1;
     TERM0 = Terminals.TERM0;
