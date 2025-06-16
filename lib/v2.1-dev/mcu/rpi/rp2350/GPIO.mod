@@ -1,10 +1,10 @@
 MODULE GPIO;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework v2.1
   --
   General Purpose IO (GPIO)
   --
-  MCU: RP2350
+  MCU: RP2350A (30 GPIO 0 .. 29), RP2350B (48 GPIO 0 .. 47)
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -16,6 +16,10 @@ MODULE GPIO;
     (* generic values *)
     Enabled* = 1;
     Disabled* = 0;
+
+    (* pad output *)
+    OutputHiZ* = 1; (* pad output = disabled *)
+    OutputConn* = 0;
 
 
     (* BANK0_GPIO bits and values *)
@@ -34,6 +38,10 @@ MODULE GPIO;
       SLEWFAST_val_slow* = 0;
       SLEWFAST_val_fast* = 1;
 
+    (* value ranges *)
+    DriveRange = {DRIVE_val_2mA .. DRIVE_val_12mA};
+    SlewRange = {SLEWFAST_val_slow, SLEWFAST_val_fast};
+
     (* value aliases *)
     Drive2mA*  = DRIVE_val_2mA;
     Drive4mA*  = DRIVE_val_4mA;  (* reset *)
@@ -47,9 +55,15 @@ MODULE GPIO;
     PADS_OD   = 7;  (* output disable *)
     PADS_IE   = 6;  (* input enable *)
 
+    (* GPIO inverters *)
+    InvOff* = 0;
+    InvOn* = 1;
+    InvLow* = 2;
+    InvHigh* = 3;
+
   TYPE
     PadCfg* = RECORD (* see ASSERTs in 'ConfigurePad' for valid values *)
-      outputDe*: INTEGER;       (* reset: Disabled *)
+      outputDe*: INTEGER;       (* reset: Disabled, ie. output enabled *)
       inputEn*: INTEGER;        (* reset: Enabled (RP2040), Disabled (RP2350) *)
       driveStrength*: INTEGER;  (* reset: Drive4mA *)
       pullupEn*: INTEGER;       (* reset: Disabled *)
@@ -74,12 +88,15 @@ MODULE GPIO;
   END SetFunction;
 
 
-  PROCEDURE* SetInverters*(pinNo: INTEGER; mask: SET);
+  PROCEDURE* SetInverters*(pinNo: INTEGER; irqInv, inInv, oeInv, outInv: INTEGER);
     VAR addr, x: INTEGER;
   BEGIN
     addr := MCU.IO_BANK0_GPIO0_CTRL + (pinNo * MCU.IO_BANK0_GPIO_Offset);
     SYSTEM.GET(addr, x);
-    BFI(x, 31, 5, ORD(mask));
+    BFI(x, 29, 28, irqInv);
+    BFI(x, 17, 16, inInv);
+    BFI(x, 15, 14, oeInv);
+    BFI(x, 13, 12, outInv);
     SYSTEM.PUT(addr, x)
   END SetInverters;
 
@@ -90,11 +107,11 @@ MODULE GPIO;
   BEGIN
     ASSERT(cfg.outputDe IN {Disabled, Enabled}, Errors.PreCond);
     ASSERT(cfg.inputEn IN {Disabled, Enabled}, Errors.PreCond);
-    ASSERT(cfg.driveStrength IN {DRIVE_val_2mA .. DRIVE_val_12mA}, Errors.PreCond);
+    ASSERT(cfg.driveStrength IN DriveRange, Errors.PreCond);
     ASSERT(cfg.pullupEn IN {Disabled, Enabled}, Errors.PreCond);
     ASSERT(cfg.pulldownEn IN {Disabled, Enabled}, Errors.PreCond);
     ASSERT(cfg.schmittTrigEn IN {Disabled, Enabled}, Errors.PreCond);
-    ASSERT(cfg.slewRate IN {SLEWFAST_val_slow, SLEWFAST_val_fast}, Errors.PreCond);
+    ASSERT(cfg.slewRate IN SlewRange, Errors.PreCond);
 
     addr := MCU.PADS_BANK0_GPIO0 + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
     SYSTEM.GET(addr, x);
@@ -111,7 +128,7 @@ MODULE GPIO;
 
   PROCEDURE* GetPadBaseCfg*(VAR cfg: PadCfg);
   (**
-    outputDe        = Disabled,           hardware reset value, ie. output is enabled
+    outputDe        = Disabled,           hardware reset value, ie. output is enabled = connected
     inputEn         = Disabled,           hardware reset value
     driveStrength   = DRIVE_val_4mA,      hardware reset value
     pullupEn        = Disabled,           hardware reset value
@@ -129,7 +146,32 @@ MODULE GPIO;
   END GetPadBaseCfg;
 
 
-  PROCEDURE* DisableOutput*(pinNo: INTEGER);
+  PROCEDURE* ConnectOutput*(pinNo: INTEGER);
+    VAR addr: INTEGER;
+  BEGIN
+    addr := MCU.PADS_BANK0_GPIO0 + MCU.ACLR + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
+    SYSTEM.PUT(addr, {PADS_OD})
+  END ConnectOutput;
+
+
+  PROCEDURE* DisconnectOutput*(pinNo: INTEGER);
+  (** set hi-z **)
+    VAR addr: INTEGER;
+  BEGIN
+    addr := MCU.PADS_BANK0_GPIO0 + MCU.ASET + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
+    SYSTEM.PUT(addr, {PADS_OD})
+  END DisconnectOutput;
+
+
+  PROCEDURE* EnableOutput*(pinNo: INTEGER); (* deprecated *)
+    VAR addr: INTEGER;
+  BEGIN
+    addr := MCU.PADS_BANK0_GPIO0 + MCU.ACLR + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
+    SYSTEM.PUT(addr, {PADS_OD})
+  END EnableOutput;
+
+
+  PROCEDURE* DisableOutput*(pinNo: INTEGER); (* deprecated *)
     VAR addr: INTEGER;
   BEGIN
     addr := MCU.PADS_BANK0_GPIO0 + MCU.ASET + (pinNo * MCU.PADS_BANK0_GPIO_Offset);
@@ -144,7 +186,6 @@ MODULE GPIO;
     SYSTEM.PUT(addr, {PADS_IE})
   END EnableInput;
 
-
   PROCEDURE* DisableInput*(pinNo: INTEGER);
     VAR addr: INTEGER;
   BEGIN
@@ -153,8 +194,17 @@ MODULE GPIO;
   END DisableInput;
 
 
+  PROCEDURE ResetPad*(pinNo: INTEGER);
+    VAR padCfg: PadCfg;
+  BEGIN
+    SetFunction(pinNo, MCU.IO_BANK0_Fnull);
+    GetPadBaseCfg(padCfg);
+    ConfigurePad(pinNo, padCfg)
+  END ResetPad;
+
+
   (* GPIO control via SIO *)
-  (* Need to select function 'Fsio' *)
+  (* GPIO function 'Fsio' *)
 
   PROCEDURE* Set*(mask: SET);
   (* atomic *)
@@ -162,11 +212,45 @@ MODULE GPIO;
     SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, mask)
   END Set;
 
+  PROCEDURE* Set2*(maskL, maskH: SET);
+  (* atomic per store *)
+  BEGIN
+    SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, maskL);
+    SYSTEM.PUT(MCU.SIO_GPIO_HI_OUT_SET, maskH)
+  END Set2;
+
+  PROCEDURE* SetPin*(pinNo: INTEGER);
+  BEGIN
+    IF pinNo < 32 THEN
+      SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {pinNo})
+    ELSE
+      SYSTEM.PUT(MCU.SIO_GPIO_HI_OUT_SET, {pinNo-32})
+    END
+  END SetPin;
+
+
   PROCEDURE* Clear*(mask: SET);
   (* atomic *)
   BEGIN
     SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, mask)
   END Clear;
+
+  PROCEDURE* Clear2*(maskL, maskH: SET);
+  (* atomic per store *)
+  BEGIN
+    SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, maskL);
+    SYSTEM.PUT(MCU.SIO_GPIO_HI_OUT_CLR, maskH);
+  END Clear2;
+
+  PROCEDURE* ClearPin*(pinNo: INTEGER);
+  BEGIN
+    IF pinNo < 32 THEN
+      SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {pinNo})
+    ELSE
+      SYSTEM.PUT(MCU.SIO_GPIO_HI_OUT_CLR, {pinNo-32})
+    END
+  END ClearPin;
+
 
   PROCEDURE* Toggle*(mask: SET);
   (* atomic *)
@@ -174,20 +258,30 @@ MODULE GPIO;
     SYSTEM.PUT(MCU.SIO_GPIO_OUT_XOR, mask)
   END Toggle;
 
+
   PROCEDURE* Get*(VAR value: SET);
   BEGIN
     SYSTEM.GET(MCU.SIO_GPIO_IN, value)
   END Get;
+
+  PROCEDURE* Get2*(VAR valueL, valueH: SET);
+  BEGIN
+    SYSTEM.GET(MCU.SIO_GPIO_IN, valueL);
+    SYSTEM.GET(MCU.SIO_GPIO_HI_IN, valueH);
+  END Get2;
+
 
   PROCEDURE* Put*(value: SET);
   BEGIN
     SYSTEM.PUT(MCU.SIO_GPIO_OUT, value)
   END Put;
 
+
   PROCEDURE* GetBack*(VAR value: INTEGER);
   BEGIN
     SYSTEM.GET(MCU.SIO_GPIO_OUT, value)
   END GetBack;
+
 
   PROCEDURE* Check*(mask: SET): BOOLEAN;
     VAR value: SET;
@@ -196,11 +290,20 @@ MODULE GPIO;
     RETURN value * mask # {}
   END Check;
 
+
   PROCEDURE* OutputEnable*(mask: SET);
   (* atomic *)
   BEGIN
     SYSTEM.PUT(MCU.SIO_GPIO_OE_SET, mask)
   END OutputEnable;
+
+  PROCEDURE* OutputEnable2*(maskL, maskH: SET);
+  (* atomic per store *)
+  BEGIN
+    SYSTEM.PUT(MCU.SIO_GPIO_OE_SET, maskL);
+    SYSTEM.PUT(MCU.SIO_GPIO_HI_OE_SET, maskH)
+  END OutputEnable2;
+
 
   PROCEDURE* OutputDisable*(mask: SET);
   (* atomic *)
@@ -208,16 +311,19 @@ MODULE GPIO;
     SYSTEM.PUT(MCU.SIO_GPIO_OE_CLR, mask)
   END OutputDisable;
 
+
   PROCEDURE* OutputEnToggle*(mask: SET);
   (* atomic *)
   BEGIN
     SYSTEM.PUT(MCU.SIO_GPIO_OE_XOR, mask)
   END OutputEnToggle;
 
-  PROCEDURE* GetOutputEnable*(VAR value: SET);
+
+  PROCEDURE* GetOutputEnable*(VAR enabled: SET);
   BEGIN
-    SYSTEM.GET(MCU.SIO_GPIO_OE, value)
+    SYSTEM.GET(MCU.SIO_GPIO_OE, enabled)
   END GetOutputEnable;
+
 
   PROCEDURE init;
   BEGIN

@@ -21,11 +21,11 @@ MODULE LED;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT GPIO, MCU := MCU2;
+  IMPORT MCU := MCU2, GPIO;
 
   CONST
     LEDpinNo = 25;
-    Green* = LEDpinNo; (* deprecated *)
+    Green* = LEDpinNo; (* Pico2-Ice compatibility *)
     Pico* = LEDpinNo;
     LSET* = MCU.SIO_GPIO_OUT_SET;
     LCLR* = MCU.SIO_GPIO_OUT_CLR;
@@ -34,6 +34,7 @@ MODULE LED;
   PROCEDURE init;
   BEGIN
     GPIO.SetFunction(LEDpinNo, MCU.IO_BANK0_Fsio);
+    GPIO.Clear({LEDpinNo});
     GPIO.OutputEnable({LEDpinNo})
   END init;
 

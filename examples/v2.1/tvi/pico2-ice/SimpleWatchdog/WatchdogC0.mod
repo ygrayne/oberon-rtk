@@ -10,8 +10,8 @@ MODULE WatchdogC0;
   --
   Note: does not (yet) use watchdog functionality provided by module Recovery.
   --
-  MCU: RP2040, RP2350
-  Board: Pico, Pico2
+  MCU: RP2350B
+  Board: Pico2-ICE
   --
   Copyright (c) 2024-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -19,7 +19,7 @@ MODULE WatchdogC0;
 
   IMPORT
     SYSTEM, Main, Kernel, Out, MultiCore, StartUp, Memory, Errors,
-    GPIO, LED, Watchdog, MCU := MCU2, CoreOne := WatchdogC1;
+    SIO, LED, Watchdog, MCU := MCU2, CoreOne := WatchdogC1;
 
   CONST
     Core1 = 1;
@@ -34,6 +34,8 @@ MODULE WatchdogC0;
     Core1FailCnt = 7;
     Core1OkFlag = 0;
     Core1FailFlag = 1;
+
+    HbLed = LED.Green;
 
 
   VAR
@@ -73,9 +75,9 @@ MODULE WatchdogC0;
   PROCEDURE t0c;
   BEGIN
     Kernel.SetPeriod(T0period, T0period);
-    GPIO.Set({LED.Pico});
+    SIO.Set({HbLed});
     REPEAT
-      GPIO.Toggle({LED.Pico});
+      SIO.Toggle({HbLed});
       Kernel.Next
     UNTIL FALSE
   END t0c;

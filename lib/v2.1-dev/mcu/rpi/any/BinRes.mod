@@ -1,33 +1,39 @@
-MODULE BinData;
+MODULE BinRes;
 (**
   Oberon RTK Framework v2
   --
   Access binary resource data.
   --
-  MCU: RP2040, RP2350
+  MCU: RP2040, RP2350A/B
   --
   Copyright (c) 2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
   --
   Structure:
   resource header -- at Config.ResourceStart
-  entry
-  entry
+  data
   ...
   resource header
-  entry
+  data
   ...
 
   Resource header:
   offset    value         meaning                           CONST
    0        05237424FH    id = "OB7R" as int
    4        000000001H    version                           ResVersionOffset
-   8        06665722EH    ".ref" as int, resource name      ResNameOffset
+   8        06665722EH    resource name as int              ResNameOffset
+  12        000000000H    max 8 chars, no null-char
+  16
   20                      resource size in bytes            ResSizeOffset
-  24                      first entry: module LinkOptions   ResDataOffset
+  24                      start of binary resource data     ResDataOffset
+                          meta data = actual binary size
 
-  Notes:
+  Note:
   * Resource name is not null-terminated.
+  * The resource must be multiple of 4 bytes, hence 'makebres' adds
+    padding zeros as needed, hence the resource size can differ
+    from the actual binary data size. The latter is encoded
+    in the first 4 byte resource data.
 **)
 
   IMPORT SYSTEM, Config;
@@ -41,18 +47,21 @@ MODULE BinData;
     ResSizeOffset = 20;
     ResDataOffset = 24;
 
+    MetaDataSize = 4; (* resource data size, first word of binary data *)
+
   TYPE
     ResName* = ARRAY 12 OF CHAR;
 
     BinDataRes* = RECORD
-      resAddr*: INTEGER;
-      dataBeginAddr*: INTEGER;
-      dataEndAddr*: INTEGER;
-      size*: INTEGER;
-      curAddr*, cnt*: INTEGER
+      resAddr*: INTEGER;      (* address of resource in program *)
+      dataBeginAddr: INTEGER; (* begin of binary data *)
+      dataEndAddr: INTEGER;   (* end of binary data *)
+      dataSize: INTEGER;      (* size of binary data *)
+      (* state while reading via 'NextByte' *)
+      curAddr*: INTEGER;      (* address of next data byte *)
+      cnt*: INTEGER           (* number of data bytes read *)
     END;
 
-  (* -- init -- *)
 
   PROCEDURE* getResName(resAddr: INTEGER; VAR name: ResName);
     VAR i, nameAddr: INTEGER; s: ARRAY 4 OF CHAR;
@@ -68,6 +77,7 @@ MODULE BinData;
 
 
   PROCEDURE GetBinDataRes*(resName: ARRAY OF CHAR; VAR res: BinDataRes);
+  (* res.resAddr # 0 if valid resource found *)
     VAR resAddr, resSize, resId, resVersion: INTEGER; found: BOOLEAN; resName0: ResName;
   BEGIN
     CLEAR(res);
@@ -82,10 +92,12 @@ MODULE BinData;
         found := resName0 = resName;
         IF found THEN
           res.resAddr := resAddr;
-          res.size := resSize;
           res.dataBeginAddr := resAddr + ResDataOffset;
-          res.dataEndAddr := res.dataBeginAddr + resSize;
-          res.curAddr := res.dataBeginAddr
+          SYSTEM.GET(res.dataBeginAddr, res.dataSize);
+          INC(res.dataBeginAddr, MetaDataSize);
+          res.dataEndAddr := res.dataBeginAddr + res.dataSize;
+          res.curAddr := res.dataBeginAddr;
+          res.cnt := 0
         ELSE
           resAddr := resAddr + ResDataOffset + resSize;
           SYSTEM.GET(resAddr, resId)
@@ -104,4 +116,4 @@ MODULE BinData;
     RETURN val
   END NextByte;
 
-END BinData.
+END BinRes.

@@ -1,18 +1,18 @@
 MODULE SignalSync;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework v2
   --
   Example program, multi-threaded, single-core
   Description: https://oberon-rtk.org/examples/v2/signalsync/
   --
-  MCU: RP2040, RP2350
-  Board: Pico, Pico2
+  MCU: RP2350B
+  Board: Pico2-ICE
   --
-  Copyright (c) 2024 Gray, gray@grayraven.org
+  Copyright (c) 2024-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT Main, Kernel, Out, MultiCore, Signals, Errors, GPIO, LED;
+  IMPORT Main, Kernel, Out, MultiCore, Signals, Errors, LED, SIO;
 
   CONST
     MillisecsPerTick  = 10;
@@ -20,6 +20,8 @@ MODULE SignalSync;
 
     T0period = 50;
     T3period = 100;
+
+    HbLed = LED.Green;
 
   VAR
     t0, t1, t2, t3: Kernel.Thread;
@@ -36,10 +38,10 @@ MODULE SignalSync;
 
   PROCEDURE t0c;
   BEGIN
-    GPIO.Set({LED.Pico});
+    SIO.Set({HbLed});
     Kernel.SetPeriod(T0period, 0);
     REPEAT
-      GPIO.Toggle({LED.Pico});
+      SIO.Toggle({HbLed});
       Kernel.Next
     UNTIL FALSE
   END t0c;

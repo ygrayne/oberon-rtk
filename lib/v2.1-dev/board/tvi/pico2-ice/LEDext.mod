@@ -5,8 +5,9 @@ MODULE LEDext;
   Eight additional LEDs, connected via GPIO pins.
   Include also the green one on the Pico for convenience.
   --
-  MCU: RP2040, RP2350
-  Board: Pico, Pico2
+  MCU: RP2350B
+  Board: Pico2-Ice
+  Needs updating with pins used on that board.
   --
   Usage:
   * Via SIO:
@@ -61,6 +62,7 @@ MODULE LEDext;
   PROCEDURE SetLedBits*(v, highBit, lowBit: INTEGER);
     VAR i, numBits: INTEGER; setMask, clearMask: INTEGER;
   BEGIN
+  (*
     setMask := 0; clearMask := 0;
     i := 0; numBits := highBit - lowBit;
     WHILE i <= numBits DO
@@ -73,6 +75,7 @@ MODULE LEDext;
     END;
     GPIO.Clear(BITS(clearMask));
     GPIO.Set(BITS(setMask))
+  *)
   END SetLedBits;
 
 
@@ -93,6 +96,7 @@ MODULE LEDext;
     LED[5] := LEDpinNo5;
     LED[6] := LEDpinNo6;
     LED[7] := LEDpinNo7;
+    (*
     GPIO.SetFunction(LEDpinNoPico, MCU.IO_BANK0_Fsio);
     GPIO.OutputEnable({LEDpinNoPico});
     i := 0;
@@ -101,6 +105,7 @@ MODULE LEDext;
       GPIO.OutputEnable(BITS(ORD({LED[i]})));
       INC(i)
     END
+    *)
   END init;
 
 BEGIN

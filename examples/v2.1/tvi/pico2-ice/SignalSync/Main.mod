@@ -1,14 +1,14 @@
 MODULE Main;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework v2
   --
   Main module
   --
   Is always initialised on core 0, hence cannot set any registers on the PPB of core 1.
   See module InitCoreOne.
   --
-  MCU: RP2350A
-  Board: Pico2
+  MCU: RP2350B
+  Board: Pico2-Ice
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -30,10 +30,10 @@ MODULE Main;
     TERM1 = Terminals.TERM1;
     UART0 = UARTdev.UART0;
     UART1 = UARTdev.UART1;
-    UART0_TxPinNo = 0;
-    UART0_RxPinNo = 1;
-    UART1_TxPinNo = 4;
-    UART1_RxPinNo = 5;
+    UART0_TxPinNo = 32;
+    UART0_RxPinNo = 33;
+    UART1_TxPinNo = 36;
+    UART1_RxPinNo = 37 ;
 
     FPUnonSecAccess = FALSE; (* enable for secure access only for now *)
     FPUtreatAsSec = FALSE;

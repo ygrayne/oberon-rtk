@@ -74,6 +74,19 @@ MODULE Timers;
   END GetTimeL;
 
 
+  PROCEDURE DelayBlk*(dev: Device; delay: INTEGER); (* microseconds *)
+  (* blocking delay *)
+    VAR start, now, elapsed: INTEGER;
+  BEGIN
+    ASSERT(delay > 0, Errors.PreCond);
+    SYSTEM.GET(dev.TIMERAWL, start);
+    REPEAT
+      SYSTEM.GET(dev.TIMERAWL, now);
+      elapsed := ABS(now - start)
+    UNTIL elapsed >= delay
+  END DelayBlk;
+
+
   PROCEDURE* SetTime*(dev: Device; timeH, timeL: INTEGER);
   (* for testing only *)
   BEGIN

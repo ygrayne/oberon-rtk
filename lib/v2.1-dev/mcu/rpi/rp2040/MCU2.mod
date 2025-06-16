@@ -123,27 +123,36 @@ MODULE MCU2;
     (* clk_gpout0 - 3 *)
     CLK_GPOUT0_CTRL*      = CLOCKS_BASE;
     CLK_GPOUT0_DIV*       = CLOCKS_BASE + 004H;
-    CLK_GPOUT0_SELECTED*  = CLOCKS_BASE + 008H;
     CLK_GPOUT1_CTRL*      = CLOCKS_BASE + 00CH;
     CLK_GPOUT1_DIV*       = CLOCKS_BASE + 010H;
-    CLK_GPOUT1_SELECTED*  = CLOCKS_BASE + 014H;
     CLK_GPOUT2_CTRL*      = CLOCKS_BASE + 018H;
     CLK_GPOUT2_DIV*       = CLOCKS_BASE + 01CH;
-    CLK_GPOUT2_SELECTED*  = CLOCKS_BASE + 020H;
     CLK_GPOUT3_CTRL*      = CLOCKS_BASE + 024H;
     CLK_GPOUT3_DIV*       = CLOCKS_BASE + 028H;
-    CLK_GPOUT3_SELECTED*  = CLOCKS_BASE + 02CH;
+      CLK_GPOUT_Offset* = 12;
+      CLK_GPOUT_CTRL_Offset* = 0;
+      CLK_GPOUT_DIV_Offset* = 4;
 
     (* clock out sources *)
-    GPOUT_PLLsys* = 00H; (* reset value *)
-    GPOUT_PLLusb* = 03H;
-    GPOUT_ROSC*   = 04H;
-    GPOUT_XOSC*   = 05H;
-    GPOUT_ClkSys* = 06H;
-    GPOUT_ClkUSB* = 07H;
-    GPOUT_ClkADC* = 08H;
-    GPOUT_ClkRTC* = 09H;
-    GPOUT_ClkRef* = 0AH;
+    CLK_GPOUT_PLLsys* = 00H; (* reset value *)
+    CLK_GPOUT_PLLusb* = 03H;
+    CLK_GPOUT_ROSC*   = 04H;
+    CLK_GPOUT_XOSC*   = 05H;
+    CLK_GPOUT_ClkSys* = 06H;
+    CLK_GPOUT_ClkUSB* = 07H;
+    CLK_GPOUT_ClkADC* = 08H;
+    CLK_GPOUT_ClkRTC* = 09H;
+    CLK_GPOUT_ClkRef* = 0AH;
+
+    (* clock out bits *)
+    CLK_GPOUT_CTRL_ENABLE*    = 11;
+    CLK_GPOUT_CTRL_KILL*      = 10;
+    CLK_GPOUT_CTRL_AUXSRC_1*  = 8;  (* [8:5] *)
+    CLK_GPOUT_CTRL_AUXSRC_0*  = 5;
+    CLK_GPOUT_DIV_INT_1*  = 31;     (* [31:8] *)
+    CLK_GPOUT_DIV_INT_0*  = 8;
+    CLK_GPOUT_DIV_FRAC_1* = 7;      (* [7:0] *)
+    CLK_GPOUT_DIV_FRAC_0* = 0;
 
     (* clk_ref *)
     CLK_REF_CTRL*         = CLOCKS_BASE + 030H;
@@ -329,8 +338,9 @@ MODULE MCU2;
     IO_BANK0_Fpio1*   = 7;
     IO_BANK0_Fclk*    = 8;
     IO_BANK0_Fusb*    = 9;
+    IO_BANK0_Fnull*   = 31;
 
-    IO_BANK0_Functions* = {IO_BANK0_Fspi .. IO_BANK0_Fusb};
+    IO_BANK0_Functions* = {IO_BANK0_Fspi .. IO_BANK0_Fusb, IO_BANK0_Fnull};
 
     (* raw interrupts *)
     IO_BANK0_INTR0*       = IO_BANK0_BASE + 00F0H;

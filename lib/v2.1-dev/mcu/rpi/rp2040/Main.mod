@@ -5,6 +5,7 @@ MODULE Main;
   Main module
   --
   MCU: RP2040
+  Board: Pico
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

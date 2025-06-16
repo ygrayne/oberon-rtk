@@ -32,6 +32,13 @@ MODULE SPIdev;
   * clkRate (max) = 24 MHz
   * clkRate (min) = 739 Hz
   --
+  Clock polarity and phase:
+  cpol cpha idle_clk clk_phase
+   0    0    low      data sampled on rising edge and shifted out on the falling edge
+   0    1    low      data sampled on the falling edge and shifted out on the rising edge
+   1    0    high     data sampled on the falling edge and shifted out on the rising edge
+   1    1    high     data sampled on the rising edge and shifted out on the falling edge
+  --
   MCU: RP2040, RP2350
   --
   Copyright (c) 2024-2025 Gray gray@grayraven.org
@@ -111,7 +118,7 @@ MODULE SPIdev;
     END;
 
 
-  PROCEDURE Init*(dev: Device; spiNo: INTEGER);
+  PROCEDURE* Init*(dev: Device; spiNo: INTEGER);
     VAR base: INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
@@ -184,7 +191,7 @@ MODULE SPIdev;
   END Configure;
 
 
-  PROCEDURE GetBaseCfg*(VAR cfg: DeviceCfg);
+  PROCEDURE* GetBaseCfg*(VAR cfg: DeviceCfg);
   BEGIN
     CLEAR(cfg);
     cfg.dataSize := DSS_val_8;
@@ -193,7 +200,7 @@ MODULE SPIdev;
 
   (* dynamic config adaptations *)
 
-  PROCEDURE GetBaseRunCfg*(dev: Device; VAR runCfg: RunCfg);
+  PROCEDURE* GetBaseRunCfg*(dev: Device; VAR runCfg: RunCfg);
   (**
     As set by 'Configure'.
   *)
@@ -202,7 +209,7 @@ MODULE SPIdev;
   END GetBaseRunCfg;
 
 
-  PROCEDURE GetCurrentRunCfg*(dev: Device; VAR runCfg: RunCfg);
+  PROCEDURE* GetCurrentRunCfg*(dev: Device; VAR runCfg: RunCfg);
   (**
     As currently set in hardware and 'dev', either by 'Configure' or 'SetRunCfg'.
     Use for save current cfg => set own cfg => operation => restore saved cfg.
@@ -213,7 +220,7 @@ MODULE SPIdev;
   END GetCurrentRunCfg;
 
 
-  PROCEDURE SetSclkRate*(dev: Device; VAR runCfg: RunCfg; sclkRate: INTEGER);
+  PROCEDURE* SetSclkRate*(dev: Device; VAR runCfg: RunCfg; sclkRate: INTEGER);
     VAR cpsr, scr, x: INTEGER;
   BEGIN
     SYSTEM.GET(dev.CPSR, cpsr);
@@ -227,13 +234,13 @@ MODULE SPIdev;
   END SetSclkRate;
 
 
-  PROCEDURE SetTxShift*(VAR runCfg: RunCfg; txShift: INTEGER);
+  PROCEDURE* SetTxShift*(VAR runCfg: RunCfg; txShift: INTEGER);
   BEGIN
     runCfg.txShift := txShift
   END SetTxShift;
 
 
-  PROCEDURE PutRunCfg*(dev: Device; runCfg: RunCfg);
+  PROCEDURE* PutRunCfg*(dev: Device; runCfg: RunCfg);
   BEGIN
     SYSTEM.PUT(dev.CR0, runCfg.cr0Value);
     dev.txShift := runCfg.txShift
@@ -241,14 +248,14 @@ MODULE SPIdev;
 
   (* enable/disable *)
 
-  PROCEDURE Enable*(dev: Device);
+  PROCEDURE* Enable*(dev: Device);
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
     SYSTEM.PUT(dev.CR1 + MCU.ASET, {CR1_SSE})
   END Enable;
 
 
-  PROCEDURE Disable*(dev: Device);
+  PROCEDURE* Disable*(dev: Device);
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
     SYSTEM.PUT(dev.CR1 + MCU.ACLR, {CR1_SSE})
@@ -256,7 +263,7 @@ MODULE SPIdev;
 
   (* status flags *)
 
-  PROCEDURE Flags*(dev: Device): SET;
+  PROCEDURE* Flags*(dev: Device): SET;
     VAR flags: SET;
   BEGIN
     SYSTEM.GET(dev.SR, flags)
@@ -265,13 +272,13 @@ MODULE SPIdev;
 
   (* MOSI to MISO loop back *)
 
-  PROCEDURE EnableLoopback*(dev: Device);
+  PROCEDURE* EnableLoopback*(dev: Device);
   BEGIN
     SYSTEM.PUT(dev.CR1 + MCU.ASET, {CR1_LBM})
   END EnableLoopback;
 
 
-  PROCEDURE DisableLoopback*(dev: Device);
+  PROCEDURE* DisableLoopback*(dev: Device);
   BEGIN
     SYSTEM.PUT(dev.CR1 + MCU.ACLR, {CR1_LBM})
   END DisableLoopback;

@@ -152,29 +152,39 @@ MODULE MCU2;
     (* clk_gpout0 - 3 *)
     CLK_GPOUT0_CTRL*      = CLOCKS_BASE;
     CLK_GPOUT0_DIV*       = CLOCKS_BASE + 004H;
-    CLK_GPOUT0_SELECTED*  = CLOCKS_BASE + 008H;
     CLK_GPOUT1_CTRL*      = CLOCKS_BASE + 00CH;
     CLK_GPOUT1_DIV*       = CLOCKS_BASE + 010H;
-    CLK_GPOUT1_SELECTED*  = CLOCKS_BASE + 014H;
     CLK_GPOUT2_CTRL*      = CLOCKS_BASE + 018H;
     CLK_GPOUT2_DIV*       = CLOCKS_BASE + 01CH;
-    CLK_GPOUT2_SELECTED*  = CLOCKS_BASE + 020H;
     CLK_GPOUT3_CTRL*      = CLOCKS_BASE + 024H;
     CLK_GPOUT3_DIV*       = CLOCKS_BASE + 028H;
-    CLK_GPOUT3_SELECTED*  = CLOCKS_BASE + 02CH;
+      CLK_GPOUT_Offset* = 12;
+      CLK_GPOUT_CTRL_Offset* = 0;
+      CLK_GPOUT_DIV_Offset* = 4;
 
     (* clock out sources *)
-    GPOUT_PLLsys*   = 00H; (* reset value *)
-    GPOUT_PLLusb*   = 03H;
-    GPOUT_ROSC*     = 05H;
-    GPOUT_XOSC*     = 06H;
-    GPOUT_LPO*      = 07H;
-    GPOUT_ClkSys*   = 08H;
-    GPOUT_ClkUSB*   = 09H;
-    GPOUT_ClkADC*   = 0AH;
-    GPOUT_ClkRef*   = 0BH;
-    GPOUT_ClkPeri*  = 0CH;
-    GPOUT_ClkHSTX*  = 0DH;
+    CLK_GPOUT_PLLsys*   = 00H; (* reset value *)
+    CLK_GPOUT_PLLusb*   = 03H;
+    CLK_GPOUT_ROSC*     = 05H;
+    CLK_GPOUT_XOSC*     = 06H;
+    CLK_GPOUT_LPO*      = 07H;
+    CLK_GPOUT_ClkSys*   = 08H;
+    CLK_GPOUT_ClkUSB*   = 09H;
+    CLK_GPOUT_ClkADC*   = 0AH;
+    CLK_GPOUT_ClkRef*   = 0BH;
+    CLK_GPOUT_ClkPeri*  = 0CH;
+    CLK_GPOUT_ClkHSTX*  = 0DH;
+
+    (* clock out bits *)
+    CLK_GPOUT_CTRL_ENABLED*   = 28;
+    CLK_GPOUT_CTRL_ENABLE*    = 11;
+    CLK_GPOUT_CTRL_KILL*      = 10;
+    CLK_GPOUT_CTRL_AUXSRC_1*  = 8;  (* [8:5] *)
+    CLK_GPOUT_CTRL_AUXSRC_0*  = 5;
+    CLK_GPOUT_DIV_INT_1*  = 31;     (* [31:16] *)
+    CLK_GPOUT_DIV_INT_0*  = 16;
+    CLK_GPOUT_DIV_FRAC_1* = 15;     (* [15:0] *)
+    CLK_GPOUT_DIV_FRAC_0* = 0;
 
     (* clk_ref *)
     CLK_REF_CTRL*         = CLOCKS_BASE + 030H;
@@ -399,8 +409,9 @@ MODULE MCU2;
     IO_BANK0_Fclk*    = 9;
     IO_BANK0_Fusb*    = 10;
     IO_BANK0_FuartAlt* = 11;
+    IO_BANK0_Fnull*   = 31;
 
-    IO_BANK0_Functions* = {IO_BANK0_Fhstx .. IO_BANK0_FuartAlt};
+    IO_BANK0_Functions* = {IO_BANK0_Fhstx .. IO_BANK0_FuartAlt, IO_BANK0_Fnull};
 
     (* note: identifiers abbreviated due to compiler name length restrictions *)
     IO_BANK0_IRQSUM_PROC0_SEC0*       = IO_BANK0_BASE + 0200H;
