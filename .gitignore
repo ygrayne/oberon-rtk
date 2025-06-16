@@ -36,6 +36,8 @@ _*
 !/examples/v1.0/pico/DebugEval/rdb/*.easm
 !/examples/v1.0/pico/DebugEval/rdb/*.lst
 
+!/examples/v2.1/tvi/pico2-ice/IceCram/rgb_blink.bin
+
 !/examples/v2.0/rpi/any/Stacktrace/*.elst
 
 # add files
