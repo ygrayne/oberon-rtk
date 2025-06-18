@@ -12,7 +12,7 @@ MODULE SignalSync;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT Main, Kernel, Out, MultiCore, Signals, Errors, LED, SIO;
+  IMPORT Main, Kernel, Out, MultiCore, Signals, Errors, LED, GPIO;
 
   CONST
     MillisecsPerTick  = 10;
@@ -38,10 +38,10 @@ MODULE SignalSync;
 
   PROCEDURE t0c;
   BEGIN
-    SIO.Set({HbLed});
+    GPIO.Set({HbLed});
     Kernel.SetPeriod(T0period, 0);
     REPEAT
-      SIO.Toggle({HbLed});
+      GPIO.Toggle({HbLed});
       Kernel.Next
     UNTIL FALSE
   END t0c;

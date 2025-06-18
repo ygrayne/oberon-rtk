@@ -17,7 +17,7 @@ MODULE RecoveryC0;
 
   IMPORT
     SYSTEM, MCU := MCU2, Main, Kernel, Recovery, Watchdog, StartUp, MultiCore,
-    SIO, Out, LED, LEDext, InitCoreOne, Core1 := RecoveryC1;
+    GPIO, Out, LED, LEDext, InitCoreOne, Core1 := RecoveryC1;
 
   CONST
     MillisecsPerTick  = 10;
@@ -75,10 +75,10 @@ MODULE RecoveryC0;
     VAR wdFail: BOOLEAN;
   BEGIN
     Kernel.SetPeriod(50, 0);
-    SIO.Set({HbLed});
+    GPIO.Set({HbLed});
     REPEAT
       Kernel.Next;
-      SIO.Toggle({HbLed});
+      GPIO.Toggle({HbLed});
       Recovery.CheckWatchdogReload(wdFail);
       IF wdFail THEN
         Recovery.WatchdogFail

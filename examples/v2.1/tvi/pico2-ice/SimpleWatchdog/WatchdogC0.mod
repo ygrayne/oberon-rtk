@@ -19,7 +19,7 @@ MODULE WatchdogC0;
 
   IMPORT
     SYSTEM, Main, Kernel, Out, MultiCore, StartUp, Memory, Errors,
-    SIO, LED, Watchdog, MCU := MCU2, CoreOne := WatchdogC1;
+    GPIO, LED, Watchdog, MCU := MCU2, CoreOne := WatchdogC1;
 
   CONST
     Core1 = 1;
@@ -75,9 +75,9 @@ MODULE WatchdogC0;
   PROCEDURE t0c;
   BEGIN
     Kernel.SetPeriod(T0period, T0period);
-    SIO.Set({HbLed});
+    GPIO.Set({HbLed});
     REPEAT
-      SIO.Toggle({HbLed});
+      GPIO.Toggle({HbLed});
       Kernel.Next
     UNTIL FALSE
   END t0c;
