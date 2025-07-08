@@ -190,14 +190,15 @@ MODULE GPIO;
     SYSTEM.PUT(addr, {PADS_IE})
   END DisableInput;
 
+  (* GPIO devices and pads --- *)
 
-  PROCEDURE ResetPad*(pinNo: INTEGER);
+  PROCEDURE ResetPin*(pinNo: INTEGER);
     VAR padCfg: PadCfg;
   BEGIN
     SetFunction(pinNo, MCU.IO_BANK0_Fnull);
     GetPadBaseCfg(padCfg);
     ConfigurePad(pinNo, padCfg)
-  END ResetPad;
+  END ResetPin;
 
 
   (* GPIO control via SIO *)

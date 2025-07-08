@@ -150,7 +150,7 @@ MODULE SPIdev;
     ASSERT(cfg.cpol IN {0, 1}, Errors.PreCond);
 
     (* release reset on SPI device *)
-    StartUp.ReleaseReset(dev.devNo);
+    StartUp.ReleaseResets({dev.devNo});
 
     (* disable, set master mode *)
     SYSTEM.PUT(dev.CR1, {});
@@ -260,6 +260,12 @@ MODULE SPIdev;
     ASSERT(dev # NIL, Errors.PreCond);
     SYSTEM.PUT(dev.CR1 + MCU.ACLR, {CR1_SSE})
   END Disable;
+
+
+  PROCEDURE ApplyReset*(dev: Device);
+  BEGIN
+    SYSTEM.PUT(MCU.RESETS_RESET + MCU.ASET, {dev.devNo})
+  END ApplyReset;
 
   (* status flags *)
 
