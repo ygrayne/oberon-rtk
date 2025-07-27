@@ -15,4 +15,6 @@ More info: [https://oberon-rtk.org/docs/examples/](https://oberon-rtk.org/docs/e
     + any: all Pico boards
     + pico: Pico/RP2040 boards
     + pico2: Pico2/RP2350 boards
+  + tvi
+    + pico2-ice: Pico2-Ice/RP2350 board
 ```

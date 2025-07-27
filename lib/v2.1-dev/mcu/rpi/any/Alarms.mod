@@ -43,7 +43,7 @@ MODULE Alarms;
     END;
 
 
-  PROCEDURE Init*(dev: Device; timerNo, alarmNo: INTEGER; cached: BOOLEAN);
+  PROCEDURE* Init*(dev: Device; timerNo, alarmNo: INTEGER; cached: BOOLEAN);
     CONST VectorAddrSize = 4; TimerRegSize = 4;
     VAR vtor, timerBaseAddr: INTEGER;
   BEGIN
@@ -65,7 +65,7 @@ MODULE Alarms;
   END Init;
 
 
-  PROCEDURE Arm*(dev: Device; proc: PROCEDURE; time: INTEGER);
+  PROCEDURE* Arm*(dev: Device; proc: PROCEDURE; time: INTEGER);
     VAR now: INTEGER;
   BEGIN
     INCL(SYSTEM.VAL(SET, proc), 0); (* thumb code *)
@@ -126,5 +126,13 @@ MODULE Alarms;
     Exceptions.ClearPendingInt(dev.intNo);
     Exceptions.DisableInt(dev.intNo)
   END Disable;
+
+
+  PROCEDURE GetTime*(timerNo: INTEGER; VAR timeL: INTEGER);
+    VAR addr: INTEGER;
+  BEGIN
+    addr := MCU.TIMER0_BASE + (timerNo * MCU.TIMER_Offset) + MCU.TIMER_TIMERAWL_Offset;
+    SYSTEM.GET(addr, timeL)
+  END GetTime;
 
 END Alarms.

@@ -18,7 +18,7 @@ MODULE WatchdogC0;
 **)
 
   IMPORT
-    SYSTEM, Main, Kernel, Out, MultiCore, StartUp, Memory, Errors,
+    SYSTEM, Main, Kernel, Out, MultiCore, InitCoreOne, StartUp, Memory, Errors,
     GPIO, LED, Watchdog, MCU := MCU2, CoreOne := WatchdogC1;
 
   CONST
@@ -134,7 +134,7 @@ MODULE WatchdogC0;
   PROCEDURE run;
     VAR res: INTEGER;
   BEGIN
-    MultiCore.InitCoreOne(CoreOne.Run, Memory.DataMem[Core1].stackStart, Memory.DataMem[Core1].dataStart);
+    MultiCore.StartCoreOne(CoreOne.Run, InitCoreOne.Init);
     Kernel.Install(MillisecsPerTick);
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.NoError, Errors.ProgError);
     Kernel.Enable(t0);

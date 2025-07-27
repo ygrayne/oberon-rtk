@@ -8,7 +8,6 @@ MODULE Timers;
   --
   MCU: RP2040, RP2350
   --
-  --
   Notes:
   * Available timer devices:
     * RP2040: one timer

@@ -27,7 +27,7 @@ MODULE LEDext;
 
   CONST
     (* LED on the board *)
-    LEDpinNoPico = 25;
+    LEDpinNoPico = 0;
     (* wired LEDs *)
     LEDpinNo0 = 27;
     LEDpinNo1 = 28;

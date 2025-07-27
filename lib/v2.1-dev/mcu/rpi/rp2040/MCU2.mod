@@ -1005,6 +1005,8 @@ MODULE MCU2;
     PPB_ExcPrio4* = 080H; (* 1000 0000 *)
     PPB_ExcPrio6* = 0C0H; (* 1100 0000 *)
 
+    NumExcPrio* = 4;
+
     VectorTableSize*            = 192; (* bytes: 16 sys exceptions + 32 interrupts, one word each *)
     ResetHandlerOffset*         = 004H;
     NMIhandlerOffset*           = 008H;
@@ -1084,5 +1086,19 @@ MODULE MCU2;
     (* SVCinstr = 'SVC' + SVCvalue *)
     SVC* = 0DF00H;
 
+  VAR
+    ExcPrioVal*: ARRAY NumExcPrio OF INTEGER;
 
- END MCU2.
+  PROCEDURE init;
+    VAR i: INTEGER;
+  BEGIN
+    i := 0;
+    WHILE i < NumExcPrio DO
+      ExcPrioVal[i] := LSL(i, 6);
+      INC(i)
+    END
+  END init;
+
+BEGIN
+  init
+END MCU2.

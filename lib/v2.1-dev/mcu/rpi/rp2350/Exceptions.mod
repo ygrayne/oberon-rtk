@@ -112,6 +112,7 @@ MODULE Exceptions;
     VAR vectAddr, vtor: INTEGER;
   BEGIN
     ASSERT(intNo < MCU.NumInterrupts, Errors.ProgError);
+    ASSERT(handler # NIL, Errors.PreCond);
     SYSTEM.GET(MCU.PPB_VTOR, vtor);
     vectAddr := vtor + IRQ0_VectOffset + (intNo * 4);
     INCL(SYSTEM.VAL(SET, handler), 0); (* thumb code *)
@@ -149,6 +150,7 @@ MODULE Exceptions;
   PROCEDURE* InstallSysExcHandler*(excNo: INTEGER; handler: PROCEDURE);
     VAR vtor, vectAddr: INTEGER;
   BEGIN
+    ASSERT(handler # NIL, Errors.PreCond);
     SYSTEM.GET(MCU.PPB_VTOR, vtor);
     vectAddr := vtor + (excNo * 4);
     INCL(SYSTEM.VAL(SET, handler), 0); (* thumb code *)

@@ -21,7 +21,7 @@ MODULE SignalSync;
     T0period = 50;
     T3period = 100;
 
-    HbLed = LED.Green;
+    HbLed = LED.Red;
 
   VAR
     t0, t1, t2, t3: Kernel.Thread;
