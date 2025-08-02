@@ -2,8 +2,8 @@ MODULE ReadyQueue;
 (**
   Oberon RTK Framework v2.1
   --
-  Kernel-v3
-  Actor ready queues.
+  Kernel-v3t
+  Actor ready-queues.
   --
   MCU: RP2350
   --
@@ -33,14 +33,11 @@ MODULE ReadyQueue;
 
 
   PROCEDURE Put*(q: Types.ReadyQueue; act: Types.Actor);
-    VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
     Out.String("rdyQ put");
     Out.Hex(SYSTEM.VAL(INTEGER, q), 12);
     Out.Hex(SYSTEM.VAL(INTEGER, act), 12);
     Out.Ln;
-    SYSTEM.EMIT(MCU.CPSID);
     IF q.head = NIL THEN
       q.head := act
     ELSE
@@ -48,22 +45,22 @@ MODULE ReadyQueue;
     END;
     q.tail := act;
     act.next := NIL;
-    SYSTEM.PUT(MCU.PPB_STIR, q.intNo); (* trigger the readyQ's interrupt *)
-    SYSTEM.EMIT(MCU.CPSIE)
+    SYSTEM.PUT(MCU.PPB_STIR, q.intNo) (* trigger the readyQ's interrupt *)
   END Put;
 
 
   PROCEDURE Get*(q: Types.ReadyQueue; VAR act: Types.Actor);
   BEGIN
-    SYSTEM.EMIT(MCU.CPSID);
     act := q.head;
     IF act # NIL THEN
       q.head := q.head.next
     ELSE
       q.tail := NIL
     END;
-    SYSTEM.EMIT(MCU.CPSIE)
+    Out.String("rdyQ get");
+    Out.Hex(SYSTEM.VAL(INTEGER, q), 12);
+    Out.Hex(SYSTEM.VAL(INTEGER, act), 12);
+    Out.Ln
   END Get;
-
 
 END ReadyQueue.

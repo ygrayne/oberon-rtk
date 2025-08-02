@@ -2,7 +2,7 @@ MODULE MessageQueue;
 (**
   Oberon RTK Framework v2.1
   --
-  Kernel-v3
+  Kernel-v3t
   Message event-queues.
   --
   MCU: RP2350
@@ -11,10 +11,7 @@ MODULE MessageQueue;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Types, Errors, Out;
-
-  TYPE
-    Queue* = Types.MessageQueue;
+  IMPORT SYSTEM, Types, Errors, Out;
 
 
   PROCEDURE Init*(q: Types.MessageQueue);
@@ -27,28 +24,24 @@ MODULE MessageQueue;
 
   PROCEDURE Put*(q: Types.MessageQueue; msg: Types.Message);
   BEGIN
-    SYSTEM.EMIT(MCU.CPSID);
     IF q.head = NIL THEN
       q.head := msg
     ELSE
       q.tail.next := msg
     END;
     q.tail := msg;
-    msg.next := NIL;
-    SYSTEM.EMIT(MCU.CPSIE)
+    msg.next := NIL
   END Put;
 
 
   PROCEDURE Get*(q: Types.MessageQueue; VAR msg: Types.Message);
   BEGIN
-    SYSTEM.EMIT(MCU.CPSID);
     msg := q.head;
     IF q.head # NIL THEN
       q.head := q.head.next
     ELSE
       q.tail := NIL
-    END;
-    SYSTEM.EMIT(MCU.CPSIE)
+    END
   END Get;
 
 
@@ -57,13 +50,11 @@ MODULE MessageQueue;
   (* caller protects queue access *)
     VAR msg: Types.Message;
   BEGIN
-    SYSTEM.EMIT(MCU.CPSID);
     msg := q.head;
     WHILE msg # NIL DO
       Out.String("m "); Out.Hex(SYSTEM.VAL(INTEGER, msg), 0); Out.Ln;
       msg := msg.next
-    END;
-    SYSTEM.EMIT(MCU.CPSIE)
+    END
   END PrintQ;
 
 END MessageQueue.

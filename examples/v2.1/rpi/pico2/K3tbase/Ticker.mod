@@ -2,7 +2,7 @@ MODULE Ticker;
 (**
   Oberon RTK Framework v2.1
   --
-  Kernel-v3
+  Kernel-v3t
   For example program: periodic timing message.
   --
   MCU: RP2350
@@ -13,7 +13,7 @@ MODULE Ticker;
 **)
 
   IMPORT
-    SYSTEM, MCU := MCU2, Types, Kernel, Alarms, MessagePool, MessageQueue, ActorQueue, Errors, LED;
+    SYSTEM, MCU := MCU2, Types, Kernel, SysCall, Alarms, MessagePool, MessageQueue, ActorQueue, Errors, LED;
 
   CONST
     NumMsg = 10;
@@ -39,7 +39,7 @@ MODULE Ticker;
   BEGIN
     SYSTEM.PUT(LED.LXOR, {LED.Green});
     Alarms.DeassertInt(alarm);
-    MessagePool.Get(msgPool, m);
+    SysCall.MPget(msgPool, m);
     IF m # NIL THEN
       msg := m(Message);
       msg.cnt := cnt;

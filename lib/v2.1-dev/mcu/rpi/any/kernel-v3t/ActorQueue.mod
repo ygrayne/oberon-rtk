@@ -2,7 +2,7 @@ MODULE ActorQueue;
 (**
   Oberon RTK Framework v2.1
   --
-  Kernel-v3
+  Kernel-v3t
   Actor event-queues.
   --
   MCU: RP2350
@@ -11,10 +11,7 @@ MODULE ActorQueue;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Types, Errors, Out;
-
-  TYPE
-    Queue* = Types.ActorQueue;
+  IMPORT SYSTEM, Types, Errors, Out;
 
 
   PROCEDURE Init*(q: Types.ActorQueue);
@@ -27,34 +24,29 @@ MODULE ActorQueue;
 
   PROCEDURE Put*(q: Types.ActorQueue; act: Types.Actor);
   BEGIN
-    SYSTEM.EMIT(MCU.CPSID);
     IF q.head = NIL THEN
       q.head := act
     ELSE
       q.tail.next := act
     END;
     q.tail := act;
-    act.next := NIL;
-    SYSTEM.EMIT(MCU.CPSIE)
+    act.next := NIL
   END Put;
 
 
   PROCEDURE Get*(q: Types.ActorQueue; VAR act: Types.Actor);
   BEGIN
-    SYSTEM.EMIT(MCU.CPSID);
     act := q.head;
     IF q.head # NIL THEN
       q.head := q.head.next;
     ELSE
       q.tail := NIL
-    END;
-    SYSTEM.EMIT(MCU.CPSIE)
+    END
   END Get;
 
 
   PROCEDURE PrintQ*(q: Types.ActorQueue);
   (* for testing/debugging *)
-  (* caller protects queue access *)
     VAR act: Types.Actor;
   BEGIN
     act := q.head;

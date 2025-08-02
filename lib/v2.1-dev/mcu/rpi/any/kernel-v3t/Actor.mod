@@ -2,7 +2,7 @@ MODULE Actor;
 (**
   Oberon RTK Framework v2.1
   --
-  Kernel-v3
+  Kernel-v3t
   Actor as base for a task-based control process.
   --
   MCU: RP2350

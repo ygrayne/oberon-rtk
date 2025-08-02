@@ -2,8 +2,8 @@ MODULE Kernel;
 (**
   Oberon RTK Framework v2.1
   --
-  Multi-threading kernel-v3.
-  Use disabling all interrupts for shared data protection.
+  Multi-threading kernel-v3t.
+  Use a trap for shared data protection.
   --
   MCU: RP2350
   --
@@ -12,8 +12,7 @@ MODULE Kernel;
 **)
 
   IMPORT
-    SYSTEM, MCU := MCU2, Types, ReadyQueue, MessageQueue, ActorQueue, MessagePool, Out;
-
+    SYSTEM, MCU := MCU2, Types, SysCall, MessageQueue, ActorQueue, Out;
 
   PROCEDURE printQ(evQ: Types.EventQueue);
   (* for testing/debugging *)
@@ -28,14 +27,14 @@ MODULE Kernel;
   PROCEDURE PutMsg*(evQ: Types.EventQueue; msg: Types.Message);
     VAR act: Types.Actor;
   BEGIN
-    Out.String("put msg k3"); Out.Ln;
+    Out.String("put msg k3t"); Out.Ln;
     printQ(evQ);
-    ActorQueue.Get(evQ.actQ, act);
+    SysCall.AQget(evQ.actQ, act);
     IF act # NIL THEN
       act.msg := msg;
-      ReadyQueue.Put(act.rdyQ, act)
+      SysCall.RQput(act.rdyQ, act)
     ELSE
-      MessageQueue.Put(evQ.msgQ, msg)
+      SysCall.MQput(evQ.msgQ, msg)
     END
   END PutMsg;
 
@@ -43,14 +42,14 @@ MODULE Kernel;
   PROCEDURE GetMsg*(evQ: Types.EventQueue; act: Types.Actor);
     VAR msg: Types.Message;
   BEGIN
-    Out.String("get msg k3"); Out.Ln;
+    Out.String("get msg k3t"); Out.Ln;
     printQ(evQ);
-    MessageQueue.Get(evQ.msgQ, msg);
+    SysCall.MQget(evQ.msgQ, msg);
     IF msg # NIL THEN
       act.msg := msg;
-      ReadyQueue.Put(act.rdyQ, act)
+      SysCall.RQput(act.rdyQ, act)
     ELSE
-      ActorQueue.Put(evQ.actQ, act)
+      SysCall.AQput(evQ.actQ, act)
     END
   END GetMsg;
 
@@ -62,12 +61,12 @@ MODULE Kernel;
     Out.String("rdyQ run");
     Out.Hex(SYSTEM.VAL(INTEGER, q), 12);
     Out.Ln;
-    ReadyQueue.Get(q, act);
+    SysCall.RQget(q, act);
     WHILE act # NIL DO
       Out.Hex(SYSTEM.VAL(INTEGER, act), 12); Out.Ln;
       act.run(act); (* must re-subscribe to a MessageQueue *)
-      MessagePool.Put(act.msg.pool, act.msg);
-      ReadyQueue.Get(q, act)
+      SysCall.MPput(act.msg.pool, act.msg);
+      SysCall.RQget(q, act)
     END
   END Run;
 

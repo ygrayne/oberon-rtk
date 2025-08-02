@@ -2,7 +2,7 @@ MODULE MessagePool;
 (**
   Oberon RTK Framework v2.1
   --
-  Kernel-v3
+  Kernel-v3t
   Message pool for event generators/sources.
   --
   MCU: RP2350
@@ -24,7 +24,7 @@ MODULE MessagePool;
     mp.head := NIL;
     i := 0;
     REPEAT
-      m := make(); (* NIL check in make() *)
+      m := make(); (* NIL check in make() *);
       m.next := mp.head;
       mp.head := m;
       m.pool := mp;
@@ -36,7 +36,6 @@ MODULE MessagePool;
 
   PROCEDURE Get*(mp: Types.MessagePool; VAR msg: Types.Message);
   BEGIN
-    SYSTEM.EMIT(MCU.CPSID);
     msg := mp.head;
     IF msg # NIL THEN
       IF mp.head.next # NIL THEN
@@ -46,20 +45,17 @@ MODULE MessagePool;
       END;
       DEC(mp.cnt);
       (*Out.String("msg cnt get: "); Out.Int(mp.cnt, 0); Out.Ln;*)
-    END;
-    SYSTEM.EMIT(MCU.CPSIE)
+    END
   END Get;
 
 
   PROCEDURE Put*(mp: Types.MessagePool; msg: Types.Message);
   BEGIN
-    SYSTEM.EMIT(MCU.CPSID);
     IF msg # NIL THEN
       msg.next := mp.head;
       mp.head := msg;
       INC(mp.cnt)
-    END;
-    SYSTEM.EMIT(MCU.CPSIE)
+    END
     (*Out.String("msg cnt put: "); Out.Int(mp.cnt, 0); Out.Ln;*)
   END Put;
 

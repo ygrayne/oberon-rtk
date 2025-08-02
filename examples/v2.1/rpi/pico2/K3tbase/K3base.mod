@@ -2,7 +2,7 @@ MODULE K3base;
 (**
   Oberon RTK Framework v2.1
   --
-  Base test program for kernel-v3 prototype.
+  Base test program for kernel-v3t prototype.
   https://oberon-rtk.org/docs/examples/v2/k3base/
   --
   MCU: RP2350
