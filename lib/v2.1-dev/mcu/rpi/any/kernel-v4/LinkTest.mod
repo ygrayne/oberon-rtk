@@ -1,3 +1,0 @@
-MODULE LinkTest;
-
-END LinkTest.
