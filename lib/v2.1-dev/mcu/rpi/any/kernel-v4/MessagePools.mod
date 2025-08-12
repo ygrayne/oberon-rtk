@@ -1,9 +1,9 @@
-MODULE MessagePool;
+MODULE MessagePools;
 (**
   Oberon RTK Framework v2.1
   --
-  Kernel-v3
-  Message pool for event generators/sources.
+  Kernel-v4
+  Message pools for event generators/sources.
   --
   MCU: RP2350
   --
@@ -11,17 +11,28 @@ MODULE MessagePool;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Types, Errors;
+  IMPORT SYSTEM, MCU := MCU2, T := KernelTypes, Errors;
 
   TYPE
-    Make* = PROCEDURE(): Types.Message;
+    Make* = PROCEDURE(): T.Message;
 
 
-  PROCEDURE Init*(mp: Types.MessagePool; make: Make; n: INTEGER);
-    VAR m: Types.Message; i: INTEGER;
+  PROCEDURE makeMsg(): T.Message;
+    VAR m: T.Message;
+  BEGIN
+    NEW(m); ASSERT(m # NIL, Errors.HeapOverflow);
+    RETURN m
+  END makeMsg;
+
+
+  PROCEDURE Init*(mp: T.MessagePool; make: Make; n: INTEGER);
+    VAR m: T.Message; i: INTEGER;
   BEGIN
     ASSERT(mp # NIL, Errors.PreCond);
     mp.head := NIL;
+    IF make = NIL THEN
+      make := makeMsg
+    END;
     i := 0;
     REPEAT
       m := make(); (* NIL check in make() *)
@@ -34,7 +45,7 @@ MODULE MessagePool;
   END Init;
 
 
-  PROCEDURE Get*(mp: Types.MessagePool; VAR msg: Types.Message);
+  PROCEDURE Get*(mp: T.MessagePool; VAR msg: T.Message);
   BEGIN
     SYSTEM.EMITH(MCU.CPSID_I);
     msg := mp.head;
@@ -51,10 +62,10 @@ MODULE MessagePool;
   END Get;
 
 
-  PROCEDURE Put*(mp: Types.MessagePool; msg: Types.Message);
+  PROCEDURE Put*(mp: T.MessagePool; msg: T.Message);
   BEGIN
     SYSTEM.EMITH(MCU.CPSID_I);
-    IF msg # NIL THEN
+    IF msg.pool # NIL THEN
       msg.next := mp.head;
       mp.head := msg;
       INC(mp.cnt)
@@ -63,4 +74,4 @@ MODULE MessagePool;
     (*Out.String("msg cnt put: "); Out.Int(mp.cnt, 0); Out.Ln;*)
   END Put;
 
-END MessagePool.
+END MessagePools.

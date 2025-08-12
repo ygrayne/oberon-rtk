@@ -1,8 +1,8 @@
-MODULE ActorQueue;
+MODULE ActorQueues;
 (**
   Oberon RTK Framework v2.1
   --
-  Kernel-v3
+  Kernel-v4
   Actor event-queues.
   --
   MCU: RP2350
@@ -11,13 +11,10 @@ MODULE ActorQueue;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Types, Errors, Out;
-
-  TYPE
-    Queue* = Types.ActorQueue;
+  IMPORT SYSTEM, MCU := MCU2, T := KernelTypes, Errors, Out;
 
 
-  PROCEDURE Init*(q: Types.ActorQueue);
+  PROCEDURE* Init*(q: T.ActorQ);
   BEGIN
     ASSERT(q # NIL, Errors.PreCond);
     q.head := NIL;
@@ -25,7 +22,7 @@ MODULE ActorQueue;
   END Init;
 
 
-  PROCEDURE Put*(q: Types.ActorQueue; act: Types.Actor);
+  PROCEDURE* Put*(q: T.ActorQ; act: T.Actor);
   BEGIN
     SYSTEM.EMITH(MCU.CPSID_I);
     IF q.head = NIL THEN
@@ -39,23 +36,29 @@ MODULE ActorQueue;
   END Put;
 
 
-  PROCEDURE Get*(q: Types.ActorQueue; VAR act: Types.Actor);
+  PROCEDURE* Get*(q: T.ActorQ; VAR act: T.Actor);
   BEGIN
     SYSTEM.EMITH(MCU.CPSID_I);
     act := q.head;
     IF q.head # NIL THEN
-      q.head := q.head.next;
-    ELSE
-      q.tail := NIL
+      q.head := q.head.next
     END;
     SYSTEM.EMITH(MCU.CPSIE_I)
   END Get;
 
 
-  PROCEDURE PrintQ*(q: Types.ActorQueue);
+  PROCEDURE* GetTail*(q: T.ActorQ; VAR tail: T.Actor);
+  BEGIN
+    SYSTEM.EMITH(MCU.CPSID_I);
+    tail := q.tail;
+    SYSTEM.EMITH(MCU.CPSIE_I)
+  END GetTail;
+
+(*
+  PROCEDURE PrintQ*(q: T.ActorQ);
   (* for testing/debugging *)
   (* caller protects queue access *)
-    VAR act: Types.Actor;
+    VAR act: T.Actor;
   BEGIN
     act := q.head;
     WHILE act # NIL DO
@@ -63,5 +66,6 @@ MODULE ActorQueue;
       act := act.next
     END
   END PrintQ;
+*)
 
-END ActorQueue.
+END ActorQueues.

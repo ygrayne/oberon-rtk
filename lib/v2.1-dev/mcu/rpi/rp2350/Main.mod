@@ -4,7 +4,7 @@ MODULE Main;
   --
   Main module
   --
-  Is always initialised on core 0, hence cannot set any registers on the PPB of core 1.
+  Always runs on core 0, hence cannot set any registers on the PPB of core 1.
   See module InitCoreOne.
   --
   MCU: RP2350A

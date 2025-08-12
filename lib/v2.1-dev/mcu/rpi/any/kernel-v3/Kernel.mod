@@ -18,10 +18,10 @@ MODULE Kernel;
   PROCEDURE printQ(evQ: Types.EventQueue);
   (* for testing/debugging *)
   BEGIN
-    SYSTEM.EMIT(MCU.CPSID);
+    SYSTEM.EMITH(MCU.CPSID_I);
     ActorQueue.PrintQ(evQ.actQ);
     MessageQueue.PrintQ(evQ.msgQ);
-    SYSTEM.EMIT(MCU.CPSIE)
+    SYSTEM.EMITH(MCU.CPSIE_I)
   END printQ;
 
 

@@ -77,7 +77,9 @@ MODULE K3base;
     Actor.Start(a1, Ticker.EvQ, rdyQ);
     Ticker.Start;
     Out.String("end init => start"); Out.Ln;
-    REPEAT UNTIL FALSE
+    REPEAT
+      SYSTEM.EMITH(MCU.WFE)
+    UNTIL FALSE
   END run;
 
 BEGIN

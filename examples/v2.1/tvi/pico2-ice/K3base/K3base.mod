@@ -30,14 +30,14 @@ MODULE K3base;
 
   VAR
     a0, a1: Actor0;
-    rdyQ: ReadyQueue.Queue;
+    rdyQ: Types.ReadyQueue;
 
 
   PROCEDURE rdyRun[0];
   (* ready queue run int handler *)
   BEGIN
     Out.String("run int"); Out.Ln;
-    ReadyQueue.Run(rdyQ)
+    Kernel.Run(rdyQ)
   END rdyRun;
 
 
@@ -77,7 +77,9 @@ MODULE K3base;
     Actor.Start(a1, Ticker.EvQ, rdyQ);
     Ticker.Start;
     Out.String("end init => start"); Out.Ln;
-    REPEAT UNTIL FALSE
+    REPEAT
+      SYSTEM.EMITH(MCU.WFE)
+    UNTIL FALSE
   END run;
 
 BEGIN

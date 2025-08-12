@@ -16,6 +16,7 @@ MODULE MCU2;
     NumSPI*         = 2;
     NumI2C*         = 2;
     NumTimers*      = 1;
+    NumAlarms*      = 4; (* per timer *)
     NumPIO*         = 2;
     NumPWMchan*     = 8;
     NumDMAchan*     = 12;
@@ -1074,13 +1075,17 @@ MODULE MCU2;
     MSR_MSP_R11* = 0F38B8808H;  (* move r11 to MSP *)
     MSR_CTL_R11* = 0F38B8814H;  (* move r11 to CONTROL *)
 
-    (* instruction sync *)
+    (* instruction & data sync *)
     ISB* = 0F3BF8F6FH;
     DSB* = 0F3BF8F4FH;
 
-    (* disable/enable interrupts via PRIMASK *)
-    CPSIE* = 0B662H; (* enable:  1011 0110 0110 0010 *)
-    CPSID* = 0B672H; (* disable: 1011 0110 0111 0010 *)
+    (* raise execution prio to 0 via PRIMASK *)
+    CPSIE_I* = 0B662H; (* enable:  1011 0110 0110 0010 *)
+    CPSID_I* = 0B672H; (* disable: 1011 0110 0111 0010 *)
+    (* raise execution prio to -1 = HardFault via FAULTMASK *)
+    (* clears on handler exit *)
+    CPSIE_F* = 0B662H; (* enable:  1011 0110 0110 0001 *)
+    CPSID_F* = 0B672H; (* disable: 1011 0110 0111 0001 *)
 
     (* SVC *)
     (* SVCinstr = 'SVC' + SVCvalue *)

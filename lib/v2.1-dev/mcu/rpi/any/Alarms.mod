@@ -22,7 +22,7 @@ MODULE Alarms;
     T1* = 1;
 
     Alarms = {A0 .. A3};
-    NumAlarms* = 4;
+    NumAlarms* = MCU.NumAlarms;
     NumTimers = MCU.NumTimers;
     Timers = {0 .. NumTimers - 1};
 
@@ -38,7 +38,7 @@ MODULE Alarms;
       margin: INTEGER;
       alarmTime*, alarmRetimed*: INTEGER;
       ALARM, ARMED: INTEGER;
-      TIMERAWL: INTEGER;
+      TIMERAWL*: INTEGER;
       INTE, INTR*: INTEGER
     END;
 
@@ -70,7 +70,7 @@ MODULE Alarms;
   BEGIN
     INCL(SYSTEM.VAL(SET, proc), 0); (* thumb code *)
     dev.alarmTime := time;
-    SYSTEM.EMITH(MCU.CPSID); (* run timing calc and hw arming with interrupts off *)
+    SYSTEM.EMITH(MCU.CPSID_I); (* run timing calc and hw arming with interrupts off *)
     SYSTEM.GET(dev.TIMERAWL, now);
     IF ~(time - now > dev.margin) THEN
       time := now + dev.margin
@@ -78,7 +78,7 @@ MODULE Alarms;
     dev.alarmRetimed := time;
     SYSTEM.PUT(dev.vectAddr, proc);
     SYSTEM.PUT(dev.ALARM, time);
-    SYSTEM.EMITH(MCU.CPSIE)
+    SYSTEM.EMITH(MCU.CPSIE_I)
   END Arm;
 
 
@@ -128,10 +128,10 @@ MODULE Alarms;
   END Disable;
 
 
-  PROCEDURE GetTime*(timerNo: INTEGER; VAR timeL: INTEGER);
+  PROCEDURE GetTime*(dev: Device; VAR timeL: INTEGER);
     VAR addr: INTEGER;
   BEGIN
-    addr := MCU.TIMER0_BASE + (timerNo * MCU.TIMER_Offset) + MCU.TIMER_TIMERAWL_Offset;
+    addr := dev.TIMERAWL;
     SYSTEM.GET(addr, timeL)
   END GetTime;
 

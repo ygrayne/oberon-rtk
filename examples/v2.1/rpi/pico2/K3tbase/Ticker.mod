@@ -80,7 +80,7 @@ MODULE Ticker;
   PROCEDURE Start*;
     VAR now: INTEGER;
   BEGIN
-    Alarms.GetTime(TickerTimer, now);
+    Alarms.GetTime(alarm, now);
     Alarms.Arm(alarm, handler, now + alarmInt)
   END Start;
 

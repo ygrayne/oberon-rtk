@@ -1,4 +1,4 @@
-MODULE MessageQueue;
+MODULE MessageQueues;
 (**
   Oberon RTK Framework v2.1
   --
@@ -11,13 +11,10 @@ MODULE MessageQueue;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Types, Errors, Out;
-
-  TYPE
-    Queue* = Types.MessageQueue;
+  IMPORT SYSTEM, MCU := MCU2, T := KernelTypes, Errors, Out;
 
 
-  PROCEDURE Init*(q: Types.MessageQueue);
+  PROCEDURE* Init*(q: T.MessageQ);
   BEGIN
     ASSERT(q # NIL, Errors.PreCond);
     q.head := NIL;
@@ -25,7 +22,7 @@ MODULE MessageQueue;
   END Init;
 
 
-  PROCEDURE Put*(q: Types.MessageQueue; msg: Types.Message);
+  PROCEDURE* Put*(q: T.MessageQ; msg: T.Message);
   BEGIN
     SYSTEM.EMITH(MCU.CPSID_I);
     IF q.head = NIL THEN
@@ -39,23 +36,21 @@ MODULE MessageQueue;
   END Put;
 
 
-  PROCEDURE Get*(q: Types.MessageQueue; VAR msg: Types.Message);
+  PROCEDURE* Get*(q: T.MessageQ; VAR msg: T.Message);
   BEGIN
     SYSTEM.EMITH(MCU.CPSID_I);
     msg := q.head;
     IF q.head # NIL THEN
       q.head := q.head.next
-    ELSE
-      q.tail := NIL
     END;
     SYSTEM.EMITH(MCU.CPSIE_I)
   END Get;
 
-
-  PROCEDURE PrintQ*(q: Types.MessageQueue);
+(*
+  PROCEDURE PrintQ*(q: T.MessageQ);
   (* for testing/debugging *)
   (* caller protects queue access *)
-    VAR msg: Types.Message;
+    VAR msg: T.Message;
   BEGIN
     SYSTEM.EMITH(MCU.CPSID_I);
     msg := q.head;
@@ -65,5 +60,5 @@ MODULE MessageQueue;
     END;
     SYSTEM.EMITH(MCU.CPSIE_I)
   END PrintQ;
-
-END MessageQueue.
+*)
+END MessageQueues.

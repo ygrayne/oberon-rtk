@@ -4,6 +4,9 @@ MODULE Main;
   --
   Main module
   --
+  Always runs on core 0, hence cannot set any registers on the PPB of core 1.
+  See module InitCoreOne.
+  --
   MCU: RP2040
   Board: Pico
   --

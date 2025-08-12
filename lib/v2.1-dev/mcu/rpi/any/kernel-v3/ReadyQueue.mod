@@ -40,7 +40,7 @@ MODULE ReadyQueue;
     Out.Hex(SYSTEM.VAL(INTEGER, q), 12);
     Out.Hex(SYSTEM.VAL(INTEGER, act), 12);
     Out.Ln;
-    SYSTEM.EMIT(MCU.CPSID);
+    SYSTEM.EMITH(MCU.CPSID_I);
     IF q.head = NIL THEN
       q.head := act
     ELSE
@@ -49,20 +49,20 @@ MODULE ReadyQueue;
     q.tail := act;
     act.next := NIL;
     SYSTEM.PUT(MCU.PPB_STIR, q.intNo); (* trigger the readyQ's interrupt *)
-    SYSTEM.EMIT(MCU.CPSIE)
+    SYSTEM.EMITH(MCU.CPSIE_I)
   END Put;
 
 
   PROCEDURE Get*(q: Types.ReadyQueue; VAR act: Types.Actor);
   BEGIN
-    SYSTEM.EMIT(MCU.CPSID);
+    SYSTEM.EMITH(MCU.CPSID_I);
     act := q.head;
     IF act # NIL THEN
       q.head := q.head.next
     ELSE
       q.tail := NIL
     END;
-    SYSTEM.EMIT(MCU.CPSIE)
+    SYSTEM.EMITH(MCU.CPSIE_I)
   END Get;
 
 
