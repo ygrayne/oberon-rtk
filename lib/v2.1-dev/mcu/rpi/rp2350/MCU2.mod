@@ -1472,6 +1472,11 @@ MODULE MCU2;
 
     NumExcPrio* = 8;
 
+    PPB_ExcPrioTop*    = PPB_ExcPrio0;
+    PPB_ExcPrioHigh*   = PPB_ExcPrio1;
+    PPB_ExcPrioMedium* = PPB_ExcPrio4;
+    PPB_ExcPrioLow*    = PPB_ExcPrio7;
+
     (* vector table *)
     VectorTableSize*            = 272; (* bytes: 16 sys exceptions + 52 interrupts, one word each *)
     ResetHandlerOffset*         = 004H;
@@ -1587,6 +1592,8 @@ MODULE MCU2;
 
     (* read specical regs MRS *)
     (* 0F3EF8 B 09H r11(B) PSP(09) *)
+    (* [11:8] = register Rn *)
+    (* [7:0] = special reg SYSm *)
     MRS_R11_IPSR* = 0F3EF8B05H;  (* move IPSR to r11 *)
     MRS_R03_IPSR* = 0F3EF8305H;  (* move IPSR to r3 *)
     MRS_R00_IPSR* = 0F3EF8005H;  (* move IPSR to r0 *)
@@ -1602,14 +1609,26 @@ MODULE MCU2;
     MRS_R03_PSP*  = 0F3EF8309H;  (* move PSP to r3 *)
     MRS_R00_PSP*  = 0F3EF8009H;  (* move PSP to r0 *)
 
-    MRS_R11_CTL*  = 0F3EF8B14H;  (* move CONTROL to r11 *)
-    MRS_R03_CTL*  = 0F3EF8314H;  (* move CONTROL to r3 *)
+    MRS_R11_CTL*  = 0F3EF8B14H;  (* move CONTROL = 14H to r11 *)
+    MRS_R03_CTL*  = 0F3EF8314H;  (* move CONTROL = 14H to r3 *)
+
+    MRS_R03_BASEPRI* = 0F3EF8311H; (* move BASEPRI = 11H to r3 *)
+    MRS_R07_BASEPRI* = 0F3EF8711H; (* move BASEPRI = 11H to r7 *)
+    MRS_R11_BASEPRI* = 0F3EF8B11H; (* move BASEPRI = 11H to r11 *)
 
     (* write special regs MSR *)
     (* 0F38 B 88 09H r11(B) PSP(09) *)
+    (* [19:16] = register Rn *)
+    (* [7:0] = special register SYSm *)
     MSR_PSP_R11* = 0F38B8809H;  (* move r11 to PSP *)
     MSR_MSP_R11* = 0F38B8808H;  (* move r11 to MSP *)
     MSR_CTL_R11* = 0F38B8814H;  (* move r11 to CONTROL *)
+
+    MSR_BASEPRI_R02* = 0F3828811H; (* move r02 to BASEPRI *)
+    MSR_BASEPRI_R03* = 0F3838811H; (* move r03 to BASEPRI *)
+    MSR_BASEPRI_R06* = 0F3868811H; (* move r06 to BASEPRI *)
+    MSR_BASEPRI_R07* = 0F3878811H; (* move r07 to BASEPRI *)
+    MSR_BASEPRI_R11* = 0F38B8811H; (* move r11 to BASEPRI *)
 
     (* instruction & data sync *)
     ISB* = 0F3BF8F6FH;

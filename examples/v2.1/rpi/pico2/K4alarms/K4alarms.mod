@@ -3,6 +3,7 @@ MODULE K4alarms;
   Oberon RTK Framework v2.1
   --
   Example/test program for kernel-v4: kernel alarms.
+  https://oberon-rtk.org/docs/examples/v2/k4tests/
   --
   MCU: RP2350
   Board: Pico2
@@ -23,7 +24,7 @@ MODULE K4alarms;
     AlarmNo0 = Alarms.A1;
     AlarmPrio = MCU.PPB_ExcPrio2;
 
-    StateRunTicker = 0;
+    StateRun = 0;
     StateRunAlarm0 = 1;
     StateRunAlarm1 = 2;
 
@@ -58,8 +59,8 @@ MODULE K4alarms;
     Out.String("=> aiRunAlarm1"); Out.Int(act.id, 2);
     a := act(A0);
     Out.Int(now - a.alarmSet, 10); Out.Ln;
-    a.run := a.states[StateRunTicker];
-    Kernel.GetTick(act)
+    a.run := a.states[StateRun];
+    Kernel.Submit(act, 2)
   END aiRunAlarm1;
 
 
@@ -70,26 +71,26 @@ MODULE K4alarms;
     Out.String("=> aiRunAlarm0"); Out.Int(act.id, 2);
     a := act(A0);
     Out.Int(now - a.alarmSet, 10); Out.Ln;
-    a.run := a.states[StateRunTicker];
+    a.run := a.states[StateRun];
     Kernel.GetTick(act)
   END aiRunAlarm0;
 
 
-  PROCEDURE aiRunTicker(act: T.Actor);
+  PROCEDURE aiRun(act: T.Actor);
     VAR a: A0;
   BEGIN
-    Out.String("=> aiRunTicker"); Out.Int(act.id, 2); Out.Ln;
+    Out.String("=> aiRun"); Out.Int(act.id, 2); Out.Ln;
     a := act(A0);
     KernelAlarms.GetTime(al0, a.alarmSet);
     IF ODD(a.cnt) THEN
       a.run := a.states[StateRunAlarm1];
-      KernelAlarms.Put(al0, a, a.alarmSet + 3500000)
+      KernelAlarms.Arm(al0, a, a.alarmSet + 3500000)
     ELSE
       a.run := a.states[StateRunAlarm0];
-      KernelAlarms.Put(al0, a, a.alarmSet + 2500000)
+      KernelAlarms.Arm(al0, a, a.alarmSet + 2500000)
     END;
     INC(a.cnt)
-  END aiRunTicker;
+  END aiRun;
 
 
   PROCEDURE aiInit(act: T.Actor);
@@ -98,10 +99,10 @@ MODULE K4alarms;
     Out.String("=> init"); Out.Int(act.id, 2); Out.Ln;
     a := act(A0);
     a.cnt := 0;
-    a.states[StateRunTicker] := aiRunTicker;
+    a.states[StateRun] := aiRun;
     a.states[StateRunAlarm0] := aiRunAlarm0;
     a.states[StateRunAlarm1] := aiRunAlarm1;
-    a.run := a.states[StateRunTicker];
+    a.run := a.states[StateRun];
     Kernel.GetTick(act)
   END aiInit;
 
@@ -112,8 +113,6 @@ MODULE K4alarms;
     Kernel.Install(MillisecsPerTick, SysTickPrio);
     NEW(rdyQ); ASSERT(rdyQ # NIL, Errors.HeapOverflow);
     ReadyQueues.Install(rdyQ, rdyRun, RunIntNo, RunPrio, 0, 0);
-    NEW(al0); ASSERT(al0 # NIL, Errors.HeapOverflow);
-    KernelAlarms.Init(al0, TimerNo, AlarmNo0, AlarmPrio);
     NEW(al0); ASSERT(al0 # NIL, Errors.HeapOverflow);
     KernelAlarms.Init(al0, TimerNo, AlarmNo0, AlarmPrio);
     NEW(ai0); ASSERT(ai0 # NIL, Errors.HeapOverflow);

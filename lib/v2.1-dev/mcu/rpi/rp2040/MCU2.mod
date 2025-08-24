@@ -1008,6 +1008,11 @@ MODULE MCU2;
 
     NumExcPrio* = 4;
 
+    PPB_ExcPrioTop*    = PPB_ExcPrio0;
+    PPB_ExcPrioHigh*   = PPB_ExcPrio2;
+    PPB_ExcPrioMedium* = PPB_ExcPrio4;
+    PPB_ExcPrioLow*    = PPB_ExcPrio6;
+
     VectorTableSize*            = 192; (* bytes: 16 sys exceptions + 32 interrupts, one word each *)
     ResetHandlerOffset*         = 004H;
     NMIhandlerOffset*           = 008H;

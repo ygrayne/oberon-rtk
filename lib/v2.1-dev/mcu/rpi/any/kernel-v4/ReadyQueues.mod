@@ -11,10 +11,11 @@ MODULE ReadyQueues;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, T := KernelTypes, Exceptions, Errors, Out, GPIO;
+  IMPORT SYSTEM, MCU := MCU2, T := KernelTypes, Exceptions, Errors;
 
   CONST
-    PutPin = 16;
+    ExcPrioBlock = MCU.PPB_ExcPrioHigh;
+
 
   PROCEDURE* Init*(q: T.ReadyQ; cid, id: INTEGER);
   BEGIN
@@ -38,15 +39,11 @@ MODULE ReadyQueues;
 
 
   PROCEDURE* Put*(q: T.ReadyQ; act: T.Actor);
+    CONST R03 = 3;
   BEGIN
-    (*
-    Out.String("rdyQ put");
-    Out.Hex(SYSTEM.VAL(INTEGER, q), 12);
-    Out.Hex(SYSTEM.VAL(INTEGER, act), 12);
-    Out.Ln;
-    *)
-    SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {PutPin});
-    SYSTEM.EMITH(MCU.CPSID_I);
+    SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
+    SYSTEM.LDREG(R03, ExcPrioBlock);
+    SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
     IF q.head = NIL THEN
       q.head := act
     ELSE
@@ -55,29 +52,23 @@ MODULE ReadyQueues;
     q.tail := act;
     act.next := NIL;
     IF q.intNo # 0 THEN
-      (*
-      Out.String("rdyQ trigger"); Out.Ln;
-      *)
       SYSTEM.PUT(MCU.PPB_STIR, q.intNo); (* trigger the readyQ's interrupt *)
     END;
-    SYSTEM.EMITH(MCU.CPSIE_I);
-    SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {PutPin})
+    SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
   END Put;
 
 
   PROCEDURE* Get*(q: T.ReadyQ; VAR act: T.Actor);
+    CONST R03  = 3;
   BEGIN
-    SYSTEM.EMITH(MCU.CPSID_I);
+    SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
+    SYSTEM.LDREG(R03, ExcPrioBlock);
+    SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
     act := q.head;
     IF q.head # NIL THEN
       q.head := q.head.next
     END;
-    SYSTEM.EMITH(MCU.CPSIE_I)
+    SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
   END Get;
 
-
-BEGIN
-  GPIO.SetFunction(PutPin, MCU.IO_BANK0_Fsio);
-  GPIO.OutputEnable({PutPin});
-  GPIO.Clear({PutPin})
 END ReadyQueues.

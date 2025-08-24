@@ -2,7 +2,8 @@ MODULE K4sema;
 (**
   Oberon RTK Framework v2.1
   --
-  Example/test program for kernel-v4: semaphores
+  Example/test program for kernel-v4: semaphores.
+  https://oberon-rtk.org/docs/examples/v2/k4tests/
   --
   MCU: RP2350
   Board: Pico2

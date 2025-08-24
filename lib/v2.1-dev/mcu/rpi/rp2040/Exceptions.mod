@@ -1,6 +1,6 @@
 MODULE Exceptions;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework v2.1
   --
   Exception management
   --
@@ -20,12 +20,12 @@ MODULE Exceptions;
 
   (* IPSR *)
 
-  PROCEDURE* GetIntStatus*(VAR status: INTEGER);
-    CONST R0 = 0;
+  PROCEDURE* GetExcNo*(VAR excNo: INTEGER);
+    CONST R = 3;
   BEGIN
-    SYSTEM.EMIT(MCU.MRS_R00_IPSR);
-    status := SYSTEM.REG(R0)
-  END GetIntStatus;
+    SYSTEM.EMIT(MCU.MRS_R03_IPSR);
+    excNo := SYSTEM.REG(R)
+  END GetExcNo;
 
   (* IRQs, via NVIC *)
 

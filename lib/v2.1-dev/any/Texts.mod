@@ -154,9 +154,6 @@ MODULE Texts;
 
 
   PROCEDURE WriteInt*(W: TextIO.Writer; int, width: INTEGER);
-  (**
-    Write an integer value in decimal form via 'W'.
-  **)
     VAR buffer: ARRAY 12 OF CHAR; strLen: INTEGER;
   BEGIN
     IntToString(int, buffer, strLen);

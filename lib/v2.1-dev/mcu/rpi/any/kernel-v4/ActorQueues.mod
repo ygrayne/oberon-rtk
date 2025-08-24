@@ -11,7 +11,10 @@ MODULE ActorQueues;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, T := KernelTypes, Errors, Out;
+  IMPORT SYSTEM, MCU := MCU2, T := KernelTypes, Errors;
+
+  CONST
+    ExcPrioBlock = MCU.PPB_ExcPrioHigh;
 
 
   PROCEDURE* Init*(q: T.ActorQ);
@@ -23,8 +26,11 @@ MODULE ActorQueues;
 
 
   PROCEDURE* Put*(q: T.ActorQ; act: T.Actor);
+    CONST R03 = 3;
   BEGIN
-    SYSTEM.EMITH(MCU.CPSID_I);
+    SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
+    SYSTEM.LDREG(R03, ExcPrioBlock);
+    SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
     IF q.head = NIL THEN
       q.head := act
     ELSE
@@ -32,26 +38,32 @@ MODULE ActorQueues;
     END;
     q.tail := act;
     act.next := NIL;
-    SYSTEM.EMITH(MCU.CPSIE_I)
+    SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
   END Put;
 
 
   PROCEDURE* Get*(q: T.ActorQ; VAR act: T.Actor);
+    CONST R03 = 3;
   BEGIN
-    SYSTEM.EMITH(MCU.CPSID_I);
+    SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
+    SYSTEM.LDREG(R03, ExcPrioBlock);
+    SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
     act := q.head;
     IF q.head # NIL THEN
       q.head := q.head.next
     END;
-    SYSTEM.EMITH(MCU.CPSIE_I)
+    SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
   END Get;
 
 
   PROCEDURE* GetTail*(q: T.ActorQ; VAR tail: T.Actor);
+    CONST R03 = 3;
   BEGIN
-    SYSTEM.EMITH(MCU.CPSID_I);
+    SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
+    SYSTEM.LDREG(R03, ExcPrioBlock);
+    SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
     tail := q.tail;
-    SYSTEM.EMITH(MCU.CPSIE_I)
+    SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
   END GetTail;
 
 (*

@@ -12,7 +12,7 @@ MODULE KernelAlarms;
 **)
 
   IMPORT
-    SYSTEM, MCU := MCU2, T := KernelTypes, Kernel, ActorQueues, MessageQueues, Alarms, Errors, GPIO, Out;
+    SYSTEM, MCU := MCU2, T := KernelTypes, Kernel, ActorQueues, MessageQueues, Alarms, Errors, GPIO;
 
   CONST
     PutPin = 17;
@@ -33,26 +33,34 @@ MODULE KernelAlarms;
   PROCEDURE handler[0];
     VAR intNo, tmNo, alNo: INTEGER; al: Alarm;
   BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {PutPin});
+    (*SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {PutPin});*)
     SYSTEM.EMIT(MCU.MRS_R11_IPSR);
     intNo := SYSTEM.REG(11) - MCU.PPB_IRQ_BASE;
     tmNo := intNo DIV 4;
     alNo := intNo MOD 4;
     al := alarms[tmNo, alNo];
     Alarms.DeassertInt(al.alarm);
-    SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {PutPin1});
+    (*SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {PutPin1});*)
     Kernel.PutMsg(al.evQ, al.msg);
-    SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {PutPin1});
-    SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {PutPin});
+    (*SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {PutPin1});*)
+    (*SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {PutPin});*)
   END handler;
 
 
-  PROCEDURE Put*(al: Alarm; act: T.Actor; time: INTEGER);
+  PROCEDURE Arm*(al: Alarm; act: T.Actor; time: INTEGER);
   BEGIN
     ASSERT(~Alarms.Armed(al.alarm), Errors.ProgError);
     Alarms.Arm(al.alarm, handler, time);
     Kernel.GetMsg(al.evQ, act)
-  END Put;
+  END Arm;
+
+
+  PROCEDURE Rearm*(al: Alarm; act: T.Actor; delay: INTEGER);
+  BEGIN
+    ASSERT(~Alarms.Armed(al.alarm), Errors.ProgError);
+    Alarms.Rearm(al.alarm, handler, delay);
+    Kernel.GetMsg(al.evQ, act)
+  END Rearm;
 
 
   PROCEDURE GetTime*(al: Alarm; VAR timeL: INTEGER);
@@ -94,8 +102,10 @@ MODULE KernelAlarms;
 
 BEGIN
   init;
+  (*
   GPIO.SetFunction(PutPin, MCU.IO_BANK0_Fsio);
   GPIO.SetFunction(PutPin1, MCU.IO_BANK0_Fsio);
   GPIO.OutputEnable({PutPin, PutPin1});
   GPIO.Clear({PutPin, PutPin1})
+  *)
 END KernelAlarms.

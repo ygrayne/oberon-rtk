@@ -22,17 +22,21 @@ MODULE KernelTypes;
 
     ActorRun* = PROCEDURE(actor: Actor);
     ActorDesc* = RECORD
+      (* kernel data *)
       id*: INTEGER;
       rdyQ*: ReadyQ;
       run*: ActorRun;
       msg*: Message;
-      time*: INTEGER;
-      next*: Actor
+      ticker*: INTEGER;
+      next*: Actor;
+      (* user data *)
+      time*: INTEGER
     END;
 
     MessageDesc* = RECORD
       next*: Message;
-      pool*: MessagePool
+      pool*: MessagePool;
+      data*: INTEGER (* application data *)
     END;
 
     RunHandler* = PROCEDURE;

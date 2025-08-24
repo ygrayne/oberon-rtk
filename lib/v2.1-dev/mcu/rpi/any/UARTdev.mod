@@ -1,6 +1,6 @@
 MODULE UARTdev;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework v2.1
   --
   UART device
   * initialisation of device data structure
@@ -87,8 +87,10 @@ MODULE UARTdev;
     (* IMSC bits: int mask set/clr *)
     IMSC_OEIM* = 10;  (* FIFO overrrun *)
     IMSC_RTIM* = 6;   (* receive timeout *)
-    IMSC_TXIM* = 5;   (* tramsmit *)
+    IMSC_TXIM* = 5;   (* transmit *)
     IMSC_RXIM* = 4;   (* receive *)
+
+    IMSC_ALL* = {IMSC_RXIM, IMSC_TXIM, IMSC_RTIM, IMSC_OEIM};
 
     (* MIS bits: int status *)
     MIS_OEMIS* = IMSC_OEIM;
@@ -101,6 +103,8 @@ MODULE UARTdev;
     ICR_RTIC* = IMSC_RTIM;
     ICR_TXIC* = IMSC_TXIM;
     ICR_RXIC* = IMSC_RXIM;
+
+    ICR_ALL* = IMSC_ALL;
 
   TYPE
     Device* = POINTER TO DeviceDesc;

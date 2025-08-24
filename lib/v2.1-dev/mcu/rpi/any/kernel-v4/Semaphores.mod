@@ -12,7 +12,7 @@ MODULE Semaphores;
 **)
 
   IMPORT
-    T := KernelTypes, Kernel, ActorQueues, MessageQueues, Errors, Out;
+    T := KernelTypes, Kernel, ActorQueues, MessageQueues, Errors;
 
   TYPE
     Semaphore* = POINTER TO SemaphoreDesc;
@@ -24,9 +24,6 @@ MODULE Semaphores;
 
   PROCEDURE Claim*(s: Semaphore; act: T.Actor);
   BEGIN
-    (*
-    Out.String("claim"); Out.Int(act.id, 4); Out.Ln;
-    *)
     Kernel.GetMsg(s.evQ, act)
   END Claim;
 
@@ -40,10 +37,6 @@ MODULE Semaphores;
   PROCEDURE Init*(s: Semaphore);
   BEGIN
     ASSERT(s # NIL, Errors.PreCond);
-    (*
-    NEW(s.msgPool); ASSERT(s.msgPool # NIL, Errors.HeapOverflow);
-    MessagePool.Init(s.msgPool, NIL, numMsg);
-    *)
     NEW(s.evQ); ASSERT(s.evQ # NIL, Errors.HeapOverflow);
     NEW(s.evQ.msgQ); ASSERT(s.evQ.msgQ # NIL, Errors.HeapOverflow);
     NEW(s.evQ.actQ); ASSERT(s.evQ.actQ # NIL, Errors.HeapOverflow);

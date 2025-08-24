@@ -75,7 +75,7 @@ MODULE UARTkstr;
       UART1exc = MCU.PPB_UART1_IRQ + MCU.PPB_IRQ_BASE;
     VAR mis: SET; uartInt: UARTint; ch: CHAR; excNo: INTEGER; overflow: BOOLEAN;
   BEGIN
-    Exceptions.GetIntStatus(excNo);
+    Exceptions.GetExcNo(excNo);
     ASSERT((excNo = UART0exc) OR (excNo = UART1exc), Errors.ProgError);
     uartInt := uartInts[excNo - UART0exc]; (* UART exceptions have adjacent number *)
     UARTdev.GetIntStatus(uartInt.dev, mis);

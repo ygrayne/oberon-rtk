@@ -14,7 +14,7 @@ MODULE Kernel;
 
   IMPORT
     SYSTEM, MCU := MCU2, T := KernelTypes, SysTick, ReadyQueues, MessageQueues,
-    ActorQueues, MessagePools, Errors, LED, Out;
+    ActorQueues, MessagePools, Errors, LED;
 
   TYPE
     CoreContext = POINTER TO CoreContextDesc;
@@ -41,8 +41,6 @@ MODULE Kernel;
   PROCEDURE PutMsg*(evQ: T.EventQ; msg: T.Message);
     VAR act: T.Actor;
   BEGIN
-    (*Out.String("put msg k4"); Out.Ln;*)
-    (*printQ(evQ);*)
     ActorQueues.Get(evQ.actQ, act);
     IF act # NIL THEN
       act.msg := msg;
@@ -56,8 +54,6 @@ MODULE Kernel;
   PROCEDURE GetMsg*(evQ: T.EventQ; act: T.Actor);
     VAR msg: T.Message;
   BEGIN
-    (*Out.String("get msg k4"); Out.Ln;*)
-    (*printQ(evQ);*)
     MessageQueues.Get(evQ.msgQ, msg);
     IF msg # NIL THEN
       act.msg := msg;
@@ -83,27 +79,16 @@ MODULE Kernel;
 
   PROCEDURE RunQueue*(q: T.ReadyQ);
   (* to be called by run int handler of ready queue or kernel loop *)
-    VAR act: T.Actor;
+    VAR act: T.Actor; msg: T.Message;
   BEGIN
-    (*
-    Out.String("rdyQ run");
-    Out.Hex(SYSTEM.VAL(INTEGER, q), 12);
-    Out.Ln;
-    *)
     ReadyQueues.Get(q, act);
     WHILE act # NIL DO
-      (*
-      Out.String("act"); Out.Hex(SYSTEM.VAL(INTEGER, act), 12); Out.Ln;
-      *)
-      act.run(act); (* actors are allowed to put themselves on their own ready queue *)
-      IF act.msg # NIL THEN
-        MessagePools.Put(act.msg.pool, act.msg);
-        act.msg := NIL
+      msg := act.msg;
+      act.run(act);
+      IF msg # NIL THEN
+        MessagePools.Put(msg.pool, msg)
       END;
-      ReadyQueues.Get(q, act);
-      (*
-      Out.String("act"); Out.Hex(SYSTEM.VAL(INTEGER, act), 12); Out.Ln;
-      *)
+      ReadyQueues.Get(q, act)
     END
   END RunQueue;
 
@@ -116,6 +101,7 @@ MODULE Kernel;
     ctx := coreCon[cid];
     ActorQueues.Get(ctx.tickActQ, act);
     WHILE act # NIL DO (* run all waiting actors *)
+      act.msg := NIL;
       ReadyQueues.Put(act.rdyQ, act);
       ActorQueues.Get(ctx.tickActQ, act)
     END
@@ -128,6 +114,7 @@ MODULE Kernel;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     ctx := coreCon[cid];
+    act.msg := NIL;
     ActorQueues.Put(ctx.tickActQ, act)
   END GetTick;
 
@@ -138,7 +125,8 @@ MODULE Kernel;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     ctx := coreCon[cid];
-    act.time := ticks;
+    act.ticker := ticks;
+    act.msg := NIL;
     ActorQueues.Put(ctx.loopActQ, act)
   END Submit;
 
@@ -150,18 +138,13 @@ MODULE Kernel;
     ctx := coreCon[cid];
     REPEAT
       SYSTEM.EMITH(MCU.WFE);
-      (*
-      Out.String("loop"); Out.Ln; (* check WFE *)
-      *)
       IF SysTick.Tick() THEN
-        (*
-        Out.String("tick"); Out.Ln;
-        *)
         ActorQueues.Get(ctx.loopActQ, act);
         ActorQueues.GetTail(ctx.loopActQ, tail);
         WHILE act # NIL DO
-          DEC(act.time);
-          IF act.time <= 0 THEN
+          DEC(act.ticker);
+          IF act.ticker <= 0 THEN
+            act.msg := NIL;
             ReadyQueues.Put(ctx.loopRdyQ, act)
           ELSE
             ActorQueues.Put(ctx.loopActQ, act)

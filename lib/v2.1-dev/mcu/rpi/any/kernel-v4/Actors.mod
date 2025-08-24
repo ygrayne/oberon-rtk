@@ -20,8 +20,9 @@ MODULE Actors;
     act.run := init;
     act.rdyQ := NIL;
     act.msg := NIL;
-    act.time := 0;
-    act.next := NIL
+    act.ticker := 0;
+    act.next := NIL;
+    act.time := 0
   END Init;
 
 

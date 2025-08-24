@@ -3,7 +3,7 @@ MODULE K4base;
   Oberon RTK Framework v2.1
   --
   Base test program for kernel-v4 prototype.
-  https://oberon-rtk.org/docs/examples/v2/k4base/
+  https://oberon-rtk.org/docs/examples/v2/k4tests/
   --
   MCU: RP2350
   Board: Pico2
