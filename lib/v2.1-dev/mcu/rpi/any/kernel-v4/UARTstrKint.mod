@@ -14,8 +14,7 @@ MODULE UARTstrKint;
 **)
 
   IMPORT
-    SYSTEM, MCU := MCU2, T := KernelTypes, MessagePools, ReadyQueues, ActorQueues, MessageQueues,
-    Actors, UARTdev, TextIO, Kernel, Exceptions, Errors;
+    SYSTEM, MCU := MCU2, Kernel, UARTdev, TextIO, Exceptions, Errors;
 
   CONST
     MsgStrLen = 24;
@@ -26,32 +25,28 @@ MODULE UARTstrKint;
     TxFifoLvl = UARTdev.TXIFLSEL_val_18;  (* 1/8 = 4 entries *)
     RxFifoLvl = UARTdev.RXIFLSEL_val_48;  (* unused, no rx implemented yet *)
 
-    (* test GPIO pins are set up in main program module *)
-    Pin2 = 17;
-    Pin3 = 18;
-    Pin4 = 19;
 
   TYPE
     PrintMsg = POINTER TO PrintMsgDesc;
-    PrintMsgDesc = RECORD (T.MessageDesc)
+    PrintMsgDesc = RECORD (Kernel.MessageDesc)
       str: ARRAY MsgStrLen OF CHAR;
       numChar: INTEGER
     END;
 
     DriverActor = POINTER TO DriverActorDesc;
-    DriverActorDesc = RECORD (T.ActorDesc)
-      states: ARRAY 2 OF T.ActorRun;
+    DriverActorDesc = RECORD (Kernel.ActorDesc)
+      states: ARRAY 2 OF Kernel.ActorRun;
       uartNo: INTEGER
     END;
 
     UARTctx = POINTER TO UARTctxDesc;
     UARTctxDesc = RECORD
       dev: UARTdev.Device;
-      rdyQ: T.ReadyQ;
-      printEvQ: T.EventQ;
-      printMsgP: T.MessagePool;
-      devEvQ: T.EventQ;
-      devMsg: T.Message;
+      rdyQ: Kernel.ReadyQ;
+      printEvQ: Kernel.EventQ;
+      printMsgP: Kernel.MessagePool;
+      devEvQ: Kernel.EventQ;
+      devMsg: Kernel.Message;
       act: DriverActor;
       ix: INTEGER;
       msg: PrintMsg
@@ -62,7 +57,7 @@ MODULE UARTstrKint;
 
 
   PROCEDURE PutString*(dev: TextIO.Device; s: ARRAY OF CHAR; numChar: INTEGER);
-    VAR dev0: UARTdev.Device; i, nc: INTEGER; m: T.Message; msg: PrintMsg; ux: UARTctx;
+    VAR dev0: UARTdev.Device; i, nc: INTEGER; m: Kernel.Message; msg: PrintMsg; ux: UARTctx;
   BEGIN
     dev0 := dev(UARTdev.Device);
     IF numChar > LEN(s) THEN numChar := LEN(s) END;
@@ -70,7 +65,7 @@ MODULE UARTstrKint;
       ux := uartCon[dev0.uartNo];
       nc := 0;
       WHILE nc < numChar DO
-        MessagePools.Get(ux.printMsgP, m);
+        Kernel.GetFromMsgPool(ux.printMsgP, m);
         IF m # NIL THEN
           msg := m(PrintMsg);
           i := 0;
@@ -88,7 +83,7 @@ MODULE UARTstrKint;
   END PutString;
 
 
-  PROCEDURE writeUART(act: T.Actor);
+  PROCEDURE writeUART(act: Kernel.Actor);
   (* write msg.str out to UART FIFO, then await UART int *)
     VAR a0: DriverActor; msg: PrintMsg; ux: UARTctx;
   BEGIN
@@ -105,7 +100,7 @@ MODULE UARTstrKint;
   END writeUART;
 
 
-  PROCEDURE awaitDevInt(act: T.Actor);
+  PROCEDURE awaitDevInt(act: Kernel.Actor);
   (* UART int msg received, go get next msg.str from print queue *)
     VAR a0: DriverActor;
   BEGIN
@@ -117,7 +112,7 @@ MODULE UARTstrKint;
   END awaitDevInt;
 
 
-  PROCEDURE init(act: T.Actor);
+  PROCEDURE init(act: Kernel.Actor);
     VAR a0: DriverActor;
   BEGIN
     a0 := act(DriverActor);
@@ -126,7 +121,7 @@ MODULE UARTstrKint;
   END init;
 
 
-  PROCEDURE initActor(act: T.Actor; uartNo: INTEGER);
+  PROCEDURE initActor(act: Kernel.Actor; uartNo: INTEGER);
     VAR a0: DriverActor;
   BEGIN
     a0 := act(DriverActor);
@@ -165,7 +160,6 @@ MODULE UARTstrKint;
   PROCEDURE devHandler0[0];
     VAR ux: UARTctx; mis: SET;
   BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {Pin2});
     ux := uartCon[0];
     SYSTEM.GET(ux.dev.MIS, mis); (* get status *)
     IF UARTdev.MIS_TXMIS IN mis THEN
@@ -176,8 +170,7 @@ MODULE UARTstrKint;
         SYSTEM.PUT(ux.dev.ICR + MCU.ASET, {UARTdev.ICR_TXIC}); (* clear/deassert int *)
         Kernel.PutMsgAwaited(ux.devEvQ, ux.devMsg);
       END
-    END;
-    SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {Pin2})
+    END
   END devHandler0;
 
 
@@ -217,7 +210,7 @@ MODULE UARTstrKint;
   END DeviceStatus;
 
 
-  PROCEDURE makePrintMsg(): T.Message;
+  PROCEDURE makePrintMsg(): Kernel.Message;
     VAR msg: PrintMsg;
   BEGIN
     NEW(msg); ASSERT(msg # NIL, Errors.HeapOverflow);
@@ -232,33 +225,24 @@ MODULE UARTstrKint;
     ux := uartCon[dev.uartNo];
     ux.dev := dev;
     (* ready queue *)
-    NEW(ux.rdyQ);
+    Kernel.NewRdyQ(ux.rdyQ, 0, 0);
     IF ux.dev.uartNo = 0 THEN
-      ReadyQueues.Install(ux.rdyQ, printRdyHandler0, rdyQintNo, intPrio, 0, 0)
+      Kernel.InstallRdyQ(ux.rdyQ, printRdyHandler0, rdyQintNo, intPrio)
     ELSE
-      ReadyQueues.Install(ux.rdyQ, printRdyHandler1, rdyQintNo, intPrio, 0, 0)
+      Kernel.InstallRdyQ(ux.rdyQ, printRdyHandler1, rdyQintNo, intPrio)
     END;
     (* print event queue *)
-    NEW(ux.printEvQ);
-    NEW(ux.printEvQ.msgQ);
-    NEW(ux.printEvQ.actQ);
-    MessageQueues.Init(ux.printEvQ.msgQ);
-    ActorQueues.Init(ux.printEvQ.actQ);
+    Kernel.NewEvQ(ux.printEvQ);
     (* device event queue *)
-    NEW(ux.devEvQ);
-    NEW(ux.devEvQ.msgQ);
-    NEW(ux.devEvQ.actQ);
-    MessageQueues.Init(ux.devEvQ.msgQ);
-    ActorQueues.Init(ux.devEvQ.actQ);
+    Kernel.NewEvQ(ux.devEvQ);
     (* print message pool *)
-    NEW(ux.printMsgP);
-    MessagePools.Init(ux.printMsgP, makePrintMsg, numMsg);
+    Kernel.NewMsgPool(ux.printMsgP, makePrintMsg, numMsg);
     (* device message *)
     NEW(ux.devMsg);
-    ux.devMsg.pool := NIL;
+    Kernel.InitMsg(ux.devMsg);
     (* print actor *)
     NEW(ux.act);
-    Actors.Init(ux.act, init, 0); initActor(ux.act, ux.dev.uartNo);
+    Kernel.InitAct(ux.act, init, 0); initActor(ux.act, ux.dev.uartNo);
     (* uart interrupt *)
     IF ux.dev.uartNo = 0 THEN
       Exceptions.InstallIntHandler(dev.intNo, devHandler0)
@@ -271,7 +255,7 @@ MODULE UARTstrKint;
     UARTdev.SetFifoLvl(dev, TxFifoLvl, RxFifoLvl);
     UARTdev.EnableInt(dev, {UARTdev.IMSC_TXIM});
     (* get started *)
-    Actors.Run(ux.act, ux.rdyQ)
+    Kernel.RunAct(ux.act, ux.rdyQ)
   END Install;
 
 END UARTstrKint.

@@ -13,8 +13,7 @@ MODULE K4print;
 **)
 
   IMPORT
-    SYSTEM, Main, MCU := MCU2, T := KernelTypes, Kernel, Actors, ReadyQueues, KernelAlarms, Alarms, Errors,
-    TextIO, Texts, Terminals, GPIO;
+    SYSTEM, Main, MCU := MCU2, Kernel, KernelAlarms, Alarms, Errors, TextIO, Texts, Terminals, GPIO;
 
   CONST
     RunIntLowNo = MCU.PPB_SPAREIRQ_IRQ2;
@@ -39,15 +38,15 @@ MODULE K4print;
 
   TYPE
     A0 = POINTER TO A0desc;
-    A0desc = RECORD (T.ActorDesc)
+    A0desc = RECORD (Kernel.ActorDesc)
       cnt: INTEGER;
       startAt: INTEGER
     END;
 
   VAR
     a0, a1: A0;
-    ahp: T.Actor;
-    rdyQlow, rdyQhigh: T.ReadyQ;
+    ahp: Kernel.Actor;
+    rdyQlow, rdyQhigh: Kernel.ReadyQ;
     ka: KernelAlarms.Alarm;
     W: ARRAY 2 OF TextIO.Writer;
     pins: ARRAY 2 OF INTEGER;
@@ -67,7 +66,7 @@ MODULE K4print;
   END rdyRunHigh;
 
 
-  PROCEDURE aWrite(act: T.Actor);
+  PROCEDURE aWrite(act: Kernel.Actor);
   (* systick-interrupt-driven actor run procedure *)
     CONST TestString0 = "   123456789012345678901234567890"; TestString1 = " 12345"; TestString2 = " 123456";
     VAR a: A0; timeL, id, pin: INTEGER; W0: TextIO.Writer;
@@ -91,14 +90,14 @@ MODULE K4print;
   END aWrite;
 
 
-  PROCEDURE aHigh(act: T.Actor);
+  PROCEDURE aHigh(act: Kernel.Actor);
   BEGIN
     SYSTEM.PUT(MCU.SIO_GPIO_OUT_XOR, {Pin1});
     KernelAlarms.Rearm(ka, act, HighPeriod)
   END aHigh;
 
 
-  PROCEDURE aInit(act: T.Actor);
+  PROCEDURE aInit(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
     a := act(A0);
@@ -109,7 +108,7 @@ MODULE K4print;
   END aInit;
 
 
-  PROCEDURE ahpInit(act: T.Actor);
+  PROCEDURE ahpInit(act: Kernel.Actor);
     VAR time: INTEGER;
   BEGIN
     act.run := aHigh;
@@ -126,24 +125,24 @@ MODULE K4print;
     pins[1] := Pin4;
 
     Kernel.Install(1000, SysTickPrio);
-    NEW(rdyQlow); ASSERT(rdyQlow # NIL, Errors.HeapOverflow);
-    ReadyQueues.Install(rdyQlow, rdyRunLow, RunIntLowNo, RunPrioLow, 0, 0);
-    NEW(rdyQhigh); ASSERT(rdyQhigh # NIL, Errors.HeapOverflow);
-    ReadyQueues.Install(rdyQhigh, rdyRunHigh, RunIntHighNo, RunPrioHigh, 0, 0);
+    Kernel.NewRdyQ(rdyQlow, 0, 0);
+    Kernel.InstallRdyQ(rdyQlow, rdyRunLow, RunIntLowNo, RunPrioLow);
+    Kernel.NewRdyQ(rdyQhigh, 0, 0);
+    Kernel.InstallRdyQ(rdyQhigh, rdyRunHigh, RunIntHighNo, RunPrioHigh);
 
     NEW(ka); ASSERT(ka # NIL, Errors.HeapOverflow);
     KernelAlarms.Init(ka, TimerNo, AlarmNo, RunPrioHigh);
 
     NEW(a0); ASSERT(a0 # NIL, Errors.HeapOverflow);
-    Actors.Init(a0, aInit, 0);
+    Kernel.InitAct(a0, aInit, 0);
     NEW(a1); ASSERT(a1 # NIL, Errors.HeapOverflow);
-    Actors.Init(a1, aInit, 1);
+    Kernel.InitAct(a1, aInit, 1);
     NEW(ahp); ASSERT(ahp # NIL, Errors.HeapOverflow);
-    Actors.Init(ahp, ahpInit, 2);
+    Kernel.InitAct(ahp, ahpInit, 2);
 
-    Actors.Run(a0, rdyQlow);
-    Actors.Run(a1, rdyQlow);
-    Actors.Run(ahp, rdyQhigh);
+    Kernel.RunAct(a0, rdyQlow);
+    Kernel.RunAct(a1, rdyQlow);
+    Kernel.RunAct(ahp, rdyQhigh);
 
     Kernel.Run
     (* we'll not return here *)

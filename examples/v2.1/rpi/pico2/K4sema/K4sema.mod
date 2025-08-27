@@ -13,7 +13,7 @@ MODULE K4sema;
 **)
 
   IMPORT
-    Main, MCU := MCU2, T := KernelTypes, Kernel, Actors, ReadyQueues, Semaphores, Out, Errors;
+    Main, MCU := MCU2, Kernel, Semaphores, Out, Errors;
 
   CONST
     MillisecsPerTick = 1000;
@@ -28,28 +28,25 @@ MODULE K4sema;
 
   TYPE
     A0 = POINTER TO A0desc;
-    A0desc = RECORD (T.ActorDesc)
-      states: ARRAY 4 OF T.ActorRun
+    A0desc = RECORD (Kernel.ActorDesc)
+      states: ARRAY 4 OF Kernel.ActorRun
     END;
 
   VAR
     ai0, ai1: A0;
-    rdyQ: T.ReadyQ;
+    rdyQ: Kernel.ReadyQ;
     term: Semaphores.Semaphore;
 
 
   PROCEDURE rdyRun[0];
   (* ready queue run int handler *)
   BEGIN
-    (*
-    Out.String("rdyRun"); Out.Ln;
-    *)
     Kernel.RunQueue(rdyQ)
   END rdyRun;
 
   (* actor states *)
 
-  PROCEDURE aiPrint1(act: T.Actor);
+  PROCEDURE aiPrint1(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
     Out.String("=> print message part 2"); Out.Int(act.id, 2); Out.Ln;
@@ -60,7 +57,7 @@ MODULE K4sema;
     Kernel.GetTick(act)
   END aiPrint1;
 
-  PROCEDURE aiPrint0(act: T.Actor);
+  PROCEDURE aiPrint0(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
     Out.String("=> print message part 1"); Out.Int(act.id, 2); Out.Ln;
@@ -69,7 +66,7 @@ MODULE K4sema;
     Kernel.GetTick(act)
   END aiPrint0;
 
-  PROCEDURE aiClaim(act: T.Actor);
+  PROCEDURE aiClaim(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
     Out.String("=> claim"); Out.Int(act.id, 2); Out.Ln;
@@ -78,7 +75,7 @@ MODULE K4sema;
     Semaphores.Claim(term, act)
   END aiClaim;
 
-  PROCEDURE aiInit(act: T.Actor);
+  PROCEDURE aiInit(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
     Out.String("=> init"); Out.Int(act.id, 2); Out.Ln;
@@ -95,16 +92,17 @@ MODULE K4sema;
   BEGIN
     Out.String("begin init"); Out.Ln;
     Kernel.Install(MillisecsPerTick, SysTickPrio);
-    NEW(rdyQ); ASSERT(rdyQ # NIL, Errors.HeapOverflow);
-    ReadyQueues.Install(rdyQ, rdyRun, RunIntNo, RunPrio, 0, 0);
+    Kernel.NewRdyQ(rdyQ, 0, 0);
+    Kernel.InstallRdyQ(rdyQ, rdyRun, RunIntNo, RunPrio);
+
     NEW(term); ASSERT(term # NIL, Errors.HeapOverflow);
     Semaphores.Init(term);
     NEW(ai0); ASSERT(ai0 # NIL, Errors.HeapOverflow);
-    Actors.Init(ai0, aiInit, 0);
+    Kernel.InitAct(ai0, aiInit, 0);
     NEW(ai1); ASSERT(ai1 # NIL, Errors.HeapOverflow);
-    Actors.Init(ai1, aiInit, 1);
-    Actors.Run(ai0, rdyQ);
-    Actors.Run(ai1, rdyQ);
+    Kernel.InitAct(ai1, aiInit, 1);
+    Kernel.RunAct(ai0, rdyQ);
+    Kernel.RunAct(ai1, rdyQ);
     Out.String("end init => start"); Out.Ln;
     Kernel.Run
     (* we'll not return here *)

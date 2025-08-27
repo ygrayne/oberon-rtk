@@ -13,7 +13,7 @@ MODULE K4alarms;
 **)
 
   IMPORT
-    Main, MCU := MCU2, T := KernelTypes, Kernel, Actors, ReadyQueues, KernelAlarms, Alarms, Out, Errors;
+    Main, MCU := MCU2, Kernel,KernelAlarms, Alarms, Out, Errors;
 
   CONST
     MillisecsPerTick = 1000;
@@ -30,14 +30,14 @@ MODULE K4alarms;
 
   TYPE
     A0 = POINTER TO A0desc;
-    A0desc = RECORD (T.ActorDesc)
-      states: ARRAY 4 OF T.ActorRun;
+    A0desc = RECORD (Kernel.ActorDesc)
+      states: ARRAY 4 OF Kernel.ActorRun;
       cnt, alarmSet: INTEGER
     END;
 
   VAR
     ai0: A0;
-    rdyQ: T.ReadyQ;
+    rdyQ: Kernel.ReadyQ;
     al0: KernelAlarms.Alarm;
 
 
@@ -52,11 +52,11 @@ MODULE K4alarms;
 
   (* actor states *)
 
-  PROCEDURE aiRunAlarm1(act: T.Actor);
+  PROCEDURE aiRunAlarm1(act: Kernel.Actor);
     VAR a: A0; now: INTEGER;
   BEGIN
     KernelAlarms.GetTime(al0, now);
-    Out.String("=> aiRunAlarm1"); Out.Int(act.id, 2);
+    Out.String("=> aiRunAlarm1 tick"); Out.Int(act.id, 2);
     a := act(A0);
     Out.Int(now - a.alarmSet, 10); Out.Ln;
     a.run := a.states[StateRun];
@@ -64,11 +64,11 @@ MODULE K4alarms;
   END aiRunAlarm1;
 
 
-  PROCEDURE aiRunAlarm0(act: T.Actor);
+  PROCEDURE aiRunAlarm0(act: Kernel.Actor);
     VAR a: A0; now: INTEGER;
   BEGIN
     KernelAlarms.GetTime(al0, now);
-    Out.String("=> aiRunAlarm0"); Out.Int(act.id, 2);
+    Out.String("=> aiRunAlarm0 bg"); Out.Int(act.id, 2);
     a := act(A0);
     Out.Int(now - a.alarmSet, 10); Out.Ln;
     a.run := a.states[StateRun];
@@ -76,7 +76,7 @@ MODULE K4alarms;
   END aiRunAlarm0;
 
 
-  PROCEDURE aiRun(act: T.Actor);
+  PROCEDURE aiRun(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
     Out.String("=> aiRun"); Out.Int(act.id, 2); Out.Ln;
@@ -93,7 +93,7 @@ MODULE K4alarms;
   END aiRun;
 
 
-  PROCEDURE aiInit(act: T.Actor);
+  PROCEDURE aiInit(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
     Out.String("=> init"); Out.Int(act.id, 2); Out.Ln;
@@ -111,13 +111,15 @@ MODULE K4alarms;
   BEGIN
     Out.String("begin init"); Out.Ln;
     Kernel.Install(MillisecsPerTick, SysTickPrio);
-    NEW(rdyQ); ASSERT(rdyQ # NIL, Errors.HeapOverflow);
-    ReadyQueues.Install(rdyQ, rdyRun, RunIntNo, RunPrio, 0, 0);
+    Kernel.NewRdyQ(rdyQ, 0, 0);
+    Kernel.InstallRdyQ(rdyQ, rdyRun, RunIntNo, RunPrio);
+
     NEW(al0); ASSERT(al0 # NIL, Errors.HeapOverflow);
     KernelAlarms.Init(al0, TimerNo, AlarmNo0, AlarmPrio);
+
     NEW(ai0); ASSERT(ai0 # NIL, Errors.HeapOverflow);
-    Actors.Init(ai0, aiInit, 0);
-    Actors.Run(ai0, rdyQ);
+    Kernel.InitAct(ai0, aiInit, 0);
+    Kernel.RunAct(ai0, rdyQ);
     Out.String("end init => start"); Out.Ln;
     Kernel.Run
     (* we'll not return here *)

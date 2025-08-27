@@ -11,18 +11,17 @@ MODULE Semaphores;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT
-    T := KernelTypes, Kernel, ActorQueues, MessageQueues, Errors;
+  IMPORT Kernel, Errors;
 
   TYPE
     Semaphore* = POINTER TO SemaphoreDesc;
     SemaphoreDesc* = RECORD
-      evQ: T.EventQ;
-      msg: T.Message
+      evQ: Kernel.EventQ;
+      msg: Kernel.Message
     END;
 
 
-  PROCEDURE Claim*(s: Semaphore; act: T.Actor);
+  PROCEDURE Claim*(s: Semaphore; act: Kernel.Actor);
   BEGIN
     Kernel.GetMsg(s.evQ, act)
   END Claim;
@@ -37,14 +36,10 @@ MODULE Semaphores;
   PROCEDURE Init*(s: Semaphore);
   BEGIN
     ASSERT(s # NIL, Errors.PreCond);
-    NEW(s.evQ); ASSERT(s.evQ # NIL, Errors.HeapOverflow);
-    NEW(s.evQ.msgQ); ASSERT(s.evQ.msgQ # NIL, Errors.HeapOverflow);
-    NEW(s.evQ.actQ); ASSERT(s.evQ.actQ # NIL, Errors.HeapOverflow);
-    MessageQueues.Init(s.evQ.msgQ);
-    ActorQueues.Init(s.evQ.actQ);
+    Kernel.NewEvQ(s.evQ);
     NEW(s.msg); ASSERT(s.msg # NIL, Errors.HeapOverflow);
-    s.msg.pool := NIL;
-    MessageQueues.Put(s.evQ.msgQ, s.msg)
+    Kernel.InitMsg(s.msg);
+    Kernel.PutMsg(s.evQ, s.msg)
   END Init;
 
 END Semaphores.
