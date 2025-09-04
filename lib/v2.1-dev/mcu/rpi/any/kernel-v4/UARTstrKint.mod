@@ -157,10 +157,9 @@ MODULE UARTstrKint;
   END devHandler;
 *)
 
-  PROCEDURE devHandler0[0];
-    VAR ux: UARTctx; mis: SET;
+  PROCEDURE handleDev(ux: UARTctx);
+    VAR mis: SET;
   BEGIN
-    ux := uartCon[0];
     SYSTEM.GET(ux.dev.MIS, mis); (* get status *)
     IF UARTdev.MIS_TXMIS IN mis THEN
       IF ux.ix < ux.msg.numChar THEN
@@ -171,23 +170,18 @@ MODULE UARTstrKint;
         Kernel.PutMsgAwaited(ux.devEvQ, ux.devMsg);
       END
     END
+  END handleDev;
+
+
+  PROCEDURE devHandler0[0];
+  BEGIN
+    handleDev(uartCon[0])
   END devHandler0;
 
 
   PROCEDURE devHandler1[0];
-    VAR ux: UARTctx; mis: SET;
   BEGIN
-    ux := uartCon[1];
-    SYSTEM.GET(ux.dev.MIS, mis); (* get status *)
-    IF UARTdev.MIS_TXMIS IN mis THEN
-      IF ux.ix < ux.msg.numChar THEN
-        SYSTEM.PUT(ux.dev.TDR, ux.msg.str[ux.ix]);
-        INC(ux.ix)
-      ELSE
-        SYSTEM.PUT(ux.dev.ICR + MCU.ASET, {UARTdev.ICR_TXIC}); (* clear/deassert int *)
-        Kernel.PutMsgAwaited(ux.devEvQ, ux.devMsg);
-      END
-    END
+    handleDev(uartCon[1])
   END devHandler1;
 
 

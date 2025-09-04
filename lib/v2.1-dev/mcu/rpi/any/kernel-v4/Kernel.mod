@@ -32,21 +32,22 @@ MODULE Kernel;
       (* kernel data *)
       ticker: INTEGER;
       next: Actor;
-
+      (* kernel data, can be used by user code *)
       id*: INTEGER;
       msg*: Message;
-
       run*: ActorRun;
       rdyQ*: ReadyQ;
-
-      (* user data *)
+      (* user data, not used by kernel *)
+      state*: INTEGER;
       time*: INTEGER
     END;
 
     MessageDesc* = RECORD
+      (* kernel data *)
       next: Message;
       pool: MessagePool;
-      data*: INTEGER (* application data *)
+      (* user data, not used by kernel *)
+      data*: INTEGER
     END;
 
     RunHandler* = PROCEDURE;
@@ -84,6 +85,7 @@ MODULE Kernel;
 
   VAR
     coreCon: ARRAY MCU.NumCores OF CoreContext;
+    putToRdyQ: PROCEDURE(rq: ReadyQ; act: Actor);
 
   (* actors *)
 
@@ -96,13 +98,17 @@ MODULE Kernel;
     act.msg := NIL;
     act.ticker := 0;
     act.next := NIL;
-    act.time := 0
+    act.time := 0;
+    act.state := 0
   END InitAct;
 
   PROCEDURE RunAct*(act: Actor; rdyQ: ReadyQ);
   BEGIN
     act.rdyQ := rdyQ;
+    putToRdyQ(rdyQ, act)
+    (*
     act.run(act)
+    *)
   END RunAct;
 
 
@@ -136,34 +142,34 @@ MODULE Kernel;
     Exceptions.EnableInt(intNo)
   END InstallRdyQ;
 
-  PROCEDURE* PutToRdyQ*(q: ReadyQ; act: Actor);
+  PROCEDURE* PutToRdyQ*(rq: ReadyQ; act: Actor);
     CONST R03 = 3;
   BEGIN
     SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
     SYSTEM.LDREG(R03, ExcPrioBlock);
     SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
-    IF q.head = NIL THEN
-      q.head := act
+    IF rq.head = NIL THEN
+      rq.head := act
     ELSE
-      q.tail.next := act
+      rq.tail.next := act
     END;
-    q.tail := act;
+    rq.tail := act;
     act.next := NIL;
-    IF q.intNo # 0 THEN
-      SYSTEM.PUT(MCU.PPB_STIR, q.intNo); (* trigger the readyQ's interrupt *)
+    IF rq.intNo # 0 THEN
+      SYSTEM.PUT(MCU.PPB_STIR, rq.intNo); (* trigger the readyQ's interrupt *)
     END;
     SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
   END PutToRdyQ;
 
-  PROCEDURE* GetFromRdyQ*(q: ReadyQ; VAR act: Actor);
+  PROCEDURE* GetFromRdyQ*(rq: ReadyQ; VAR act: Actor);
     CONST R03  = 3;
   BEGIN
     SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
     SYSTEM.LDREG(R03, ExcPrioBlock);
     SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
-    act := q.head;
-    IF q.head # NIL THEN
-      q.head := q.head.next
+    act := rq.head;
+    IF rq.head # NIL THEN
+      rq.head := rq.head.next
     END;
     SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
   END GetFromRdyQ;
@@ -279,6 +285,7 @@ MODULE Kernel;
   PROCEDURE NewMsgPool*(VAR mp: MessagePool; makeMsg: NewMsg; numMsg: INTEGER);
     VAR m: Message; i: INTEGER;
   BEGIN
+    ASSERT(numMsg > 0, Errors.PreCond);
     NEW(mp); ASSERT(mp # NIL, Errors.HeapOverflow);
     IF makeMsg = NIL THEN
       makeMsg := newMsg
@@ -488,4 +495,6 @@ MODULE Kernel;
     SysTick.Init(millisecsPerTick, tickPrio, tickHandler)
   END Install;
 
+BEGIN
+  putToRdyQ := PutToRdyQ
 END Kernel.

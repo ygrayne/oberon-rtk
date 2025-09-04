@@ -410,7 +410,7 @@ MODULE MCU2;
     IO_BANK0_Fclk*    = 9;
     IO_BANK0_Fusb*    = 10;
     IO_BANK0_FuartAlt* = 11;
-    IO_BANK0_Fnull*   = 31;
+    IO_BANK0_Fnull*   = 31;   (* sets GPIO output driver to hi-z *)
 
     IO_BANK0_Functions* = {IO_BANK0_Fhstx .. IO_BANK0_FuartAlt, IO_BANK0_Fnull};
 
@@ -659,14 +659,14 @@ MODULE MCU2;
 
     (* bits in ACCESSCTRL_* registers *)
     (* ACCESSCTRL_ROM to ACCESSCTRL_XIP_AUX *)
-    ACCESSSCTRL_DBG*    = 7;
-    ACCESSSCTRL_DMA*    = 6;
-    ACCESSSCTRL_CORE1*  = 5;
-    ACCESSSCTRL_CORE0*  = 4;
-    ACCESSSCTRL_SP*     = 3;
-    ACCESSSCTRL_SU*     = 2;
-    ACCESSSCTRL_NSP*    = 1;
-    ACCESSSCTRL_NSU*    = 0;
+    ACSCTRL_DBG*    = 7;
+    ACSCTRL_DMA*    = 6;
+    ACSCTRL_CORE1*  = 5;
+    ACSCTRL_CORE0*  = 4;
+    ACSCTRL_SP*     = 3;
+    ACSCTRL_SU*     = 2;
+    ACSCTRL_NSP*    = 1;
+    ACSCTRL_NSU*    = 0;
 
 
     (* == BUSCTRL == *)
@@ -1330,9 +1330,19 @@ MODULE MCU2;
     (* .. *)
 
     (* -- DWT: data watchpoint and trace -- *)
-    PPB_DWT_CTRL*     = PPB_BASE + 01000H;
-    PPB_DWT_CYCCNT*   = PPB_BASE + 01004H;
-    PPB_DWT_EXCCNT*   = PPB_BASE + 0100CH;
+    PPB_DWT_CTRL*      = PPB_BASE + 01000H;
+    PPB_DWT_CYCCNT*    = PPB_BASE + 01004H;
+    PPB_DWT_EXCCNT*    = PPB_BASE + 0100CH;
+    PPB_DWT_LSUCNT*    = PPB_BASE + 01014H;
+    PPB_DWT_FOLDCNT*   = PPB_BASE + 01018H;
+    PPB_DWT_COMP0*     = PPB_BASE + 01020H;
+    PPB_DWT_FUNCTION0* = PPB_BASE + 01028H;
+    PPB_DWT_COMP1*     = PPB_BASE + 01030H;
+    PPB_DWT_FUNCTION1* = PPB_BASE + 01038H;
+    PPB_DWT_COMP2*     = PPB_BASE + 01040H;
+    PPB_DWT_FUNCTION2* = PPB_BASE + 01048H;
+    PPB_DWT_COMP3*     = PPB_BASE + 01050H;
+    PPB_DWT_FUNCTION3* = PPB_BASE + 01058H;
     (* .. *)
 
     (* -- FPB: flash patch and breakpoint -- *)
@@ -1542,7 +1552,9 @@ MODULE MCU2;
 
     (* -- debug control block -- *)
     PPB_DHCSR*        = PPB_BASE + 0EDF0H;
-    (* ... *)
+    PPB_DCRSR*        = PPB_BASE + 0EDF4H;
+    PPB_DCRDR*        = PPB_BASE + 0EDF8H;
+    PPB_DEMCR*        = PPB_BASE + 0EDFCH;
 
     (* -- sw interrupt generation -- *)
     PPB_STIR*         = PPB_BASE + 0EF00H;
