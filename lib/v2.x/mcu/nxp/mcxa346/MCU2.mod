@@ -98,6 +98,9 @@ MODULE MCU2;
     RGPIO4_BASE*    = 040106000H;
     CDOG1_BASE*     = 040107000H;
 
+    (* -- PPB base addresses -- *)
+    PPB_BASE*       = 0E0000000H;
+
 
 (* === peripheral bridge 1 === *)
 
@@ -314,6 +317,9 @@ MODULE MCU2;
     PPB_DebugMon_Exc*      = 12;
     PPB_PendSV_Exc*        = 14;
     PPB_SysTick_Exc*       = 15;
+
+
+    PPB_VTOR* = PPB_BASE + 0ED08H;
 
 
 
