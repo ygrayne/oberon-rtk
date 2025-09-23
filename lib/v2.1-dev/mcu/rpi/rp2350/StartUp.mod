@@ -88,7 +88,7 @@ MODULE StartUp;
   END ReleaseResets;
 
 
-  PROCEDURE ReleaseReset*(devNo: INTEGER); (* deprecated *)
+  PROCEDURE ReleaseReset*(devNo: INTEGER);
   BEGIN
     ReleaseResets({devNo})
   END ReleaseReset;
