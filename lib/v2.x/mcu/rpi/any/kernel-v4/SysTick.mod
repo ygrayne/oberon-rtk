@@ -1,13 +1,14 @@
 MODULE SysTick;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   Kernel-v4
   System tick
   Enable interrupt and install an interrupt handler
   so we can use WFE/WFI in kernel loop.
   --
-  MCU: RP2350
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -44,8 +45,8 @@ MODULE SysTick;
     VAR cntReload: INTEGER;
   BEGIN
     IF handler = NIL THEN handler := tickHandler END;
-    Exceptions.InstallSysExcHandler(MCU.PPB_SysTick_Exc, handler);
-    Exceptions.SetSysExcPrio(MCU.PPB_SysTick_Exc, prio);
+    Exceptions.InstallSysExcHandler(MCU.EXC_SysTick, handler);
+    Exceptions.SetSysExcPrio(MCU.EXC_SysTick, prio);
     cntReload := millisecondsPerTick * CountPerMillisecond - 1;
     SYSTEM.PUT(MCU.PPB_SYST_RVR, cntReload);
     SYSTEM.PUT(MCU.PPB_SYST_CVR, 0) (* clear counter *)

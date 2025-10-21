@@ -1,6 +1,7 @@
 MODULE Coroutines;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   Simple coroutines
   --

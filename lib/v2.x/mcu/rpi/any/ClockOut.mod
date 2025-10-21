@@ -1,10 +1,11 @@
 MODULE ClockOut;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   Clock out via GPIO.
   --
-  MCU: RP2350A, RP2350B
+  MCU: RP2040, RP2350A, RP2350B
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

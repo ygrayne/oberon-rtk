@@ -150,7 +150,7 @@ MODULE Stacktrace;
       IF stackVal = StackSeal THEN
         (* at top of main stack: we have an EXC_RETURN value with 'PSP used for stacking' *)
         (* switch stacks, point to stacked regs on process stack *)
-          SYSTEM.EMIT(MCU.MRS_R11_PSP);
+        SYSTEM.EMIT(MCU.MRS_R11_PSP);
         stackAddr := SYSTEM.REG(R11);
         isStackFrame := TRUE
       ELSE

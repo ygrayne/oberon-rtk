@@ -1,0 +1,126 @@
+MODULE K4base;
+(**
+  Oberon RTK Framework v3.0
+  --
+  Base test program for kernel-v4 prototype.
+  https://oberon-rtk.org/docs/examples/v2/k4tests/
+  --
+  MCU: RP2040, RP2350
+  Board: Pico, Pico2
+  --
+  Kernel-v4
+  --
+  Copyright (c) 2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT
+    SYSTEM, Main, MCU := MCU2, Kernel, Out, Errors;
+
+  CONST
+    RunPrio = MCU.ExcPrio4;
+    RunIntNo = MCU.IRQ_SW_0;
+    SysTickPrio = MCU.ExcPrio2;
+    TIMER_RAWL = MCU.TIMER0_BASE + MCU.TIMER_TIMERAWL_Offset;
+
+  TYPE
+    A0 = POINTER TO A0desc;
+    A0desc = RECORD (Kernel.ActorDesc)
+      cnt: INTEGER;
+      startAt: INTEGER
+    END;
+
+  VAR
+    ai0, ai1, ab0, ab1: A0;
+    rdyQ: Kernel.ReadyQ;
+
+
+  PROCEDURE rdyRun[0];
+  (* ready queue run int handler *)
+  BEGIN
+    Kernel.RunQueue(rdyQ)
+  END rdyRun;
+
+
+  PROCEDURE aiRun(act: Kernel.Actor);
+  (* systick-interrupt-driven actor run procedure *)
+    VAR a: A0; timeL: INTEGER;
+  BEGIN
+    SYSTEM.GET(TIMER_RAWL, timeL);
+    a := act(A0);
+    Out.String("=> int"); Out.Int(a.id, 2); Out.Int(a.cnt, 12);
+    Out.Int(timeL - a.startAt, 12); Out.Ln;
+    INC(a.cnt);
+    a.startAt := timeL;
+    Kernel.GetTick(a)
+  END aiRun;
+
+
+  PROCEDURE abRun(act: Kernel.Actor);
+  (* background actor run procedure *)
+    VAR a: A0; timeL, i: INTEGER;
+  BEGIN
+    SYSTEM.GET(TIMER_RAWL, timeL);
+    a := act(A0);
+    Out.String("-> bg"); Out.Int(a.id, 2); Out.String(" begin"); Out.Int(a.cnt, 12);
+    Out.Int(timeL - a.startAt, 12); Out.Ln;
+    INC(a.cnt);
+    a.startAt := timeL;
+    i := 0;
+    WHILE i < 10000000 DO INC(i) END; (* waste cycles *)
+    Out.String("-> bg"); Out.Int(a.id, 2); Out.String(" end"); Out.Ln;
+    Kernel.Submit(act, 2)
+  END abRun;
+
+
+  PROCEDURE aiInit(act: Kernel.Actor);
+    VAR a: A0;
+  BEGIN
+    a := act(A0);
+    a.cnt := 0;
+    a.startAt := 0;
+    a.run := aiRun;
+    Kernel.GetTick(a)
+  END aiInit;
+
+
+  PROCEDURE abInit(act: Kernel.Actor);
+    VAR a: A0;
+  BEGIN
+    a := act(A0);
+    a.cnt := 0;
+    a.startAt := 0;
+    a.run := abRun;
+    Kernel.Submit(act, 2)
+  END abInit;
+
+
+  PROCEDURE run;
+  BEGIN
+    Out.String("begin init"); Out.Ln;
+    Kernel.Install(1000, SysTickPrio);
+    Kernel.NewRdyQ(rdyQ, 0, 0);
+    Kernel.InstallRdyQ(rdyQ, rdyRun, RunIntNo, RunPrio);
+
+    NEW(ai0); ASSERT(ai0 # NIL, Errors.HeapOverflow);
+    Kernel.InitAct(ai0, aiInit, 0);
+    NEW(ai1); ASSERT(ai1 # NIL, Errors.HeapOverflow);
+    Kernel.InitAct(ai1, aiInit, 1);
+    NEW(ab0); ASSERT(ab0 # NIL, Errors.HeapOverflow);
+    Kernel.InitAct(ab0, abInit, 2);
+    NEW(ab1); ASSERT(ab1 # NIL, Errors.HeapOverflow);
+    Kernel.InitAct(ab1, abInit, 3);
+
+    Kernel.RunAct(ai0, rdyQ);
+    Kernel.RunAct(ai1, rdyQ);
+    Kernel.Submit(ab0, 0);
+    Kernel.Submit(ab1, 0);
+
+    Out.String("end init => start"); Out.Ln;
+    Kernel.Run
+    (* we'll not return here *)
+  END run;
+
+BEGIN
+  run
+END K4base.

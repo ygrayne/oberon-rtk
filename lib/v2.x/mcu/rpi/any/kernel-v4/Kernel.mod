@@ -1,22 +1,23 @@
 MODULE Kernel;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   Multi-threading kernel-v4.
   Interrupt-driven asynchronous tasks and synchronous background tasks.
   General ticker service.
   --
-  MCU: RP2350
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
   IMPORT
-    SYSTEM, MCU := MCU2, Exceptions, SysTick, Errors, LED;
+    SYSTEM, MCU := MCU2, Cores, Exceptions, SysTick, Errors, LED;
 
   CONST
-    ExcPrioBlock = MCU.PPB_ExcPrioHigh;
+    ExcPrioBlock = MCU.ExcPrioHigh;
 
   TYPE
     Actor* = POINTER TO ActorDesc;
@@ -54,7 +55,8 @@ MODULE Kernel;
     ReadyQueueDesc* = RECORD
       head, tail: Actor;
       intNo: INTEGER;
-      cid, id: INTEGER
+      cid, id: INTEGER;
+      ispr, intMask: INTEGER
     END;
 
     MessageQueueDesc* = RECORD
@@ -137,6 +139,8 @@ MODULE Kernel;
   PROCEDURE InstallRdyQ*(rq: ReadyQ; rh: RunHandler; intNo, prio: INTEGER);
   BEGIN
     rq.intNo := intNo;
+    rq.ispr := MCU.PPB_NVIC_ISPR0 + ((intNo DIV 32) * 4);
+    rq.intMask := intNo MOD 32;
     Exceptions.InstallIntHandler(intNo, rh);
     Exceptions.SetIntPrio(intNo, prio);
     Exceptions.EnableInt(intNo)
@@ -155,8 +159,9 @@ MODULE Kernel;
     END;
     rq.tail := act;
     act.next := NIL;
-    IF rq.intNo # 0 THEN
-      SYSTEM.PUT(MCU.PPB_STIR, rq.intNo); (* trigger the readyQ's interrupt *)
+    IF rq.intNo # 0 THEN (* trigger the readyQ's interrupt *)
+      SYSTEM.PUT(rq.ispr, {rq.intMask});
+      (*SYSTEM.PUT(MCU.PPB_STIR, rq.intNo); *)
     END;
     SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
   END PutToRdyQ;
@@ -409,7 +414,7 @@ MODULE Kernel;
   (* get next tick from kernel ticker *)
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     act.msg := NIL;
     PutToActQ(ctx.tickActQ, act)
@@ -420,7 +425,7 @@ MODULE Kernel;
   (* submit to loop *)
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     act.ticker := ticks;
     act.msg := NIL;
@@ -432,7 +437,7 @@ MODULE Kernel;
     VAR cid: INTEGER; ctx: CoreContext; act: Actor;
   BEGIN
     SYSTEM.PUT(LED.LXOR, {LED.Green});
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     GetFromActQ(ctx.tickActQ, act);
     WHILE act # NIL DO (* run all waiting actors *)
@@ -447,7 +452,7 @@ MODULE Kernel;
   (* runs in thread mode *)
     VAR cid: INTEGER; act, tail: Actor; ctx: CoreContext;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     REPEAT
       SYSTEM.EMITH(MCU.WFE);
@@ -484,7 +489,7 @@ MODULE Kernel;
   PROCEDURE Install*(millisecsPerTick, tickPrio: INTEGER);
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     NEW(coreCon[cid]); ASSERT(coreCon[cid] # NIL, Errors.HeapOverflow);
     ctx := coreCon[cid];
     (* loop *)

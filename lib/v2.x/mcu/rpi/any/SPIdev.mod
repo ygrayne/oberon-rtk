@@ -1,6 +1,7 @@
 MODULE SPIdev;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   SPI device (master mode, Motorola SPI only)
   * initialisation of SPI device data structure

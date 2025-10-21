@@ -1,6 +1,7 @@
 MODULE ClockCtrl;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   Clock control
   --
@@ -18,7 +19,7 @@ MODULE ClockCtrl;
     (* bits in CLKDIV *)
     CLKDIV_UNSTABLE = 31;
 
-    (* clocks for 'clk' parameter *)
+    (* clocks for 'clk' parameter (functional clock) *)
     CLK_FRO_LF_DIV*   = 0;  (* CTIMER, I2C, SPI, UART, LPTMR *)
     CLK_FRO_HF_GATED* = 1;  (* CTIMER *)
     CLK_FRO_HF_DIV*   = 2;  (* I2C, SPI, UART, LPTMR *)
@@ -26,6 +27,10 @@ MODULE ClockCtrl;
     CLK_CLK_16K*      = 4;  (* CTIMER, UART *)
     CLK_CLK_1M*       = 5;  (* CTIMER, I2C, SPI, UART, LPTMR *)
     CLK_PLL_CLK_DIV*  = 6;  (* CTIMER, I2C, SPI, UART, LPTMR *)
+
+    CLK_ST_CPU_CLK*      = 0;  (* SYSTICK *)
+    CLK_ST_CLK_1M*       = 1;
+    CLK_ST_OUT_CLK_16K*  = 2;
 
     CLK_OUT_FRO_12M*    = 0; (* CLK_CLKOUT *)
     CLK_OUT_FRO_HF_DIV* = 1;
@@ -35,7 +40,8 @@ MODULE ClockCtrl;
     CLK_OUT_CLK_SLOW*   = 6;
 
 
-  PROCEDURE ConfigClock*(device: INTEGER; clk, div: INTEGER);
+  PROCEDURE ConfigDevClock*(device: INTEGER; clk, div: INTEGER);
+  (* set functional clock *)
   (* use with clock disabled *)
   (* MCU.CLK_* devices *)
     VAR selReg, divReg: INTEGER;
@@ -47,29 +53,6 @@ MODULE ClockCtrl;
     SYSTEM.PUT(selReg, clk);
     SYSTEM.PUT(divReg, div);
     REPEAT UNTIL ~SYSTEM.BIT(divReg, CLKDIV_UNSTABLE)
-  END ConfigClock;
-
-
-  PROCEDURE EnableClock*(device: INTEGER);
-  (* MCU.DEV_* devices *)
-    VAR reg, devNo: INTEGER;
-  BEGIN
-    reg := device DIV 32;
-    reg := MCU.MRCC_GLB_CC0_SET + (reg * MCU.MRCC_GLB_CC_Offset);
-    devNo := device MOD 32;
-    SYSTEM.PUT(reg, {devNo})
-  END EnableClock;
-
-
-  PROCEDURE DisableClock*(device: INTEGER);
-  (* MCU.DEV_* devices *)
-    VAR reg, devNo: INTEGER;
-  BEGIN
-    reg := device DIV 32;
-    reg := MCU.MRCC_GLB_CC0_CLR + (reg * MCU.MRCC_GLB_CC_Offset);
-    devNo := device MOD 32;
-    SYSTEM.PUT(reg, {devNo})
-  END DisableClock;
-
+  END ConfigDevClock;
 
 END ClockCtrl.

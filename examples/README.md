@@ -17,4 +17,11 @@ More info: [https://oberon-rtk.org/docs/examples/](https://oberon-rtk.org/docs/e
     + pico2: Pico2/RP2350 boards
   + tvi
     + pico2-ice: Pico2-Ice/RP2350 board
++ v3.0: based on lib/v3.0
+  + rpi
+    + any: all Pico boards
+    + pico: Pico/RP2040 boards
+    + pico2: Pico2/RP2350 boards
+  + nxp
+    + frdm-mcxa346: FRDM-MCXA346 board
 ```

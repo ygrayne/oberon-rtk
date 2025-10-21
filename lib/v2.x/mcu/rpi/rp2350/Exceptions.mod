@@ -1,6 +1,7 @@
 MODULE Exceptions;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   Exception management
   --
@@ -134,7 +135,7 @@ MODULE Exceptions;
     CONST SHPR0 = MCU.PPB_SHPR1 - 04H;
     VAR addr, val, shift: INTEGER; clrMask: SET;
   BEGIN
-    ASSERT(excNo IN MCU.PPB_SysExc, Errors.PreCond);
+    ASSERT(excNo IN MCU.SysExc, Errors.PreCond);
     prio := ORD(BITS(prio) * BITS(PrioMask));
     addr := SHPR0 + ((excNo DIV ExcPerRegPrio) * RegOffset);
     shift := (excNo MOD ExcPerRegPrio) * PrioBits;
@@ -151,7 +152,7 @@ MODULE Exceptions;
     CONST SHPR0 = MCU.PPB_SHPR1 - 04H;
     VAR addr: INTEGER;
   BEGIN
-    ASSERT(excNo IN MCU.PPB_SysExc, Errors.PreCond);
+    ASSERT(excNo IN MCU.SysExc, Errors.PreCond);
     addr := SHPR0 + (excNo DIV ExcPerRegPrio) * RegOffset;
     SYSTEM.GET(addr, prio);
     prio := LSR(prio, (excNo MOD ExcPerRegPrio) * PrioBits);
@@ -162,7 +163,7 @@ MODULE Exceptions;
   PROCEDURE* InstallSysExcHandler*(excNo: INTEGER; handler: PROCEDURE);
     VAR vtor, vectAddr: INTEGER;
   BEGIN
-    ASSERT(excNo IN MCU.PPB_SysExc, Errors.PreCond);
+    ASSERT(excNo IN MCU.SysExc, Errors.PreCond);
     ASSERT(handler # NIL, Errors.PreCond);
     SYSTEM.GET(MCU.PPB_VTOR, vtor);
     vectAddr := vtor + (excNo * 4);

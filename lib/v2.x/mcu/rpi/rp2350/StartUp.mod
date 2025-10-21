@@ -1,6 +1,7 @@
 MODULE StartUp;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   Start-up control
   * power-on state machine (hardware controlled part)

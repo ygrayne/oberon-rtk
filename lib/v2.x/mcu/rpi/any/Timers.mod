@@ -1,6 +1,7 @@
 MODULE Timers;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   64 bit micro seconds => rolls over in 500,000+ years.
   --

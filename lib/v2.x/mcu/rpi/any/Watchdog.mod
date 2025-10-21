@@ -1,6 +1,7 @@
 MODULE Watchdog;
 (**
   Oberon RTK Framework
+  Version: v3.0
   --
   Watchdog controller
   --
@@ -143,7 +144,7 @@ MODULE Watchdog;
   END GetScratchReg;
 
 
-  PROCEDURE init;
+  PROCEDURE* init;
   BEGIN
     SYSTEM.PUT(MCU.WATCHDOG_CTRL + MCU.ACLR, CTRL_RESET);
     SYSTEM.PUT(MCU.PSM_WDSEL, 0);

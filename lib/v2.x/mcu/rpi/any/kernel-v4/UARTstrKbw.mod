@@ -1,13 +1,14 @@
 MODULE UARTstrKbw;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   UART string device driver for kernel-v4 use.
   Output only for now (PutString).
   --
   See https://oberon-rtk.org/docs/examples/v2/k4print/
   --
-  MCU: RP2350
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/

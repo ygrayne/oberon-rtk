@@ -1,6 +1,7 @@
 MODULE BinRes;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   Access binary resource data.
   --
@@ -81,7 +82,7 @@ MODULE BinRes;
     VAR resAddr, resSize, resId, resVersion: INTEGER; found: BOOLEAN; resName0: ResName;
   BEGIN
     CLEAR(res);
-    resAddr := Config.ResourceStart;
+    resAddr := Config.ResMem.start;
     SYSTEM.GET(resAddr, resId);
     SYSTEM.GET(resAddr + ResVersionOffset, resVersion);
     IF (resId = ResId) & (resVersion = ResVersion) THEN

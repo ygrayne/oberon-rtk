@@ -1,6 +1,7 @@
 MODULE RuntimeErrors;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   Exception handling: run-time errors and faults
   Multi-core
@@ -23,7 +24,7 @@ MODULE RuntimeErrors;
 **)
 
   IMPORT
-    SYSTEM, MCU := MCU2, LEDext, Memory;
+    SYSTEM, MCU := MCU2, LED, Config;
 
   CONST
     NumCores* = MCU.NumCores;
@@ -97,7 +98,7 @@ PROCEDURE excHandler[0];
 
     SYSTEM.EMIT(MCU.MRS_R11_IPSR);
     excNo := SYSTEM.REG(R11);
-    IF excNo = MCU.PPB_SVC_Exc THEN (* SVC exception *)
+    IF excNo = MCU.EXC_SVC THEN (* SVC exception *)
       (* get source line number *)
       SYSTEM.GET(retAddr + 1, b1);
       SYSTEM.GET(retAddr, b0);
@@ -118,35 +119,25 @@ PROCEDURE excHandler[0];
     SYSTEM.GET(MCU.PPB_ICSR, icsr);
     icsr := icsr + {PENDSVSET};
     SYSTEM.PUT(MCU.PPB_ICSR, icsr);
-    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB);
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
   END excHandler;
 
 
   PROCEDURE errorHandler[0];
-    VAR cid, leds, i: INTEGER; setMask: SET; er: ErrorDesc;
+    (* default handler: simply blink LED *)
+    VAR cid, cnt, i: INTEGER; er: ErrorDesc;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
     er := ErrorRec[cid];
-
-    (* set LEDs to indicate error *)
-    leds := LSL(er.core, 7); (* [7]: core 0 or 1 *)
-    leds := leds + LSL((er.errType) DIV 2, 6); (* [6]: error or fault *)
-    leds := leds + er.errCode;
-    i := 0; setMask := {};
-    WHILE i < 8 DO
-      IF i IN BITS(leds) THEN
-        INCL(setMask, LEDext.LED[i])
-      END;
-      INC(i)
+    IF er.errType IN {0, 1} THEN
+      cnt := 1000000
+    ELSE
+      cnt := 5000000
     END;
-    SYSTEM.PUT(LEDext.LCLR, LEDext.LEDx);
-    SYSTEM.PUT(LEDext.LSET, setMask); (* [5:0]: error/fault code *)
-
-    (* blink nervously *)
     REPEAT
-      SYSTEM.PUT(LEDext.LXOR, {LEDext.LEDpico});
+      SYSTEM.PUT(LED.LXOR, {LED.Pico});
       i := 0;
-      WHILE i < 1000000 DO INC(i) END
+      WHILE i < cnt DO INC(i) END
     UNTIL FALSE
   END errorHandler;
 
@@ -161,12 +152,12 @@ PROCEDURE excHandler[0];
   PROCEDURE InstallErrorHandler*(cid: INTEGER; eh: PROCEDURE);
     VAR vectorTableBase: INTEGER;
   BEGIN
-    vectorTableBase := Memory.DataMem[cid].dataStart;
-    install(vectorTableBase + MCU.PendSVhandlerOffset, eh);
+    vectorTableBase := Config.DataMem[cid].start;
+    install(vectorTableBase + MCU.EXC_PendSV_Offset, eh);
   END InstallErrorHandler;
 
 
-  PROCEDURE EnableFaults*;
+  PROCEDURE* EnableFaults*;
   (* call from code running on core 0 AND on core 1*)
     VAR x: SET;
   BEGIN
@@ -178,44 +169,35 @@ PROCEDURE excHandler[0];
 
 
   PROCEDURE Init*;
-    CONST Core0 = 0;
-    VAR i, addr, vectorTableBase, vectorTableTop: INTEGER;
+    VAR cid, addr, vectorTableBase, vectorTableTop: INTEGER;
   BEGIN
-    i := 0;
-    WHILE i < NumCores DO
-      (* set core 0 VTOR register to core 0 SRAM bottom *)
-      IF i = Core0 THEN
-        (* VTOR of core 1 will be set by core 1 wake-up sequence *)
-        SYSTEM.PUT(MCU.PPB_VTOR, Memory.DataMem[Core0].dataStart)
-      END;
-
-      (* initialise vector table *)
-      (* install exception handlers for all errors and faults as implemented in the MCU *)
-      vectorTableBase := Memory.DataMem[i].dataStart;
+    cid := 0;
+    WHILE cid < NumCores DO
+      (* initialise vector tables for each core *)
+      (* install exception handlers for all errors and faults *)
+      vectorTableBase := Config.DataMem[cid].start;
       vectorTableTop := vectorTableBase + MCU.VectorTableSize;
-      install(vectorTableBase + MCU.NMIhandlerOffset, excHandler);
-      install(vectorTableBase + MCU.HardFaultHandlerOffset, excHandler);
-      install(vectorTableBase + MCU.MemMgmtFaultHandlerOffset, excHandler);
-      install(vectorTableBase + MCU.BusFaultHandlerOffset, excHandler);
-      install(vectorTableBase + MCU.UsageFaultHandlerOffset, excHandler);
-      install(vectorTableBase + MCU.SecureFaultHandlerOffset, excHandler);
-      install(vectorTableBase + MCU.SVChandlerOffset, excHandler);
-      install(vectorTableBase + MCU.DebugMonitorOffset, excHandler);
+      install(vectorTableBase + MCU.EXC_NMI_Offset, excHandler);
+      install(vectorTableBase + MCU.EXC_HardFault_Offset, excHandler);
+      install(vectorTableBase + MCU.EXC_MemMgmtFault_Offset, excHandler);
+      install(vectorTableBase + MCU.EXC_BusFault_Offset, excHandler);
+      install(vectorTableBase + MCU.EXC_UsageFault_Offset, excHandler);
+      install(vectorTableBase + MCU.EXC_SecureFault_Offset, excHandler);
+      install(vectorTableBase + MCU.EXC_SVC_Offset, excHandler);
+      install(vectorTableBase + MCU.EXC_DebugMon_Offset, excHandler);
       (* install default error handler *)
-      install(vectorTableBase + MCU.PendSVhandlerOffset, errorHandler);
+      install(vectorTableBase + MCU.EXC_PendSV_Offset, errorHandler);
 
-      (* install faultHandler across the rest of the vector table *)
+      (* install excHandler across the rest of the vector table *)
       (* will catch any exception with a missing handler *)
-      addr := vectorTableBase + MCU.SysTickHandlerOffset;
+      addr := vectorTableBase + MCU.EXC_SysTick_Offset;
       WHILE addr < vectorTableTop DO
         install(addr, excHandler); INC(addr, 4)
       END;
-      INC(i)
+      INC(cid)
     END
   END Init;
 
-BEGIN
-  Init
 END RuntimeErrors.
 
 

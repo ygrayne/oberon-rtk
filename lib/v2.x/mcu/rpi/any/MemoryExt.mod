@@ -1,6 +1,7 @@
 MODULE MemoryExt;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   * extended memory allocation for two cores
   * two 4k blocks,
@@ -97,10 +98,10 @@ MODULE MemoryExt;
   PROCEDURE init;
     CONST Core0 = 0; Core1 = 1;
   BEGIN
-    coreCon[Core0].memTop := Config.CoreZeroRamExtStart;
-    coreCon[Core0].memLimit := Config.CoreZeroRamExtEnd;
-    coreCon[Core1].memTop := Config.CoreOneRamExtStart;
-    coreCon[Core1].memLimit := Config.CoreOneRamExtEnd
+    coreCon[Core0].memTop := Config.ExtMem[Core0].start;
+    coreCon[Core0].memLimit := Config.ExtMem[Core0].end;
+    coreCon[Core1].memTop := Config.ExtMem[Core1].start;
+    coreCon[Core1].memLimit := Config.ExtMem[Core1].end
   END init;
 
 BEGIN

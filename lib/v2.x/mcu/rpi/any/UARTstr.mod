@@ -1,6 +1,7 @@
 MODULE UARTstr;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   UART string device driver, kernel not required (busy waiting)
   --

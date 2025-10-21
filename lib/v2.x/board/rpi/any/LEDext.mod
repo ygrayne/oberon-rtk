@@ -1,6 +1,7 @@
 MODULE LEDext;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   Eight additional LEDs, connected via GPIO pins.
   Include also the green one on the Pico for convenience.
@@ -27,6 +28,7 @@ MODULE LEDext;
   CONST
     (* LED on the board *)
     LEDpinNoPico = 25;
+    LEDboard* = LEDpinNoPico;
     (* wired LEDs *)
     LEDpinNo0 = 27;
     LEDpinNo1 = 28;
@@ -71,8 +73,8 @@ MODULE LEDext;
       END;
       INC(i)
     END;
-    GPIO.Clear(BITS(clearMask));
-    GPIO.Set(BITS(setMask))
+    GPIO.ClearL(BITS(clearMask));
+    GPIO.SetL(BITS(setMask))
   END SetLedBits;
 
 
@@ -94,11 +96,11 @@ MODULE LEDext;
     LED[6] := LEDpinNo6;
     LED[7] := LEDpinNo7;
     GPIO.SetFunction(LEDpinNoPico, MCU.IO_BANK0_Fsio);
-    GPIO.OutputEnable({LEDpinNoPico});
+    GPIO.EnableOutputL({LEDpinNoPico});
     i := 0;
     WHILE i < NumLeds DO
       GPIO.SetFunction(LED[i], MCU.IO_BANK0_Fsio);
-      GPIO.OutputEnable(BITS(ORD({LED[i]})));
+      GPIO.EnableOutputL(BITS(ORD({LED[i]})));
       INC(i)
     END
   END init;

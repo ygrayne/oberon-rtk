@@ -1,6 +1,7 @@
 MODULE LED;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   Green LED on Pico and Pico2
   --
@@ -8,10 +9,10 @@ MODULE LED;
   Board: Pico, Pico2
   --
   Usage:
-  * Via SIO:
-    GPIO.Set({LED.Pico}),
-    GPIO.Clear({LED.Pico},
-    GPIO.Toggle({LED.Pico})
+  * Via procedures:
+    LED.Set({LED.Pico}),
+    LED.Clear({LED.Pico},
+    LED.Toggle({LED.Pico})
   * Direct, avoiding procedure calls, eg. for leaf procedures:
     SYSTEM.PUT(LED.LSET, {LED.Pico}),
     SYSTEM.PUT(LED.LCLR, {LED.Pico}),
@@ -21,21 +22,37 @@ MODULE LED;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT MCU := MCU2, GPIO;
+  IMPORT SYSTEM, MCU := MCU2, GPIO;
 
   CONST
     LEDpinNo = 25;
-    Green* = LEDpinNo; (* Pico2-Ice compatibility *)
+    Green* = LEDpinNo;
     Pico* = LEDpinNo;
+
     LSET* = MCU.SIO_GPIO_OUT_SET;
     LCLR* = MCU.SIO_GPIO_OUT_CLR;
     LXOR* = MCU.SIO_GPIO_OUT_XOR;
 
+  PROCEDURE Set*(leds: SET);
+  BEGIN
+    SYSTEM.PUT(LSET, leds)
+  END Set;
+
+  PROCEDURE Clear*(leds: SET);
+  BEGIN
+    SYSTEM.PUT(LCLR, leds)
+  END Clear;
+
+  PROCEDURE Toggle*(leds: SET);
+  BEGIN
+    SYSTEM.PUT(LXOR, leds)
+  END Toggle;
+
   PROCEDURE init;
   BEGIN
-    GPIO.SetFunction(LEDpinNo, MCU.IO_BANK0_Fsio);
-    GPIO.Clear({LEDpinNo});
-    GPIO.OutputEnable({LEDpinNo})
+    GPIO.SetFunction(LEDpinNo, GPIO.Fsio);
+    GPIO.EnableOutput(MCU.GPIO0, {LEDpinNo});
+    GPIO.Clear(MCU.GPIO0, {LEDpinNo})
   END init;
 
 BEGIN

@@ -1,6 +1,7 @@
 MODULE UARTdev;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   UART device
   * initialisation of device data structure
@@ -25,6 +26,7 @@ MODULE UARTdev;
     UART4* = 4;
     UART5* = 5;
     UARTs = {UART0 .. UART5};
+    NumUART* = MCU.NumUART;
 
     Disabled* = 0;
     Enabled* = 1;
@@ -110,8 +112,8 @@ MODULE UARTdev;
 
       (* release reset on UART device, set clock *)
       StartUp.ReleaseReset(dev.devNo);
-      ClockCtrl.ConfigClock(dev.clkNo, ClkSel, ClkDiv);
-      ClockCtrl.EnableClock(dev.devNo);
+      ClockCtrl.ConfigDevClock(dev.clkNo, ClkSel, ClkDiv);
+      StartUp.EnableClock(dev.devNo);
 
       (* disable transmitter and receiver *)
       SYSTEM.GET(dev.CTRL, val);
@@ -130,8 +132,8 @@ MODULE UARTdev;
 
       (* tx watermark, fifo is 4 values deep *)
       SYSTEM.GET(dev.WATER, val);
-      BFI(val, WATER_TX_1, WATER_TX_0, TxWatermark);
-      BFI(val, WATER_RX_1, WATER_RX_0, RxWatermark);
+      BFI(val, WATER_TX_1, WATER_TX_0, cfg.txwater);
+      BFI(val, WATER_RX_1, WATER_RX_0, cfg.rxwater);
       SYSTEM.PUT(dev.FIFO, val);
 
       (* enable fifos *)

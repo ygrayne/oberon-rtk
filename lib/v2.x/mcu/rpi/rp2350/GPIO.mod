@@ -1,10 +1,13 @@
 MODULE GPIO;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   General Purpose IO (GPIO)
   --
-  MCU: RP2350A (30 GPIO: 0 .. 29), RP2350B (48 GPIO: 0 .. 47)
+  MCU:
+    RP2350A (30 GPIO: 0 .. 29)
+    RP2350B (48 GPIO: 0 .. 47)
   --
   Note the deprecated procedures and definitions.
   --
@@ -22,14 +25,14 @@ MODULE GPIO;
     (* --- GPIO devices --- *)
 
     (* GPIO_CTRL overrides *)
-    GPIO_OVER_IRQ1 = 29;  (* [29:28] *)
-    GPIO_OVER_IRQ0 = 28;
-    GPIO_OVER_IN1  = 17;  (* [17:16] *)
-    GPIO_OVER_IN0  = 16;
-    GPIO_OVER_OE1  = 15;  (* [15:14] *)
-    GPIO_OVER_OE0  = 14;
-    GPIO_OVER_OUT1 = 13;  (* [13:12] *)
-    GPIO_OVER_OUT0 = 12;
+    GPIO_OVER_IRQ_1 = 29;  (* [29:28] *)
+    GPIO_OVER_IRQ_0 = 28;
+    GPIO_OVER_IN_1  = 17;  (* [17:16] *)
+    GPIO_OVER_IN_0  = 16;
+    GPIO_OVER_OE_1  = 15;  (* [15:14] *)
+    GPIO_OVER_OE_0  = 14;
+    GPIO_OVER_OUT_1 = 13;  (* [13:12] *)
+    GPIO_OVER_OUT_0 = 12;
 
     (* values for all overrides *)
     GPIO_OVER_val_direct* = 0;  (* direct, don't invert *)
@@ -43,13 +46,6 @@ MODULE GPIO;
     OverLow*  = GPIO_OVER_val_low;
     OverHigh* = GPIO_OVER_val_high;
 
-    (* deprecated *)
-    InvOff*  = GPIO_OVER_val_direct;
-    InvOn*   = GPIO_OVER_val_inv;
-    InvLow*  = GPIO_OVER_val_low;
-    InvHigh* = GPIO_OVER_val_high;
-    (* --- *)
-
     (* GPIO IRQ trigger event bits *)
     IRQ_LVL_LOW*   = 0;
     IRQ_LVL_HIGH*  = 1;
@@ -62,7 +58,6 @@ MODULE GPIO;
     EventBits = 4;    (* width of event field *)
     EventMask = 0FH;  (* mask corresponding to event field width *)
 
-
     (* --- pads --- *)
 
     (* pad output *)
@@ -73,8 +68,8 @@ MODULE GPIO;
     PADS_ISO*         = 8;
     PADS_OD*          = 7;
     PADS_IE*          = 6;
-    PADS_DRIVE1*      = 5;  (* [5:4], drive strength *)
-    PADS_DRIVE0*      = 4;
+    PADS_DRIVE_1*     = 5;  (* [5:4], drive strength *)
+    PADS_DRIVE_0*     = 4;
       DRIVE_val_2mA*  = 0;
       DRIVE_val_4mA*  = 1;
       DRIVE_val_8mA*  = 2;
@@ -85,17 +80,6 @@ MODULE GPIO;
     PADS_SLEWFAST*    = 0;
       SLEWFAST_val_slow* = 0;
       SLEWFAST_val_fast* = 1;
-
-    (* deprecated *)
-    BANK0_GPIO_OD*          = 7;
-    BANK0_GPIO_IE*          = 6;
-    BANK0_GPIO_DRIVE1*      = 5;
-    BANK0_GPIO_DRIVE0*      = 4;
-    BANK0_GPIO_PUE*         = 3;
-    BANK0_GPIO_PDE*         = 2;
-    BANK0_GPIO_SCHMITT*     = 1;
-    BANK0_GPIO_SLEWFAST*    = 0;
-    (* --- *)
 
     (* value ranges *)
     DriveRange = {DRIVE_val_2mA .. DRIVE_val_12mA};
@@ -108,6 +92,25 @@ MODULE GPIO;
     Drive12mA* = DRIVE_val_12mA;
     SlewSlow*  = SLEWFAST_val_slow;  (* reset *)
     SlewFast*  = SLEWFAST_val_fast;
+
+    (* IO functions *)
+    Fhstx*    = MCU.IO_BANK0_Fhstx;
+    Fspi*     = MCU.IO_BANK0_Fspi;
+    Fuart*    = MCU.IO_BANK0_Fuart;
+    Fi2c*     = MCU.IO_BANK0_Fi2c;
+    Fpwm*     = MCU.IO_BANK0_Fpwm;
+    Fsio*     = MCU.IO_BANK0_Fsio;
+    Fpio0*    = MCU.IO_BANK0_Fpio0;
+    Fpio1*    = MCU.IO_BANK0_Fpio1;
+    Fpio2*    = MCU.IO_BANK0_Fpio2;
+    Fqmi*     = MCU.IO_BANK0_Fqmi;
+    Ftrc*     = MCU.IO_BANK0_Ftrc;
+    Fclk*     = MCU.IO_BANK0_Fclk;
+    Fusb*     = MCU.IO_BANK0_Fusb;
+    FuartAlt* = MCU.IO_BANK0_FuartAlt;
+    Fnull*    = MCU.IO_BANK0_Fnull;     (* reset state *)
+
+    Functions* = MCU.IO_BANK0_Functions;
 
 
   TYPE
@@ -127,7 +130,7 @@ MODULE GPIO;
   PROCEDURE* SetFunction*(pin, functionNo: INTEGER);
     VAR addr, x: INTEGER;
   BEGIN
-    ASSERT(functionNo IN MCU.IO_BANK0_Functions, Errors. PreCond);
+    ASSERT(functionNo IN Functions, Errors. PreCond);
     addr := MCU.IO_BANK0_GPIO0_CTRL + (pin * MCU.IO_BANK0_GPIO_Offset);
     SYSTEM.GET(addr, x);
     BFI(x, 4, 0, functionNo);
@@ -151,19 +154,12 @@ MODULE GPIO;
   BEGIN
     addr := MCU.IO_BANK0_GPIO0_CTRL + (pin * MCU.IO_BANK0_GPIO_Offset);
     SYSTEM.GET(addr, val);
-    BFI(val, GPIO_OVER_IRQ1, GPIO_OVER_IRQ0, irqOver);
-    BFI(val, GPIO_OVER_IN1, GPIO_OVER_IN0, inOver);
-    BFI(val, GPIO_OVER_OE1, GPIO_OVER_OE0, oeOver);
-    BFI(val, GPIO_OVER_OUT1, GPIO_OVER_OUT0, outOver);
+    BFI(val, GPIO_OVER_IRQ_1, GPIO_OVER_IRQ_0, irqOver);
+    BFI(val, GPIO_OVER_IN_1, GPIO_OVER_IN_0, inOver);
+    BFI(val, GPIO_OVER_OE_1, GPIO_OVER_OE_0, oeOver);
+    BFI(val, GPIO_OVER_OUT_1, GPIO_OVER_OUT_0, outOver);
     SYSTEM.PUT(addr, val)
   END SetOverrides;
-
-
-  PROCEDURE SetInverters*(pin: INTEGER; irqInv, inInv, oeInv, outInv: INTEGER);
-  (* deprecated *)
-  BEGIN
-    SetOverrides(pin, irqInv, inInv, oeInv, outInv)
-  END SetInverters;
 
 
   (* --- pads --- *)
@@ -185,7 +181,7 @@ MODULE GPIO;
     BFI(x, PADS_SCHMITT, cfg.schmittTrigEn);
     BFI(x, PADS_PDE, cfg.pulldownEn);
     BFI(x, PADS_PUE, cfg.pullupEn);
-    BFI(x, PADS_DRIVE1, BANK0_GPIO_DRIVE0, cfg.driveStrength);
+    BFI(x, PADS_DRIVE_1, PADS_DRIVE_0, cfg.driveStrength);
     BFI(x, PADS_IE, cfg.inputEn);
     BFI(x, PADS_OD, cfg.outputDe);
     SYSTEM.PUT(addr, x)
@@ -243,39 +239,6 @@ MODULE GPIO;
     addr := MCU.PADS_BANK0_GPIO0 + MCU.ACLR + (pin * MCU.PADS_BANK0_GPIO_Offset);
     SYSTEM.PUT(addr, {PADS_IE})
   END DisconnectInput;
-
-
-  PROCEDURE* EnableOutput*(pin: INTEGER);
-  (* deprecated *)
-    VAR addr: INTEGER;
-  BEGIN
-    addr := MCU.PADS_BANK0_GPIO0 + MCU.ACLR + (pin * MCU.PADS_BANK0_GPIO_Offset);
-    SYSTEM.PUT(addr, {PADS_OD})
-  END EnableOutput;
-
-  PROCEDURE* DisableOutput*(pin: INTEGER);
-  (* deprecated *)
-    VAR addr: INTEGER;
-  BEGIN
-    addr := MCU.PADS_BANK0_GPIO0 + MCU.ASET + (pin * MCU.PADS_BANK0_GPIO_Offset);
-    SYSTEM.PUT(addr, {PADS_OD})
-  END DisableOutput;
-
-  PROCEDURE* EnableInput*(pin: INTEGER);
-  (* deprecated *)
-    VAR addr: INTEGER;
-  BEGIN
-    addr := MCU.PADS_BANK0_GPIO0 + MCU.ASET + (pin * MCU.PADS_BANK0_GPIO_Offset);
-    SYSTEM.PUT(addr, {PADS_IE})
-  END EnableInput;
-
-  PROCEDURE* DisableInput*(pin: INTEGER);
-  (* deprecated *)
-    VAR addr: INTEGER;
-  BEGIN
-    addr := MCU.PADS_BANK0_GPIO0 + MCU.ACLR + (pin * MCU.PADS_BANK0_GPIO_Offset);
-    SYSTEM.PUT(addr, {PADS_IE})
-  END DisableInput;
 
 
   (* --- GPIO devices and pads --- *)
@@ -351,102 +314,81 @@ MODULE GPIO;
 
   (* GPIO control via SIO *)
   (* GPIO function 'Fsio' *)
+  (* parameter 'gpio': MCU.GPIOx *)
 
-  PROCEDURE* Set*(mask: SET);
-  (* atomic *)
+  PROCEDURE* Set*(gpio: INTEGER; pinMask: SET);
   BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, mask)
+    SYSTEM.PUT(gpio + MCU.SIO_GPIO_OUT_SET_Offset, pinMask)
   END Set;
 
-  PROCEDURE* SetH*(maskH: SET);
-  (* atomic *)
+  PROCEDURE* SetL*(pinMask: SET);
   BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_HI_OUT_SET, maskH)
+    SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, pinMask)
+  END SetL;
+
+  PROCEDURE* SetH*(pinMask: SET);
+  BEGIN
+    SYSTEM.PUT(MCU.SIO_GPIO_HI_OUT_SET, pinMask)
   END SetH;
 
-  PROCEDURE* Set2*(maskL, maskH: SET);
-  (* deprecated, use Set and SetH *)
-  BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, maskL);
-    SYSTEM.PUT(MCU.SIO_GPIO_HI_OUT_SET, maskH)
-  END Set2;
 
-  PROCEDURE* SetPin*(pin: INTEGER);
-  (* deprecated, use PutPin *)
+  PROCEDURE* Clear*(gpio: INTEGER; pinMask: SET);
   BEGIN
-    IF pin < 32 THEN
-      SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {pin})
-    ELSE
-      SYSTEM.PUT(MCU.SIO_GPIO_HI_OUT_SET, {pin-32})
-    END
-  END SetPin;
-
-
-  PROCEDURE* Clear*(mask: SET);
-  (* atomic *)
-  BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, mask)
+    SYSTEM.PUT(gpio + MCU.SIO_GPIO_OUT_CLR_Offset, pinMask)
   END Clear;
 
-  PROCEDURE* ClearH*(maskH: SET);
-  (* atomic *)
+  PROCEDURE* ClearL*(pinMask: SET);
   BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_HI_OUT_CLR, maskH)
+    SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, pinMask)
+  END ClearL;
+
+  PROCEDURE* ClearH*(pinMask: SET);
+  BEGIN
+    SYSTEM.PUT(MCU.SIO_GPIO_HI_OUT_CLR, pinMask)
   END ClearH;
 
-  PROCEDURE* Clear2*(maskL, maskH: SET);
-  (* depreacted, use Clear and Clear H *)
-  BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, maskL);
-    SYSTEM.PUT(MCU.SIO_GPIO_HI_OUT_CLR, maskH);
-  END Clear2;
 
-  PROCEDURE* ClearPin*(pin: INTEGER);
-  (* deprecated, use PutPin *)
+  PROCEDURE* Toggle*(gpio: INTEGER; pinMask: SET);
   BEGIN
-    IF pin < 32 THEN
-      SYSTEM.PUT(MCU.SIO_GPIO_OUT_CLR, {pin})
-    ELSE
-      SYSTEM.PUT(MCU.SIO_GPIO_HI_OUT_CLR, {pin-32})
-    END
-  END ClearPin;
-
-
-  PROCEDURE* Toggle*(mask: SET);
-  (* atomic *)
-  BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_OUT_XOR, mask)
+    SYSTEM.PUT(gpio + MCU.SIO_GPIO_OUT_XOR_Offset, pinMask)
   END Toggle;
 
-  PROCEDURE* ToggleH*(maskH: SET);
-  (* atomic *)
+  PROCEDURE* ToggleL*(pinMask: SET);
   BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_HI_OUT_XOR, maskH)
+    SYSTEM.PUT(MCU.SIO_GPIO_OUT_XOR, pinMask)
+  END ToggleL;
+
+  PROCEDURE* ToggleH*(pinMask: SET);
+  BEGIN
+    SYSTEM.PUT(MCU.SIO_GPIO_HI_OUT_XOR, pinMask)
   END ToggleH;
 
 
-  PROCEDURE* Get*(VAR pinVal: SET);
+  PROCEDURE* Get*(gpio: INTEGER; VAR pinVal: SET);
   BEGIN
-    SYSTEM.GET(MCU.SIO_GPIO_IN, pinVal)
+    SYSTEM.GET(gpio, pinVal)
   END Get;
 
-  PROCEDURE* GetH*(VAR pinValH: SET);
+  PROCEDURE* GetL*(VAR pinVal: SET);
   BEGIN
-    SYSTEM.GET(MCU.SIO_GPIO_HI_IN, pinValH)
+    SYSTEM.GET(MCU.SIO_GPIO_IN, pinVal)
+  END GetL;
+
+  PROCEDURE* GetH*(VAR pinVal: SET);
+  BEGIN
+    SYSTEM.GET(MCU.SIO_GPIO_HI_IN, pinVal)
   END GetH;
 
-  PROCEDURE* Get2*(VAR valueL, valueH: SET);
-  (* deprecated, use Get and GetH *)
+
+  PROCEDURE* Put*(gpio: INTEGER; pinVal: SET);
   BEGIN
-    SYSTEM.GET(MCU.SIO_GPIO_IN, valueL);
-    SYSTEM.GET(MCU.SIO_GPIO_HI_IN, valueH)
-  END Get2;
+    SYSTEM.PUT(gpio + MCU.SIO_GPIO_OUT_Offset, pinVal)
+  END Put;
 
-
-  PROCEDURE* Put*(pinVal: SET);
+  PROCEDURE* PutL*(pinVal: SET);
   BEGIN
     SYSTEM.PUT(MCU.SIO_GPIO_OUT, pinVal)
-  END Put;
+  END PutL;
 
   PROCEDURE* PutH*(pinValH: SET);
   BEGIN
@@ -454,7 +396,6 @@ MODULE GPIO;
   END PutH;
 
   PROCEDURE* PutPin*(pin: INTEGER; setPin: BOOLEAN);
-  (* atomic *)
     VAR addr: INTEGER;
   BEGIN
     IF pin < 32 THEN
@@ -475,87 +416,74 @@ MODULE GPIO;
   END PutPin;
 
 
-  PROCEDURE* GetOut*(VAR pinVal: SET);
+  PROCEDURE* Check*(gpio: INTEGER; pinMask: SET): BOOLEAN;
+    VAR value: SET;
   BEGIN
-    SYSTEM.GET(MCU.SIO_GPIO_OUT, pinVal)
-  END GetOut;
+    SYSTEM.GET(gpio, value);
+    RETURN value * pinMask # {}
+  END Check;
 
-  PROCEDURE* GetOutH*(VAR pinValH: INTEGER);
-  BEGIN
-    SYSTEM.GET(MCU.SIO_GPIO_HI_OUT, pinValH)
-  END GetOutH;
-
-
-  PROCEDURE* Check*(mask: SET): BOOLEAN;
+  PROCEDURE* CheckL*(pinMask: SET): BOOLEAN;
     VAR value: SET;
   BEGIN
     SYSTEM.GET(MCU.SIO_GPIO_IN, value);
-    RETURN value * mask # {}
-  END Check;
+    RETURN value * pinMask # {}
+  END CheckL;
 
-  PROCEDURE* CheckH*(maskH: SET): BOOLEAN;
+  PROCEDURE* CheckH*(pinMask: SET): BOOLEAN;
     VAR value: SET;
   BEGIN
     SYSTEM.GET(MCU.SIO_GPIO_HI_IN, value);
-    RETURN value * maskH # {}
+    RETURN value * pinMask # {}
   END CheckH;
 
 
-  PROCEDURE* OutputEnable*(mask: SET);
-  (* atomic *)
+  PROCEDURE* EnableOutput*(gpio: INTEGER; pinMask: SET);
   BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_OE_SET, mask)
-  END OutputEnable;
+    SYSTEM.PUT(gpio + MCU.SIO_GPIO_OE_SET_Offset, pinMask)
+  END EnableOutput;
 
-  PROCEDURE* OutputEnableH*(maskH: SET);
-  (* atomic *)
+  PROCEDURE* EnableOutputL*(pinMask: SET);
   BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_HI_OE_SET, maskH)
-  END OutputEnableH;
+    SYSTEM.PUT(MCU.SIO_GPIO_OE_SET, pinMask)
+  END EnableOutputL;
 
-  PROCEDURE* OutputEnable2*(maskL, maskH: SET);
-  (* deprecated, use OutputEnable and OutputEnableH *)
+  PROCEDURE* EnableOutputH*(pinMaskH: SET);
   BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_OE_SET, maskL);
-    SYSTEM.PUT(MCU.SIO_GPIO_HI_OE_SET, maskH)
-  END OutputEnable2;
+    SYSTEM.PUT(MCU.SIO_GPIO_HI_OE_SET, pinMaskH)
+  END EnableOutputH;
 
 
-  PROCEDURE* OutputDisable*(mask: SET);
-  (* atomic *)
+  PROCEDURE* DisableOutput*(gpio: INTEGER; pinMask: SET);
   BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_OE_CLR, mask)
-  END OutputDisable;
+    SYSTEM.PUT(gpio + MCU.SIO_GPIO_OE_CLR_Offset, pinMask)
+  END DisableOutput;
 
-  PROCEDURE* OutputDisableH*(maskH: SET);
-  (* atomic *)
+  PROCEDURE* DisableOutputL*(pinMask: SET);
   BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_HI_OE_CLR, maskH)
-  END OutputDisableH;
+    SYSTEM.PUT(MCU.SIO_GPIO_OE_CLR, pinMask)
+  END DisableOutputL;
 
-
-  PROCEDURE* OutputEnToggle*(mask: SET);
-  (* atomic *)
+  PROCEDURE* DisableOutputH*(pinMaskH: SET);
   BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_OE_XOR, mask)
-  END OutputEnToggle;
+    SYSTEM.PUT(MCU.SIO_GPIO_HI_OE_CLR, pinMaskH)
+  END DisableOutputH;
 
-  PROCEDURE* OutputEnToggleH*(maskH: SET);
-  (* atomic *)
+
+  PROCEDURE* GetEnabledOutput*(gpio: INTEGER; VAR pinVal: SET);
   BEGIN
-    SYSTEM.PUT(MCU.SIO_GPIO_HI_OE_XOR, maskH)
-  END OutputEnToggleH;
+    SYSTEM.GET(gpio + MCU.SIO_GPIO_OE_Offset, pinVal)
+  END GetEnabledOutput;
 
-
-  PROCEDURE* GetOutputEnable*(VAR pinVal: SET);
+  PROCEDURE* GetEnabledOutputL*(VAR pinVal: SET);
   BEGIN
     SYSTEM.GET(MCU.SIO_GPIO_OE, pinVal)
-  END GetOutputEnable;
+  END GetEnabledOutputL;
 
-  PROCEDURE* GetOutputEnableH*(VAR pinValH: SET);
+  PROCEDURE* GetEnabledOutputH*(VAR pinValH: SET);
   BEGIN
     SYSTEM.GET(MCU.SIO_GPIO_HI_OE, pinValH)
-  END GetOutputEnableH;
+  END GetEnabledOutputH;
 
 
   PROCEDURE init;

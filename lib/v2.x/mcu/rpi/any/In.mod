@@ -1,6 +1,7 @@
 MODULE In;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   Input via two TextIO.Reader.
   --
@@ -10,7 +11,7 @@ MODULE In;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Errors, TextIO, Texts;
+  IMPORT Cores, Errors, TextIO, Texts;
 
   CONST
     NumTerminals = 2;
@@ -30,7 +31,6 @@ MODULE In;
   PROCEDURE Open*(R0, R1: TextIO.Reader);
   BEGIN
     ASSERT(R0 # NIL, Errors.PreCond);
-    ASSERT(R1 # NIL, Errors.PreCond);
     R[0] := R0;
     R[1] := R1
   END Open;
@@ -39,7 +39,7 @@ MODULE In;
   PROCEDURE String*(VAR str: ARRAY OF CHAR; VAR res: INTEGER);
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     Texts.ReadString(R[cid], str, res)
   END String;
 
@@ -47,7 +47,7 @@ MODULE In;
   PROCEDURE Int*(VAR int, res: INTEGER);
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     Texts.ReadInt(R[cid], int, res)
   END Int;
 

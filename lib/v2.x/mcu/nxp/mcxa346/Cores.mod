@@ -1,8 +1,9 @@
 MODULE Cores;
 (**
-  Oberon RTK Framework v2.x
+  Oberon RTK Framework
+  Version: v3.0
   --
-  Multi-core handling
+  Core handling
   --
   MCU: MCX-A346
   --
@@ -12,10 +13,10 @@ MODULE Cores;
 
   IMPORT SYSTEM, MCU := MCU2;
 
-
+  (*
   VAR
     runInit, runStart: PROCEDURE;
-
+  *)
 
   PROCEDURE SetCoreId*(id: INTEGER);
     VAR vtor: INTEGER;
@@ -40,7 +41,7 @@ MODULE Cores;
     RETURN cid
   END CoreId;
 
-
+(*
   PROCEDURE init;
   BEGIN
     IF runInit # NIL THEN
@@ -57,5 +58,5 @@ MODULE Cores;
     runStart := startProc;
 
   END StartCoreOne;
-
+*)
 END Cores.

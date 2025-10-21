@@ -1,6 +1,7 @@
 MODULE Recovery;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   Recovery from runtime errors.
   --
@@ -14,7 +15,7 @@ MODULE Recovery;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, RuntimeErrors, Watchdog, LEDext;
+  IMPORT SYSTEM, MCU := MCU2, Cores, RuntimeErrors, Watchdog, LEDext;
 
   CONST
     (* restart scratch register *)
@@ -103,7 +104,7 @@ MODULE Recovery;
     REPEAT
       SYSTEM.GET(SpinLock, sl)
     UNTIL sl # 0;
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     SYSTEM.PUT(LEDext.LSET, {LEDext.LED[cid + 6]});
     SYSTEM.GET(RestartScratchRegAddr, scrRestart);
     BFI(scrRestart, ErrCode1, ErrCode0, ORD(RuntimeErrors.ErrorRec[cid].errCode));
@@ -150,7 +151,7 @@ MODULE Recovery;
   PROCEDURE Install*;
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     RuntimeErrors.InstallErrorHandler(cid, errorHandler);
     IF cid = 0 THEN
       collectRestartMode;

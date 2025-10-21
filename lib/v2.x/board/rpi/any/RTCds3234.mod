@@ -1,6 +1,7 @@
 MODULE RTCds3234;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   SPI driver for Maxim DS3234 real-time clock
   --
@@ -45,20 +46,20 @@ MODULE RTCds3234;
 
   PROCEDURE ReadRegisters*(addr: BYTE; VAR regValues: ARRAY OF BYTE; n: INTEGER);
   BEGIN
-    GPIO.Clear({cs});
+    GPIO.ClearL({cs});
     SPI.PutByte(spi, addr);
     SPI.GetBytes(spi, regValues, n);
-    GPIO.Set({cs})
+    GPIO.SetL({cs})
   END ReadRegisters;
 
 
   PROCEDURE WriteRegisters*(addr: BYTE; regValues: ARRAY OF BYTE; n: INTEGER);
     CONST WriteEnable = 80H;
   BEGIN
-    GPIO.Clear({cs});
+    GPIO.ClearL({cs});
     SPI.PutByte(spi, addr + WriteEnable);
     SPI.PutBytes(spi, regValues, n);
-    GPIO.Set({cs})
+    GPIO.SetL({cs})
   END WriteRegisters;
 
 

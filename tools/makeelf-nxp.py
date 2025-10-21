@@ -38,7 +38,10 @@ class Elf:
     assert section_name not in self.sections
     self.sections[section_name] = section
 
-  def set_code_addr(self, entry_addr):
+  def set_code_addr(self, code_addr):
+    self._code_addr = code_addr
+
+  def set_entry_addr(self, entry_addr):
     self._entry_addr = entry_addr
 
   def make(self, prog_data):
@@ -72,7 +75,7 @@ class Elf:
     text_hd.set_data_field('sh_name', self._shstr_tab.index_of('.text'))
     text_hd.set_data_field('sh_type', 1) # SHT_PROGBITS
     text_hd.set_data_field('sh_flags', 0x4 | 0x2) # SHF_EXECINSTR | SHF_ALLOC
-    text_hd.set_data_field('sh_addr', self._entry_addr)
+    text_hd.set_data_field('sh_addr', self._code_addr)
     text_hd.set_data_field('sh_size', text.size())
     text_hd.set_data_field('sh_addralign', 4)
     self._sh_tab.add_entry(text_hd, '.text')
@@ -81,8 +84,8 @@ class Elf:
     # create entry for .text in program header table
     text_ph = ProgramHeader()
     text_ph.set_data_field('p_type', 1)  # PT_LOAD
-    text_ph.set_data_field('p_vaddr', self._entry_addr)
-    text_ph.set_data_field('p_paddr', self._entry_addr)
+    text_ph.set_data_field('p_vaddr', self._code_addr)
+    text_ph.set_data_field('p_paddr', self._code_addr)
     text_ph.set_data_field('p_filesz', text.size())
     text_ph.set_data_field('p_memsz', text.size())
     text_ph.set_data_field('p_flags', 0x04 | 0x01) # PF_R | PF_X
@@ -426,6 +429,10 @@ class BinFile:
     self._binbuf[0x20:0x24] = struct.pack('<I', self._size)
 
   @property
+  def entry_addr(self):
+    return struct.unpack('<L', self._binbuf[4:8])[0]
+
+  @property
   def data(self):
     return self._binbuf
 
@@ -442,15 +449,15 @@ def main():
   parser.add_argument('bin_file', type=str, help="binary file (.bin)")
   parser.add_argument('-v', action='store_true', dest='verbose', help="print feedback")
   parser.add_argument('-o', type=str, dest='out_file', help="output file (.elf), default: bin_file.elf")
-  parser.add_argument('-e', dest='entry_addr', default='0x00000000',
-                      help="program address in hexadecimal, default: 0x00000000")
+  parser.add_argument('-l', dest='load_addr', default='0x00000000',
+                      help="program memory address in hexadecimal, default: 0x00000000")
   args = parser.parse_args()
 
   args.bin_file = Path(args.bin_file)
   if args.out_file == None: args.out_file = args.bin_file.with_suffix('.elf')
 
   try:
-    args.entry_addr = int(args.entry_addr, base = 16)
+    args.load_addr = int(args.load_addr, base = 16)
   except:
     print(f'{PROG_NAME}: enter addresses in hexadecimal format (with or without \'0x\' prefix)')
     sys.exit(1)
@@ -462,14 +469,17 @@ def main():
 
   bin_file = BinFile(bin_f)
   bin_file.make_nxp()
+  entry_addr = bin_file.entry_addr
 
   elf = Elf()
-  elf.set_code_addr(args.entry_addr)
+  elf.set_code_addr(args.load_addr)
+  elf.set_entry_addr(entry_addr)
 
   if args.verbose:
     print("Binary file: {}".format(args.bin_file))
     print("Elf file: {}".format(args.out_file))
-    print("Entry address: {}".format(hex(args.entry_addr)))
+    print("Memory address: {}".format(hex(args.load_addr)))
+    print("Entry address: {}".format(hex(entry_addr)))
     print("Creating ELF data: {}...".format(args.out_file))
 
   elf.make(bin_file.data)

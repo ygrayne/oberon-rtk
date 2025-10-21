@@ -1,6 +1,7 @@
 MODULE Main;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   Main module
   --
@@ -15,8 +16,6 @@ MODULE Main;
 **)
 
   IMPORT
-    (* the first row of imports "auto-init", keep their order in the list *)
-    (* ignore the corresponding "is not used" warnings *)
     (* LinkOptions is the first import of Config *)
     Config, Clocks, Memory, RuntimeErrors,
     RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr, MCU := MCU2;
@@ -44,9 +43,9 @@ MODULE Main;
     padCfg.pulldownEn := GPIO.Disabled;
     GPIO.ConfigurePad(txPinNo, padCfg);
     GPIO.ConfigurePad(rxPinNo, padCfg);
-    GPIO.SetFunction(txPinNo, MCU.IO_BANK0_Fuart);
-    GPIO.SetFunction(rxPinNo, MCU.IO_BANK0_Fuart);
-    GPIO.EnableInput(rxPinNo)
+    GPIO.SetFunction(txPinNo, GPIO.Fuart);
+    GPIO.SetFunction(rxPinNo, GPIO.Fuart);
+    GPIO.ConnectInput(rxPinNo)
   END configPins;
 
 
@@ -55,6 +54,8 @@ MODULE Main;
       uartDev0, uartDev1: UARTdev.Device;
       uartCfg: UARTdev.DeviceCfg;
   BEGIN
+    RuntimeErrors.Init;
+
     (* define UART cfg *)
     UARTdev.GetBaseCfg(uartCfg);
     uartCfg.fifoEn := UARTdev.Enabled;

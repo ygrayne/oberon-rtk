@@ -1,6 +1,7 @@
 MODULE Errors;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   Definition of fault and error codes and corresponding message strings.
   --
@@ -18,14 +19,14 @@ MODULE Errors;
 
     (* MCU fault codes *)
     (* all *)
-    NMI*          = MCU.PPB_NMI_Exc;
-    HardFault*    = MCU.PPB_HardFault_Exc;
+    NMI*          = MCU.EXC_NMI;
+    HardFault*    = MCU.EXC_HardFault;
     (* M33 only *)
-    MemMgmtFault* = MCU.PPB_MemMgmtFault_Exc;
-    BusFault*     = MCU.PPB_BusFault_Exc;
-    UsageFault*   = MCU.PPB_UsageFault_Exc;
-    SecureFault*  = MCU.PPB_SecureFault_Exc;
-    DebugMon*     = MCU.PPB_DebugMon_Exc;
+    MemMgmtFault* = MCU.EXC_MemMgmtFault;
+    BusFault*     = MCU.EXC_BusFault;
+    UsageFault*   = MCU.EXC_UsageFault;
+    SecureFault*  = MCU.EXC_SecureFault;
+    DebugMon*     = MCU.EXC_DebugMon;
 
     (* error types *)
     ErrTypeErrorHandler* = 0;

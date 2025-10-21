@@ -1,6 +1,7 @@
 MODULE UARTdev;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   UART device
   * initialisation of device data structure
@@ -139,7 +140,7 @@ MODULE UARTdev;
     ASSERT(uartNo IN UARTs);
     dev.uartNo := uartNo;
     dev.devNo := MCU.RESETS_UART0 + uartNo;
-    dev.intNo := MCU.PPB_UART0_IRQ + uartNo;
+    dev.intNo := MCU.IRQ_UART0 + uartNo;
     base      := MCU.UART0_BASE + (uartNo * MCU.UART_Offset);
     dev.CR    := base + MCU.UART_CR_Offset;
     dev.IBRD  := base + MCU.UART_IBRD_Offset;

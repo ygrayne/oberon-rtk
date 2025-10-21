@@ -1,6 +1,7 @@
 MODULE KernelAlarms;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   Kernel-v4
   Alarms for kernel actors for microseconds timing.
@@ -31,7 +32,7 @@ MODULE KernelAlarms;
     VAR intNo, tmNo, alNo: INTEGER; al: Alarm;
   BEGIN
     SYSTEM.EMIT(MCU.MRS_R11_IPSR);
-    intNo := SYSTEM.REG(11) - MCU.PPB_IRQ_BASE;
+    intNo := SYSTEM.REG(11) - MCU.IRQ_BASE;
     tmNo := intNo DIV 4;
     alNo := intNo MOD 4;
     al := alarms[tmNo, alNo];

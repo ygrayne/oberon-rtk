@@ -1,6 +1,7 @@
 MODULE Bootrom;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   Access to the functions ond data in bootrom.
   --

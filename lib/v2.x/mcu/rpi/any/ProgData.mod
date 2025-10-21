@@ -1,6 +1,7 @@
 MODULE ProgData;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   Get data about the program from the '.ref' resource data block
   at the end of the program.
@@ -218,7 +219,7 @@ MODULE ProgData;
     VAR resAddr, resSize, resId, resVersion: INTEGER; found: BOOLEAN; resName: ResName;
   BEGIN
     CLEAR(res);
-    resAddr := Config.ResourceStart;
+    resAddr := Config.ResMem.start;
     SYSTEM.GET(resAddr, resId);
     SYSTEM.GET(resAddr + ResVersionOffset, resVersion);
     IF (resId = ResId) & (resVersion = ResVersion) THEN

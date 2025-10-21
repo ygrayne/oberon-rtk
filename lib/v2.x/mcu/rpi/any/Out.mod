@@ -1,6 +1,7 @@
 MODULE Out;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   Output via two TextIO.Writer.
   --
@@ -10,7 +11,7 @@ MODULE Out;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Errors, TextIO, Texts;
+  IMPORT Cores, Errors, TextIO, Texts;
 
   CONST
     NumTerminals = 2;
@@ -22,7 +23,6 @@ MODULE Out;
   PROCEDURE Open*(W0, W1: TextIO.Writer);
   BEGIN
     ASSERT(W0 # NIL, Errors.PreCond);
-    ASSERT(W1 # NIL, Errors.PreCond);
     W[0] := W0;
     W[1] := W1
   END Open;
@@ -31,7 +31,7 @@ MODULE Out;
   PROCEDURE Char*(ch: CHAR);
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     Texts.Write(W[cid], ch)
   END Char;
 
@@ -39,7 +39,7 @@ MODULE Out;
   PROCEDURE String*(s: ARRAY OF CHAR);
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     Texts.WriteString(W[cid], s)
   END String;
 
@@ -47,7 +47,7 @@ MODULE Out;
   PROCEDURE Ln*;
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     Texts.WriteLn(W[cid])
   END Ln;
 
@@ -55,7 +55,7 @@ MODULE Out;
   PROCEDURE Int*(n, width: INTEGER);
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     Texts.WriteInt(W[cid], n, width)
   END Int;
 
@@ -63,7 +63,7 @@ MODULE Out;
   PROCEDURE Hex*(n, width: INTEGER);
    VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     Texts.WriteHex(W[cid], n, width)
   END Hex;
 
@@ -71,7 +71,7 @@ MODULE Out;
   PROCEDURE Bin*(n, width: INTEGER);
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     Texts.WriteBin(W[cid], n, width)
   END Bin;
 
@@ -79,7 +79,7 @@ MODULE Out;
   PROCEDURE Flush*;
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     Texts.FlushOut(W[cid])
   END Flush;
 

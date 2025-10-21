@@ -1,6 +1,7 @@
 MODULE Kernel;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   Multi-threading kernel v1
   --
@@ -16,7 +17,7 @@ MODULE Kernel;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Coroutines, Memory, SysTick, MCU := MCU2, Errors;
+  IMPORT SYSTEM, Coroutines, Memory, SysTick, Cores, MCU := MCU2, Errors;
 
   CONST
     MaxNumThreads* = 16;
@@ -104,7 +105,7 @@ MODULE Kernel;
   PROCEDURE Allocate*(proc: PROC; stackSize: INTEGER; VAR t: Thread; VAR tid, res: INTEGER);
     VAR cid, stackAddr: INTEGER; ctx: CoreContext;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     res := Failed;
     IF ctx.numThreads < MaxNumThreads THEN
@@ -150,16 +151,16 @@ MODULE Kernel;
   PROCEDURE Next*;
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     Coroutines.Transfer(ctx.Ct.cor, ctx.loop)
   END Next;
 
 
-  PROCEDURE* NextQueued*(): Thread;
+  PROCEDURE NextQueued*(): Thread;
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     RETURN coreCon[cid].ct
   END NextQueued;
 
@@ -167,7 +168,7 @@ MODULE Kernel;
   PROCEDURE SuspendMe*;
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     ctx.Ct.state := StateSuspended;
     Coroutines.Transfer(ctx.Ct.cor, ctx.loop)
@@ -177,17 +178,17 @@ MODULE Kernel;
   PROCEDURE DelayMe*(delay: INTEGER);
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     ctx.Ct.delay := delay;
     Coroutines.Transfer(ctx.Ct.cor, ctx.loop)
   END DelayMe;
 
 
-  PROCEDURE* StartTimeout*(timeout: INTEGER);
+  PROCEDURE StartTimeout*(timeout: INTEGER);
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     coreCon[cid].Ct.delay := timeout
   END StartTimeout;
 
@@ -208,7 +209,7 @@ MODULE Kernel;
   **)
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     ctx.Ct.devAddr := addr;
     ctx.Ct.devFlagsSet := setFlags;
@@ -217,58 +218,58 @@ MODULE Kernel;
   END AwaitDeviceFlags;
 
 
-  PROCEDURE* CancelAwaitDeviceFlags*;
+  PROCEDURE CancelAwaitDeviceFlags*;
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     ctx.Ct.devAddr := 0
   END CancelAwaitDeviceFlags;
 
 
-  PROCEDURE* SetPrio*(prio: INTEGER);
+  PROCEDURE SetPrio*(prio: INTEGER);
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     coreCon[cid].Ct.prio := prio
   END SetPrio;
 
 
-  PROCEDURE* SetPeriod*(period, startAfter: INTEGER); (* as number of ticks *)
+  PROCEDURE SetPeriod*(period, startAfter: INTEGER); (* as number of ticks *)
      VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     ctx.Ct.period := period * ctx.loopPeriod;
     ctx.Ct.ticker := startAfter * ctx.loopPeriod
   END SetPeriod;
 
 
-  PROCEDURE* Ct*(): Thread;
+  PROCEDURE Ct*(): Thread;
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     RETURN coreCon[cid].Ct
   END Ct;
 
 
-  PROCEDURE* Tid*(): INTEGER;
+  PROCEDURE Tid*(): INTEGER;
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     RETURN coreCon[cid].Ct.tid
   END Tid;
 
 
-  PROCEDURE* Prio*(t: Thread): INTEGER;
+  PROCEDURE Prio*(t: Thread): INTEGER;
     RETURN t.prio
   END Prio;
 
 
-  PROCEDURE* Trigger*(): INTEGER;
+  PROCEDURE Trigger*(): INTEGER;
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     RETURN coreCon[cid].Ct.trigCode
   END Trigger;
 
@@ -277,7 +278,7 @@ MODULE Kernel;
   PROCEDURE loopc;
     VAR tid, cid: INTEGER; t, t0: Thread; ctx: CoreContext; devFlags: SET;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);;
     Memory.ResetMainStack; (* for clean stack traces in main stack *)
     ctx := coreCon[cid];
     ctx.Ct := NIL;
@@ -359,7 +360,7 @@ MODULE Kernel;
     VAR cid: INTEGER;
   BEGIN
     (* MSP is used here *)
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     (* set PSP to current MSP *)
     SYSTEM.LDREG(R11, SYSTEM.REG(SP));
     SYSTEM.EMIT(MCU.MSR_PSP_R11);
@@ -380,7 +381,7 @@ MODULE Kernel;
   PROCEDURE Install*(millisecsPerTick: INTEGER);
     VAR i, stkAddr, cid: INTEGER; ctx: CoreContext;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
 
     (* allocate and init the core's context *)
     NEW(coreCon[cid]); ASSERT(coreCon[cid] # NIL, Errors.HeapOverflow);

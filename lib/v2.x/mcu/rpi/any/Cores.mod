@@ -1,6 +1,7 @@
-MODULE MultiCore;
+MODULE Cores;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   Multi-core handling
   --
@@ -10,7 +11,7 @@ MODULE MultiCore;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Memory;
+  IMPORT SYSTEM, MCU := MCU2, Config;
 
   CONST
     (* fifo bits *)
@@ -27,12 +28,19 @@ MODULE MultiCore;
   VAR
     runInit, runStart: PROCEDURE;
 
-  PROCEDURE* CPUid*(): INTEGER;
-    VAR x: INTEGER;
+
+  PROCEDURE* GetCoreId*(VAR cid: INTEGER);
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, x);
-    RETURN x
-  END CPUid;
+    SYSTEM.GET(MCU.SIO_CPUID, cid)
+  END GetCoreId;
+
+
+  PROCEDURE* CoreId*(): INTEGER;
+    VAR cid: INTEGER;
+  BEGIN
+    SYSTEM.GET(MCU.SIO_CPUID, cid)
+    RETURN cid
+  END CoreId;
 
 
   PROCEDURE* Send*(value: FifoValue);
@@ -111,7 +119,7 @@ MODULE MultiCore;
   BEGIN
     runInit := initProc;
     runStart := startProc;
-    InitCoreOne(init, Memory.DataMem[Core1].stackStart, Memory.DataMem[Core1].dataStart)
+    InitCoreOne(init, Config.StackMem[Core1].start, Config.DataMem[Core1].start)
   END StartCoreOne;
 
-END MultiCore.
+END Cores.

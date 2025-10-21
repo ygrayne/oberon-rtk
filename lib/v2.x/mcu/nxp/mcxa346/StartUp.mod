@@ -1,9 +1,9 @@
 MODULE StartUp;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   Start-up control
-
   --
   MCU: MCX-A346
   --
@@ -15,7 +15,7 @@ MODULE StartUp;
 
 
   PROCEDURE ReleaseReset*(device: INTEGER);
-  (* MCU.DEV_* *)
+  (* MCU.DEV_* devices *)
     VAR reg, devNo: INTEGER;
   BEGIN
     reg := device DIV 32;
@@ -26,7 +26,7 @@ MODULE StartUp;
 
 
   PROCEDURE ApplyReset*(device: INTEGER);
-  (* MCU.DEV_* *)
+  (* MCU.DEV_* devices *)
     VAR reg, devNo: INTEGER;
   BEGIN
     reg := device DIV 32;
@@ -36,6 +36,27 @@ MODULE StartUp;
   END ApplyReset;
 
 
+  PROCEDURE EnableClock*(device: INTEGER);
+  (* bus clock *)
+  (* MCU.DEV_* devices *)
+    VAR reg, devNo: INTEGER;
+  BEGIN
+    reg := device DIV 32;
+    reg := MCU.MRCC_GLB_CC0_SET + (reg * MCU.MRCC_GLB_CC_Offset);
+    devNo := device MOD 32;
+    SYSTEM.PUT(reg, {devNo})
+  END EnableClock;
 
+
+  PROCEDURE DisableClock*(device: INTEGER);
+  (* bus clock *)
+  (* MCU.DEV_* devices *)
+    VAR reg, devNo: INTEGER;
+  BEGIN
+    reg := device DIV 32;
+    reg := MCU.MRCC_GLB_CC0_CLR + (reg * MCU.MRCC_GLB_CC_Offset);
+    devNo := device MOD 32;
+    SYSTEM.PUT(reg, {devNo})
+  END DisableClock;
 
 END StartUp.

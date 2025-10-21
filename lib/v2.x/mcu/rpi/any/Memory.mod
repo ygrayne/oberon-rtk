@@ -1,9 +1,10 @@
 MODULE Memory;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
-  * heap memory allocation for two cores
-  * stacks allocation for two cores
+  * heap memory allocation
+  * stacks allocation
   --
   MCU: RP2040, RP2350
   --
@@ -13,13 +14,12 @@ MODULE Memory;
   Please refer to the licensing conditions as defined at the end of this file.
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Config, MAU;
+  IMPORT SYSTEM, MCU := MCU2, Config, MAU, Cores;
 
   CONST
     NumCores = MCU.NumCores;
     NumThreadStacks = 16;
-    CoreZeroMainStackSize* = 2048; (* default, see SetMainStackSize below *)
-    CoreOneMainStackSize*  = 2048;
+    MainStackSize* = 2048; (* default, see SetMainStackSize below *)
 
     StackSeal* = 0FEF5EDA5H;
 
@@ -57,12 +57,12 @@ MODULE Memory;
 
   (* --- Astrobe code begin --- *)
 
-  PROCEDURE* Allocate*(VAR p: INTEGER; typeDesc: INTEGER);
+  PROCEDURE Allocate*(VAR p: INTEGER; typeDesc: INTEGER);
   (* from Astrobe library, modified *)
   (* allocate record, prefix with typeDesc field of 1 word with offset -4 *)
     VAR cid, h, size, limit: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid); (* direct, for leaf procedure *)
+    Cores.GetCoreId(cid);
     limit := heaps[cid].heapLimit;
     IF limit = 0 THEN
       limit := stacks[cid].stacksBottom
@@ -81,14 +81,14 @@ MODULE Memory;
   END Allocate;
 
 
-  PROCEDURE* Deallocate*(VAR p: INTEGER; typeDesc: INTEGER);
+  PROCEDURE Deallocate*(VAR p: INTEGER; typeDesc: INTEGER);
   (* from Astrobe Library, modified *)
   (* Assign NIL = 0 to the pointer 'p'. Reclaim the space if this was the most
      recent allocation, otherwise do nothing. *)
     VAR cid, h, size: INTEGER;
   BEGIN
     ASSERT(p # 0, 12);
-    SYSTEM.GET(MCU.SIO_CPUID, cid); (* direct, for leaf procedure *)
+    Cores.GetCoreId(cid);
     (* obtain record size from type descriptor, usually in flash *)
     SYSTEM.GET(typeDesc, size);
     h := heaps[cid].heapTop - size;
@@ -99,10 +99,13 @@ MODULE Memory;
   (* --- Astrobe code end --- *)
 
   PROCEDURE* LockHeaps*;
-    CONST Core0 = 0; Core1 = 1;
+    VAR cid: INTEGER;
   BEGIN
-    heaps[Core0].heapLimit := heaps[Core0].heapTop;
-    heaps[Core1].heapLimit := heaps[Core1].heapTop
+    cid := 0;
+    WHILE cid < NumCores DO
+      heaps[cid].heapLimit := heaps[cid].heapTop;
+      INC(cid)
+    END
   END LockHeaps;
 
   (* === thread & loop stacks === *)
@@ -131,7 +134,7 @@ MODULE Memory;
   PROCEDURE CheckLoopStackUsage*(VAR size, used: INTEGER);
     VAR cid, addr, limit, unused: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     addr := stacks[cid].loopStack.addr;
     size := stacks[cid].loopStack.size;
     limit := addr + size;
@@ -143,7 +146,7 @@ MODULE Memory;
   PROCEDURE CheckThreadStackUsage*(id: INTEGER; VAR size, used: INTEGER);
     VAR cid, addr, limit, unused: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     addr := stacks[cid].threadStacks[id].addr;
     size := stacks[cid].threadStacks[id].size;
     limit := addr + size;
@@ -172,7 +175,7 @@ MODULE Memory;
   PROCEDURE AllocThreadStack*(VAR stkAddr: INTEGER; id, stkSize: INTEGER);
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     allocStack(stkAddr, cid, stkSize);
     IF stkAddr # 0 THEN
       stacks[cid].threadStacks[id].addr := stkAddr;
@@ -187,7 +190,7 @@ MODULE Memory;
   PROCEDURE AllocLoopStack*(VAR stkAddr: INTEGER; stkSize: INTEGER);
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     allocStack(stkAddr, cid, stkSize);
     IF stkAddr # 0 THEN
       stacks[cid].loopStack.addr := stkAddr;
@@ -199,77 +202,60 @@ MODULE Memory;
   END AllocLoopStack;
 
 
-  PROCEDURE* EnableStackCheck*(on: BOOLEAN);
+  PROCEDURE EnableStackCheck*(on: BOOLEAN);
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     stacks[cid].stackCheckEnabled := on
   END EnableStackCheck;
 
 
-  PROCEDURE* ResetMainStack*;
+  PROCEDURE ResetMainStack*;
   (* set MSP to top of stack memory from kernel loopc *)
   (* clear out the top of the main stack to get clean stack traces *)
     CONST R11 = 11;
     VAR cid, addr: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    Cores.GetCoreId(cid);
     addr := DataMem[cid].stackStart;
     SYSTEM.LDREG(R11, addr);
-    SYSTEM.EMIT(MCU.MSR_MSP_R11); (* move r11 to msp *)
-    (*
-    DEC(addr, 4); (* leave top-most value alone: stack seal *)
-    i := 0;
-    WHILE i < 256 DO
-      SYSTEM.PUT(addr, 0);
-      INC(i); DEC(addr, 4)
-    END
-    *)
+    SYSTEM.EMIT(MCU.MSR_MSP_R11) (* move r11 to msp *)
   END ResetMainStack;
 
   (* === init and config === *)
 
-  PROCEDURE* SetMainStackSize*(core0mainStackSize, core1mainStackSize: INTEGER);
+  PROCEDURE* SetMainStackSize*(mainStackSize: ARRAY OF INTEGER);
   (* must be used before Kernel.Install *)
-    CONST Core0 = 0; Core1 = 1;
+    VAR cid: INTEGER;
   BEGIN
-    stacks[Core0].stacksBottom := Config.CoreZeroStackStart - core0mainStackSize;
-    stacks[Core1].stacksBottom := Config.CoreOneStackStart - core1mainStackSize;
+    cid := 0;
+    WHILE cid < NumCores DO
+      stacks[cid].stacksBottom := Config.StackMem[cid].start - mainStackSize[cid];
+      INC(cid)
+    END
   END SetMainStackSize;
 
 
-  PROCEDURE init;
-    CONST Core0 = 0; Core1 = 1;
+  PROCEDURE Init*;
+    VAR cid: INTEGER;
   BEGIN
     MAU.SetNew(Allocate); MAU.SetDispose(Deallocate);
-
-    (* exported info *)
-    DataMem[Core0].stackStart := Config.CoreZeroStackStart;
-    DataMem[Core0].dataStart := Config.CoreZeroDataStart;
-    DataMem[Core1].stackStart := Config.CoreOneStackStart;
-    DataMem[Core1].dataStart := Config.CoreOneDataStart;
-
-    (* heaps *)
-    heaps[Core0].heapTop := Config.CoreZeroHeapStart;
-    heaps[Core0].heapLimit := Config.CoreZeroHeapLimit;
-    heaps[Core1].heapTop := Config.CoreOneHeapStart;
-    heaps[Core1].heapLimit := Config.CoreOneHeapLimit;
-
-    (* thread & loop stacks *)
-    stacks[Core0].stacksBottom := Config.CoreZeroStackStart - CoreZeroMainStackSize;
-    stacks[Core0].stacksTop := Config.CoreZeroStackStart;
-    stacks[Core0].stackCheckEnabled := FALSE;
-    stacks[Core1].stacksBottom := Config.CoreOneStackStart - CoreOneMainStackSize;
-    stacks[Core1].stacksTop := Config.CoreOneStackStart;
-    stacks[Core1].stackCheckEnabled := FALSE;
-
-    (* mark top of main stack (0FEF5EDA5H) *)
-    SYSTEM.PUT(DataMem[Core0].stackStart, StackSeal);
-    SYSTEM.PUT(DataMem[Core1].stackStart, StackSeal)
-  END init;
+    cid := 0;
+    WHILE cid < NumCores DO
+      DataMem[cid].stackStart := Config.StackMem[cid].start;
+      DataMem[cid].dataStart := Config.DataMem[cid].start;
+      heaps[cid].heapTop := Config.HeapMem[cid].start;
+      heaps[cid].heapLimit := Config.HeapMem[cid].limit;
+      stacks[cid].stacksBottom := Config.StackMem[cid].start - MainStackSize;
+      stacks[cid].stacksTop := Config.StackMem[cid].start;
+      stacks[cid].stackCheckEnabled := FALSE;
+      SYSTEM.PUT(DataMem[cid].stackStart, StackSeal);
+      INC(cid)
+    END
+  END Init;
 
 BEGIN
-  init
+  Init
 END Memory.
 
 (**

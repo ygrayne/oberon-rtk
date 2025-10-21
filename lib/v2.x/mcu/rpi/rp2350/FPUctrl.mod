@@ -1,6 +1,7 @@
 MODULE FPUctrl;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   FPU control/mgmt
   --

@@ -1,6 +1,7 @@
 MODULE Alarms;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   * schedule handler procedures for the timers' alarms
   * see: https://oberon-rtk.org/examples/v2/alarmtest/
@@ -52,7 +53,7 @@ MODULE Alarms;
     ASSERT(alarmNo IN Alarms, Errors.ProgError);
     dev.alarmNo := alarmNo;
     dev.timerNo := timerNo;
-    dev.intNo := MCU.PPB_TIMER0_IRQ_0 + (timerNo * NumAlarms) + alarmNo;
+    dev.intNo := MCU.IRQ_TIMER0_0 + (timerNo * NumAlarms) + alarmNo;
     timerBaseAddr := MCU.TIMER0_BASE + (timerNo * MCU.TIMER_Offset);
     dev.ALARM := timerBaseAddr + MCU.TIMER_ALARM0_Offset + (alarmNo * TimerRegSize);
     dev.ARMED := timerBaseAddr + MCU.TIMER_ARMED_Offset;
@@ -61,7 +62,7 @@ MODULE Alarms;
     dev.INTR := timerBaseAddr + MCU.TIMER_INTR_Offset;
     IF cached THEN dev.margin := MarginCached ELSE dev.margin := MarginUncached END;
     SYSTEM.GET(MCU.PPB_VTOR, vtor);
-    dev.vectAddr := vtor + ((dev.intNo + MCU.PPB_IRQ_BASE) * VectorAddrSize)
+    dev.vectAddr := vtor + ((dev.intNo + MCU.IRQ_BASE) * VectorAddrSize)
   END Init;
 
 

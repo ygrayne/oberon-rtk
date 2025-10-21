@@ -1,6 +1,7 @@
 MODULE SysTick;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   System tick
   For Kernel v1: poll sys tick count flag

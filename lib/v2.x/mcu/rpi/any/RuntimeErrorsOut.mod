@@ -1,6 +1,7 @@
 MODULE RuntimeErrorsOut;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   Human-readable output for run-time errors.
   --
@@ -11,7 +12,7 @@ MODULE RuntimeErrorsOut;
 **)
 
   IMPORT
-    RuntimeErrors, Stacktrace, MultiCore, TextIO, Texts, Errors, ProgData, Config;
+    RuntimeErrors, Stacktrace, Cores, TextIO, Texts, Errors, ProgData, Config;
 
   CONST NumCores = RuntimeErrors.NumCores;
 
@@ -63,8 +64,8 @@ MODULE RuntimeErrorsOut;
       tp: Stacktrace.TracePoint;
       We: TextIO.Writer;
   BEGIN
-    We := W[MultiCore.CPUid()];
-    startSeqAddr := Config.ResourceStart - 8;
+    We := W[Cores.CoreId()];
+    startSeqAddr := Config.ResMem.start - 8;
     IF tr.count > 1 THEN
       Texts.WriteString(We, "trace:"); Texts.WriteLn(We);
       i := 0;
@@ -100,7 +101,7 @@ MODULE RuntimeErrorsOut;
   PROCEDURE PrintStackedRegs*(stackedRegs: Stacktrace.StackedRegs);
     VAR We: TextIO.Writer;
   BEGIN
-    We := W[MultiCore.CPUid()];
+    We := W[Cores.CoreId()];
     Texts.WriteString(We, "stacked registers:"); Texts.WriteLn(We);
     printReg(We, "xpsr:", stackedRegs.xpsr);
     printReg(We, "  pc:", stackedRegs.pc);
@@ -121,7 +122,7 @@ MODULE RuntimeErrorsOut;
       msg: Errors.String;
       We: TextIO.Writer;
   BEGIN
-    We := W[MultiCore.CPUid()];
+    We := W[Cores.CoreId()];
     Errors.GetErrorType(er.errType, msg);
     Texts.WriteString(We, msg);
     Texts.WriteString(We, ": "); Texts.WriteInt(We, ABS(er.errCode), 0);
@@ -143,15 +144,16 @@ MODULE RuntimeErrorsOut;
   PROCEDURE PrintLogEntry*(er: RuntimeErrors.ErrorDesc);
     VAR We: TextIO.Writer;
   BEGIN
-    We := W[MultiCore.CPUid()];
+    We := W[Cores.CoreId()];
     Texts.WriteString(We, "run-time error:");
     Texts.WriteInt(We, er.core, 2);
     Texts.WriteInt(We, er.errType, 2);
     Texts.WriteInt(We, er.errCode, 4);
     Texts.WriteHex(We, er.errAddr, 10);
     Texts.WriteInt(We, er.errLineNo, 6);
-    Texts.WriteLn(We);
-    REPEAT UNTIL FALSE
+    Texts.WriteHex(We, er.stackframeBase, 12);
+    Texts.WriteHex(We, er.excRetVal, 12);
+    Texts.WriteLn(We)
   END PrintLogEntry;
 
 
@@ -161,7 +163,8 @@ MODULE RuntimeErrorsOut;
   (* print error data and halt *)
     VAR cid: INTEGER; trace: Stacktrace.Trace; regs: Stacktrace.StackedRegs;
   BEGIN
-    cid := MultiCore.CPUid();
+    Cores.GetCoreId(cid);
+    PrintLogEntry(RuntimeErrors.ErrorRec[cid]);
     Stacktrace.CreateTrace(RuntimeErrors.ErrorRec[cid], trace);
     Stacktrace.ReadRegisters(RuntimeErrors.ErrorRec[cid], regs);
     PrintError(RuntimeErrors.ErrorRec[cid]);

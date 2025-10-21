@@ -1,6 +1,7 @@
 MODULE UARTkstr;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   UART string device driver for kernel use
   --
@@ -71,8 +72,8 @@ MODULE UARTkstr;
 
   PROCEDURE rxHandler[0];
     CONST
-      UART0exc = MCU.PPB_UART0_IRQ + MCU.PPB_IRQ_BASE;
-      UART1exc = MCU.PPB_UART1_IRQ + MCU.PPB_IRQ_BASE;
+      UART0exc = MCU.IRQ_UART0 + MCU.IRQ_BASE;
+      UART1exc = MCU.IRQ_UART1 + MCU.IRQ_BASE;
     VAR mis: SET; uartInt: UARTint; ch: CHAR; excNo: INTEGER; overflow: BOOLEAN;
   BEGIN
     Exceptions.GetExcNo(excNo);

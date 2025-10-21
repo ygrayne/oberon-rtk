@@ -1,6 +1,7 @@
 MODULE Main;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   Main module
   --
@@ -12,23 +13,22 @@ MODULE Main;
 **)
 
   IMPORT
-    SYSTEM, LinkOptions, MCU := MCU2, StartUp, Clocks, ClockCtrl, UARTdev, UARTstr, TextIO, GPIO;
+    SYSTEM, Config, Memory, MCU := MCU2, Cores, RuntimeErrors, RuntimeErrorsOut, StartUp, Clocks, Terminals,
+    UARTdev, UARTstr, FPUctrl, GPIO, Out, In;
 
   CONST
     Baudrate0 = 38400; (* terminal 0 *)
-    UART0 = UARTdev.UART2;
-    UART0_TxPinNo = (MCU.PORT2 * 32) + 2;
-    UART0_RxPinNo = (MCU.PORT2 * 32) + 3;
+    UARTt0 = UARTdev.UART2;
+    UARTt0_TxPinNo = MCU.PORT2 + 2;
+    UARTt0_RxPinNo = MCU.PORT2 + 3;
+    TERM0 = Terminals.TERM0;
 
-  VAR
-    W*: TextIO.Writer;
-    uart*: UARTdev.Device;
 
   PROCEDURE cfgPins(txPin, rxPin: INTEGER);
     VAR padCfg: GPIO.PadCfg;
   BEGIN
     StartUp.ReleaseReset(MCU.DEV_PORT2);
-    ClockCtrl.EnableClock(MCU.DEV_PORT2);
+    StartUp.EnableClock(MCU.DEV_PORT2);
     GPIO.GetPadBaseCfg(padCfg);
     GPIO.ConfigurePad(txPin, padCfg);
     GPIO.ConfigurePad(rxPin, padCfg);
@@ -48,25 +48,47 @@ MODULE Main;
 
 
   PROCEDURE init;
-    VAR cfg: UARTdev.DeviceCfg;
+    CONST Core0 = 0;
+    VAR
+      uartDev: UARTdev.Device;
+      uartCfg: UARTdev.DeviceCfg;
   BEGIN
+    RuntimeErrors.Init;
+    (*Clocks.InitFIRC(Clocks.FIRC_180);*)
     Clocks.InitSPLL;
-    enableFlashCache;
-    cfgPins(UART0_TxPinNo, UART0_RxPinNo);
-    NEW(uart);
-    UARTdev.GetBaseCfg(cfg);
-    cfg.osr := 11;
-    cfg.txfe := UARTdev.Enabled;
-    cfg.rxfe := UARTdev.Enabled;
-    cfg.txwater := UARTdev.FifoSize - 1;
-    cfg.rxwater := UARTdev.FifoSize - 1;
-    UARTdev.Init(uart, UART0);
-    UARTdev.Configure(uart, cfg, Baudrate0);
-    UARTdev.Enable(uart);
-    NEW(W);
-    TextIO.OpenWriter(W, uart, UARTstr.PutString);
-  END init;
 
+    enableFlashCache;
+    Cores.SetCoreId(Core0);
+
+    (* config pins and pads *)
+    cfgPins(UARTt0_TxPinNo, UARTt0_RxPinNo);
+
+    (* define UART cfg *)
+    UARTdev.GetBaseCfg(uartCfg);
+    uartCfg.osr := 11;
+    uartCfg.txfe := UARTdev.Enabled;
+    uartCfg.rxfe := UARTdev.Enabled;
+    uartCfg.txwater := UARTdev.FifoSize - 1;
+    uartCfg.rxwater := UARTdev.FifoSize - 1;
+
+    (* open text IO to/from serial terminal *)
+    Terminals.InitUART(UARTt0, uartCfg, Baudrate0, uartDev);
+    Terminals.Open(TERM0, uartDev, UARTstr.PutString, UARTstr.GetString);
+
+    (* init Out and In to use terminal *)
+    Out.Open(Terminals.W[0], NIL);
+    In.Open(Terminals.R[0], NIL);
+
+    (* init run-time error printing to serial terminal *)
+    (* use error output writer *)
+    Terminals.OpenErr(TERM0, UARTstr.PutString);
+    RuntimeErrorsOut.SetWriter(Core0, Terminals.Werr[0]);
+    RuntimeErrors.InstallErrorHandler(Core0, RuntimeErrorsOut.ErrorHandler);
+
+    (* core init *)
+    RuntimeErrors.EnableFaults;
+    FPUctrl.Init
+  END init;
 
 BEGIN
   init

@@ -1,6 +1,7 @@
 MODULE Stacktrace;
 (**
-  Oberon RTK Framework v2.1
+  Oberon RTK Framework
+  Version: v3.0
   --
   Create stack trace amd read stack registers based on error data
   collected by run-time error handling RuntimeErrors.
@@ -108,7 +109,7 @@ MODULE Stacktrace;
     (* must be Thumb mode *)
     IF ODD(lr) THEN
       DEC(lr);
-      IF (lr >= Config.CodeStart) & (lr < Config.CodeEnd) THEN
+      IF (lr >= Config.CodeMem.start) & (lr < Config.CodeMem.end) THEN
         IF isBL(lr - 4) OR isBLX(lr - 2) THEN
           getHalfWord(lr, nextInstr);
           (* if stack trace is enabled there is a B,0 instruction (0E0000H)

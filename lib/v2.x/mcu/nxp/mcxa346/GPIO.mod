@@ -1,6 +1,17 @@
 MODULE GPIO;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  General Purpose IO (GPIO)
+  --
+  MCU: MCX-A346
+  --
+  Copyright (c) 2023-2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
 
-  IMPORT SYSTEM, MCU := MCU2, StartUp, ClockCtrl;
+  IMPORT SYSTEM, MCU := MCU2;
 
 
   CONST
@@ -40,6 +51,7 @@ MODULE GPIO;
 
     (* functions *)
     (* check port map to select applicable value for a specific pin *)
+    Fio0*       = 0;
     Fcan0*      = 11;
     Fclkout0*   = 1;
     Fclkout1*   = 12;
@@ -66,7 +78,7 @@ MODULE GPIO;
 
 
   TYPE
-    PadCfg* = RECORD            (* first value: reset/base state *)
+    PadCfg* = RECORD            (* PCR: first value: reset/base state *)
       inputInv*: INTEGER;       (* disabled/enabled *)
       inputBufEn*: INTEGER;     (* disabled/enabled *)
       driveStrength1*: INTEGER; (* normal/double *)
@@ -76,6 +88,11 @@ MODULE GPIO;
       slewRate*: INTEGER;       (* fast/slow *)
       pullEn*: INTEGER;         (* disabled/enabled *)
       pullSel*: INTEGER         (* down/up *)
+    END;
+
+    Pin* = RECORD
+      pinNo: INTEGER;
+      port: INTEGER
     END;
 
 
@@ -98,8 +115,16 @@ MODULE GPIO;
   END ConfigurePad;
 
 
+  PROCEDURE GetPadConfig*(pin: INTEGER; VAR pcrVal: INTEGER);
+    VAR pcr: INTEGER;
+  BEGIN
+    pcr := MCU.PORT0_BASE + ((pin DIV 32) * MCU.PORT_Offset);
+    pcr := pcr + MCU.PORT_PCR_Offset + ((pin MOD 32) * 4);
+    SYSTEM.GET(pcr, pcrVal)
+  END GetPadConfig;
+
+
   PROCEDURE GetPadBaseCfg*(VAR cfg: PadCfg);
-  (* not valid for pin 29 on port 1: reset pin *)
   BEGIN
     CLEAR(cfg)
   END GetPadBaseCfg;
@@ -116,7 +141,7 @@ MODULE GPIO;
   END LockPad;
 
 
-  PROCEDURE SetFunction*(pin, function: INTEGER);
+  PROCEDURE* SetFunction*(pin, function: INTEGER);
     VAR pcr, val: INTEGER;
   BEGIN
     pcr := MCU.PORT0_BASE + ((pin DIV 32) * MCU.PORT_Offset);
@@ -127,55 +152,62 @@ MODULE GPIO;
   END SetFunction;
 
 
-  PROCEDURE EnableInput*(pin: INTEGER);
-  END EnableInput;
+  PROCEDURE ConnectInput*(pin: INTEGER);
+  END ConnectInput;
 
 
-  PROCEDURE Set*(port: INTEGER; mask: SET);
-    VAR addr: INTEGER;
+  (* GPIO control *)
+  (* function 'Fio' *)
+  (* parameter 'gpio': MCU.GPIOx *)
+
+  PROCEDURE* Set*(gpio: INTEGER; mask: SET);
   BEGIN
-    addr := MCU.RGPIO0_BASE + (port * MCU.RGPIO_Offset) + MCU.RGPIO_PSOR_Offset;
-    SYSTEM.PUT(addr, mask)
+    SYSTEM.PUT(gpio + MCU.RGPIO_PSOR_Offset, mask)
   END Set;
 
 
-  PROCEDURE Toggle*(port: INTEGER; mask: SET);
-    VAR addr: INTEGER;
+  PROCEDURE* Clear*(gpio: INTEGER; mask: SET);
   BEGIN
-    addr := MCU.RGPIO0_BASE + (port * MCU.RGPIO_Offset) + MCU.RGPIO_PTOR_Offset;
-    SYSTEM.PUT(addr, mask)
+    SYSTEM.PUT(gpio + MCU.RGPIO_PCOR_Offset, mask)
+  END Clear;
+
+
+  PROCEDURE* Toggle*(gpio: INTEGER; mask: SET);
+  BEGIN
+    SYSTEM.PUT(gpio + MCU.RGPIO_PTOR_Offset, mask)
   END Toggle;
 
 
-  PROCEDURE EnableOutput*(port: INTEGER; mask: SET);
+  PROCEDURE* EnableOutput*(gpio: INTEGER; mask: SET);
     VAR addr: INTEGER; val: SET;
   BEGIN
-    addr := MCU.RGPIO0_BASE + (port * MCU.RGPIO_Offset) + MCU.RGPIO_PDDR_Offset;
+    addr := gpio + MCU.RGPIO_PDDR_Offset;
     SYSTEM.GET(addr, val);
     val := val + mask;
     SYSTEM.PUT(addr, val)
   END EnableOutput;
 
+END GPIO.
 
-  PROCEDURE init;
-    CONST
-      PinReset0 = {16, 17, 18, 22};
-      PinReset3 = {29};
+(*
+  PROCEDURE* Set*(port: INTEGER; mask: SET);
     VAR addr: INTEGER;
   BEGIN
-    StartUp.ReleaseReset(MCU.DEV_PORT0);
-    ClockCtrl.EnableClock(MCU.DEV_PORT0);
-    addr := MCU.PORT0_BASE + MCU.PORT_GPCLR_Offset;
-    SYSTEM.PUT(addr, PinReset0);
-    StartUp.ApplyReset(MCU.DEV_PORT0);
+    addr := MCU.RGPIO0_BASE + MCU.RGPIO_PSOR_Offset + (port * MCU.RGPIO_Offset);
+    SYSTEM.PUT(addr, mask)
+  END Set;
 
-    StartUp.ReleaseReset(MCU.DEV_PORT3);
-    ClockCtrl.EnableClock(MCU.DEV_PORT3);
-    addr := MCU.PORT3_BASE + MCU.PORT_GPCHR_Offset;
-    SYSTEM.PUT(addr, PinReset3);
-    StartUp.ApplyReset(MCU.DEV_PORT3)
-  END init;
+  PROCEDURE* Clear*(port: INTEGER; mask: SET);
+    VAR addr: INTEGER;
+  BEGIN
+    addr := MCU.RGPIO0_BASE + MCU.RGPIO_PCOR_Offset + (port * MCU.RGPIO_Offset);
+    SYSTEM.PUT(addr, mask)
+  END Clear;
 
-BEGIN
-  init
-END GPIO.
+  PROCEDURE* Toggle2*(port: INTEGER; mask: SET);
+    VAR addr: INTEGER;
+  BEGIN
+    addr := MCU.RGPIO0_BASE + MCU.RGPIO_PTOR_Offset + (port * MCU.RGPIO_Offset);
+    SYSTEM.PUT(addr, mask)
+  END Toggle2;
+*)

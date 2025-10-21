@@ -1,6 +1,7 @@
 MODULE InitCoreOne;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
   Initialisation code that has to run on core 1.
   Complements module Main, which always runs on core 0.
