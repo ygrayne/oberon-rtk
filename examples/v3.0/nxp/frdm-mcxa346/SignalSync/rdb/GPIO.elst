@@ -1,0 +1,391 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\frdm-mcxa346\SignalSync\SignalSync.mod>
+
+.     0  000000414              <Pad: 0>
+MODULE GPIO;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  General Purpose IO (GPIO)
+  --
+  MCU: MCX-A346
+  --
+  Copyright (c) 2023-2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2;
+
+
+  CONST
+    Enabled* = 1;
+    Disabled* = 0;
+
+    PCR_LK = 15;    (* lock *)
+    PCR_INV = 13;   (* input inverter *)
+    PCR_IBE = 12;   (* input buffer enable *)
+    PCR_MUX_1 = 11; (* function *)
+    PCR_MUX_0 = 8;
+    PCR_DSE1 = 7;   (* drive strength 1, only port 3, not all pins *)
+      PCR_DSE1_val_normal = 0;
+      PCR_DSE1_val_double = 1;
+    PCR_DSE = 6;    (* drive strength *)
+      PCR_DSE_val_low = 0;
+      PCR_DSE_val_high = 1;
+    PCR_ODE = 5;    (* open drain enable *)
+    PCR_PFE = 4;    (* passive filter enable *)
+    PCR_SRE = 3;    (* slew rate *)
+      PCR_SRE_val_fast = 0;
+      PCR_SRE_val_slow = 1;
+    PCR_PE = 1;     (* pull enable *)
+    PCR_PS = 0;     (* pull select *)
+      PCR_PS_val_down = 0;
+      PCR_PS_val_up = 1;
+
+    (* value aliases *)
+    SlewSlow* = PCR_SRE_val_slow;
+    SlewFast* = PCR_SRE_val_fast;
+    DriveLow* = PCR_DSE_val_low;
+    DriveHigh* = PCR_DSE_val_high;
+    DriveNormal* = PCR_DSE1_val_normal;
+    DriveDouble* = PCR_DSE1_val_double;
+    PullDown* = PCR_PS_val_down;
+    PullUp* = PCR_PS_val_up;
+
+    (* functions *)
+    (* check port map to select applicable value for a specific pin *)
+    Fio0*       = 0;
+    Fcan0*      = 11;
+    Fclkout0*   = 1;
+    Fclkout1*   = 12;
+    Fcmp0*      = 8;
+    Fct0*       = 4;
+    Fct1*       = 5;
+    Ffrqme0*    = 1;
+    Ffrqme1*    = 12;
+    Fi2c0*      = 2;
+    Fi2c1*      = 3;
+    Fpwm0*      = 5;
+    Fpwm1*      = 7;
+    Fsmartdma0* = 7;
+    Fsmartdma1* = 10;
+    Fspi0*      = 2;
+    Fspi1*      = 3;
+    Ftamper0*   = 13;
+    Ftrig0*     = 1;
+    Fuart0*     = 2;
+    Fuart1*     = 3;
+    Fuart2*     = 8;
+    Futick0*    = 5;
+    Fwuu0*      = 13;
+
+
+  TYPE
+    PadCfg* = RECORD            (* PCR: first value: reset/base state *)
+      inputInv*: INTEGER;       (* disabled/enabled *)
+      inputBufEn*: INTEGER;     (* disabled/enabled *)
+      driveStrength1*: INTEGER; (* normal/double *)
+      driveStrength*: INTEGER;  (* low/high *)
+      openDrainEn*: INTEGER;    (* disabled/enabled *)
+      filterEn*: INTEGER;       (* disabled/enabled *)
+      slewRate*: INTEGER;       (* fast/slow *)
+      pullEn*: INTEGER;         (* disabled/enabled *)
+      pullSel*: INTEGER         (* down/up *)
+    END;
+.     4  000000418      00418      00024  <Type:   36>
+.     8  00000041C      0041C      00000  <Type:   0>
+.    12  000000420      00420      00000  <Type:   0>
+.    16  000000424      00424      00000  <Type:   0>
+.    20  000000428      00428      00000  <Type:   0>
+
+    Pin* = RECORD
+      pinNo: INTEGER;
+      port: INTEGER
+    END;
+.    24  00000042C      0042C      00008  <Type:   8>
+.    28  000000430      00430      00000  <Type:   0>
+.    32  000000434      00434      00000  <Type:   0>
+.    36  000000438      00438      00000  <Type:   0>
+.    40  00000043C      0043C      00000  <Type:   0>
+
+
+  PROCEDURE ConfigurePad*(pin: INTEGER; cfg: PadCfg);
+    VAR pcr, val: INTEGER;
+  BEGIN
+.    44  000000440      0B507  push      { r0, r1, r2, lr }
+.    46  000000442      0B082  sub       sp,#8
+    pcr := MCU.PORT0_BASE + ((pin DIV 32) * MCU.PORT_Offset);
+.    48  000000444      09802  ldr       r0,[sp,#8]
+.    50  000000446      01140  asrs      r0,r0,#5
+.    52  000000448      00300  lsls      r0,r0,#12
+.    54  00000044A  0F8DF10A4  ldr.w     r1,[pc,#164] -> 220
+.    58  00000044E      04408  add       r0,r1
+.    60  000000450      09000  str       r0,[sp]
+    pcr := pcr + MCU.PORT_PCR_Offset + ((pin MOD 32) * 4);
+.    62  000000452      09800  ldr       r0,[sp]
+.    64  000000454      03080  adds      r0,#128
+.    66  000000456      09902  ldr       r1,[sp,#8]
+.    68  000000458  0F001011F  and.w     r1,r1,#31
+.    72  00000045C      00089  lsls      r1,r1,#2
+.    74  00000045E      04408  add       r0,r1
+.    76  000000460      09000  str       r0,[sp]
+    SYSTEM.GET(pcr, val);
+.    78  000000462      09800  ldr       r0,[sp]
+.    80  000000464      06801  ldr       r1,[r0]
+.    82  000000466      09101  str       r1,[sp,#4]
+    BFI(val, PCR_INV, cfg.inputInv);
+.    84  000000468      04668  mov       r0,sp
+.    86  00000046A      09903  ldr       r1,[sp,#12]
+.    88  00000046C      06809  ldr       r1,[r1]
+.    90  00000046E      06842  ldr       r2,[r0,#4]
+.    92  000000470  0F361324D  bfi       r2,r1,13,1
+.    96  000000474      09201  str       r2,[sp,#4]
+    BFI(val, PCR_IBE, cfg.inputBufEn);
+.    98  000000476      04668  mov       r0,sp
+.   100  000000478      09903  ldr       r1,[sp,#12]
+.   102  00000047A      06849  ldr       r1,[r1,#4]
+.   104  00000047C      06842  ldr       r2,[r0,#4]
+.   106  00000047E  0F361320C  bfi       r2,r1,12,1
+.   110  000000482      09201  str       r2,[sp,#4]
+    BFI(val, PCR_DSE1, cfg.driveStrength1);
+.   112  000000484      04668  mov       r0,sp
+.   114  000000486      09903  ldr       r1,[sp,#12]
+.   116  000000488      06889  ldr       r1,[r1,#8]
+.   118  00000048A      06842  ldr       r2,[r0,#4]
+.   120  00000048C  0F36112C7  bfi       r2,r1,7,1
+.   124  000000490      09201  str       r2,[sp,#4]
+    BFI(val, PCR_DSE, cfg.driveStrength);
+.   126  000000492      04668  mov       r0,sp
+.   128  000000494      09903  ldr       r1,[sp,#12]
+.   130  000000496      068C9  ldr       r1,[r1,#12]
+.   132  000000498      06842  ldr       r2,[r0,#4]
+.   134  00000049A  0F3611286  bfi       r2,r1,6,1
+.   138  00000049E      09201  str       r2,[sp,#4]
+    BFI(val, PCR_ODE, cfg.openDrainEn);
+.   140  0000004A0      04668  mov       r0,sp
+.   142  0000004A2      09903  ldr       r1,[sp,#12]
+.   144  0000004A4      06909  ldr       r1,[r1,#16]
+.   146  0000004A6      06842  ldr       r2,[r0,#4]
+.   148  0000004A8  0F3611245  bfi       r2,r1,5,1
+.   152  0000004AC      09201  str       r2,[sp,#4]
+    BFI(val, PCR_PFE, cfg.filterEn);
+.   154  0000004AE      04668  mov       r0,sp
+.   156  0000004B0      09903  ldr       r1,[sp,#12]
+.   158  0000004B2      06949  ldr       r1,[r1,#20]
+.   160  0000004B4      06842  ldr       r2,[r0,#4]
+.   162  0000004B6  0F3611204  bfi       r2,r1,4,1
+.   166  0000004BA      09201  str       r2,[sp,#4]
+    BFI(val, PCR_SRE, cfg.slewRate);
+.   168  0000004BC      04668  mov       r0,sp
+.   170  0000004BE      09903  ldr       r1,[sp,#12]
+.   172  0000004C0      06989  ldr       r1,[r1,#24]
+.   174  0000004C2      06842  ldr       r2,[r0,#4]
+.   176  0000004C4  0F36102C3  bfi       r2,r1,3,1
+.   180  0000004C8      09201  str       r2,[sp,#4]
+    BFI(val, PCR_PE, cfg.pullEn);
+.   182  0000004CA      04668  mov       r0,sp
+.   184  0000004CC      09903  ldr       r1,[sp,#12]
+.   186  0000004CE      069C9  ldr       r1,[r1,#28]
+.   188  0000004D0      06842  ldr       r2,[r0,#4]
+.   190  0000004D2  0F3610241  bfi       r2,r1,1,1
+.   194  0000004D6      09201  str       r2,[sp,#4]
+    BFI(val, PCR_PS, cfg.pullSel);
+.   196  0000004D8      04668  mov       r0,sp
+.   198  0000004DA      09903  ldr       r1,[sp,#12]
+.   200  0000004DC      06A09  ldr       r1,[r1,#32]
+.   202  0000004DE      06842  ldr       r2,[r0,#4]
+.   204  0000004E0  0F3610200  bfi       r2,r1,0,1
+.   208  0000004E4      09201  str       r2,[sp,#4]
+    SYSTEM.PUT(pcr, val)
+  END ConfigurePad;
+.   210  0000004E6      09800  ldr       r0,[sp]
+.   212  0000004E8      09901  ldr       r1,[sp,#4]
+.   214  0000004EA      06001  str       r1,[r0]
+.   216  0000004EC      0B005  add       sp,#20
+.   218  0000004EE      0BD00  pop       { pc }
+.   220  0000004F0  0400BC000  <Const:  1074511872>
+
+
+  PROCEDURE GetPadConfig*(pin: INTEGER; VAR pcrVal: INTEGER);
+    VAR pcr: INTEGER;
+  BEGIN
+.   224  0000004F4      0B503  push      { r0, r1, lr }
+.   226  0000004F6      0B081  sub       sp,#4
+    pcr := MCU.PORT0_BASE + ((pin DIV 32) * MCU.PORT_Offset);
+.   228  0000004F8      09801  ldr       r0,[sp,#4]
+.   230  0000004FA      01140  asrs      r0,r0,#5
+.   232  0000004FC      00300  lsls      r0,r0,#12
+.   234  0000004FE  0F8DF1024  ldr.w     r1,[pc,#36] -> 272
+.   238  000000502      04408  add       r0,r1
+.   240  000000504      09000  str       r0,[sp]
+    pcr := pcr + MCU.PORT_PCR_Offset + ((pin MOD 32) * 4);
+.   242  000000506      09800  ldr       r0,[sp]
+.   244  000000508      03080  adds      r0,#128
+.   246  00000050A      09901  ldr       r1,[sp,#4]
+.   248  00000050C  0F001011F  and.w     r1,r1,#31
+.   252  000000510      00089  lsls      r1,r1,#2
+.   254  000000512      04408  add       r0,r1
+.   256  000000514      09000  str       r0,[sp]
+    SYSTEM.GET(pcr, pcrVal)
+  END GetPadConfig;
+.   258  000000516      09800  ldr       r0,[sp]
+.   260  000000518      06801  ldr       r1,[r0]
+.   262  00000051A      09A02  ldr       r2,[sp,#8]
+.   264  00000051C      06011  str       r1,[r2]
+.   266  00000051E      0B003  add       sp,#12
+.   268  000000520      0BD00  pop       { pc }
+.   270  000000522      0BF00  nop       
+.   272  000000524  0400BC000  <Const:  1074511872>
+
+
+  PROCEDURE GetPadBaseCfg*(VAR cfg: PadCfg);
+  BEGIN
+.   276  000000528      0B503  push      { r0, r1, lr }
+    CLEAR(cfg)
+  END GetPadBaseCfg;
+.   278  00000052A      09800  ldr       r0,[sp]
+.   280  00000052C      02100  movs      r1,#0
+.   282  00000052E      02209  movs      r2,#9
+.   284  000000530  0F8401B04  str.w     r1,[r0],#4
+.   288  000000534      03A01  subs      r2,#1
+.   290  000000536      0DCFB  bgt.n     -10 -> 284
+.   292  000000538      0B002  add       sp,#8
+.   294  00000053A      0BD00  pop       { pc }
+
+
+  PROCEDURE LockPad*(pin: INTEGER);
+    VAR pcr, val: INTEGER;
+  BEGIN
+.   296  00000053C      0B501  push      { r0, lr }
+.   298  00000053E      0B082  sub       sp,#8
+    pcr := MCU.PORT0_BASE + ((pin DIV 32) * MCU.PORT_Offset);
+.   300  000000540      09802  ldr       r0,[sp,#8]
+.   302  000000542      01140  asrs      r0,r0,#5
+.   304  000000544      00300  lsls      r0,r0,#12
+.   306  000000546  0F8DF1034  ldr.w     r1,[pc,#52] -> 360
+.   310  00000054A      04408  add       r0,r1
+.   312  00000054C      09000  str       r0,[sp]
+    pcr := pcr + MCU.PORT_PCR_Offset + ((pin MOD 32) * 4);
+.   314  00000054E      09800  ldr       r0,[sp]
+.   316  000000550      03080  adds      r0,#128
+.   318  000000552      09902  ldr       r1,[sp,#8]
+.   320  000000554  0F001011F  and.w     r1,r1,#31
+.   324  000000558      00089  lsls      r1,r1,#2
+.   326  00000055A      04408  add       r0,r1
+.   328  00000055C      09000  str       r0,[sp]
+    SYSTEM.GET(pcr, val);
+.   330  00000055E      09800  ldr       r0,[sp]
+.   332  000000560      06801  ldr       r1,[r0]
+.   334  000000562      09101  str       r1,[sp,#4]
+    BFI(val, PCR_LK, Enabled);
+.   336  000000564      04668  mov       r0,sp
+.   338  000000566      02101  movs      r1,#1
+.   340  000000568      06842  ldr       r2,[r0,#4]
+.   342  00000056A  0F36132CF  bfi       r2,r1,15,1
+.   346  00000056E      09201  str       r2,[sp,#4]
+    SYSTEM.PUT(pcr, val)
+  END LockPad;
+.   348  000000570      09800  ldr       r0,[sp]
+.   350  000000572      09901  ldr       r1,[sp,#4]
+.   352  000000574      06001  str       r1,[r0]
+.   354  000000576      0B003  add       sp,#12
+.   356  000000578      0BD00  pop       { pc }
+.   358  00000057A      0BF00  nop       
+.   360  00000057C  0400BC000  <Const:  1074511872>
+
+
+  PROCEDURE* SetFunction*(pin, function: INTEGER);
+    VAR pcr, val: INTEGER;
+  BEGIN
+.   364  000000580      0B500  push      { lr }
+    pcr := MCU.PORT0_BASE + ((pin DIV 32) * MCU.PORT_Offset);
+.   366  000000582      01144  asrs      r4,r0,#5
+.   368  000000584      00324  lsls      r4,r4,#12
+.   370  000000586  0F8DF5020  ldr.w     r5,[pc,#32] -> 404
+.   374  00000058A      0442C  add       r4,r5
+.   376  00000058C      04622  mov       r2,r4
+    pcr := pcr + MCU.PORT_PCR_Offset + ((pin MOD 32) * 4);
+.   378  00000058E  0F1020480  add.w     r4,r2,#128
+.   382  000000592  0F000051F  and.w     r5,r0,#31
+.   386  000000596      000AD  lsls      r5,r5,#2
+.   388  000000598      0442C  add       r4,r5
+.   390  00000059A      04622  mov       r2,r4
+    SYSTEM.GET(pcr, val);
+.   392  00000059C      06813  ldr       r3,[r2]
+    BFI(val, PCR_MUX_1, PCR_MUX_0, function);
+.   394  00000059E      0461C  mov       r4,r3
+.   396  0000005A0  0F361230B  bfi       r3,r1,8,4
+    SYSTEM.PUT(pcr, val)
+  END SetFunction;
+.   400  0000005A4      06013  str       r3,[r2]
+.   402  0000005A6      0BD00  pop       { pc }
+.   404  0000005A8  0400BC000  <Const:  1074511872>
+
+
+  PROCEDURE ConnectInput*(pin: INTEGER);
+  END ConnectInput;
+.   408  0000005AC      0B501  push      { r0, lr }
+.   410  0000005AE      0B001  add       sp,#4
+.   412  0000005B0      0BD00  pop       { pc }
+.   414  0000005B2      0BF00  nop       
+
+
+  (* GPIO control *)
+  (* function 'Fio' *)
+  (* parameter 'gpio': MCU.GPIOx *)
+
+  PROCEDURE* Set*(gpio: INTEGER; mask: SET);
+  BEGIN
+.   416  0000005B4      0B500  push      { lr }
+    SYSTEM.PUT(gpio + MCU.RGPIO_PSOR_Offset, mask)
+.   418  0000005B6  0F1000244  add.w     r2,r0,#68
+  END Set;
+.   422  0000005BA      06011  str       r1,[r2]
+.   424  0000005BC      0BD00  pop       { pc }
+.   426  0000005BE      0BF00  nop       
+
+
+  PROCEDURE* Clear*(gpio: INTEGER; mask: SET);
+  BEGIN
+.   428  0000005C0      0B500  push      { lr }
+    SYSTEM.PUT(gpio + MCU.RGPIO_PCOR_Offset, mask)
+.   430  0000005C2  0F1000248  add.w     r2,r0,#72
+  END Clear;
+.   434  0000005C6      06011  str       r1,[r2]
+.   436  0000005C8      0BD00  pop       { pc }
+.   438  0000005CA      0BF00  nop       
+
+
+  PROCEDURE* Toggle*(gpio: INTEGER; mask: SET);
+  BEGIN
+.   440  0000005CC      0B500  push      { lr }
+    SYSTEM.PUT(gpio + MCU.RGPIO_PTOR_Offset, mask)
+.   442  0000005CE  0F100024C  add.w     r2,r0,#76
+  END Toggle;
+.   446  0000005D2      06011  str       r1,[r2]
+.   448  0000005D4      0BD00  pop       { pc }
+.   450  0000005D6      0BF00  nop       
+
+
+  PROCEDURE* EnableOutput*(gpio: INTEGER; mask: SET);
+    VAR addr: INTEGER; val: SET;
+  BEGIN
+.   452  0000005D8      0B500  push      { lr }
+    addr := gpio + MCU.RGPIO_PDDR_Offset;
+.   454  0000005DA  0F1000254  add.w     r2,r0,#84
+    SYSTEM.GET(addr, val);
+.   458  0000005DE      06813  ldr       r3,[r2]
+    val := val + mask;
+.   460  0000005E0  0EA530401  orrs.w    r4,r3,r1
+.   464  0000005E4      04623  mov       r3,r4
+    SYSTEM.PUT(addr, val)
+  END EnableOutput;
+.   466  0000005E6      06013  str       r3,[r2]
+.   468  0000005E8      0BD00  pop       { pc }
+.   470  0000005EA      0BF00  nop       
+
+END GPIO.
+.   472  0000005EC      0B500  push      { lr }
+.   474  0000005EE      0BD00  pop       { pc }
+ 

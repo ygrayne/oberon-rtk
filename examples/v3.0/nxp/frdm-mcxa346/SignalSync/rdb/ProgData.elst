@@ -1,0 +1,626 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\frdm-mcxa346\SignalSync\SignalSync.mod>
+
+.     0  000002BA0              <Pad: 0>
+MODULE ProgData;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  Get data about the program from the '.ref' resource data block
+  at the end of the program.
+  --
+  MCU: MCX-A346
+  --
+  Copyright (c) 2024-2025 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+  --
+  Structure:
+  resource header -- at Config.ResourceStart
+  entry
+  entry
+  ...
+  resource header
+  entry
+  ...
+
+  Resource header:
+  offset    value         meaning                           CONST
+   0        05237424FH    id = "OB7R" as int
+   4        000000001H    version                           ResVersionOffset
+   8        06665722EH    ".ref" as int, resource name      ResNameOffset
+  20                      resource size in bytes            ResSizeOffset
+  24                      first entry: module LinkOptions   ResDataOffset
+
+  Resource entry, example LinkOptions:
+  offset    value         meaning
+   0        000000000H    entry type: module = 0
+   4        06B6E694CH    "Link" as int
+   8        06974704FH    "Opti" as int
+  12        000736E6FH    "ons" + OX as int
+  16        000000000H    0X as int
+  20        010000340H    code address
+
+  Resource entry, example LinkOptions.CodeStartAddress:
+  offset    value         meaning                         CONST
+   0        000000000H    entry type: proc = 1, 2, ...
+   4        065646F43H    "Code" as int                   EntryStringOffset
+   8        072617453H    "Star" as int
+  12        064644174H    "tAdd" as int
+  16        000736572H    "res" + OX as int
+  20        010000344H    code address                    EntryAddrOffset
+
+  Module block:
+  module 0 (type = 0)
+    procedure 1 (type = 1)
+    procedure 2 (type = 2)
+    ...
+    procedure .init (type = n)
+  module 1 (type = 0)
+    procedure 1 (type = 1)
+    procedure 2 (type = 2)
+    ...
+    procedure .init (type = n)
+
+  Notes:
+  * Entry  type:
+    module = 0
+    procedure > 0, ie. 1, 2, 3, ... enumerated within module
+  * Entry string is terminated by a null char.
+  * Hence max string length is (4 x 4) - 1 = 15 chars
+  * Entry string memory addresses can contain garbage, but this is always separated
+    by a null char from the entry string, for example:
+    0696E692EH  ".ini"
+    072610074H  "t"     <= null char here: '0074'
+    064644174H  "tAdd"  <= garbage
+    000736572H  "res"
+  * Resource name is not null-terminated.
+  * The last entry is always the program's '.init' procedure. Any 'bl.w' address beyond the
+    .inits code address cannot be identified, namely in the start-up sequence.
+**)
+
+  IMPORT SYSTEM, Config;
+
+  CONST
+    ProgResName = ".ref";
+.     4  000002BA4  06665722E  <String: ".ref">
+.     8  000002BA8  000000000  <String: "....">
+    ResId = 05237424FH; (* "OB7R" little endian *)
+    ResVersion = 1;
+
+    ResVersionOffset = 4;
+    ResNameOffset = 8;
+    ResSizeOffset = 20;
+    ResDataOffset = 24;
+
+    EntrySize = 6 * 4;
+
+    EntryStringOffset = 4;
+    EntryAddrOffset = 5 * 4;
+    NextEntryAddrOffset = EntryAddrOffset + EntrySize;
+    EntryStringLen = 16;
+    EntryTypeModule = 0;
+
+  TYPE
+    ResName = ARRAY 12 OF CHAR;
+    EntryString* = ARRAY EntryStringLen OF CHAR;
+
+    ProgDataRes = RECORD
+      resAddr: INTEGER;
+      dataBeginAddr: INTEGER;
+      dataEndAddr: INTEGER;
+      size: INTEGER
+    END;
+.    12  000002BAC      02BAC      00010  <Type:   16>
+.    16  000002BB0      02BB0      00000  <Type:   0>
+.    20  000002BB4      02BB4      00000  <Type:   0>
+.    24  000002BB8      02BB8      00000  <Type:   0>
+.    28  000002BBC      02BBC      00000  <Type:   0>
+
+    VAR
+      progDataRes: ProgDataRes;
+
+
+  PROCEDURE FindEntry*(codeAddr: INTEGER; VAR entryAddr: INTEGER);
+    VAR ca: INTEGER; found: BOOLEAN;
+  BEGIN
+.    32  000002BC0      0B503  push      { r0, r1, lr }
+.    34  000002BC2      0B082  sub       sp,#8
+    entryAddr := 0;
+.    36  000002BC4      02000  movs      r0,#0
+.    38  000002BC6      09903  ldr       r1,[sp,#12]
+.    40  000002BC8      06008  str       r0,[r1]
+    IF progDataRes.resAddr # 0 THEN
+.    42  000002BCA  0F8DF009C  ldr.w     r0,[pc,#156] -> 200
+.    46  000002BCE      06800  ldr       r0,[r0]
+.    48  000002BD0      02800  cmp       r0,#0
+.    50  000002BD2  0F0008046  beq.w     140 -> 194
+      found := FALSE;
+.    54  000002BD6      02000  movs      r0,#0
+.    56  000002BD8  0F88D0004  strb.w    r0,[sp,#4]
+      entryAddr := progDataRes.dataBeginAddr;
+.    60  000002BDC  0F8DF0088  ldr.w     r0,[pc,#136] -> 200
+.    64  000002BE0      06840  ldr       r0,[r0,#4]
+.    66  000002BE2      09903  ldr       r1,[sp,#12]
+.    68  000002BE4      06008  str       r0,[r1]
+      WHILE (entryAddr < progDataRes.dataEndAddr) & ~found DO
+.    70  000002BE6  0F8DF0080  ldr.w     r0,[pc,#128] -> 200
+.    74  000002BEA      09903  ldr       r1,[sp,#12]
+.    76  000002BEC      06809  ldr       r1,[r1]
+.    78  000002BEE      06880  ldr       r0,[r0,#8]
+.    80  000002BF0      04281  cmp       r1,r0
+.    82  000002BF2  0F2808036  bge.w     108 -> 194
+.    86  000002BF6  0F89D0004  ldrb.w    r0,[sp,#4]
+.    90  000002BFA  0F0100F01  tst.w     r0,#1
+.    94  000002BFE  0F0408030  bne.w     96 -> 194
+        found := entryAddr + NextEntryAddrOffset > progDataRes.dataEndAddr; (* at last entry *)
+.    98  000002C02      09803  ldr       r0,[sp,#12]
+.   100  000002C04      06800  ldr       r0,[r0]
+.   102  000002C06      0302C  adds      r0,#44
+.   104  000002C08  0F8DF105C  ldr.w     r1,[pc,#92] -> 200
+.   108  000002C0C      06889  ldr       r1,[r1,#8]
+.   110  000002C0E      04288  cmp       r0,r1
+.   112  000002C10      0BFCC  ite       gt
+.   114  000002C12  0F04F0001  movgt.w   r0,#1
+.   118  000002C16  0F04F0000  movle.w   r0,#0
+.   122  000002C1A  0F88D0004  strb.w    r0,[sp,#4]
+        IF ~found THEN
+.   126  000002C1E  0F89D0004  ldrb.w    r0,[sp,#4]
+.   130  000002C22  0F0100F01  tst.w     r0,#1
+.   134  000002C26  0F040800F  bne.w     30 -> 168
+          SYSTEM.GET(entryAddr + NextEntryAddrOffset, ca);
+.   138  000002C2A      09803  ldr       r0,[sp,#12]
+.   140  000002C2C      06800  ldr       r0,[r0]
+.   142  000002C2E      0302C  adds      r0,#44
+.   144  000002C30      06801  ldr       r1,[r0]
+.   146  000002C32      09100  str       r1,[sp]
+          found := codeAddr < ca
+        END;
+.   148  000002C34      09802  ldr       r0,[sp,#8]
+.   150  000002C36      09900  ldr       r1,[sp]
+.   152  000002C38      04288  cmp       r0,r1
+.   154  000002C3A      0BFB4  ite       lt
+.   156  000002C3C  0F04F0001  movlt.w   r0,#1
+.   160  000002C40  0F04F0000  movge.w   r0,#0
+.   164  000002C44  0F88D0004  strb.w    r0,[sp,#4]
+        IF ~found THEN
+.   168  000002C48  0F89D0004  ldrb.w    r0,[sp,#4]
+.   172  000002C4C  0F0100F01  tst.w     r0,#1
+.   176  000002C50  0F0408005  bne.w     10 -> 190
+          entryAddr := entryAddr + EntrySize
+        END
+.   180  000002C54      09803  ldr       r0,[sp,#12]
+.   182  000002C56      06800  ldr       r0,[r0]
+.   184  000002C58      03018  adds      r0,#24
+.   186  000002C5A      09903  ldr       r1,[sp,#12]
+.   188  000002C5C      06008  str       r0,[r1]
+      END
+.   190  000002C5E  0F7FFBFC2  b.w       -124 -> 70
+    END
+  END FindEntry;
+.   194  000002C62      0B004  add       sp,#16
+.   196  000002C64      0BD00  pop       { pc }
+.   198  000002C66      0BF00  nop       
+.   200  000002C68  020027EC0  <Global: ProgData data>
+
+
+  PROCEDURE GetNextEntry*(thisEntryAddr: INTEGER; VAR nextEntryAddr: INTEGER);
+  BEGIN
+.   204  000002C6C      0B503  push      { r0, r1, lr }
+    nextEntryAddr := 0;
+.   206  000002C6E      02000  movs      r0,#0
+.   208  000002C70      09901  ldr       r1,[sp,#4]
+.   210  000002C72      06008  str       r0,[r1]
+    IF thisEntryAddr + NextEntryAddrOffset < progDataRes.dataEndAddr THEN
+.   212  000002C74      09800  ldr       r0,[sp]
+.   214  000002C76      0302C  adds      r0,#44
+.   216  000002C78  0F8DF1014  ldr.w     r1,[pc,#20] -> 240
+.   220  000002C7C      06889  ldr       r1,[r1,#8]
+.   222  000002C7E      04288  cmp       r0,r1
+.   224  000002C80  0F2808004  bge.w     8 -> 236
+      nextEntryAddr := thisEntryAddr + EntrySize
+    END
+.   228  000002C84      09800  ldr       r0,[sp]
+.   230  000002C86      03018  adds      r0,#24
+.   232  000002C88      09901  ldr       r1,[sp,#4]
+.   234  000002C8A      06008  str       r0,[r1]
+  END GetNextEntry;
+.   236  000002C8C      0B002  add       sp,#8
+.   238  000002C8E      0BD00  pop       { pc }
+.   240  000002C90  020027EC0  <Global: ProgData data>
+
+
+  PROCEDURE FindProcEntries*(codeAddr: INTEGER; VAR modEntryAddr, procEntryAddr: INTEGER);
+  (* will return '.init' of the program for all 'codeAddr' >= .init's code address *)
+  (* this is a limitation of the available program meta data *)
+    VAR entryAddr, etype, ca: INTEGER; found: BOOLEAN;
+  BEGIN
+.   244  000002C94      0B507  push      { r0, r1, r2, lr }
+.   246  000002C96      0B084  sub       sp,#16
+    IF progDataRes.resAddr # 0 THEN
+.   248  000002C98  0F8DF00B8  ldr.w     r0,[pc,#184] -> 436
+.   252  000002C9C      06800  ldr       r0,[r0]
+.   254  000002C9E      02800  cmp       r0,#0
+.   256  000002CA0  0F0008055  beq.w     170 -> 430
+      found := FALSE;
+.   260  000002CA4      02000  movs      r0,#0
+.   262  000002CA6  0F88D000C  strb.w    r0,[sp,#12]
+      entryAddr := progDataRes.dataBeginAddr;
+.   266  000002CAA  0F8DF00A8  ldr.w     r0,[pc,#168] -> 436
+.   270  000002CAE      06840  ldr       r0,[r0,#4]
+.   272  000002CB0      09000  str       r0,[sp]
+      modEntryAddr := 0; procEntryAddr := 0;
+.   274  000002CB2      02000  movs      r0,#0
+.   276  000002CB4      09905  ldr       r1,[sp,#20]
+.   278  000002CB6      06008  str       r0,[r1]
+.   280  000002CB8      02000  movs      r0,#0
+.   282  000002CBA      09906  ldr       r1,[sp,#24]
+.   284  000002CBC      06008  str       r0,[r1]
+      WHILE (entryAddr < progDataRes.dataEndAddr) & ~found DO
+.   286  000002CBE  0F8DF0094  ldr.w     r0,[pc,#148] -> 436
+.   290  000002CC2      09900  ldr       r1,[sp]
+.   292  000002CC4      06880  ldr       r0,[r0,#8]
+.   294  000002CC6      04281  cmp       r1,r0
+.   296  000002CC8  0F2808041  bge.w     130 -> 430
+.   300  000002CCC  0F89D000C  ldrb.w    r0,[sp,#12]
+.   304  000002CD0  0F0100F01  tst.w     r0,#1
+.   308  000002CD4  0F040803B  bne.w     118 -> 430
+        found := entryAddr + NextEntryAddrOffset > progDataRes.dataEndAddr; (* at last entry *)
+.   312  000002CD8      09800  ldr       r0,[sp]
+.   314  000002CDA      0302C  adds      r0,#44
+.   316  000002CDC  0F8DF1074  ldr.w     r1,[pc,#116] -> 436
+.   320  000002CE0      06889  ldr       r1,[r1,#8]
+.   322  000002CE2      04288  cmp       r0,r1
+.   324  000002CE4      0BFCC  ite       gt
+.   326  000002CE6  0F04F0001  movgt.w   r0,#1
+.   330  000002CEA  0F04F0000  movle.w   r0,#0
+.   334  000002CEE  0F88D000C  strb.w    r0,[sp,#12]
+        IF ~found THEN
+.   338  000002CF2  0F89D000C  ldrb.w    r0,[sp,#12]
+.   342  000002CF6  0F0100F01  tst.w     r0,#1
+.   346  000002CFA  0F040800E  bne.w     28 -> 378
+          SYSTEM.GET(entryAddr + NextEntryAddrOffset, ca);
+.   350  000002CFE      09800  ldr       r0,[sp]
+.   352  000002D00      0302C  adds      r0,#44
+.   354  000002D02      06801  ldr       r1,[r0]
+.   356  000002D04      09102  str       r1,[sp,#8]
+          found := codeAddr < ca
+        END;
+.   358  000002D06      09804  ldr       r0,[sp,#16]
+.   360  000002D08      09902  ldr       r1,[sp,#8]
+.   362  000002D0A      04288  cmp       r0,r1
+.   364  000002D0C      0BFB4  ite       lt
+.   366  000002D0E  0F04F0001  movlt.w   r0,#1
+.   370  000002D12  0F04F0000  movge.w   r0,#0
+.   374  000002D16  0F88D000C  strb.w    r0,[sp,#12]
+        SYSTEM.GET(entryAddr, etype);
+.   378  000002D1A      09800  ldr       r0,[sp]
+.   380  000002D1C      06801  ldr       r1,[r0]
+.   382  000002D1E      09101  str       r1,[sp,#4]
+        IF found THEN
+.   384  000002D20  0F89D000C  ldrb.w    r0,[sp,#12]
+.   388  000002D24  0F0100F01  tst.w     r0,#1
+.   392  000002D28  0F0008005  beq.w     10 -> 406
+          procEntryAddr := entryAddr;
+.   396  000002D2C      09800  ldr       r0,[sp]
+.   398  000002D2E      09906  ldr       r1,[sp,#24]
+.   400  000002D30      06008  str       r0,[r1]
+        ELSIF etype = EntryTypeModule THEN
+.   402  000002D32  0F000B807  b.w       14 -> 420
+.   406  000002D36      09801  ldr       r0,[sp,#4]
+.   408  000002D38      02800  cmp       r0,#0
+.   410  000002D3A  0F0408003  bne.w     6 -> 420
+          modEntryAddr := entryAddr
+        END;
+.   414  000002D3E      09800  ldr       r0,[sp]
+.   416  000002D40      09905  ldr       r1,[sp,#20]
+.   418  000002D42      06008  str       r0,[r1]
+        entryAddr := entryAddr + EntrySize
+      END
+.   420  000002D44      09800  ldr       r0,[sp]
+.   422  000002D46      03018  adds      r0,#24
+.   424  000002D48      09000  str       r0,[sp]
+.   426  000002D4A  0F7FFBFB8  b.w       -144 -> 286
+    END
+  END FindProcEntries;
+.   430  000002D4E      0B007  add       sp,#28
+.   432  000002D50      0BD00  pop       { pc }
+.   434  000002D52      0BF00  nop       
+.   436  000002D54  020027EC0  <Global: ProgData data>
+
+
+  PROCEDURE GetCodeAddr*(entryAddr: INTEGER; VAR codeAddr: INTEGER);
+  BEGIN
+.   440  000002D58      0B503  push      { r0, r1, lr }
+    SYSTEM.GET(entryAddr + EntryAddrOffset, codeAddr)
+.   442  000002D5A      09800  ldr       r0,[sp]
+.   444  000002D5C      03014  adds      r0,#20
+  END GetCodeAddr;
+.   446  000002D5E      06801  ldr       r1,[r0]
+.   448  000002D60      09A01  ldr       r2,[sp,#4]
+.   450  000002D62      06011  str       r1,[r2]
+.   452  000002D64      0B002  add       sp,#8
+.   454  000002D66      0BD00  pop       { pc }
+
+
+  PROCEDURE GetString*(entryAddr: INTEGER; VAR s: EntryString);
+    VAR stringAddr, i: INTEGER; b: BYTE;
+  BEGIN
+.   456  000002D68      0B503  push      { r0, r1, lr }
+.   458  000002D6A      0B083  sub       sp,#12
+    stringAddr := entryAddr + EntryStringOffset;
+.   460  000002D6C      09803  ldr       r0,[sp,#12]
+.   462  000002D6E      03004  adds      r0,#4
+.   464  000002D70      09000  str       r0,[sp]
+    i := 0;
+.   466  000002D72      02000  movs      r0,#0
+.   468  000002D74      09001  str       r0,[sp,#4]
+    WHILE i < EntryStringLen DO
+.   470  000002D76      09801  ldr       r0,[sp,#4]
+.   472  000002D78      02810  cmp       r0,#16
+.   474  000002D7A  0F2808016  bge.w     44 -> 522
+      SYSTEM.GET(stringAddr + i, b);
+.   478  000002D7E      09800  ldr       r0,[sp]
+.   480  000002D80      09901  ldr       r1,[sp,#4]
+.   482  000002D82      04408  add       r0,r1
+.   484  000002D84      07801  ldrb      r1,[r0]
+.   486  000002D86  0F88D1008  strb.w    r1,[sp,#8]
+      s[i] := CHR(b);
+.   490  000002D8A      09801  ldr       r0,[sp,#4]
+.   492  000002D8C      02810  cmp       r0,#16
+.   494  000002D8E      0D301  bcc.n     2 -> 500
+.   496  000002D90      0DF01  svc       1
+.   498  000002D92      000B7  <LineNo: 183>
+.   500  000002D94      09904  ldr       r1,[sp,#16]
+.   502  000002D96  0EB100001  adds.w    r0,r0,r1
+.   506  000002D9A  0F89D1008  ldrb.w    r1,[sp,#8]
+.   510  000002D9E      07001  strb      r1,[r0]
+      INC(i)
+    END
+.   512  000002DA0      09801  ldr       r0,[sp,#4]
+.   514  000002DA2      03001  adds      r0,#1
+.   516  000002DA4      09001  str       r0,[sp,#4]
+.   518  000002DA6  0F7FFBFE6  b.w       -52 -> 470
+  END GetString;
+.   522  000002DAA      0B005  add       sp,#20
+.   524  000002DAC      0BD00  pop       { pc }
+.   526  000002DAE      0BF00  nop       
+
+
+  PROCEDURE GetNames*(modEntryAddr, procEntryAddr: INTEGER; VAR modName, procName: EntryString);
+  BEGIN
+.   528  000002DB0      0B50F  push      { r0, r1, r2, r3, lr }
+    IF procEntryAddr # 0 THEN
+.   530  000002DB2      09801  ldr       r0,[sp,#4]
+.   532  000002DB4      02800  cmp       r0,#0
+.   534  000002DB6  0F0008008  beq.w     16 -> 554
+      GetString(procEntryAddr, procName);
+.   538  000002DBA      09801  ldr       r0,[sp,#4]
+.   540  000002DBC      09903  ldr       r1,[sp,#12]
+.   542  000002DBE  0F7FFFFD3  bl.w      -90 -> 456
+.   546  000002DC2      0E000  b         0 -> 550
+.   548  000002DC4      000C0  <LineNo: 192>
+    ELSE
+      procName := "Unknown"
+.   550  000002DC6  0F000B80E  b.w       28 -> 582
+    END;
+.   554  000002DCA      09803  ldr       r0,[sp,#12]
+.   556  000002DCC      0A100  adr       r1,pc,#0 -> 560
+.   558  000002DCE      0E003  b         6 -> 568
+.   560  000002DD0  06E6B6E55  <String: "Unkn">
+.   564  000002DD4  0006E776F  <String: "own.">
+.   568  000002DD8  0F8512B04  ldr.w     r2,[r1],#4
+.   572  000002DDC  0F8402B04  str.w     r2,[r0],#4
+.   576  000002DE0  0F012427F  ands.w    r2,r2,#0FF000000H
+.   580  000002DE4      0D1F8  bne.n     -16 -> 568
+    IF modEntryAddr # 0 THEN
+.   582  000002DE6      09800  ldr       r0,[sp]
+.   584  000002DE8      02800  cmp       r0,#0
+.   586  000002DEA  0F0008008  beq.w     16 -> 606
+      GetString(modEntryAddr, modName)
+.   590  000002DEE      09800  ldr       r0,[sp]
+.   592  000002DF0      09902  ldr       r1,[sp,#8]
+    ELSE
+.   594  000002DF2  0F7FFFFB9  bl.w      -142 -> 456
+.   598  000002DF6      0E000  b         0 -> 602
+.   600  000002DF8      000C5  <LineNo: 197>
+      modName := "Unknown"
+.   602  000002DFA  0F000B80E  b.w       28 -> 634
+    END
+.   606  000002DFE      09802  ldr       r0,[sp,#8]
+.   608  000002E00      0A100  adr       r1,pc,#0 -> 612
+.   610  000002E02      0E003  b         6 -> 620
+.   612  000002E04  06E6B6E55  <String: "Unkn">
+.   616  000002E08  0006E776F  <String: "own.">
+.   620  000002E0C  0F8512B04  ldr.w     r2,[r1],#4
+.   624  000002E10  0F8402B04  str.w     r2,[r0],#4
+.   628  000002E14  0F012427F  ands.w    r2,r2,#0FF000000H
+.   632  000002E18      0D1F8  bne.n     -16 -> 620
+  END GetNames;
+.   634  000002E1A      0B004  add       sp,#16
+.   636  000002E1C      0BD00  pop       { pc }
+.   638  000002E1E      0BF00  nop       
+
+  (* -- init -- *)
+
+  PROCEDURE* getResName(resAddr: INTEGER; VAR name: ResName);
+    VAR i, nameAddr: INTEGER; s: ARRAY 4 OF CHAR;
+  BEGIN
+.   640  000002E20      0B500  push      { lr }
+.   642  000002E22      0B081  sub       sp,#4
+    nameAddr := resAddr + ResNameOffset;
+.   644  000002E24  0F1000308  add.w     r3,r0,#8
+    SYSTEM.GET(nameAddr, s);
+.   648  000002E28      0681C  ldr       r4,[r3]
+.   650  000002E2A      09400  str       r4,[sp]
+    FOR i := 0 TO 3 DO name[i] := s[i] END;
+.   652  000002E2C      02400  movs      r4,#0
+.   654  000002E2E      04622  mov       r2,r4
+.   656  000002E30      02A03  cmp       r2,#3
+.   658  000002E32  0F3008009  bgt.w     18 -> 680
+.   662  000002E36  0EB120401  adds.w    r4,r2,r1
+.   666  000002E3A  0EB1D0502  adds.w    r5,sp,r2
+.   670  000002E3E      0782D  ldrb      r5,[r5]
+.   672  000002E40      07025  strb      r5,[r4]
+.   674  000002E42      03201  adds      r2,#1
+.   676  000002E44  0F7FFBFF4  b.w       -24 -> 656
+    INC(nameAddr, 4);
+.   680  000002E48      03304  adds      r3,#4
+    SYSTEM.GET(nameAddr, s);
+.   682  000002E4A      0681C  ldr       r4,[r3]
+.   684  000002E4C      09400  str       r4,[sp]
+    FOR i := 0 TO 3 DO name[i + 4] := s[i] END;
+.   686  000002E4E      02400  movs      r4,#0
+.   688  000002E50      04622  mov       r2,r4
+.   690  000002E52      02A03  cmp       r2,#3
+.   692  000002E54  0F300800A  bgt.w     20 -> 716
+.   696  000002E58      01D14  adds      r4,r2,#4
+.   698  000002E5A  0EB140401  adds.w    r4,r4,r1
+.   702  000002E5E  0EB1D0502  adds.w    r5,sp,r2
+.   706  000002E62      0782D  ldrb      r5,[r5]
+.   708  000002E64      07025  strb      r5,[r4]
+.   710  000002E66      03201  adds      r2,#1
+.   712  000002E68  0F7FFBFF3  b.w       -26 -> 690
+    name[8] := 0X
+  END getResName;
+.   716  000002E6C      02400  movs      r4,#0
+.   718  000002E6E      0720C  strb      r4,[r1,#8]
+.   720  000002E70      0B001  add       sp,#4
+.   722  000002E72      0BD00  pop       { pc }
+
+
+  PROCEDURE getProgDataRes(VAR res: ProgDataRes);
+    VAR resAddr, resSize, resId, resVersion: INTEGER; found: BOOLEAN; resName: ResName;
+  BEGIN
+.   724  000002E74      0B503  push      { r0, r1, lr }
+.   726  000002E76      0B088  sub       sp,#32
+    CLEAR(res);
+.   728  000002E78      09808  ldr       r0,[sp,#32]
+.   730  000002E7A      02100  movs      r1,#0
+.   732  000002E7C      02204  movs      r2,#4
+.   734  000002E7E      0BF00  nop       
+.   736  000002E80  0F8401B04  str.w     r1,[r0],#4
+.   740  000002E84      03A01  subs      r2,#1
+.   742  000002E86      0DCFB  bgt.n     -10 -> 736
+    resAddr := Config.ResMem.start;
+.   744  000002E88  0F8DF00D8  ldr.w     r0,[pc,#216] -> 964
+.   748  000002E8C      06800  ldr       r0,[r0]
+.   750  000002E8E      09000  str       r0,[sp]
+    SYSTEM.GET(resAddr, resId);
+.   752  000002E90      09800  ldr       r0,[sp]
+.   754  000002E92      06801  ldr       r1,[r0]
+.   756  000002E94      09102  str       r1,[sp,#8]
+    SYSTEM.GET(resAddr + ResVersionOffset, resVersion);
+.   758  000002E96      09800  ldr       r0,[sp]
+.   760  000002E98      03004  adds      r0,#4
+.   762  000002E9A      06801  ldr       r1,[r0]
+.   764  000002E9C      09103  str       r1,[sp,#12]
+    IF (resId = ResId) & (resVersion = ResVersion) THEN
+.   766  000002E9E      09802  ldr       r0,[sp,#8]
+.   768  000002EA0  0F8DF10BC  ldr.w     r1,[pc,#188] -> 960
+.   772  000002EA4      04288  cmp       r0,r1
+.   774  000002EA6  0F0408058  bne.w     176 -> 954
+.   778  000002EAA      09803  ldr       r0,[sp,#12]
+.   780  000002EAC      02801  cmp       r0,#1
+.   782  000002EAE  0F0408054  bne.w     168 -> 954
+      found := FALSE;
+.   786  000002EB2      02000  movs      r0,#0
+.   788  000002EB4  0F88D0010  strb.w    r0,[sp,#16]
+      WHILE (resId = ResId) & ~found DO
+.   792  000002EB8      09802  ldr       r0,[sp,#8]
+.   794  000002EBA  0F8DF10A4  ldr.w     r1,[pc,#164] -> 960
+.   798  000002EBE      04288  cmp       r0,r1
+.   800  000002EC0  0F040804B  bne.w     150 -> 954
+.   804  000002EC4  0F89D0010  ldrb.w    r0,[sp,#16]
+.   808  000002EC8  0F0100F01  tst.w     r0,#1
+.   812  000002ECC  0F0408045  bne.w     138 -> 954
+        getResName(resAddr, resName);
+.   816  000002ED0      09800  ldr       r0,[sp]
+.   818  000002ED2  0F11D0114  adds.w    r1,sp,#20
+.   822  000002ED6  0F7FFFFA3  bl.w      -186 -> 640
+.   826  000002EDA      0E000  b         0 -> 830
+.   828  000002EDC      000E4  <LineNo: 228>
+        SYSTEM.GET(resAddr + ResSizeOffset, resSize);
+.   830  000002EDE      09800  ldr       r0,[sp]
+.   832  000002EE0      03014  adds      r0,#20
+.   834  000002EE2      06801  ldr       r1,[r0]
+.   836  000002EE4      09101  str       r1,[sp,#4]
+        found := resName = ProgResName;
+.   838  000002EE6      02000  movs      r0,#0
+.   840  000002EE8  0F11D0114  adds.w    r1,sp,#20
+.   844  000002EEC      0467B  mov       r3,pc
+.   846  000002EEE  0F5B37253  subs.w    r2,r3,#844
+.   850  000002EF2  0F8113000  ldrb.w    r3,[r1,r0]
+.   854  000002EF6  0F8124000  ldrb.w    r4,[r2,r0]
+.   858  000002EFA      03001  adds      r0,#1
+.   860  000002EFC      042A3  cmp       r3,r4
+.   862  000002EFE  0F0408003  bne.w     6 -> 872
+.   866  000002F02  0F1B30F00  cmp.w     r3,#0
+.   870  000002F06      0D1F4  bne.n     -24 -> 850
+.   872  000002F08      0BF0C  ite       eq
+.   874  000002F0A  0F04F0001  moveq.w   r0,#1
+.   878  000002F0E  0F04F0000  movne.w   r0,#0
+.   882  000002F12  0F88D0010  strb.w    r0,[sp,#16]
+        IF found THEN
+.   886  000002F16  0F89D0010  ldrb.w    r0,[sp,#16]
+.   890  000002F1A  0F0100F01  tst.w     r0,#1
+.   894  000002F1E  0F0008012  beq.w     36 -> 934
+          res.resAddr := resAddr;
+.   898  000002F22      09800  ldr       r0,[sp]
+.   900  000002F24      09908  ldr       r1,[sp,#32]
+.   902  000002F26      06008  str       r0,[r1]
+          res.size := resSize;
+.   904  000002F28      09801  ldr       r0,[sp,#4]
+.   906  000002F2A      09908  ldr       r1,[sp,#32]
+.   908  000002F2C      060C8  str       r0,[r1,#12]
+          res.dataBeginAddr := resAddr + ResDataOffset;
+.   910  000002F2E      09800  ldr       r0,[sp]
+.   912  000002F30      03018  adds      r0,#24
+.   914  000002F32      09908  ldr       r1,[sp,#32]
+.   916  000002F34      06048  str       r0,[r1,#4]
+          res.dataEndAddr := res.dataBeginAddr + resSize;
+.   918  000002F36      09808  ldr       r0,[sp,#32]
+.   920  000002F38      06840  ldr       r0,[r0,#4]
+.   922  000002F3A      09901  ldr       r1,[sp,#4]
+.   924  000002F3C      04408  add       r0,r1
+.   926  000002F3E      09908  ldr       r1,[sp,#32]
+.   928  000002F40      06088  str       r0,[r1,#8]
+        ELSE
+          resAddr := resAddr + ResDataOffset + resSize;
+.   930  000002F42  0F000B808  b.w       16 -> 950
+.   934  000002F46      09800  ldr       r0,[sp]
+.   936  000002F48      03018  adds      r0,#24
+.   938  000002F4A      09901  ldr       r1,[sp,#4]
+.   940  000002F4C      04408  add       r0,r1
+.   942  000002F4E      09000  str       r0,[sp]
+          SYSTEM.GET(resAddr, resId)
+        END
+.   944  000002F50      09800  ldr       r0,[sp]
+.   946  000002F52      06801  ldr       r1,[r0]
+.   948  000002F54      09102  str       r1,[sp,#8]
+      END
+.   950  000002F56  0F7FFBFAF  b.w       -162 -> 792
+    END
+  END getProgDataRes;
+.   954  000002F5A      0B00A  add       sp,#40
+.   956  000002F5C      0BD00  pop       { pc }
+.   958  000002F5E      0BF00  nop       
+.   960  000002F60  05237424F  <Const:  1379353167>
+.   964  000002F64  020027FA4  <Global: Config data>
+
+BEGIN
+.   968  000002F68      0B500  push      { lr }
+  getProgDataRes(progDataRes)
+.   970  000002F6A  0F8DF001C  ldr.w     r0,[pc,#28] -> 1000
+.   974  000002F6E      0467A  mov       r2,pc
+.   976  000002F70  0F8DF1010  ldr.w     r1,[pc,#16] -> 996
+.   980  000002F74  0EB110102  adds.w    r1,r1,r2
+END ProgData.
+.   984  000002F78  0F7FFFF7C  bl.w      -264 -> 724
+.   988  000002F7C      0E000  b         0 -> 992
+.   990  000002F7E      000F5  <LineNo: 245>
+.   992  000002F80      0BD00  pop       { pc }
+.   994  000002F82      0BF00  nop       
+.   996  000002F84  0FFFFFC3A  <Const:  -966>
+.  1000  000002F88  020027EC0  <Global: ProgData data>
+ 

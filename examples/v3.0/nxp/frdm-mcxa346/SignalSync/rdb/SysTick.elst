@@ -1,0 +1,80 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\frdm-mcxa346\SignalSync\SignalSync.mod>
+
+.     0  000004748              <Pad: 0>
+MODULE SysTick;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  System tick
+  --
+  MCU: MCX-A346
+  --
+  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2, Clocks;
+
+  CONST
+    (* bits *)
+    SYST_CSR_COUNTFLAG = 16;
+    SYST_CSR_ENABLE = 0;
+
+    CountPerMillisecond = Clocks.FRO_1M DIV 1000;
+
+
+  PROCEDURE* Tick*(): BOOLEAN;
+    RETURN SYSTEM.BIT(MCU.PPB_SYST_CSR, SYST_CSR_COUNTFLAG)
+.     4  00000474C      0B500  push      { lr }
+  END Tick;
+.     6  00000474E  0F8DF0014  ldr.w     r0,[pc,#20] -> 28
+.    10  000004752      06801  ldr       r1,[r0]
+.    12  000004754      003C9  lsls      r1,r1,#15
+.    14  000004756      0BF4C  ite       mi
+.    16  000004758  0F04F0001  movmi.w   r0,#1
+.    20  00000475C  0F04F0000  movpl.w   r0,#0
+.    24  000004760      0BD00  pop       { pc }
+.    26  000004762      0BF00  nop       
+.    28  000004764  0E000E010  <Const:  -536813552>
+
+
+  PROCEDURE* Enable*;
+  BEGIN
+.    32  000004768      0B500  push      { lr }
+    SYSTEM.PUT(MCU.PPB_SYST_CSR, {SYST_CSR_ENABLE})
+  END Enable;
+.    34  00000476A  0F8DF0008  ldr.w     r0,[pc,#8] -> 44
+.    38  00000476E      02101  movs      r1,#1
+.    40  000004770      06001  str       r1,[r0]
+.    42  000004772      0BD00  pop       { pc }
+.    44  000004774  0E000E010  <Const:  -536813552>
+
+
+  PROCEDURE* Init*(millisecondsPerTick: INTEGER);
+    VAR cntReload: INTEGER;
+  BEGIN
+.    48  000004778      0B500  push      { lr }
+    cntReload := millisecondsPerTick * CountPerMillisecond - 1;
+.    50  00000477A  0F24033E8  movw      r3,#1000
+.    54  00000477E  0FB00F203  mul.w     r2,r0,r3
+.    58  000004782      03A01  subs      r2,#1
+.    60  000004784      04611  mov       r1,r2
+    SYSTEM.PUT(MCU.PPB_SYST_RVR, cntReload);
+.    62  000004786  0F8DF2010  ldr.w     r2,[pc,#16] -> 80
+.    66  00000478A      06011  str       r1,[r2]
+    SYSTEM.PUT(MCU.PPB_SYST_CVR, 0) (* clear counter *)
+  END Init;
+.    68  00000478C  0F8DF200C  ldr.w     r2,[pc,#12] -> 84
+.    72  000004790      02300  movs      r3,#0
+.    74  000004792      06013  str       r3,[r2]
+.    76  000004794      0BD00  pop       { pc }
+.    78  000004796      0BF00  nop       
+.    80  000004798  0E000E014  <Const:  -536813548>
+.    84  00000479C  0E000E018  <Const:  -536813544>
+
+END SysTick.
+.    88  0000047A0      0B500  push      { lr }
+.    90  0000047A2      0BD00  pop       { pc }
+ 

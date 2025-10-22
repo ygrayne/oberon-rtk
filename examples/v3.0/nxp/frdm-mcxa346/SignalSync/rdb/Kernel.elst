@@ -1,0 +1,1413 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\frdm-mcxa346\SignalSync\SignalSync.mod>
+
+.     0  0000047A4              <Pad: 0>
+MODULE Kernel;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  Multi-threading kernel v1
+  --
+  Based on coroutines
+  Multi-core
+  Time-driven scheduler
+  Cooperative scheduling
+  No support for interrupts
+  --
+  MCU: MCX-A346
+  --
+  Copyright (c) 2020-2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, Coroutines, Memory, SysTick, Cores, MCU := MCU2, Errors;
+
+  CONST
+    MaxNumThreads* = 16;
+    NumCores = MCU.NumCores;
+
+    (* result codes *)
+    OK* = 0;
+    NoError* = 0;
+    Failed* = 1;
+
+    DefaultPrio* = 7;
+
+    (* thread states *)
+    StateEnabled = 0;    (* triggered: queued at next trigger event; queued at next scheduler run *)
+    StateSuspended = 1;  (* must be (re-) enabled before it can run *)
+
+    (* thread trigger modes *)
+    TrigNone* = 0;
+    TrigPeriod* = 1;
+    TrigDelay* = 2;
+    TrigDevice* = 3;
+
+
+    (* loop *)
+    LoopStackSize = 256; (* bytes *)
+    LoopCorId = -1;
+
+    (* scheduler slow motion factor (debugging) *)
+    SloMo = 1;
+
+
+  TYPE
+    (* one thread *)
+    PROC* = PROCEDURE; (* Modula-2 vibes *)
+    Thread* = POINTER TO ThreadDesc;
+    ThreadDesc* = RECORD
+      prio, tid: INTEGER;
+      state: INTEGER;
+      period, ticker: INTEGER;
+      delay: INTEGER;
+      devAddr: INTEGER;
+      devFlagsSet, devFlagsClr: SET;
+      cor: Coroutines.Coroutine;
+      trigCode: INTEGER;
+      next*: Thread
+    END;
+.     4  0000047A8      047A8      00030  <Type:   48>
+.     8  0000047AC      047AC      00000  <Type:   0>
+.    12  0000047B0      047B0      00000  <Type:   0>
+.    16  0000047B4      047B4      00000  <Type:   0>
+.    20  0000047B8      047B8      00000  <Type:   0>
+
+    (* core-specific data *)
+    CoreContext = POINTER TO CoreContextDesc;
+    CoreContextDesc = RECORD
+      threads: ARRAY MaxNumThreads OF Thread;
+      Ct, ct: Thread;
+      queued: SET;
+      numThreads: INTEGER;
+      loopPeriod: INTEGER;
+      loop, jump: Coroutines.Coroutine
+    END;
+.    24  0000047BC      047BC      0005C  <Type:   92>
+.    28  0000047C0      047C0      00000  <Type:   0>
+.    32  0000047C4      047C4      00000  <Type:   0>
+.    36  0000047C8      047C8      00000  <Type:   0>
+.    40  0000047CC      047CC      00000  <Type:   0>
+
+  VAR
+    coreCon: ARRAY NumCores OF CoreContext;
+
+    Done*: PROCEDURE; (* alias for SuspendMe *)
+    Yield*: PROCEDURE; (* alias for Next *)
+
+
+  (* ready queue *)
+
+  PROCEDURE* slotIn(t: Thread; ctx: CoreContext);
+  (* put into ready queue, prio sorted *)
+    VAR t0, t1: Thread;
+  BEGIN
+.    44  0000047D0      0B500  push      { lr }
+.    46  0000047D2      0B082  sub       sp,#8
+    IF ~(t.tid IN ctx.queued) THEN
+.    48  0000047D4      06C8A  ldr       r2,[r1,#72]
+.    50  0000047D6      06843  ldr       r3,[r0,#4]
+.    52  0000047D8      02401  movs      r4,#1
+.    54  0000047DA      0409C  lsls      r4,r3
+.    56  0000047DC  0EA120F04  tst.w     r2,r4
+.    60  0000047E0  0F0408029  bne.w     82 -> 146
+      t0 := ctx.ct; t1 := t0;
+.    64  0000047E4      06C4A  ldr       r2,[r1,#68]
+.    66  0000047E6      09200  str       r2,[sp]
+.    68  0000047E8      09A00  ldr       r2,[sp]
+.    70  0000047EA      09201  str       r2,[sp,#4]
+      WHILE (t0 # NIL) & (t0.prio <= t.prio) DO
+.    72  0000047EC      09A00  ldr       r2,[sp]
+.    74  0000047EE      02A00  cmp       r2,#0
+.    76  0000047F0  0F000800D  beq.w     26 -> 106
+.    80  0000047F4      09A00  ldr       r2,[sp]
+.    82  0000047F6      06812  ldr       r2,[r2]
+.    84  0000047F8      06803  ldr       r3,[r0]
+.    86  0000047FA      0429A  cmp       r2,r3
+.    88  0000047FC  0F3008007  bgt.w     14 -> 106
+        t1 := t0; t0 := t0.next
+.    92  000004800      09A00  ldr       r2,[sp]
+.    94  000004802      09201  str       r2,[sp,#4]
+      END;
+.    96  000004804      09A00  ldr       r2,[sp]
+.    98  000004806      06AD2  ldr       r2,[r2,#44]
+.   100  000004808      09200  str       r2,[sp]
+.   102  00000480A  0F7FFBFEF  b.w       -34 -> 72
+      IF t1 = t0 THEN ctx.ct := t ELSE t1.next := t END;
+.   106  00000480E      09A01  ldr       r2,[sp,#4]
+.   108  000004810      09B00  ldr       r3,[sp]
+.   110  000004812      0429A  cmp       r2,r3
+.   112  000004814  0F0408003  bne.w     6 -> 122
+.   116  000004818      06448  str       r0,[r1,#68]
+.   118  00000481A  0F000B802  b.w       4 -> 126
+.   122  00000481E      09A01  ldr       r2,[sp,#4]
+.   124  000004820      062D0  str       r0,[r2,#44]
+      t.next := t0;
+.   126  000004822      09A00  ldr       r2,[sp]
+.   128  000004824      062C2  str       r2,[r0,#44]
+      INCL(ctx.queued, t.tid)
+    END
+.   130  000004826      06842  ldr       r2,[r0,#4]
+.   132  000004828      02301  movs      r3,#1
+.   134  00000482A      04093  lsls      r3,r2
+.   136  00000482C  0F1110448  adds.w    r4,r1,#72
+.   140  000004830      06825  ldr       r5,[r4]
+.   142  000004832      0431D  orrs      r5,r3
+.   144  000004834      06025  str       r5,[r4]
+  END slotIn;
+.   146  000004836      0B002  add       sp,#8
+.   148  000004838      0BD00  pop       { pc }
+.   150  00000483A      0BF00  nop       
+
+  (* manage threads *)
+
+  PROCEDURE Allocate*(proc: PROC; stackSize: INTEGER; VAR t: Thread; VAR tid, res: INTEGER);
+    VAR cid, stackAddr: INTEGER; ctx: CoreContext;
+  BEGIN
+.   152  00000483C      0B51F  push      { r0, r1, r2, r3, r4, lr }
+.   154  00000483E      0B083  sub       sp,#12
+    Cores.GetCoreId(cid);
+.   156  000004840      04668  mov       r0,sp
+.   158  000004842  0F7FCF91D  bl.w      Ext Proc #2
+.   162  000004846      0E000  b         0 -> 166
+.   164  000004848      0006C  <LineNo: 108>
+    ctx := coreCon[cid];
+.   166  00000484A      09800  ldr       r0,[sp]
+.   168  00000484C      02801  cmp       r0,#1
+.   170  00000484E      0D301  bcc.n     2 -> 176
+.   172  000004850      0DF01  svc       1
+.   174  000004852      0006D  <LineNo: 109>
+.   176  000004854  0F8DF10B8  ldr.w     r1,[pc,#184] -> 364
+.   180  000004858      00082  lsls      r2,r0,#2
+.   182  00000485A  0EB020001  add.w     r0,r2,r1
+.   186  00000485E      06800  ldr       r0,[r0]
+.   188  000004860      09002  str       r0,[sp,#8]
+    res := Failed;
+.   190  000004862      02001  movs      r0,#1
+.   192  000004864      09907  ldr       r1,[sp,#28]
+.   194  000004866      06008  str       r0,[r1]
+    IF ctx.numThreads < MaxNumThreads THEN
+.   196  000004868      09802  ldr       r0,[sp,#8]
+.   198  00000486A      06CC0  ldr       r0,[r0,#76]
+.   200  00000486C      02810  cmp       r0,#16
+.   202  00000486E  0F280804C  bge.w     152 -> 358
+      tid := ctx.numThreads;
+.   206  000004872      09802  ldr       r0,[sp,#8]
+.   208  000004874      06CC0  ldr       r0,[r0,#76]
+.   210  000004876      09906  ldr       r1,[sp,#24]
+.   212  000004878      06008  str       r0,[r1]
+      t := ctx.threads[tid];
+.   214  00000487A      09806  ldr       r0,[sp,#24]
+.   216  00000487C      06800  ldr       r0,[r0]
+.   218  00000487E      02810  cmp       r0,#16
+.   220  000004880      0D301  bcc.n     2 -> 226
+.   222  000004882      0DF01  svc       1
+.   224  000004884      00071  <LineNo: 113>
+.   226  000004886      09902  ldr       r1,[sp,#8]
+.   228  000004888      00082  lsls      r2,r0,#2
+.   230  00000488A  0EB020001  add.w     r0,r2,r1
+.   234  00000488E      06800  ldr       r0,[r0]
+.   236  000004890      09905  ldr       r1,[sp,#20]
+.   238  000004892      06008  str       r0,[r1]
+      INC(ctx.numThreads);
+.   240  000004894      09802  ldr       r0,[sp,#8]
+.   242  000004896      06CC1  ldr       r1,[r0,#76]
+.   244  000004898      03101  adds      r1,#1
+.   246  00000489A      064C1  str       r1,[r0,#76]
+      t.state := StateSuspended;
+.   248  00000489C      09805  ldr       r0,[sp,#20]
+.   250  00000489E      06800  ldr       r0,[r0]
+.   252  0000048A0      02101  movs      r1,#1
+.   254  0000048A2      06081  str       r1,[r0,#8]
+      t.prio := DefaultPrio;
+.   256  0000048A4      09805  ldr       r0,[sp,#20]
+.   258  0000048A6      06800  ldr       r0,[r0]
+.   260  0000048A8      02107  movs      r1,#7
+.   262  0000048AA      06001  str       r1,[r0]
+      t.period := 0; t.delay := 0; t.devAddr := 0;
+.   264  0000048AC      09805  ldr       r0,[sp,#20]
+.   266  0000048AE      06800  ldr       r0,[r0]
+.   268  0000048B0      02100  movs      r1,#0
+.   270  0000048B2      060C1  str       r1,[r0,#12]
+.   272  0000048B4      09805  ldr       r0,[sp,#20]
+.   274  0000048B6      06800  ldr       r0,[r0]
+.   276  0000048B8      02100  movs      r1,#0
+.   278  0000048BA      06141  str       r1,[r0,#20]
+.   280  0000048BC      09805  ldr       r0,[sp,#20]
+.   282  0000048BE      06800  ldr       r0,[r0]
+.   284  0000048C0      02100  movs      r1,#0
+.   286  0000048C2      06181  str       r1,[r0,#24]
+      Memory.AllocThreadStack(stackAddr, tid, stackSize);
+.   288  0000048C4  0F11D0004  adds.w    r0,sp,#4
+.   292  0000048C8      09906  ldr       r1,[sp,#24]
+.   294  0000048CA      06809  ldr       r1,[r1]
+.   296  0000048CC      09A04  ldr       r2,[sp,#16]
+.   298  0000048CE  0F7FCFAC1  bl.w      Ext Proc #8
+.   302  0000048D2      0E000  b         0 -> 306
+.   304  0000048D4      00076  <LineNo: 118>
+      IF stackAddr # 0 THEN
+.   306  0000048D6      09801  ldr       r0,[sp,#4]
+.   308  0000048D8      02800  cmp       r0,#0
+.   310  0000048DA  0F0008016  beq.w     44 -> 358
+        Coroutines.Init(t.cor, stackAddr, stackSize, tid);
+.   314  0000048DE      09805  ldr       r0,[sp,#20]
+.   316  0000048E0      06800  ldr       r0,[r0]
+.   318  0000048E2      06A40  ldr       r0,[r0,#36]
+.   320  0000048E4      09901  ldr       r1,[sp,#4]
+.   322  0000048E6      09A04  ldr       r2,[sp,#16]
+.   324  0000048E8      09B06  ldr       r3,[sp,#24]
+.   326  0000048EA      0681B  ldr       r3,[r3]
+.   328  0000048EC  0F7FFFF12  bl.w      Ext Proc #4
+.   332  0000048F0      0E000  b         0 -> 336
+.   334  0000048F2      00078  <LineNo: 120>
+        Coroutines.Allocate(t.cor, proc);
+.   336  0000048F4      09805  ldr       r0,[sp,#20]
+.   338  0000048F6      06800  ldr       r0,[r0]
+.   340  0000048F8      06A40  ldr       r0,[r0,#36]
+.   342  0000048FA      09903  ldr       r1,[sp,#12]
+.   344  0000048FC  0F7FFFEFA  bl.w      Ext Proc #3
+.   348  000004900      0E000  b         0 -> 352
+.   350  000004902      00079  <LineNo: 121>
+        res := NoError
+      END
+.   352  000004904      02000  movs      r0,#0
+.   354  000004906      09907  ldr       r1,[sp,#28]
+.   356  000004908      06008  str       r0,[r1]
+    END
+  END Allocate;
+.   358  00000490A      0B008  add       sp,#32
+.   360  00000490C      0BD00  pop       { pc }
+.   362  00000490E      0BF00  nop       
+.   364  000004910  020027E90  <Global: Kernel data>
+
+
+  PROCEDURE Reallocate*(t: Thread; proc: PROC; VAR res: INTEGER);
+  BEGIN
+.   368  000004914      0B507  push      { r0, r1, r2, lr }
+    res := Failed;
+.   370  000004916      02001  movs      r0,#1
+.   372  000004918      09902  ldr       r1,[sp,#8]
+.   374  00000491A      06008  str       r0,[r1]
+    IF t.state = StateSuspended THEN
+.   376  00000491C      09800  ldr       r0,[sp]
+.   378  00000491E      06880  ldr       r0,[r0,#8]
+.   380  000004920      02801  cmp       r0,#1
+.   382  000004922  0F0408016  bne.w     44 -> 430
+      t.prio := DefaultPrio;
+.   386  000004926      02007  movs      r0,#7
+.   388  000004928      09900  ldr       r1,[sp]
+.   390  00000492A      06008  str       r0,[r1]
+      t.period := 0; t.delay := 0;
+.   392  00000492C      02000  movs      r0,#0
+.   394  00000492E      09900  ldr       r1,[sp]
+.   396  000004930      060C8  str       r0,[r1,#12]
+.   398  000004932      02000  movs      r0,#0
+.   400  000004934      09900  ldr       r1,[sp]
+.   402  000004936      06148  str       r0,[r1,#20]
+      t.devAddr := 0;
+.   404  000004938      02000  movs      r0,#0
+.   406  00000493A      09900  ldr       r1,[sp]
+.   408  00000493C      06188  str       r0,[r1,#24]
+      Coroutines.Allocate(t.cor, proc);
+.   410  00000493E      09800  ldr       r0,[sp]
+.   412  000004940      06A40  ldr       r0,[r0,#36]
+.   414  000004942      09901  ldr       r1,[sp,#4]
+.   416  000004944  0F7FFFED6  bl.w      Ext Proc #3
+.   420  000004948      0E000  b         0 -> 424
+.   422  00000494A      00087  <LineNo: 135>
+      res := NoError
+    END
+.   424  00000494C      02000  movs      r0,#0
+.   426  00000494E      09902  ldr       r1,[sp,#8]
+.   428  000004950      06008  str       r0,[r1]
+  END Reallocate;
+.   430  000004952      0B003  add       sp,#12
+.   432  000004954      0BD00  pop       { pc }
+.   434  000004956      0BF00  nop       
+
+
+
+  PROCEDURE* Enable*(t: Thread);
+  BEGIN
+.   436  000004958      0B500  push      { lr }
+    ASSERT(t # NIL, Errors.PreCond);
+.   438  00000495A      02800  cmp       r0,#0
+.   440  00000495C      0D101  bne.n     2 -> 446
+.   442  00000495E      0DF22  svc       34
+.   444  000004960      00090  <LineNo: 144>
+    t.state := StateEnabled
+  END Enable;
+.   446  000004962      02100  movs      r1,#0
+.   448  000004964      06081  str       r1,[r0,#8]
+.   450  000004966      0BD00  pop       { pc }
+
+
+  (* in-process api *)
+
+  PROCEDURE Next*;
+    VAR cid: INTEGER; ctx: CoreContext;
+  BEGIN
+.   452  000004968      0B500  push      { lr }
+.   454  00000496A      0B082  sub       sp,#8
+    Cores.GetCoreId(cid);
+.   456  00000496C      04668  mov       r0,sp
+.   458  00000496E  0F7FCF887  bl.w      Ext Proc #2
+.   462  000004972      0E000  b         0 -> 466
+.   464  000004974      0009A  <LineNo: 154>
+    ctx := coreCon[cid];
+.   466  000004976      09800  ldr       r0,[sp]
+.   468  000004978      02801  cmp       r0,#1
+.   470  00000497A      0D301  bcc.n     2 -> 476
+.   472  00000497C      0DF01  svc       1
+.   474  00000497E      0009B  <LineNo: 155>
+.   476  000004980  0F8DF1020  ldr.w     r1,[pc,#32] -> 512
+.   480  000004984      00082  lsls      r2,r0,#2
+.   482  000004986  0EB020001  add.w     r0,r2,r1
+.   486  00000498A      06800  ldr       r0,[r0]
+.   488  00000498C      09001  str       r0,[sp,#4]
+    Coroutines.Transfer(ctx.Ct.cor, ctx.loop)
+.   490  00000498E      09801  ldr       r0,[sp,#4]
+.   492  000004990      06C00  ldr       r0,[r0,#64]
+.   494  000004992      06A40  ldr       r0,[r0,#36]
+.   496  000004994      09901  ldr       r1,[sp,#4]
+.   498  000004996      06D49  ldr       r1,[r1,#84]
+  END Next;
+.   500  000004998  0F7FFFEC6  bl.w      Ext Proc #5
+.   504  00000499C      0E000  b         0 -> 508
+.   506  00000499E      0009C  <LineNo: 156>
+.   508  0000049A0      0B002  add       sp,#8
+.   510  0000049A2      0BD00  pop       { pc }
+.   512  0000049A4  020027E90  <Global: Kernel data>
+
+
+  PROCEDURE NextQueued*(): Thread;
+    VAR cid: INTEGER;
+  BEGIN
+.   516  0000049A8      0B500  push      { lr }
+.   518  0000049AA      0B081  sub       sp,#4
+    Cores.GetCoreId(cid);
+.   520  0000049AC      04668  mov       r0,sp
+.   522  0000049AE  0F7FCF867  bl.w      Ext Proc #2
+.   526  0000049B2      0E000  b         0 -> 530
+.   528  0000049B4      000A3  <LineNo: 163>
+    RETURN coreCon[cid].ct
+.   530  0000049B6      09800  ldr       r0,[sp]
+.   532  0000049B8      02801  cmp       r0,#1
+.   534  0000049BA      0D301  bcc.n     2 -> 540
+.   536  0000049BC      0DF01  svc       1
+.   538  0000049BE      000A3  <LineNo: 163>
+.   540  0000049C0  0F8DF1010  ldr.w     r1,[pc,#16] -> 560
+.   544  0000049C4      00082  lsls      r2,r0,#2
+.   546  0000049C6  0EB020001  add.w     r0,r2,r1
+.   550  0000049CA      06800  ldr       r0,[r0]
+  END NextQueued;
+.   552  0000049CC      06C40  ldr       r0,[r0,#68]
+.   554  0000049CE      0B001  add       sp,#4
+.   556  0000049D0      0BD00  pop       { pc }
+.   558  0000049D2      0BF00  nop       
+.   560  0000049D4  020027E90  <Global: Kernel data>
+
+
+  PROCEDURE SuspendMe*;
+    VAR cid: INTEGER; ctx: CoreContext;
+  BEGIN
+.   564  0000049D8      0B500  push      { lr }
+.   566  0000049DA      0B082  sub       sp,#8
+    Cores.GetCoreId(cid);
+.   568  0000049DC      04668  mov       r0,sp
+.   570  0000049DE  0F7FCF84F  bl.w      Ext Proc #2
+.   574  0000049E2      0E000  b         0 -> 578
+.   576  0000049E4      000AB  <LineNo: 171>
+    ctx := coreCon[cid];
+.   578  0000049E6      09800  ldr       r0,[sp]
+.   580  0000049E8      02801  cmp       r0,#1
+.   582  0000049EA      0D301  bcc.n     2 -> 588
+.   584  0000049EC      0DF01  svc       1
+.   586  0000049EE      000AC  <LineNo: 172>
+.   588  0000049F0  0F8DF1028  ldr.w     r1,[pc,#40] -> 632
+.   592  0000049F4      00082  lsls      r2,r0,#2
+.   594  0000049F6  0EB020001  add.w     r0,r2,r1
+.   598  0000049FA      06800  ldr       r0,[r0]
+.   600  0000049FC      09001  str       r0,[sp,#4]
+    ctx.Ct.state := StateSuspended;
+.   602  0000049FE      09801  ldr       r0,[sp,#4]
+.   604  000004A00      06C00  ldr       r0,[r0,#64]
+.   606  000004A02      02101  movs      r1,#1
+.   608  000004A04      06081  str       r1,[r0,#8]
+    Coroutines.Transfer(ctx.Ct.cor, ctx.loop)
+.   610  000004A06      09801  ldr       r0,[sp,#4]
+.   612  000004A08      06C00  ldr       r0,[r0,#64]
+.   614  000004A0A      06A40  ldr       r0,[r0,#36]
+.   616  000004A0C      09901  ldr       r1,[sp,#4]
+.   618  000004A0E      06D49  ldr       r1,[r1,#84]
+  END SuspendMe;
+.   620  000004A10  0F7FFFE8A  bl.w      Ext Proc #5
+.   624  000004A14      0E000  b         0 -> 628
+.   626  000004A16      000AE  <LineNo: 174>
+.   628  000004A18      0B002  add       sp,#8
+.   630  000004A1A      0BD00  pop       { pc }
+.   632  000004A1C  020027E90  <Global: Kernel data>
+
+
+  PROCEDURE DelayMe*(delay: INTEGER);
+    VAR cid: INTEGER; ctx: CoreContext;
+  BEGIN
+.   636  000004A20      0B501  push      { r0, lr }
+.   638  000004A22      0B082  sub       sp,#8
+    Cores.GetCoreId(cid);
+.   640  000004A24      04668  mov       r0,sp
+.   642  000004A26  0F7FCF82B  bl.w      Ext Proc #2
+.   646  000004A2A      0E000  b         0 -> 650
+.   648  000004A2C      000B5  <LineNo: 181>
+    ctx := coreCon[cid];
+.   650  000004A2E      09800  ldr       r0,[sp]
+.   652  000004A30      02801  cmp       r0,#1
+.   654  000004A32      0D301  bcc.n     2 -> 660
+.   656  000004A34      0DF01  svc       1
+.   658  000004A36      000B6  <LineNo: 182>
+.   660  000004A38  0F8DF1028  ldr.w     r1,[pc,#40] -> 704
+.   664  000004A3C      00082  lsls      r2,r0,#2
+.   666  000004A3E  0EB020001  add.w     r0,r2,r1
+.   670  000004A42      06800  ldr       r0,[r0]
+.   672  000004A44      09001  str       r0,[sp,#4]
+    ctx.Ct.delay := delay;
+.   674  000004A46      09801  ldr       r0,[sp,#4]
+.   676  000004A48      06C00  ldr       r0,[r0,#64]
+.   678  000004A4A      09902  ldr       r1,[sp,#8]
+.   680  000004A4C      06141  str       r1,[r0,#20]
+    Coroutines.Transfer(ctx.Ct.cor, ctx.loop)
+.   682  000004A4E      09801  ldr       r0,[sp,#4]
+.   684  000004A50      06C00  ldr       r0,[r0,#64]
+.   686  000004A52      06A40  ldr       r0,[r0,#36]
+.   688  000004A54      09901  ldr       r1,[sp,#4]
+.   690  000004A56      06D49  ldr       r1,[r1,#84]
+  END DelayMe;
+.   692  000004A58  0F7FFFE66  bl.w      Ext Proc #5
+.   696  000004A5C      0E000  b         0 -> 700
+.   698  000004A5E      000B8  <LineNo: 184>
+.   700  000004A60      0B003  add       sp,#12
+.   702  000004A62      0BD00  pop       { pc }
+.   704  000004A64  020027E90  <Global: Kernel data>
+
+
+  PROCEDURE StartTimeout*(timeout: INTEGER);
+    VAR cid: INTEGER;
+  BEGIN
+.   708  000004A68      0B501  push      { r0, lr }
+.   710  000004A6A      0B081  sub       sp,#4
+    Cores.GetCoreId(cid);
+.   712  000004A6C      04668  mov       r0,sp
+.   714  000004A6E  0F7FCF807  bl.w      Ext Proc #2
+.   718  000004A72      0E000  b         0 -> 722
+.   720  000004A74      000BF  <LineNo: 191>
+    coreCon[cid].Ct.delay := timeout
+.   722  000004A76      09800  ldr       r0,[sp]
+.   724  000004A78      02801  cmp       r0,#1
+.   726  000004A7A      0D301  bcc.n     2 -> 732
+.   728  000004A7C      0DF01  svc       1
+.   730  000004A7E      000C0  <LineNo: 192>
+.   732  000004A80  0F8DF1014  ldr.w     r1,[pc,#20] -> 756
+.   736  000004A84      00082  lsls      r2,r0,#2
+.   738  000004A86  0EB020001  add.w     r0,r2,r1
+.   742  000004A8A      06800  ldr       r0,[r0]
+.   744  000004A8C      06C00  ldr       r0,[r0,#64]
+  END StartTimeout;
+.   746  000004A8E      09901  ldr       r1,[sp,#4]
+.   748  000004A90      06141  str       r1,[r0,#20]
+.   750  000004A92      0B002  add       sp,#8
+.   752  000004A94      0BD00  pop       { pc }
+.   754  000004A96      0BF00  nop       
+.   756  000004A98  020027E90  <Global: Kernel data>
+
+
+  PROCEDURE CancelTimeout*;
+  BEGIN
+.   760  000004A9C      0B500  push      { lr }
+    StartTimeout(0)
+.   762  000004A9E      02000  movs      r0,#0
+  END CancelTimeout;
+.   764  000004AA0  0F7FFFFE2  bl.w      -60 -> 708
+.   768  000004AA4      0E000  b         0 -> 772
+.   770  000004AA6      000C6  <LineNo: 198>
+.   772  000004AA8      0BD00  pop       { pc }
+.   774  000004AAA      0BF00  nop       
+
+
+  PROCEDURE AwaitDeviceFlags*(addr: INTEGER; setFlags, clrFlags: SET);
+  (**
+    Await any of the 'setFlags' to be set, or any of the 'clrFlags'
+    to be set or cleared by the hardware, respectively.
+    Any resetting of the flags must be done by the thread.
+    Device flag awaiting takes precedence over period.
+    Can be combined with a delay for timeout, though.
+  **)
+    VAR cid: INTEGER; ctx: CoreContext;
+  BEGIN
+.   776  000004AAC      0B507  push      { r0, r1, r2, lr }
+.   778  000004AAE      0B082  sub       sp,#8
+    Cores.GetCoreId(cid);
+.   780  000004AB0      04668  mov       r0,sp
+.   782  000004AB2  0F7FBFFE5  bl.w      Ext Proc #2
+.   786  000004AB6      0E000  b         0 -> 790
+.   788  000004AB8      000D4  <LineNo: 212>
+    ctx := coreCon[cid];
+.   790  000004ABA      09800  ldr       r0,[sp]
+.   792  000004ABC      02801  cmp       r0,#1
+.   794  000004ABE      0D301  bcc.n     2 -> 800
+.   796  000004AC0      0DF01  svc       1
+.   798  000004AC2      000D5  <LineNo: 213>
+.   800  000004AC4  0F8DF1038  ldr.w     r1,[pc,#56] -> 860
+.   804  000004AC8      00082  lsls      r2,r0,#2
+.   806  000004ACA  0EB020001  add.w     r0,r2,r1
+.   810  000004ACE      06800  ldr       r0,[r0]
+.   812  000004AD0      09001  str       r0,[sp,#4]
+    ctx.Ct.devAddr := addr;
+.   814  000004AD2      09801  ldr       r0,[sp,#4]
+.   816  000004AD4      06C00  ldr       r0,[r0,#64]
+.   818  000004AD6      09902  ldr       r1,[sp,#8]
+.   820  000004AD8      06181  str       r1,[r0,#24]
+    ctx.Ct.devFlagsSet := setFlags;
+.   822  000004ADA      09801  ldr       r0,[sp,#4]
+.   824  000004ADC      06C00  ldr       r0,[r0,#64]
+.   826  000004ADE      09903  ldr       r1,[sp,#12]
+.   828  000004AE0      061C1  str       r1,[r0,#28]
+    ctx.Ct.devFlagsClr := clrFlags;
+.   830  000004AE2      09801  ldr       r0,[sp,#4]
+.   832  000004AE4      06C00  ldr       r0,[r0,#64]
+.   834  000004AE6      09904  ldr       r1,[sp,#16]
+.   836  000004AE8      06201  str       r1,[r0,#32]
+    Coroutines.Transfer(ctx.Ct.cor, ctx.loop)
+.   838  000004AEA      09801  ldr       r0,[sp,#4]
+.   840  000004AEC      06C00  ldr       r0,[r0,#64]
+.   842  000004AEE      06A40  ldr       r0,[r0,#36]
+.   844  000004AF0      09901  ldr       r1,[sp,#4]
+.   846  000004AF2      06D49  ldr       r1,[r1,#84]
+  END AwaitDeviceFlags;
+.   848  000004AF4  0F7FFFE18  bl.w      Ext Proc #5
+.   852  000004AF8      0E000  b         0 -> 856
+.   854  000004AFA      000D9  <LineNo: 217>
+.   856  000004AFC      0B005  add       sp,#20
+.   858  000004AFE      0BD00  pop       { pc }
+.   860  000004B00  020027E90  <Global: Kernel data>
+
+
+  PROCEDURE CancelAwaitDeviceFlags*;
+    VAR cid: INTEGER; ctx: CoreContext;
+  BEGIN
+.   864  000004B04      0B500  push      { lr }
+.   866  000004B06      0B082  sub       sp,#8
+    Cores.GetCoreId(cid);
+.   868  000004B08      04668  mov       r0,sp
+.   870  000004B0A  0F7FBFFB9  bl.w      Ext Proc #2
+.   874  000004B0E      0E000  b         0 -> 878
+.   876  000004B10      000E0  <LineNo: 224>
+    ctx := coreCon[cid];
+.   878  000004B12      09800  ldr       r0,[sp]
+.   880  000004B14      02801  cmp       r0,#1
+.   882  000004B16      0D301  bcc.n     2 -> 888
+.   884  000004B18      0DF01  svc       1
+.   886  000004B1A      000E1  <LineNo: 225>
+.   888  000004B1C  0F8DF1018  ldr.w     r1,[pc,#24] -> 916
+.   892  000004B20      00082  lsls      r2,r0,#2
+.   894  000004B22  0EB020001  add.w     r0,r2,r1
+.   898  000004B26      06800  ldr       r0,[r0]
+.   900  000004B28      09001  str       r0,[sp,#4]
+    ctx.Ct.devAddr := 0
+.   902  000004B2A      09801  ldr       r0,[sp,#4]
+.   904  000004B2C      06C00  ldr       r0,[r0,#64]
+  END CancelAwaitDeviceFlags;
+.   906  000004B2E      02100  movs      r1,#0
+.   908  000004B30      06181  str       r1,[r0,#24]
+.   910  000004B32      0B002  add       sp,#8
+.   912  000004B34      0BD00  pop       { pc }
+.   914  000004B36      0BF00  nop       
+.   916  000004B38  020027E90  <Global: Kernel data>
+
+
+  PROCEDURE SetPrio*(prio: INTEGER);
+    VAR cid: INTEGER;
+  BEGIN
+.   920  000004B3C      0B501  push      { r0, lr }
+.   922  000004B3E      0B081  sub       sp,#4
+    Cores.GetCoreId(cid);
+.   924  000004B40      04668  mov       r0,sp
+.   926  000004B42  0F7FBFF9D  bl.w      Ext Proc #2
+.   930  000004B46      0E000  b         0 -> 934
+.   932  000004B48      000E9  <LineNo: 233>
+    coreCon[cid].Ct.prio := prio
+.   934  000004B4A      09800  ldr       r0,[sp]
+.   936  000004B4C      02801  cmp       r0,#1
+.   938  000004B4E      0D301  bcc.n     2 -> 944
+.   940  000004B50      0DF01  svc       1
+.   942  000004B52      000EA  <LineNo: 234>
+.   944  000004B54  0F8DF1014  ldr.w     r1,[pc,#20] -> 968
+.   948  000004B58      00082  lsls      r2,r0,#2
+.   950  000004B5A  0EB020001  add.w     r0,r2,r1
+.   954  000004B5E      06800  ldr       r0,[r0]
+.   956  000004B60      06C00  ldr       r0,[r0,#64]
+  END SetPrio;
+.   958  000004B62      09901  ldr       r1,[sp,#4]
+.   960  000004B64      06001  str       r1,[r0]
+.   962  000004B66      0B002  add       sp,#8
+.   964  000004B68      0BD00  pop       { pc }
+.   966  000004B6A      0BF00  nop       
+.   968  000004B6C  020027E90  <Global: Kernel data>
+
+
+  PROCEDURE SetPeriod*(period, startAfter: INTEGER); (* as number of ticks *)
+     VAR cid: INTEGER; ctx: CoreContext;
+  BEGIN
+.   972  000004B70      0B503  push      { r0, r1, lr }
+.   974  000004B72      0B082  sub       sp,#8
+    Cores.GetCoreId(cid);
+.   976  000004B74      04668  mov       r0,sp
+.   978  000004B76  0F7FBFF83  bl.w      Ext Proc #2
+.   982  000004B7A      0E000  b         0 -> 986
+.   984  000004B7C      000F1  <LineNo: 241>
+    ctx := coreCon[cid];
+.   986  000004B7E      09800  ldr       r0,[sp]
+.   988  000004B80      02801  cmp       r0,#1
+.   990  000004B82      0D301  bcc.n     2 -> 996
+.   992  000004B84      0DF01  svc       1
+.   994  000004B86      000F2  <LineNo: 242>
+.   996  000004B88  0F8DF1030  ldr.w     r1,[pc,#48] -> 1048
+.  1000  000004B8C      00082  lsls      r2,r0,#2
+.  1002  000004B8E  0EB020001  add.w     r0,r2,r1
+.  1006  000004B92      06800  ldr       r0,[r0]
+.  1008  000004B94      09001  str       r0,[sp,#4]
+    ctx.Ct.period := period * ctx.loopPeriod;
+.  1010  000004B96      09801  ldr       r0,[sp,#4]
+.  1012  000004B98      06C00  ldr       r0,[r0,#64]
+.  1014  000004B9A      09902  ldr       r1,[sp,#8]
+.  1016  000004B9C      09A01  ldr       r2,[sp,#4]
+.  1018  000004B9E      06D12  ldr       r2,[r2,#80]
+.  1020  000004BA0  0FB01F102  mul.w     r1,r1,r2
+.  1024  000004BA4      060C1  str       r1,[r0,#12]
+    ctx.Ct.ticker := startAfter * ctx.loopPeriod
+.  1026  000004BA6      09801  ldr       r0,[sp,#4]
+.  1028  000004BA8      06C00  ldr       r0,[r0,#64]
+  END SetPeriod;
+.  1030  000004BAA      09903  ldr       r1,[sp,#12]
+.  1032  000004BAC      09A01  ldr       r2,[sp,#4]
+.  1034  000004BAE      06D12  ldr       r2,[r2,#80]
+.  1036  000004BB0  0FB01F102  mul.w     r1,r1,r2
+.  1040  000004BB4      06101  str       r1,[r0,#16]
+.  1042  000004BB6      0B004  add       sp,#16
+.  1044  000004BB8      0BD00  pop       { pc }
+.  1046  000004BBA      0BF00  nop       
+.  1048  000004BBC  020027E90  <Global: Kernel data>
+
+
+  PROCEDURE Ct*(): Thread;
+    VAR cid: INTEGER;
+  BEGIN
+.  1052  000004BC0      0B500  push      { lr }
+.  1054  000004BC2      0B081  sub       sp,#4
+    Cores.GetCoreId(cid);
+.  1056  000004BC4      04668  mov       r0,sp
+.  1058  000004BC6  0F7FBFF5B  bl.w      Ext Proc #2
+.  1062  000004BCA      0E000  b         0 -> 1066
+.  1064  000004BCC      000FB  <LineNo: 251>
+    RETURN coreCon[cid].Ct
+.  1066  000004BCE      09800  ldr       r0,[sp]
+.  1068  000004BD0      02801  cmp       r0,#1
+.  1070  000004BD2      0D301  bcc.n     2 -> 1076
+.  1072  000004BD4      0DF01  svc       1
+.  1074  000004BD6      000FB  <LineNo: 251>
+.  1076  000004BD8  0F8DF1010  ldr.w     r1,[pc,#16] -> 1096
+.  1080  000004BDC      00082  lsls      r2,r0,#2
+.  1082  000004BDE  0EB020001  add.w     r0,r2,r1
+.  1086  000004BE2      06800  ldr       r0,[r0]
+  END Ct;
+.  1088  000004BE4      06C00  ldr       r0,[r0,#64]
+.  1090  000004BE6      0B001  add       sp,#4
+.  1092  000004BE8      0BD00  pop       { pc }
+.  1094  000004BEA      0BF00  nop       
+.  1096  000004BEC  020027E90  <Global: Kernel data>
+
+
+  PROCEDURE Tid*(): INTEGER;
+    VAR cid: INTEGER;
+  BEGIN
+.  1100  000004BF0      0B500  push      { lr }
+.  1102  000004BF2      0B081  sub       sp,#4
+    Cores.GetCoreId(cid);
+.  1104  000004BF4      04668  mov       r0,sp
+.  1106  000004BF6  0F7FBFF43  bl.w      Ext Proc #2
+.  1110  000004BFA      0E000  b         0 -> 1114
+.  1112  000004BFC      00103  <LineNo: 259>
+    RETURN coreCon[cid].Ct.tid
+.  1114  000004BFE      09800  ldr       r0,[sp]
+.  1116  000004C00      02801  cmp       r0,#1
+.  1118  000004C02      0D301  bcc.n     2 -> 1124
+.  1120  000004C04      0DF01  svc       1
+.  1122  000004C06      00103  <LineNo: 259>
+.  1124  000004C08  0F8DF1010  ldr.w     r1,[pc,#16] -> 1144
+.  1128  000004C0C      00082  lsls      r2,r0,#2
+.  1130  000004C0E  0EB020001  add.w     r0,r2,r1
+.  1134  000004C12      06800  ldr       r0,[r0]
+.  1136  000004C14      06C00  ldr       r0,[r0,#64]
+  END Tid;
+.  1138  000004C16      06840  ldr       r0,[r0,#4]
+.  1140  000004C18      0B001  add       sp,#4
+.  1142  000004C1A      0BD00  pop       { pc }
+.  1144  000004C1C  020027E90  <Global: Kernel data>
+
+
+  PROCEDURE Prio*(t: Thread): INTEGER;
+    RETURN t.prio
+.  1148  000004C20      0B501  push      { r0, lr }
+  END Prio;
+.  1150  000004C22      09800  ldr       r0,[sp]
+.  1152  000004C24      06800  ldr       r0,[r0]
+.  1154  000004C26      0B001  add       sp,#4
+.  1156  000004C28      0BD00  pop       { pc }
+.  1158  000004C2A      0BF00  nop       
+
+
+  PROCEDURE Trigger*(): INTEGER;
+    VAR cid: INTEGER;
+  BEGIN
+.  1160  000004C2C      0B500  push      { lr }
+.  1162  000004C2E      0B081  sub       sp,#4
+    Cores.GetCoreId(cid);
+.  1164  000004C30      04668  mov       r0,sp
+.  1166  000004C32  0F7FBFF25  bl.w      Ext Proc #2
+.  1170  000004C36      0E000  b         0 -> 1174
+.  1172  000004C38      00110  <LineNo: 272>
+    RETURN coreCon[cid].Ct.trigCode
+.  1174  000004C3A      09800  ldr       r0,[sp]
+.  1176  000004C3C      02801  cmp       r0,#1
+.  1178  000004C3E      0D301  bcc.n     2 -> 1184
+.  1180  000004C40      0DF01  svc       1
+.  1182  000004C42      00110  <LineNo: 272>
+.  1184  000004C44  0F8DF1010  ldr.w     r1,[pc,#16] -> 1204
+.  1188  000004C48      00082  lsls      r2,r0,#2
+.  1190  000004C4A  0EB020001  add.w     r0,r2,r1
+.  1194  000004C4E      06800  ldr       r0,[r0]
+.  1196  000004C50      06C00  ldr       r0,[r0,#64]
+  END Trigger;
+.  1198  000004C52      06A80  ldr       r0,[r0,#40]
+.  1200  000004C54      0B001  add       sp,#4
+.  1202  000004C56      0BD00  pop       { pc }
+.  1204  000004C58  020027E90  <Global: Kernel data>
+
+  (* scheduler coroutine code *)
+
+  PROCEDURE loopc;
+    VAR tid, cid: INTEGER; t, t0: Thread; ctx: CoreContext; devFlags: SET;
+  BEGIN
+.  1208  000004C5C      0B500  push      { lr }
+.  1210  000004C5E      0B086  sub       sp,#24
+    Cores.GetCoreId(cid);;
+.  1212  000004C60  0F11D0004  adds.w    r0,sp,#4
+.  1216  000004C64  0F7FBFF0C  bl.w      Ext Proc #2
+.  1220  000004C68      0E000  b         0 -> 1224
+.  1222  000004C6A      00119  <LineNo: 281>
+    Memory.ResetMainStack; (* for clean stack traces in main stack *)
+.  1224  000004C6C  0F7FCF9B2  bl.w      Ext Proc #11
+.  1228  000004C70      0E000  b         0 -> 1232
+.  1230  000004C72      0011A  <LineNo: 282>
+    ctx := coreCon[cid];
+.  1232  000004C74      09801  ldr       r0,[sp,#4]
+.  1234  000004C76      02801  cmp       r0,#1
+.  1236  000004C78      0D301  bcc.n     2 -> 1242
+.  1238  000004C7A      0DF01  svc       1
+.  1240  000004C7C      0011B  <LineNo: 283>
+.  1242  000004C7E  0F8DF11C8  ldr.w     r1,[pc,#456] -> 1700
+.  1246  000004C82      00082  lsls      r2,r0,#2
+.  1248  000004C84  0EB020001  add.w     r0,r2,r1
+.  1252  000004C88      06800  ldr       r0,[r0]
+.  1254  000004C8A      09004  str       r0,[sp,#16]
+    ctx.Ct := NIL;
+.  1256  000004C8C      02000  movs      r0,#0
+.  1258  000004C8E      09904  ldr       r1,[sp,#16]
+.  1260  000004C90      06408  str       r0,[r1,#64]
+    REPEAT
+      IF SysTick.Tick() THEN
+.  1262  000004C92  0F7FFFD5B  bl.w      Ext Proc #1
+.  1266  000004C96      0E000  b         0 -> 1270
+.  1268  000004C98      0011E  <LineNo: 286>
+.  1270  000004C9A  0F0100F01  tst.w     r0,#1
+.  1274  000004C9E  0F00080A7  beq.w     334 -> 1612
+        tid := 0;
+.  1278  000004CA2      02000  movs      r0,#0
+.  1280  000004CA4      09000  str       r0,[sp]
+        WHILE tid < ctx.numThreads DO
+.  1282  000004CA6      09800  ldr       r0,[sp]
+.  1284  000004CA8      09904  ldr       r1,[sp,#16]
+.  1286  000004CAA      06CC9  ldr       r1,[r1,#76]
+.  1288  000004CAC      04288  cmp       r0,r1
+.  1290  000004CAE  0F280809F  bge.w     318 -> 1612
+          t := ctx.threads[tid];
+.  1294  000004CB2      09800  ldr       r0,[sp]
+.  1296  000004CB4      02810  cmp       r0,#16
+.  1298  000004CB6      0D301  bcc.n     2 -> 1304
+.  1300  000004CB8      0DF01  svc       1
+.  1302  000004CBA      00121  <LineNo: 289>
+.  1304  000004CBC      09904  ldr       r1,[sp,#16]
+.  1306  000004CBE      00082  lsls      r2,r0,#2
+.  1308  000004CC0  0EB020001  add.w     r0,r2,r1
+.  1312  000004CC4      06800  ldr       r0,[r0]
+.  1314  000004CC6      09002  str       r0,[sp,#8]
+          t0 := NIL;
+.  1316  000004CC8      02000  movs      r0,#0
+.  1318  000004CCA      09003  str       r0,[sp,#12]
+          IF t.state = StateEnabled THEN
+.  1320  000004CCC      09802  ldr       r0,[sp,#8]
+.  1322  000004CCE      06880  ldr       r0,[r0,#8]
+.  1324  000004CD0      02800  cmp       r0,#0
+.  1326  000004CD2  0F040807E  bne.w     252 -> 1582
+            t.trigCode := TrigNone;
+.  1330  000004CD6      02000  movs      r0,#0
+.  1332  000004CD8      09902  ldr       r1,[sp,#8]
+.  1334  000004CDA      06288  str       r0,[r1,#40]
+            IF (t.delay <= 0) & (t.period = 0) & (t.devAddr = 0) THEN (* no triggers *)
+.  1336  000004CDC      09802  ldr       r0,[sp,#8]
+.  1338  000004CDE      06940  ldr       r0,[r0,#20]
+.  1340  000004CE0      02800  cmp       r0,#0
+.  1342  000004CE2  0F300800E  bgt.w     28 -> 1374
+.  1346  000004CE6      09802  ldr       r0,[sp,#8]
+.  1348  000004CE8      068C0  ldr       r0,[r0,#12]
+.  1350  000004CEA      02800  cmp       r0,#0
+.  1352  000004CEC  0F0408009  bne.w     18 -> 1374
+.  1356  000004CF0      09802  ldr       r0,[sp,#8]
+.  1358  000004CF2      06980  ldr       r0,[r0,#24]
+.  1360  000004CF4      02800  cmp       r0,#0
+.  1362  000004CF6  0F0408004  bne.w     8 -> 1374
+              t0 := t;
+.  1366  000004CFA      09802  ldr       r0,[sp,#8]
+.  1368  000004CFC      09003  str       r0,[sp,#12]
+            ELSE
+              IF t.period > 0 THEN (* keep the periodic timing on schedule in any case *)
+.  1370  000004CFE  0F000B868  b.w       208 -> 1582
+.  1374  000004D02      09802  ldr       r0,[sp,#8]
+.  1376  000004D04      068C0  ldr       r0,[r0,#12]
+.  1378  000004D06      02800  cmp       r0,#0
+.  1380  000004D08  0F3408017  ble.w     46 -> 1430
+                DEC(t.ticker, ctx.loopPeriod);
+.  1384  000004D0C      09804  ldr       r0,[sp,#16]
+.  1386  000004D0E      06D00  ldr       r0,[r0,#80]
+.  1388  000004D10      09902  ldr       r1,[sp,#8]
+.  1390  000004D12      03110  adds      r1,#16
+.  1392  000004D14      0680A  ldr       r2,[r1]
+.  1394  000004D16  0EBA20200  sub.w     r2,r2,r0
+.  1398  000004D1A      0600A  str       r2,[r1]
+                IF t.ticker <= 0 THEN
+.  1400  000004D1C      09802  ldr       r0,[sp,#8]
+.  1402  000004D1E      06900  ldr       r0,[r0,#16]
+.  1404  000004D20      02800  cmp       r0,#0
+.  1406  000004D22  0F300800A  bgt.w     20 -> 1430
+                  t.ticker := t.ticker + t.period;
+.  1410  000004D26      09802  ldr       r0,[sp,#8]
+.  1412  000004D28      06900  ldr       r0,[r0,#16]
+.  1414  000004D2A      09902  ldr       r1,[sp,#8]
+.  1416  000004D2C      068C9  ldr       r1,[r1,#12]
+.  1418  000004D2E      04408  add       r0,r1
+.  1420  000004D30      09902  ldr       r1,[sp,#8]
+.  1422  000004D32      06108  str       r0,[r1,#16]
+                  t.trigCode := TrigPeriod
+                  (* don't slot in here *)
+                END
+.  1424  000004D34      02001  movs      r0,#1
+.  1426  000004D36      09902  ldr       r1,[sp,#8]
+.  1428  000004D38      06288  str       r0,[r1,#40]
+              END;
+              IF t.delay > 0 THEN (* on delay or timeout *)
+.  1430  000004D3A      09802  ldr       r0,[sp,#8]
+.  1432  000004D3C      06940  ldr       r0,[r0,#20]
+.  1434  000004D3E      02800  cmp       r0,#0
+.  1436  000004D40  0F3408012  ble.w     36 -> 1476
+                DEC(t.delay, ctx.loopPeriod);
+.  1440  000004D44      09804  ldr       r0,[sp,#16]
+.  1442  000004D46      06D00  ldr       r0,[r0,#80]
+.  1444  000004D48      09902  ldr       r1,[sp,#8]
+.  1446  000004D4A      03114  adds      r1,#20
+.  1448  000004D4C      0680A  ldr       r2,[r1]
+.  1450  000004D4E  0EBA20200  sub.w     r2,r2,r0
+.  1454  000004D52      0600A  str       r2,[r1]
+                IF t.delay <= 0 THEN
+.  1456  000004D54      09802  ldr       r0,[sp,#8]
+.  1458  000004D56      06940  ldr       r0,[r0,#20]
+.  1460  000004D58      02800  cmp       r0,#0
+.  1462  000004D5A  0F3008005  bgt.w     10 -> 1476
+                  t0 := t;
+.  1466  000004D5E      09802  ldr       r0,[sp,#8]
+.  1468  000004D60      09003  str       r0,[sp,#12]
+                  t.trigCode := TrigDelay
+                END
+.  1470  000004D62      02002  movs      r0,#2
+.  1472  000004D64      09902  ldr       r1,[sp,#8]
+.  1474  000004D66      06288  str       r0,[r1,#40]
+              END;
+              IF t.devAddr # 0 THEN (* waiting for device flags *)
+.  1476  000004D68      09802  ldr       r0,[sp,#8]
+.  1478  000004D6A      06980  ldr       r0,[r0,#24]
+.  1480  000004D6C      02800  cmp       r0,#0
+.  1482  000004D6E  0F000801F  beq.w     62 -> 1548
+                SYSTEM.GET(t.devAddr, devFlags);
+.  1486  000004D72      09802  ldr       r0,[sp,#8]
+.  1488  000004D74      06980  ldr       r0,[r0,#24]
+.  1490  000004D76      06801  ldr       r1,[r0]
+.  1492  000004D78      09105  str       r1,[sp,#20]
+                IF (t.devFlagsSet * devFlags # {}) OR (devFlags * t.devFlagsClr # t.devFlagsClr) THEN
+.  1494  000004D7A      09802  ldr       r0,[sp,#8]
+.  1496  000004D7C      069C0  ldr       r0,[r0,#28]
+.  1498  000004D7E      09905  ldr       r1,[sp,#20]
+.  1500  000004D80      04008  ands      r0,r1
+.  1502  000004D82      02100  movs      r1,#0
+.  1504  000004D84  0EA900F01  teq.w     r0,r1
+.  1508  000004D88  0F040800A  bne.w     20 -> 1532
+.  1512  000004D8C      09805  ldr       r0,[sp,#20]
+.  1514  000004D8E      09902  ldr       r1,[sp,#8]
+.  1516  000004D90      06A09  ldr       r1,[r1,#32]
+.  1518  000004D92      04008  ands      r0,r1
+.  1520  000004D94      09902  ldr       r1,[sp,#8]
+.  1522  000004D96      06A09  ldr       r1,[r1,#32]
+.  1524  000004D98  0EA900F01  teq.w     r0,r1
+.  1528  000004D9C  0F0008008  beq.w     16 -> 1548
+                  t0 := t;
+.  1532  000004DA0      09802  ldr       r0,[sp,#8]
+.  1534  000004DA2      09003  str       r0,[sp,#12]
+                  t.devAddr := 0;
+.  1536  000004DA4      02000  movs      r0,#0
+.  1538  000004DA6      09902  ldr       r1,[sp,#8]
+.  1540  000004DA8      06188  str       r0,[r1,#24]
+                  t.trigCode := TrigDevice
+                END
+.  1542  000004DAA      02003  movs      r0,#3
+.  1544  000004DAC      09902  ldr       r1,[sp,#8]
+.  1546  000004DAE      06288  str       r0,[r1,#40]
+              END;
+              IF t.trigCode = TrigPeriod THEN (* see above *)
+.  1548  000004DB0      09802  ldr       r0,[sp,#8]
+.  1550  000004DB2      06A80  ldr       r0,[r0,#40]
+.  1552  000004DB4      02801  cmp       r0,#1
+.  1554  000004DB6  0F040800C  bne.w     24 -> 1582
+                IF (t.delay <= 0) & (t.devAddr = 0) THEN (* delay and device flags take precedence *)
+.  1558  000004DBA      09802  ldr       r0,[sp,#8]
+.  1560  000004DBC      06940  ldr       r0,[r0,#20]
+.  1562  000004DBE      02800  cmp       r0,#0
+.  1564  000004DC0  0F3008007  bgt.w     14 -> 1582
+.  1568  000004DC4      09802  ldr       r0,[sp,#8]
+.  1570  000004DC6      06980  ldr       r0,[r0,#24]
+.  1572  000004DC8      02800  cmp       r0,#0
+.  1574  000004DCA  0F0408002  bne.w     4 -> 1582
+                  t0 := t
+                END
+.  1578  000004DCE      09802  ldr       r0,[sp,#8]
+.  1580  000004DD0      09003  str       r0,[sp,#12]
+              END
+            END
+          END;
+          IF t0 # NIL THEN
+.  1582  000004DD2      09803  ldr       r0,[sp,#12]
+.  1584  000004DD4      02800  cmp       r0,#0
+.  1586  000004DD6  0F0008006  beq.w     12 -> 1602
+            slotIn(t0, ctx)
+.  1590  000004DDA      09803  ldr       r0,[sp,#12]
+.  1592  000004DDC      09904  ldr       r1,[sp,#16]
+          END;
+.  1594  000004DDE  0F7FFFCF7  bl.w      -1554 -> 44
+.  1598  000004DE2      0E000  b         0 -> 1602
+.  1600  000004DE4      00147  <LineNo: 327>
+          INC(tid)
+        END
+.  1602  000004DE6      09800  ldr       r0,[sp]
+.  1604  000004DE8      03001  adds      r0,#1
+.  1606  000004DEA      09000  str       r0,[sp]
+.  1608  000004DEC  0F7FFBF5B  b.w       -330 -> 1282
+      END;
+      (* print ready-queue for debugging *)
+      (* cannot be used together with UARTkstr, simply use UARTstr in Main.mod *)
+      (*
+      IF ctx.ct # NIL THEN
+        t := ctx.ct;
+        WHILE t # NIL DO
+          Out.Int(t.tid, 4); Out.String(" / "); Out.Int(t.prio, 0);
+          t := t.next
+        END;
+        Out.Ln;
+      END;
+      *)
+      WHILE ctx.ct # NIL DO
+.  1612  000004DF0      09804  ldr       r0,[sp,#16]
+.  1614  000004DF2      06C40  ldr       r0,[r0,#68]
+.  1616  000004DF4      02800  cmp       r0,#0
+.  1618  000004DF6  0F0008021  beq.w     66 -> 1688
+        t := ctx.ct;
+.  1622  000004DFA      09804  ldr       r0,[sp,#16]
+.  1624  000004DFC      06C40  ldr       r0,[r0,#68]
+.  1626  000004DFE      09002  str       r0,[sp,#8]
+        ctx.ct := ctx.ct.next; EXCL(ctx.queued, t.tid); (* slot out ctx.ct *)
+.  1628  000004E00      09804  ldr       r0,[sp,#16]
+.  1630  000004E02      06C40  ldr       r0,[r0,#68]
+.  1632  000004E04      06AC0  ldr       r0,[r0,#44]
+.  1634  000004E06      09904  ldr       r1,[sp,#16]
+.  1636  000004E08      06448  str       r0,[r1,#68]
+.  1638  000004E0A      09802  ldr       r0,[sp,#8]
+.  1640  000004E0C      06840  ldr       r0,[r0,#4]
+.  1642  000004E0E      02101  movs      r1,#1
+.  1644  000004E10      04081  lsls      r1,r0
+.  1646  000004E12      09A04  ldr       r2,[sp,#16]
+.  1648  000004E14      03248  adds      r2,#72
+.  1650  000004E16      06813  ldr       r3,[r2]
+.  1652  000004E18      0438B  bics      r3,r1
+.  1654  000004E1A      06013  str       r3,[r2]
+        ctx.Ct := t;
+.  1656  000004E1C      09802  ldr       r0,[sp,#8]
+.  1658  000004E1E      09904  ldr       r1,[sp,#16]
+.  1660  000004E20      06408  str       r0,[r1,#64]
+        Coroutines.Transfer(ctx.loop, t.cor);
+.  1662  000004E22      09804  ldr       r0,[sp,#16]
+.  1664  000004E24      06D40  ldr       r0,[r0,#84]
+.  1666  000004E26      09902  ldr       r1,[sp,#8]
+.  1668  000004E28      06A49  ldr       r1,[r1,#36]
+.  1670  000004E2A  0F7FFFC7D  bl.w      Ext Proc #5
+.  1674  000004E2E      0E000  b         0 -> 1678
+.  1676  000004E30      0015C  <LineNo: 348>
+        ctx.Ct := NIL
+      END;
+.  1678  000004E32      02000  movs      r0,#0
+.  1680  000004E34      09904  ldr       r1,[sp,#16]
+.  1682  000004E36      06408  str       r0,[r1,#64]
+.  1684  000004E38  0F7FFBFDA  b.w       -76 -> 1612
+    UNTIL FALSE
+  END loopc;
+.  1688  000004E3C      04280  cmp       r0,r0
+.  1690  000004E3E  0F43FAF28  beq.w     -432 -> 1262
+.  1694  000004E42      0B006  add       sp,#24
+.  1696  000004E44      0BD00  pop       { pc }
+.  1698  000004E46      0BF00  nop       
+.  1700  000004E48  020027E90  <Global: Kernel data>
+
+
+  (* scheduler start *)
+  (* set use of PSP *)
+
+  PROCEDURE Run*;
+    CONST SP = 13; R11 = 11;
+    VAR cid: INTEGER;
+  BEGIN
+.  1704  000004E4C      0B500  push      { lr }
+.  1706  000004E4E      0B081  sub       sp,#4
+    (* MSP is used here *)
+    Cores.GetCoreId(cid);
+.  1708  000004E50      04668  mov       r0,sp
+.  1710  000004E52  0F7FBFE15  bl.w      Ext Proc #2
+.  1714  000004E56      0E000  b         0 -> 1718
+.  1716  000004E58      0016B  <LineNo: 363>
+    (* set PSP to current MSP *)
+    SYSTEM.LDREG(R11, SYSTEM.REG(SP));
+.  1718  000004E5A      04668  mov       r0,sp
+.  1720  000004E5C      04683  mov       r11,r0
+    SYSTEM.EMIT(MCU.MSR_PSP_R11);
+.  1722  000004E5E  0F38B8809  .word     0x8809F38B /* EMIT */
+    (* enable PSP use *)
+    SYSTEM.LDREG(R11, ORD({MCU.CONTROL_SPSEL}));
+.  1726  000004E62  0F2400B02  movw      r11,#2
+    SYSTEM.EMIT(MCU.MSR_CTL_R11);
+.  1730  000004E66  0F38B8814  .word     0x8814F38B /* EMIT */
+    SYSTEM.EMIT(MCU.ISB);
+.  1734  000004E6A  0F3BF8F6F  isb       
+    (* from here, we use the PSP *)
+    (* still in main stack memory *)
+    SysTick.Enable;
+.  1738  000004E6E  0F7FFFC7B  bl.w      Ext Proc #2
+.  1742  000004E72      0E000  b         0 -> 1746
+.  1744  000004E74      00175  <LineNo: 373>
+    Coroutines.Transfer(coreCon[cid].jump, coreCon[cid].loop)
+.  1746  000004E76      09800  ldr       r0,[sp]
+.  1748  000004E78      02801  cmp       r0,#1
+.  1750  000004E7A      0D301  bcc.n     2 -> 1756
+.  1752  000004E7C      0DF01  svc       1
+.  1754  000004E7E      00176  <LineNo: 374>
+.  1756  000004E80  0F8DF1030  ldr.w     r1,[pc,#48] -> 1808
+.  1760  000004E84      00082  lsls      r2,r0,#2
+.  1762  000004E86  0EB020001  add.w     r0,r2,r1
+.  1766  000004E8A      06800  ldr       r0,[r0]
+.  1768  000004E8C      06D80  ldr       r0,[r0,#88]
+.  1770  000004E8E      09900  ldr       r1,[sp]
+.  1772  000004E90      02901  cmp       r1,#1
+.  1774  000004E92      0D301  bcc.n     2 -> 1780
+.  1776  000004E94      0DF01  svc       1
+.  1778  000004E96      00176  <LineNo: 374>
+.  1780  000004E98  0F8DF2018  ldr.w     r2,[pc,#24] -> 1808
+.  1784  000004E9C      0008B  lsls      r3,r1,#2
+.  1786  000004E9E  0EB030102  add.w     r1,r3,r2
+.  1790  000004EA2      06809  ldr       r1,[r1]
+.  1792  000004EA4      06D49  ldr       r1,[r1,#84]
+    (* we'll not return here *)
+  END Run;
+.  1794  000004EA6  0F7FFFC3F  bl.w      Ext Proc #5
+.  1798  000004EAA      0E000  b         0 -> 1802
+.  1800  000004EAC      00176  <LineNo: 374>
+.  1802  000004EAE      0B001  add       sp,#4
+.  1804  000004EB0      0BD00  pop       { pc }
+.  1806  000004EB2      0BF00  nop       
+.  1808  000004EB4  020027E90  <Global: Kernel data>
+
+
+  (* installation *)
+
+  PROCEDURE Install*(millisecsPerTick: INTEGER);
+    VAR i, stkAddr, cid: INTEGER; ctx: CoreContext;
+  BEGIN
+.  1812  000004EB8      0B501  push      { r0, lr }
+.  1814  000004EBA      0B084  sub       sp,#16
+    Cores.GetCoreId(cid);
+.  1816  000004EBC  0F11D0008  adds.w    r0,sp,#8
+.  1820  000004EC0  0F7FBFDDE  bl.w      Ext Proc #2
+.  1824  000004EC4      0E000  b         0 -> 1828
+.  1826  000004EC6      00180  <LineNo: 384>
+
+    (* allocate and init the core's context *)
+    NEW(coreCon[cid]); ASSERT(coreCon[cid] # NIL, Errors.HeapOverflow);
+.  1828  000004EC8      09802  ldr       r0,[sp,#8]
+.  1830  000004ECA      02801  cmp       r0,#1
+.  1832  000004ECC      0D301  bcc.n     2 -> 1838
+.  1834  000004ECE      0DF01  svc       1
+.  1836  000004ED0      00183  <LineNo: 387>
+.  1838  000004ED2  0F8DF11D4  ldr.w     r1,[pc,#468] -> 2308
+.  1842  000004ED6      00082  lsls      r2,r0,#2
+.  1844  000004ED8  0EB020001  add.w     r0,r2,r1
+.  1848  000004EDC      0467A  mov       r2,pc
+.  1850  000004EDE  0F8DF11B8  ldr.w     r1,[pc,#440] -> 2292
+.  1854  000004EE2  0EB110102  adds.w    r1,r1,r2
+.  1858  000004EE6  0F7FBFCFD  bl.w      Ext Proc #1
+.  1862  000004EEA      0E000  b         0 -> 1866
+.  1864  000004EEC      00183  <LineNo: 387>
+.  1866  000004EEE      09802  ldr       r0,[sp,#8]
+.  1868  000004EF0      02801  cmp       r0,#1
+.  1870  000004EF2      0D301  bcc.n     2 -> 1876
+.  1872  000004EF4      0DF01  svc       1
+.  1874  000004EF6      00183  <LineNo: 387>
+.  1876  000004EF8  0F8DF11AC  ldr.w     r1,[pc,#428] -> 2308
+.  1880  000004EFC      00082  lsls      r2,r0,#2
+.  1882  000004EFE  0EB020001  add.w     r0,r2,r1
+.  1886  000004F02      06800  ldr       r0,[r0]
+.  1888  000004F04      02800  cmp       r0,#0
+.  1890  000004F06      0D101  bne.n     2 -> 1896
+.  1892  000004F08      0DF29  svc       41
+.  1894  000004F0A      00183  <LineNo: 387>
+    ctx := coreCon[cid];
+.  1896  000004F0C      09802  ldr       r0,[sp,#8]
+.  1898  000004F0E      02801  cmp       r0,#1
+.  1900  000004F10      0D301  bcc.n     2 -> 1906
+.  1902  000004F12      0DF01  svc       1
+.  1904  000004F14      00184  <LineNo: 388>
+.  1906  000004F16  0F8DF1190  ldr.w     r1,[pc,#400] -> 2308
+.  1910  000004F1A      00082  lsls      r2,r0,#2
+.  1912  000004F1C  0EB020001  add.w     r0,r2,r1
+.  1916  000004F20      06800  ldr       r0,[r0]
+.  1918  000004F22      09003  str       r0,[sp,#12]
+    ctx.Ct := NIL; ctx.ct := NIL;
+.  1920  000004F24      02000  movs      r0,#0
+.  1922  000004F26      09903  ldr       r1,[sp,#12]
+.  1924  000004F28      06408  str       r0,[r1,#64]
+.  1926  000004F2A      02000  movs      r0,#0
+.  1928  000004F2C      09903  ldr       r1,[sp,#12]
+.  1930  000004F2E      06448  str       r0,[r1,#68]
+    ctx.queued := {};
+.  1932  000004F30      02000  movs      r0,#0
+.  1934  000004F32      09903  ldr       r1,[sp,#12]
+.  1936  000004F34      06488  str       r0,[r1,#72]
+    ctx.numThreads := 0;
+.  1938  000004F36      02000  movs      r0,#0
+.  1940  000004F38      09903  ldr       r1,[sp,#12]
+.  1942  000004F3A      064C8  str       r0,[r1,#76]
+    ctx.loopPeriod := millisecsPerTick;
+.  1944  000004F3C      09804  ldr       r0,[sp,#16]
+.  1946  000004F3E      09903  ldr       r1,[sp,#12]
+.  1948  000004F40      06508  str       r0,[r1,#80]
+    NEW(ctx.jump); ASSERT(ctx.jump # NIL, Errors.HeapOverflow);
+.  1950  000004F42      09803  ldr       r0,[sp,#12]
+.  1952  000004F44      03058  adds      r0,#88
+.  1954  000004F46  0F8DF115C  ldr.w     r1,[pc,#348] -> 2304
+.  1958  000004F4A  0F7FBFCCB  bl.w      Ext Proc #1
+.  1962  000004F4E      0E000  b         0 -> 1966
+.  1964  000004F50      00189  <LineNo: 393>
+.  1966  000004F52      09803  ldr       r0,[sp,#12]
+.  1968  000004F54      06D80  ldr       r0,[r0,#88]
+.  1970  000004F56      02800  cmp       r0,#0
+.  1972  000004F58      0D101  bne.n     2 -> 1978
+.  1974  000004F5A      0DF29  svc       41
+.  1976  000004F5C      00189  <LineNo: 393>
+    NEW(ctx.loop); ASSERT(ctx.loop # NIL, Errors.HeapOverflow);
+.  1978  000004F5E      09803  ldr       r0,[sp,#12]
+.  1980  000004F60      03054  adds      r0,#84
+.  1982  000004F62  0F8DF1140  ldr.w     r1,[pc,#320] -> 2304
+.  1986  000004F66  0F7FBFCBD  bl.w      Ext Proc #1
+.  1990  000004F6A      0E000  b         0 -> 1994
+.  1992  000004F6C      0018A  <LineNo: 394>
+.  1994  000004F6E      09803  ldr       r0,[sp,#12]
+.  1996  000004F70      06D40  ldr       r0,[r0,#84]
+.  1998  000004F72      02800  cmp       r0,#0
+.  2000  000004F74      0D101  bne.n     2 -> 2006
+.  2002  000004F76      0DF29  svc       41
+.  2004  000004F78      0018A  <LineNo: 394>
+    Memory.AllocLoopStack(stkAddr, LoopStackSize); ASSERT(stkAddr # 0, Errors.StorageOverflow);
+.  2006  000004F7A  0F11D0004  adds.w    r0,sp,#4
+.  2010  000004F7E  0F2401100  movw      r1,#256
+.  2014  000004F82  0F7FBFFC1  bl.w      Ext Proc #9
+.  2018  000004F86      0E000  b         0 -> 2022
+.  2020  000004F88      0018B  <LineNo: 395>
+.  2022  000004F8A      09801  ldr       r0,[sp,#4]
+.  2024  000004F8C      02800  cmp       r0,#0
+.  2026  000004F8E      0D101  bne.n     2 -> 2032
+.  2028  000004F90      0DF2B  svc       43
+.  2030  000004F92      0018B  <LineNo: 395>
+    Coroutines.Init(ctx.loop, stkAddr, LoopStackSize, LoopCorId);
+.  2032  000004F94      09803  ldr       r0,[sp,#12]
+.  2034  000004F96      06D40  ldr       r0,[r0,#84]
+.  2036  000004F98      09901  ldr       r1,[sp,#4]
+.  2038  000004F9A  0F2401200  movw      r2,#256
+.  2042  000004F9E  0F8DF30FC  ldr.w     r3,[pc,#252] -> 2296
+.  2046  000004FA2  0F7FFFBB7  bl.w      Ext Proc #4
+.  2050  000004FA6      0E000  b         0 -> 2054
+.  2052  000004FA8      0018C  <LineNo: 396>
+    Coroutines.Allocate(ctx.loop, loopc);
+.  2054  000004FAA      09803  ldr       r0,[sp,#12]
+.  2056  000004FAC      06D40  ldr       r0,[r0,#84]
+.  2058  000004FAE      0BF00  nop       
+.  2060  000004FB0  0F2AF3158  adr.w     r1,pc,#-856 -> 1208
+.  2064  000004FB4  0F7FFFB9E  bl.w      Ext Proc #3
+.  2068  000004FB8      0E000  b         0 -> 2072
+.  2070  000004FBA      0018D  <LineNo: 397>
+
+    (* allocate the data structures for all threads and their coroutines *)
+    (* don't yet allocate the stacks *)
+    i := 0;
+.  2072  000004FBC      02000  movs      r0,#0
+.  2074  000004FBE      09000  str       r0,[sp]
+    WHILE i < MaxNumThreads DO
+.  2076  000004FC0      09800  ldr       r0,[sp]
+.  2078  000004FC2      02810  cmp       r0,#16
+.  2080  000004FC4  0F280805D  bge.w     186 -> 2270
+      NEW(ctx.threads[i]); ASSERT(ctx.threads[i] # NIL, Errors.HeapOverflow);
+.  2084  000004FC8      09800  ldr       r0,[sp]
+.  2086  000004FCA      02810  cmp       r0,#16
+.  2088  000004FCC      0D301  bcc.n     2 -> 2094
+.  2090  000004FCE      0DF01  svc       1
+.  2092  000004FD0      00193  <LineNo: 403>
+.  2094  000004FD2      09903  ldr       r1,[sp,#12]
+.  2096  000004FD4      00082  lsls      r2,r0,#2
+.  2098  000004FD6  0EB020001  add.w     r0,r2,r1
+.  2102  000004FDA      0467A  mov       r2,pc
+.  2104  000004FDC  0F8DF10C0  ldr.w     r1,[pc,#192] -> 2300
+.  2108  000004FE0  0EB110102  adds.w    r1,r1,r2
+.  2112  000004FE4  0F7FBFC7E  bl.w      Ext Proc #1
+.  2116  000004FE8      0E000  b         0 -> 2120
+.  2118  000004FEA      00193  <LineNo: 403>
+.  2120  000004FEC      09800  ldr       r0,[sp]
+.  2122  000004FEE      02810  cmp       r0,#16
+.  2124  000004FF0      0D301  bcc.n     2 -> 2130
+.  2126  000004FF2      0DF01  svc       1
+.  2128  000004FF4      00193  <LineNo: 403>
+.  2130  000004FF6      09903  ldr       r1,[sp,#12]
+.  2132  000004FF8      00082  lsls      r2,r0,#2
+.  2134  000004FFA  0EB020001  add.w     r0,r2,r1
+.  2138  000004FFE      06800  ldr       r0,[r0]
+.  2140  000005000      02800  cmp       r0,#0
+.  2142  000005002      0D101  bne.n     2 -> 2148
+.  2144  000005004      0DF29  svc       41
+.  2146  000005006      00193  <LineNo: 403>
+      ctx.threads[i].state := StateSuspended;
+.  2148  000005008      09800  ldr       r0,[sp]
+.  2150  00000500A      02810  cmp       r0,#16
+.  2152  00000500C      0D301  bcc.n     2 -> 2158
+.  2154  00000500E      0DF01  svc       1
+.  2156  000005010      00194  <LineNo: 404>
+.  2158  000005012      09903  ldr       r1,[sp,#12]
+.  2160  000005014      00082  lsls      r2,r0,#2
+.  2162  000005016  0EB020001  add.w     r0,r2,r1
+.  2166  00000501A      06800  ldr       r0,[r0]
+.  2168  00000501C      02101  movs      r1,#1
+.  2170  00000501E      06081  str       r1,[r0,#8]
+      ctx.threads[i].tid := i;
+.  2172  000005020      09800  ldr       r0,[sp]
+.  2174  000005022      02810  cmp       r0,#16
+.  2176  000005024      0D301  bcc.n     2 -> 2182
+.  2178  000005026      0DF01  svc       1
+.  2180  000005028      00195  <LineNo: 405>
+.  2182  00000502A      09903  ldr       r1,[sp,#12]
+.  2184  00000502C      00082  lsls      r2,r0,#2
+.  2186  00000502E  0EB020001  add.w     r0,r2,r1
+.  2190  000005032      06800  ldr       r0,[r0]
+.  2192  000005034      09900  ldr       r1,[sp]
+.  2194  000005036      06041  str       r1,[r0,#4]
+      NEW(ctx.threads[i].cor); ASSERT(ctx.threads[i].cor # NIL, Errors.HeapOverflow);
+.  2196  000005038      09800  ldr       r0,[sp]
+.  2198  00000503A      02810  cmp       r0,#16
+.  2200  00000503C      0D301  bcc.n     2 -> 2206
+.  2202  00000503E      0DF01  svc       1
+.  2204  000005040      00196  <LineNo: 406>
+.  2206  000005042      09903  ldr       r1,[sp,#12]
+.  2208  000005044      00082  lsls      r2,r0,#2
+.  2210  000005046  0EB020001  add.w     r0,r2,r1
+.  2214  00000504A      06800  ldr       r0,[r0]
+.  2216  00000504C      03024  adds      r0,#36
+.  2218  00000504E  0F8DF1054  ldr.w     r1,[pc,#84] -> 2304
+.  2222  000005052  0F7FBFC47  bl.w      Ext Proc #1
+.  2226  000005056      0E000  b         0 -> 2230
+.  2228  000005058      00196  <LineNo: 406>
+.  2230  00000505A      09800  ldr       r0,[sp]
+.  2232  00000505C      02810  cmp       r0,#16
+.  2234  00000505E      0D301  bcc.n     2 -> 2240
+.  2236  000005060      0DF01  svc       1
+.  2238  000005062      00196  <LineNo: 406>
+.  2240  000005064      09903  ldr       r1,[sp,#12]
+.  2242  000005066      00082  lsls      r2,r0,#2
+.  2244  000005068  0EB020001  add.w     r0,r2,r1
+.  2248  00000506C      06800  ldr       r0,[r0]
+.  2250  00000506E      06A40  ldr       r0,[r0,#36]
+.  2252  000005070      02800  cmp       r0,#0
+.  2254  000005072      0D101  bne.n     2 -> 2260
+.  2256  000005074      0DF29  svc       41
+.  2258  000005076      00196  <LineNo: 406>
+      INC(i)
+    END;
+.  2260  000005078      09800  ldr       r0,[sp]
+.  2262  00000507A      03001  adds      r0,#1
+.  2264  00000507C      09000  str       r0,[sp]
+.  2266  00000507E  0F7FFBF9F  b.w       -194 -> 2076
+    (* configure sys tick *)
+    SysTick.Init(millisecsPerTick * SloMo)
+.  2270  000005082      09804  ldr       r0,[sp,#16]
+.  2272  000005084      02101  movs      r1,#1
+.  2274  000005086  0FB00F001  mul.w     r0,r0,r1
+  END Install;
+.  2278  00000508A  0F7FFFB75  bl.w      Ext Proc #3
+.  2282  00000508E      0E000  b         0 -> 2286
+.  2284  000005090      0019A  <LineNo: 410>
+.  2286  000005092      0B005  add       sp,#20
+.  2288  000005094      0BD00  pop       { pc }
+.  2290  000005096      0BF00  nop       
+.  2292  000005098  0FFFFF8DC  <Const:  -1828>
+.  2296  00000509C  0FFFFFFFF  <Const:  -1>
+.  2300  0000050A0  0FFFFF7CA  <Const:  -2102>
+.  2304  0000050A4      046A4  <Global: Coroutines code>
+.  2308  0000050A8  020027E90  <Global: Kernel data>
+
+BEGIN
+.  2312  0000050AC      0B500  push      { lr }
+  ASSERT(MaxNumThreads <= 32, Errors.ProgError);
+.  2314  0000050AE      02010  movs      r0,#16
+.  2316  0000050B0      02820  cmp       r0,#32
+.  2318  0000050B2      0DD01  ble.n     2 -> 2324
+.  2320  0000050B4      0DF25  svc       37
+.  2322  0000050B6      0019E  <LineNo: 414>
+  Done := SuspendMe; Yield := Next
+.  2324  0000050B8  0F2AF60E4  adr.w     r0,pc,#-1764 -> 564
+.  2328  0000050BC  0F8DF1010  ldr.w     r1,[pc,#16] -> 2348
+.  2332  0000050C0      06008  str       r0,[r1]
+END Kernel.
+.  2334  0000050C2      0BF00  nop       
+.  2336  0000050C4  0F2AF7060  adr.w     r0,pc,#-1888 -> 452
+.  2340  0000050C8  0F8DF1008  ldr.w     r1,[pc,#8] -> 2352
+.  2344  0000050CC      06008  str       r0,[r1]
+.  2346  0000050CE      0BD00  pop       { pc }
+.  2348  0000050D0  020027E8C  <Global: Kernel data>
+.  2352  0000050D4  020027E88  <Global: Kernel data>
+ 

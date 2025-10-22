@@ -1,0 +1,983 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\frdm-mcxa346\SignalSync\SignalSync.mod>
+
+.     0  000000AB4              <Pad: 0>
+MODULE Memory;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  * heap memory allocation
+  * stacks allocation
+  --
+  MCU: MCX-A346
+  --
+  Copyright (c) 2023-2025 Gray, gray@grayraven.org
+  Portions copyright (c) 2012-2021 CFB Software, https://www.astrobe.com
+  Used with permission.
+  Please refer to the licensing conditions as defined at the end of this file.
+**)
+
+  IMPORT SYSTEM, MCU := MCU2, Config, MAU, Cores;
+
+  CONST
+    NumCores = MCU.NumCores;
+    NumThreadStacks = 16;
+    MainStackSize* = 2048; (* default, see SetMainStackSize below *)
+    StackSeal* = 0FEF5EDA5H;
+
+  TYPE
+    CoreHeap = RECORD
+      heapLimit: INTEGER;
+      heapTop: INTEGER
+    END;
+.     4  000000AB8      00AB8      00008  <Type:   8>
+.     8  000000ABC      00ABC      00000  <Type:   0>
+.    12  000000AC0      00AC0      00000  <Type:   0>
+.    16  000000AC4      00AC4      00000  <Type:   0>
+.    20  000000AC8      00AC8      00000  <Type:   0>
+
+    Stack = RECORD
+      addr: INTEGER;
+      size: INTEGER
+    END;
+.    24  000000ACC      00ACC      00008  <Type:   8>
+.    28  000000AD0      00AD0      00000  <Type:   0>
+.    32  000000AD4      00AD4      00000  <Type:   0>
+.    36  000000AD8      00AD8      00000  <Type:   0>
+.    40  000000ADC      00ADC      00000  <Type:   0>
+
+    CoreStacks = RECORD
+      threadStacks: ARRAY NumThreadStacks OF Stack;
+      loopStack: Stack;
+      stacksBottom, stacksTop: INTEGER;
+      stackCheckEnabled: BOOLEAN
+    END;
+.    44  000000AE0      00AE0      00094  <Type:   148>
+.    48  000000AE4      00AE4      00000  <Type:   0>
+.    52  000000AE8      00AE8      00000  <Type:   0>
+.    56  000000AEC      00AEC      00000  <Type:   0>
+.    60  000000AF0      00AF0      00000  <Type:   0>
+
+    DataMemory* = RECORD
+      stackStart*: INTEGER;
+      dataStart*: INTEGER
+    END;
+.    64  000000AF4      00AF4      00008  <Type:   8>
+.    68  000000AF8      00AF8      00000  <Type:   0>
+.    72  000000AFC      00AFC      00000  <Type:   0>
+.    76  000000B00      00B00      00000  <Type:   0>
+.    80  000000B04      00B04      00000  <Type:   0>
+
+    CoreDataMemory* = ARRAY NumCores OF DataMemory;
+
+  VAR
+    DataMem*: CoreDataMemory;
+    heaps: ARRAY NumCores OF CoreHeap;
+    stacks: ARRAY NumCores OF CoreStacks;
+
+  (* === heap memory === *)
+
+  (* --- Astrobe code begin --- *)
+
+  PROCEDURE Allocate*(VAR p: INTEGER; typeDesc: INTEGER);
+  (* from Astrobe library, modified *)
+  (* allocate record, prefix with typeDesc field of 1 word with offset -4 *)
+    VAR cid, h, size, limit: INTEGER;
+  BEGIN
+.    84  000000B08      0B503  push      { r0, r1, lr }
+.    86  000000B0A      0B084  sub       sp,#16
+    Cores.GetCoreId(cid);
+.    88  000000B0C      04668  mov       r0,sp
+.    90  000000B0E  0F7FFFFB7  bl.w      Ext Proc #2
+.    94  000000B12      0E000  b         0 -> 98
+.    96  000000B14      00040  <LineNo: 64>
+    limit := heaps[cid].heapLimit;
+.    98  000000B16      09800  ldr       r0,[sp]
+.   100  000000B18      02801  cmp       r0,#1
+.   102  000000B1A      0D301  bcc.n     2 -> 108
+.   104  000000B1C      0DF01  svc       1
+.   106  000000B1E      00041  <LineNo: 65>
+.   108  000000B20  0F8DF10B8  ldr.w     r1,[pc,#184] -> 296
+.   112  000000B24      000C2  lsls      r2,r0,#3
+.   114  000000B26  0EB020001  add.w     r0,r2,r1
+.   118  000000B2A      06800  ldr       r0,[r0]
+.   120  000000B2C      09003  str       r0,[sp,#12]
+    IF limit = 0 THEN
+.   122  000000B2E      09803  ldr       r0,[sp,#12]
+.   124  000000B30      02800  cmp       r0,#0
+.   126  000000B32  0F040800D  bne.w     26 -> 156
+      limit := stacks[cid].stacksBottom
+.   130  000000B36      09800  ldr       r0,[sp]
+.   132  000000B38      02801  cmp       r0,#1
+.   134  000000B3A      0D301  bcc.n     2 -> 140
+.   136  000000B3C      0DF01  svc       1
+.   138  000000B3E      00043  <LineNo: 67>
+.   140  000000B40  0F8DF109C  ldr.w     r1,[pc,#156] -> 300
+.   144  000000B44      02294  movs      r2,#148
+.   146  000000B46  0FB021000  mla.w     r0,r2,r0,r1
+    END;
+.   150  000000B4A  0F8D00088  ldr.w     r0,[r0,#136]
+.   154  000000B4E      09003  str       r0,[sp,#12]
+    (* obtain record size from type descriptor, usually in flash *)
+    SYSTEM.GET(typeDesc, size);
+.   156  000000B50      09805  ldr       r0,[sp,#20]
+.   158  000000B52      06801  ldr       r1,[r0]
+.   160  000000B54      09102  str       r1,[sp,#8]
+    h := heaps[cid].heapTop + 4 + size;
+.   162  000000B56      09800  ldr       r0,[sp]
+.   164  000000B58      02801  cmp       r0,#1
+.   166  000000B5A      0D301  bcc.n     2 -> 172
+.   168  000000B5C      0DF01  svc       1
+.   170  000000B5E      00047  <LineNo: 71>
+.   172  000000B60  0F8DF1078  ldr.w     r1,[pc,#120] -> 296
+.   176  000000B64      000C2  lsls      r2,r0,#3
+.   178  000000B66  0EB020001  add.w     r0,r2,r1
+.   182  000000B6A      06840  ldr       r0,[r0,#4]
+.   184  000000B6C      03004  adds      r0,#4
+.   186  000000B6E      09902  ldr       r1,[sp,#8]
+.   188  000000B70      04408  add       r0,r1
+.   190  000000B72      09001  str       r0,[sp,#4]
+    IF h > limit THEN
+.   192  000000B74      09801  ldr       r0,[sp,#4]
+.   194  000000B76      09903  ldr       r1,[sp,#12]
+.   196  000000B78      04288  cmp       r0,r1
+.   198  000000B7A  0F3408005  ble.w     10 -> 212
+      p := 0
+    ELSE
+.   202  000000B7E      02000  movs      r0,#0
+.   204  000000B80      09904  ldr       r1,[sp,#16]
+.   206  000000B82      06008  str       r0,[r1]
+      p := heaps[cid].heapTop + 4;
+.   208  000000B84  0F000B827  b.w       78 -> 290
+.   212  000000B88      09800  ldr       r0,[sp]
+.   214  000000B8A      02801  cmp       r0,#1
+.   216  000000B8C      0D301  bcc.n     2 -> 222
+.   218  000000B8E      0DF01  svc       1
+.   220  000000B90      0004B  <LineNo: 75>
+.   222  000000B92  0F8DF1048  ldr.w     r1,[pc,#72] -> 296
+.   226  000000B96      000C2  lsls      r2,r0,#3
+.   228  000000B98  0EB020001  add.w     r0,r2,r1
+.   232  000000B9C      06840  ldr       r0,[r0,#4]
+.   234  000000B9E      03004  adds      r0,#4
+.   236  000000BA0      09904  ldr       r1,[sp,#16]
+.   238  000000BA2      06008  str       r0,[r1]
+      (* address of type descriptor to tagfield of new record *)
+      SYSTEM.PUT(heaps[cid].heapTop, typeDesc);
+.   240  000000BA4      09800  ldr       r0,[sp]
+.   242  000000BA6      02801  cmp       r0,#1
+.   244  000000BA8      0D301  bcc.n     2 -> 250
+.   246  000000BAA      0DF01  svc       1
+.   248  000000BAC      0004D  <LineNo: 77>
+.   250  000000BAE  0F8DF102C  ldr.w     r1,[pc,#44] -> 296
+.   254  000000BB2      000C2  lsls      r2,r0,#3
+.   256  000000BB4  0EB020001  add.w     r0,r2,r1
+.   260  000000BB8      06840  ldr       r0,[r0,#4]
+.   262  000000BBA      09905  ldr       r1,[sp,#20]
+.   264  000000BBC      06001  str       r1,[r0]
+      heaps[cid].heapTop := h
+.   266  000000BBE      09800  ldr       r0,[sp]
+.   268  000000BC0      02801  cmp       r0,#1
+.   270  000000BC2      0D301  bcc.n     2 -> 276
+.   272  000000BC4      0DF01  svc       1
+.   274  000000BC6      0004E  <LineNo: 78>
+.   276  000000BC8  0F8DF1010  ldr.w     r1,[pc,#16] -> 296
+.   280  000000BCC      000C2  lsls      r2,r0,#3
+.   282  000000BCE  0EB020001  add.w     r0,r2,r1
+    END;
+.   286  000000BD2      09901  ldr       r1,[sp,#4]
+.   288  000000BD4      06041  str       r1,[r0,#4]
+  END Allocate;
+.   290  000000BD6      0B006  add       sp,#24
+.   292  000000BD8      0BD00  pop       { pc }
+.   294  000000BDA      0BF00  nop       
+.   296  000000BDC  020027F84  <Global: Memory data>
+.   300  000000BE0  020027EF0  <Global: Memory data>
+
+
+  PROCEDURE Deallocate*(VAR p: INTEGER; typeDesc: INTEGER);
+  (* from Astrobe Library, modified *)
+  (* Assign NIL = 0 to the pointer 'p'. Reclaim the space if this was the most
+     recent allocation, otherwise do nothing. *)
+    VAR cid, h, size: INTEGER;
+  BEGIN
+.   304  000000BE4      0B503  push      { r0, r1, lr }
+.   306  000000BE6      0B083  sub       sp,#12
+    ASSERT(p # 0, 12);
+.   308  000000BE8      09803  ldr       r0,[sp,#12]
+.   310  000000BEA      06800  ldr       r0,[r0]
+.   312  000000BEC      02800  cmp       r0,#0
+.   314  000000BEE      0D101  bne.n     2 -> 320
+.   316  000000BF0      0DF0C  svc       12
+.   318  000000BF2      00059  <LineNo: 89>
+    Cores.GetCoreId(cid);
+.   320  000000BF4      04668  mov       r0,sp
+.   322  000000BF6  0F7FFFF43  bl.w      Ext Proc #2
+.   326  000000BFA      0E000  b         0 -> 330
+.   328  000000BFC      0005A  <LineNo: 90>
+    (* obtain record size from type descriptor, usually in flash *)
+    SYSTEM.GET(typeDesc, size);
+.   330  000000BFE      09804  ldr       r0,[sp,#16]
+.   332  000000C00      06801  ldr       r1,[r0]
+.   334  000000C02      09102  str       r1,[sp,#8]
+    h := heaps[cid].heapTop - size;
+.   336  000000C04      09800  ldr       r0,[sp]
+.   338  000000C06      02801  cmp       r0,#1
+.   340  000000C08      0D301  bcc.n     2 -> 346
+.   342  000000C0A      0DF01  svc       1
+.   344  000000C0C      0005D  <LineNo: 93>
+.   346  000000C0E  0F8DF1044  ldr.w     r1,[pc,#68] -> 416
+.   350  000000C12      000C2  lsls      r2,r0,#3
+.   352  000000C14  0EB020001  add.w     r0,r2,r1
+.   356  000000C18      06840  ldr       r0,[r0,#4]
+.   358  000000C1A      09902  ldr       r1,[sp,#8]
+.   360  000000C1C  0EBA00001  sub.w     r0,r0,r1
+.   364  000000C20      09001  str       r0,[sp,#4]
+    IF h = p THEN heaps[cid].heapTop := h - 4 END;
+.   366  000000C22      09801  ldr       r0,[sp,#4]
+.   368  000000C24      09903  ldr       r1,[sp,#12]
+.   370  000000C26      06809  ldr       r1,[r1]
+.   372  000000C28      04288  cmp       r0,r1
+.   374  000000C2A  0F040800D  bne.w     26 -> 404
+.   378  000000C2E      09800  ldr       r0,[sp]
+.   380  000000C30      02801  cmp       r0,#1
+.   382  000000C32      0D301  bcc.n     2 -> 388
+.   384  000000C34      0DF01  svc       1
+.   386  000000C36      0005E  <LineNo: 94>
+.   388  000000C38  0F8DF1018  ldr.w     r1,[pc,#24] -> 416
+.   392  000000C3C      000C2  lsls      r2,r0,#3
+.   394  000000C3E  0EB020001  add.w     r0,r2,r1
+.   398  000000C42      09901  ldr       r1,[sp,#4]
+.   400  000000C44      03904  subs      r1,#4
+.   402  000000C46      06041  str       r1,[r0,#4]
+    p := 0
+  END Deallocate;
+.   404  000000C48      02000  movs      r0,#0
+.   406  000000C4A      09903  ldr       r1,[sp,#12]
+.   408  000000C4C      06008  str       r0,[r1]
+.   410  000000C4E      0B005  add       sp,#20
+.   412  000000C50      0BD00  pop       { pc }
+.   414  000000C52      0BF00  nop       
+.   416  000000C54  020027F84  <Global: Memory data>
+
+  (* --- Astrobe code end --- *)
+
+  PROCEDURE* LockHeaps*;
+    VAR cid: INTEGER;
+  BEGIN
+.   420  000000C58      0B500  push      { lr }
+    cid := 0;
+.   422  000000C5A      02100  movs      r1,#0
+.   424  000000C5C      04608  mov       r0,r1
+    WHILE cid < NumCores DO
+.   426  000000C5E      02801  cmp       r0,#1
+.   428  000000C60  0F280800F  bge.w     30 -> 462
+      heaps[cid].heapLimit := heaps[cid].heapTop;
+.   432  000000C64  0F8DF101C  ldr.w     r1,[pc,#28] -> 464
+.   436  000000C68      000C2  lsls      r2,r0,#3
+.   438  000000C6A  0EB020101  add.w     r1,r2,r1
+.   442  000000C6E  0F8DF2014  ldr.w     r2,[pc,#20] -> 464
+.   446  000000C72      000C3  lsls      r3,r0,#3
+.   448  000000C74  0EB030202  add.w     r2,r3,r2
+.   452  000000C78      06852  ldr       r2,[r2,#4]
+.   454  000000C7A      0600A  str       r2,[r1]
+      INC(cid)
+    END
+.   456  000000C7C      03001  adds      r0,#1
+.   458  000000C7E  0F7FFBFEE  b.w       -36 -> 426
+  END LockHeaps;
+.   462  000000C82      0BD00  pop       { pc }
+.   464  000000C84  020027F84  <Global: Memory data>
+
+  (* === thread & loop stacks === *)
+
+  PROCEDURE* initStackCheck(addr, limit: INTEGER);
+  BEGIN
+.   468  000000C88      0B500  push      { lr }
+    WHILE addr < limit DO
+.   470  000000C8A      04288  cmp       r0,r1
+.   472  000000C8C  0F2808005  bge.w     10 -> 486
+      SYSTEM.PUT(addr, addr + 3);
+.   476  000000C90      01CC2  adds      r2,r0,#3
+.   478  000000C92      06002  str       r2,[r0]
+      INC(addr, 4)
+    END
+.   480  000000C94      03004  adds      r0,#4
+.   482  000000C96  0F7FFBFF8  b.w       -16 -> 470
+  END initStackCheck;
+.   486  000000C9A      0BD00  pop       { pc }
+
+
+  PROCEDURE* checkStackUsage(addr, limit: INTEGER; VAR unused: INTEGER);
+    VAR value: INTEGER;
+  BEGIN
+.   488  000000C9C      0B500  push      { lr }
+    SYSTEM.GET(addr, value);
+.   490  000000C9E      06803  ldr       r3,[r0]
+    unused := 0;
+.   492  000000CA0      02400  movs      r4,#0
+.   494  000000CA2      06014  str       r4,[r2]
+    WHILE (value = addr + 3) & (addr < limit) DO
+.   496  000000CA4      01CC4  adds      r4,r0,#3
+.   498  000000CA6      042A3  cmp       r3,r4
+.   500  000000CA8  0F040800A  bne.w     20 -> 524
+.   504  000000CAC      04288  cmp       r0,r1
+.   506  000000CAE  0F2808007  bge.w     14 -> 524
+      INC(addr, 4); INC(unused, 4);
+.   510  000000CB2      03004  adds      r0,#4
+.   512  000000CB4      06814  ldr       r4,[r2]
+.   514  000000CB6      03404  adds      r4,#4
+.   516  000000CB8      06014  str       r4,[r2]
+      SYSTEM.GET(addr, value)
+    END
+.   518  000000CBA      06803  ldr       r3,[r0]
+.   520  000000CBC  0F7FFBFF2  b.w       -28 -> 496
+  END checkStackUsage;
+.   524  000000CC0      0BD00  pop       { pc }
+.   526  000000CC2      0BF00  nop       
+
+
+  PROCEDURE CheckLoopStackUsage*(VAR size, used: INTEGER);
+    VAR cid, addr, limit, unused: INTEGER;
+  BEGIN
+.   528  000000CC4      0B503  push      { r0, r1, lr }
+.   530  000000CC6      0B084  sub       sp,#16
+    Cores.GetCoreId(cid);
+.   532  000000CC8      04668  mov       r0,sp
+.   534  000000CCA  0F7FFFED9  bl.w      Ext Proc #2
+.   538  000000CCE      0E000  b         0 -> 542
+.   540  000000CD0      00088  <LineNo: 136>
+    addr := stacks[cid].loopStack.addr;
+.   542  000000CD2      09800  ldr       r0,[sp]
+.   544  000000CD4      02801  cmp       r0,#1
+.   546  000000CD6      0D301  bcc.n     2 -> 552
+.   548  000000CD8      0DF01  svc       1
+.   550  000000CDA      00089  <LineNo: 137>
+.   552  000000CDC  0F8DF1054  ldr.w     r1,[pc,#84] -> 640
+.   556  000000CE0      02294  movs      r2,#148
+.   558  000000CE2  0FB021000  mla.w     r0,r2,r0,r1
+.   562  000000CE6  0F8D00080  ldr.w     r0,[r0,#128]
+.   566  000000CEA      09001  str       r0,[sp,#4]
+    size := stacks[cid].loopStack.size;
+.   568  000000CEC      09800  ldr       r0,[sp]
+.   570  000000CEE      02801  cmp       r0,#1
+.   572  000000CF0      0D301  bcc.n     2 -> 578
+.   574  000000CF2      0DF01  svc       1
+.   576  000000CF4      0008A  <LineNo: 138>
+.   578  000000CF6  0F8DF103C  ldr.w     r1,[pc,#60] -> 640
+.   582  000000CFA      02294  movs      r2,#148
+.   584  000000CFC  0FB021000  mla.w     r0,r2,r0,r1
+.   588  000000D00  0F8D00084  ldr.w     r0,[r0,#132]
+.   592  000000D04      09904  ldr       r1,[sp,#16]
+.   594  000000D06      06008  str       r0,[r1]
+    limit := addr + size;
+.   596  000000D08      09801  ldr       r0,[sp,#4]
+.   598  000000D0A      09904  ldr       r1,[sp,#16]
+.   600  000000D0C      06809  ldr       r1,[r1]
+.   602  000000D0E      04408  add       r0,r1
+.   604  000000D10      09002  str       r0,[sp,#8]
+    checkStackUsage(addr, limit, unused);
+.   606  000000D12      09801  ldr       r0,[sp,#4]
+.   608  000000D14      09902  ldr       r1,[sp,#8]
+.   610  000000D16  0F11D020C  adds.w    r2,sp,#12
+.   614  000000D1A  0F7FFFFBF  bl.w      -130 -> 488
+.   618  000000D1E      0E000  b         0 -> 622
+.   620  000000D20      0008C  <LineNo: 140>
+    used := size - unused
+  END CheckLoopStackUsage;
+.   622  000000D22      09804  ldr       r0,[sp,#16]
+.   624  000000D24      06800  ldr       r0,[r0]
+.   626  000000D26      09903  ldr       r1,[sp,#12]
+.   628  000000D28  0EBA00001  sub.w     r0,r0,r1
+.   632  000000D2C      09905  ldr       r1,[sp,#20]
+.   634  000000D2E      06008  str       r0,[r1]
+.   636  000000D30      0B006  add       sp,#24
+.   638  000000D32      0BD00  pop       { pc }
+.   640  000000D34  020027EF0  <Global: Memory data>
+
+
+  PROCEDURE CheckThreadStackUsage*(id: INTEGER; VAR size, used: INTEGER);
+    VAR cid, addr, limit, unused: INTEGER;
+  BEGIN
+.   644  000000D38      0B507  push      { r0, r1, r2, lr }
+.   646  000000D3A      0B084  sub       sp,#16
+    Cores.GetCoreId(cid);
+.   648  000000D3C      04668  mov       r0,sp
+.   650  000000D3E  0F7FFFE9F  bl.w      Ext Proc #2
+.   654  000000D42      0E000  b         0 -> 658
+.   656  000000D44      00094  <LineNo: 148>
+    addr := stacks[cid].threadStacks[id].addr;
+.   658  000000D46      09800  ldr       r0,[sp]
+.   660  000000D48      02801  cmp       r0,#1
+.   662  000000D4A      0D301  bcc.n     2 -> 668
+.   664  000000D4C      0DF01  svc       1
+.   666  000000D4E      00095  <LineNo: 149>
+.   668  000000D50  0F8DF1070  ldr.w     r1,[pc,#112] -> 784
+.   672  000000D54      02294  movs      r2,#148
+.   674  000000D56  0FB021000  mla.w     r0,r2,r0,r1
+.   678  000000D5A      09904  ldr       r1,[sp,#16]
+.   680  000000D5C      02910  cmp       r1,#16
+.   682  000000D5E      0D301  bcc.n     2 -> 688
+.   684  000000D60      0DF01  svc       1
+.   686  000000D62      00095  <LineNo: 149>
+.   688  000000D64      000CA  lsls      r2,r1,#3
+.   690  000000D66  0EB020000  add.w     r0,r2,r0
+.   694  000000D6A      06800  ldr       r0,[r0]
+.   696  000000D6C      09001  str       r0,[sp,#4]
+    size := stacks[cid].threadStacks[id].size;
+.   698  000000D6E      09800  ldr       r0,[sp]
+.   700  000000D70      02801  cmp       r0,#1
+.   702  000000D72      0D301  bcc.n     2 -> 708
+.   704  000000D74      0DF01  svc       1
+.   706  000000D76      00096  <LineNo: 150>
+.   708  000000D78  0F8DF1048  ldr.w     r1,[pc,#72] -> 784
+.   712  000000D7C      02294  movs      r2,#148
+.   714  000000D7E  0FB021000  mla.w     r0,r2,r0,r1
+.   718  000000D82      09904  ldr       r1,[sp,#16]
+.   720  000000D84      02910  cmp       r1,#16
+.   722  000000D86      0D301  bcc.n     2 -> 728
+.   724  000000D88      0DF01  svc       1
+.   726  000000D8A      00096  <LineNo: 150>
+.   728  000000D8C      000CA  lsls      r2,r1,#3
+.   730  000000D8E  0EB020000  add.w     r0,r2,r0
+.   734  000000D92      06840  ldr       r0,[r0,#4]
+.   736  000000D94      09905  ldr       r1,[sp,#20]
+.   738  000000D96      06008  str       r0,[r1]
+    limit := addr + size;
+.   740  000000D98      09801  ldr       r0,[sp,#4]
+.   742  000000D9A      09905  ldr       r1,[sp,#20]
+.   744  000000D9C      06809  ldr       r1,[r1]
+.   746  000000D9E      04408  add       r0,r1
+.   748  000000DA0      09002  str       r0,[sp,#8]
+    checkStackUsage(addr, limit, unused);
+.   750  000000DA2      09801  ldr       r0,[sp,#4]
+.   752  000000DA4      09902  ldr       r1,[sp,#8]
+.   754  000000DA6  0F11D020C  adds.w    r2,sp,#12
+.   758  000000DAA  0F7FFFF77  bl.w      -274 -> 488
+.   762  000000DAE      0E000  b         0 -> 766
+.   764  000000DB0      00098  <LineNo: 152>
+    used := size - unused
+  END CheckThreadStackUsage;
+.   766  000000DB2      09805  ldr       r0,[sp,#20]
+.   768  000000DB4      06800  ldr       r0,[r0]
+.   770  000000DB6      09903  ldr       r1,[sp,#12]
+.   772  000000DB8  0EBA00001  sub.w     r0,r0,r1
+.   776  000000DBC      09906  ldr       r1,[sp,#24]
+.   778  000000DBE      06008  str       r0,[r1]
+.   780  000000DC0      0B007  add       sp,#28
+.   782  000000DC2      0BD00  pop       { pc }
+.   784  000000DC4  020027EF0  <Global: Memory data>
+
+
+  PROCEDURE* allocStack(VAR stkAddr: INTEGER; cid, stkSize: INTEGER);
+    VAR limit: INTEGER;
+  BEGIN
+.   788  000000DC8      0B500  push      { lr }
+    limit := heaps[cid].heapLimit;
+.   790  000000DCA  0F8DF4080  ldr.w     r4,[pc,#128] -> 920
+.   794  000000DCE      000CD  lsls      r5,r1,#3
+.   796  000000DD0  0EB050404  add.w     r4,r5,r4
+.   800  000000DD4      06824  ldr       r4,[r4]
+.   802  000000DD6      04623  mov       r3,r4
+    IF limit = 0 THEN
+.   804  000000DD8      02B00  cmp       r3,#0
+.   806  000000DDA  0F0408007  bne.w     14 -> 824
+      limit := heaps[cid].heapTop
+.   810  000000DDE  0F8DF406C  ldr.w     r4,[pc,#108] -> 920
+.   814  000000DE2      000CD  lsls      r5,r1,#3
+.   816  000000DE4  0EB050404  add.w     r4,r5,r4
+    END;
+.   820  000000DE8      06864  ldr       r4,[r4,#4]
+.   822  000000DEA      04623  mov       r3,r4
+    IF stacks[cid].stacksBottom - stkSize > limit THEN
+.   824  000000DEC  0F8DF4060  ldr.w     r4,[pc,#96] -> 924
+.   828  000000DF0      02594  movs      r5,#148
+.   830  000000DF2  0FB054401  mla.w     r4,r5,r1,r4
+.   834  000000DF6  0F8D44088  ldr.w     r4,[r4,#136]
+.   838  000000DFA  0EBA40402  sub.w     r4,r4,r2
+.   842  000000DFE      0429C  cmp       r4,r3
+.   844  000000E00  0F340801F  ble.w     62 -> 910
+      SYSTEM.PUT(stacks[cid].stacksBottom - 4, StackSeal);
+.   848  000000E04  0F8DF4048  ldr.w     r4,[pc,#72] -> 924
+.   852  000000E08      02594  movs      r5,#148
+.   854  000000E0A  0FB054401  mla.w     r4,r5,r1,r4
+.   858  000000E0E  0F8D44088  ldr.w     r4,[r4,#136]
+.   862  000000E12      03C04  subs      r4,#4
+.   864  000000E14  0F8DF5030  ldr.w     r5,[pc,#48] -> 916
+.   868  000000E18      06025  str       r5,[r4]
+      DEC(stacks[cid].stacksBottom, stkSize);
+.   870  000000E1A  0F8DF4034  ldr.w     r4,[pc,#52] -> 924
+.   874  000000E1E      02594  movs      r5,#148
+.   876  000000E20  0FB054401  mla.w     r4,r5,r1,r4
+.   880  000000E24      03488  adds      r4,#136
+.   882  000000E26      06825  ldr       r5,[r4]
+.   884  000000E28  0EBA50502  sub.w     r5,r5,r2
+.   888  000000E2C      06025  str       r5,[r4]
+      stkAddr := stacks[cid].stacksBottom
+.   890  000000E2E  0F8DF4020  ldr.w     r4,[pc,#32] -> 924
+.   894  000000E32      02594  movs      r5,#148
+.   896  000000E34  0FB054401  mla.w     r4,r5,r1,r4
+    ELSE
+.   900  000000E38  0F8D44088  ldr.w     r4,[r4,#136]
+.   904  000000E3C      06004  str       r4,[r0]
+      stkAddr := 0
+.   906  000000E3E  0F000B802  b.w       4 -> 914
+    END
+.   910  000000E42      02400  movs      r4,#0
+.   912  000000E44      06004  str       r4,[r0]
+  END allocStack;
+.   914  000000E46      0BD00  pop       { pc }
+.   916  000000E48  0FEF5EDA5  <Const:  -17437275>
+.   920  000000E4C  020027F84  <Global: Memory data>
+.   924  000000E50  020027EF0  <Global: Memory data>
+
+
+  PROCEDURE AllocThreadStack*(VAR stkAddr: INTEGER; id, stkSize: INTEGER);
+    VAR cid: INTEGER;
+  BEGIN
+.   928  000000E54      0B507  push      { r0, r1, r2, lr }
+.   930  000000E56      0B081  sub       sp,#4
+    Cores.GetCoreId(cid);
+.   932  000000E58      04668  mov       r0,sp
+.   934  000000E5A  0F7FFFE11  bl.w      Ext Proc #2
+.   938  000000E5E      0E000  b         0 -> 942
+.   940  000000E60      000B1  <LineNo: 177>
+    allocStack(stkAddr, cid, stkSize);
+.   942  000000E62      09801  ldr       r0,[sp,#4]
+.   944  000000E64      09900  ldr       r1,[sp]
+.   946  000000E66      09A03  ldr       r2,[sp,#12]
+.   948  000000E68  0F7FFFFAE  bl.w      -164 -> 788
+.   952  000000E6C      0E000  b         0 -> 956
+.   954  000000E6E      000B2  <LineNo: 178>
+    IF stkAddr # 0 THEN
+.   956  000000E70      09801  ldr       r0,[sp,#4]
+.   958  000000E72      06800  ldr       r0,[r0]
+.   960  000000E74      02800  cmp       r0,#0
+.   962  000000E76  0F0008043  beq.w     134 -> 1100
+      stacks[cid].threadStacks[id].addr := stkAddr;
+.   966  000000E7A      09800  ldr       r0,[sp]
+.   968  000000E7C      02801  cmp       r0,#1
+.   970  000000E7E      0D301  bcc.n     2 -> 976
+.   972  000000E80      0DF01  svc       1
+.   974  000000E82      000B4  <LineNo: 180>
+.   976  000000E84  0F8DF107C  ldr.w     r1,[pc,#124] -> 1104
+.   980  000000E88      02294  movs      r2,#148
+.   982  000000E8A  0FB021000  mla.w     r0,r2,r0,r1
+.   986  000000E8E      09902  ldr       r1,[sp,#8]
+.   988  000000E90      02910  cmp       r1,#16
+.   990  000000E92      0D301  bcc.n     2 -> 996
+.   992  000000E94      0DF01  svc       1
+.   994  000000E96      000B4  <LineNo: 180>
+.   996  000000E98      000CA  lsls      r2,r1,#3
+.   998  000000E9A  0EB020000  add.w     r0,r2,r0
+.  1002  000000E9E      09901  ldr       r1,[sp,#4]
+.  1004  000000EA0      06809  ldr       r1,[r1]
+.  1006  000000EA2      06001  str       r1,[r0]
+      stacks[cid].threadStacks[id].size := stkSize;
+.  1008  000000EA4      09800  ldr       r0,[sp]
+.  1010  000000EA6      02801  cmp       r0,#1
+.  1012  000000EA8      0D301  bcc.n     2 -> 1018
+.  1014  000000EAA      0DF01  svc       1
+.  1016  000000EAC      000B5  <LineNo: 181>
+.  1018  000000EAE  0F8DF1054  ldr.w     r1,[pc,#84] -> 1104
+.  1022  000000EB2      02294  movs      r2,#148
+.  1024  000000EB4  0FB021000  mla.w     r0,r2,r0,r1
+.  1028  000000EB8      09902  ldr       r1,[sp,#8]
+.  1030  000000EBA      02910  cmp       r1,#16
+.  1032  000000EBC      0D301  bcc.n     2 -> 1038
+.  1034  000000EBE      0DF01  svc       1
+.  1036  000000EC0      000B5  <LineNo: 181>
+.  1038  000000EC2      000CA  lsls      r2,r1,#3
+.  1040  000000EC4  0EB020000  add.w     r0,r2,r0
+.  1044  000000EC8      09903  ldr       r1,[sp,#12]
+.  1046  000000ECA      06041  str       r1,[r0,#4]
+      IF stacks[cid].stackCheckEnabled THEN
+.  1048  000000ECC      09800  ldr       r0,[sp]
+.  1050  000000ECE      02801  cmp       r0,#1
+.  1052  000000ED0      0D301  bcc.n     2 -> 1058
+.  1054  000000ED2      0DF01  svc       1
+.  1056  000000ED4      000B6  <LineNo: 182>
+.  1058  000000ED6  0F8DF102C  ldr.w     r1,[pc,#44] -> 1104
+.  1062  000000EDA      02294  movs      r2,#148
+.  1064  000000EDC  0FB021000  mla.w     r0,r2,r0,r1
+.  1068  000000EE0  0F8900090  ldrb.w    r0,[r0,#144]
+.  1072  000000EE4  0F0100F01  tst.w     r0,#1
+.  1076  000000EE8  0F000800A  beq.w     20 -> 1100
+        initStackCheck(stkAddr, stkAddr + stkSize)
+.  1080  000000EEC      09801  ldr       r0,[sp,#4]
+.  1082  000000EEE      06800  ldr       r0,[r0]
+.  1084  000000EF0      09901  ldr       r1,[sp,#4]
+.  1086  000000EF2      06809  ldr       r1,[r1]
+.  1088  000000EF4      09A03  ldr       r2,[sp,#12]
+.  1090  000000EF6      04411  add       r1,r2
+      END
+.  1092  000000EF8  0F7FFFEC6  bl.w      -628 -> 468
+.  1096  000000EFC      0E000  b         0 -> 1100
+.  1098  000000EFE      000B7  <LineNo: 183>
+    END
+  END AllocThreadStack;
+.  1100  000000F00      0B004  add       sp,#16
+.  1102  000000F02      0BD00  pop       { pc }
+.  1104  000000F04  020027EF0  <Global: Memory data>
+
+
+  PROCEDURE AllocLoopStack*(VAR stkAddr: INTEGER; stkSize: INTEGER);
+    VAR cid: INTEGER;
+  BEGIN
+.  1108  000000F08      0B503  push      { r0, r1, lr }
+.  1110  000000F0A      0B081  sub       sp,#4
+    Cores.GetCoreId(cid);
+.  1112  000000F0C      04668  mov       r0,sp
+.  1114  000000F0E  0F7FFFDB7  bl.w      Ext Proc #2
+.  1118  000000F12      0E000  b         0 -> 1122
+.  1120  000000F14      000C0  <LineNo: 192>
+    allocStack(stkAddr, cid, stkSize);
+.  1122  000000F16      09801  ldr       r0,[sp,#4]
+.  1124  000000F18      09900  ldr       r1,[sp]
+.  1126  000000F1A      09A02  ldr       r2,[sp,#8]
+.  1128  000000F1C  0F7FFFF54  bl.w      -344 -> 788
+.  1132  000000F20      0E000  b         0 -> 1136
+.  1134  000000F22      000C1  <LineNo: 193>
+    IF stkAddr # 0 THEN
+.  1136  000000F24      09801  ldr       r0,[sp,#4]
+.  1138  000000F26      06800  ldr       r0,[r0]
+.  1140  000000F28      02800  cmp       r0,#0
+.  1142  000000F2A  0F0008035  beq.w     106 -> 1252
+      stacks[cid].loopStack.addr := stkAddr;
+.  1146  000000F2E      09800  ldr       r0,[sp]
+.  1148  000000F30      02801  cmp       r0,#1
+.  1150  000000F32      0D301  bcc.n     2 -> 1156
+.  1152  000000F34      0DF01  svc       1
+.  1154  000000F36      000C3  <LineNo: 195>
+.  1156  000000F38  0F8DF1060  ldr.w     r1,[pc,#96] -> 1256
+.  1160  000000F3C      02294  movs      r2,#148
+.  1162  000000F3E  0FB021000  mla.w     r0,r2,r0,r1
+.  1166  000000F42      09901  ldr       r1,[sp,#4]
+.  1168  000000F44      06809  ldr       r1,[r1]
+.  1170  000000F46  0F8C01080  str.w     r1,[r0,#128]
+      stacks[cid].loopStack.size := stkSize;
+.  1174  000000F4A      09800  ldr       r0,[sp]
+.  1176  000000F4C      02801  cmp       r0,#1
+.  1178  000000F4E      0D301  bcc.n     2 -> 1184
+.  1180  000000F50      0DF01  svc       1
+.  1182  000000F52      000C4  <LineNo: 196>
+.  1184  000000F54  0F8DF1044  ldr.w     r1,[pc,#68] -> 1256
+.  1188  000000F58      02294  movs      r2,#148
+.  1190  000000F5A  0FB021000  mla.w     r0,r2,r0,r1
+.  1194  000000F5E      09902  ldr       r1,[sp,#8]
+.  1196  000000F60  0F8C01084  str.w     r1,[r0,#132]
+      IF stacks[cid].stackCheckEnabled THEN
+.  1200  000000F64      09800  ldr       r0,[sp]
+.  1202  000000F66      02801  cmp       r0,#1
+.  1204  000000F68      0D301  bcc.n     2 -> 1210
+.  1206  000000F6A      0DF01  svc       1
+.  1208  000000F6C      000C5  <LineNo: 197>
+.  1210  000000F6E  0F8DF102C  ldr.w     r1,[pc,#44] -> 1256
+.  1214  000000F72      02294  movs      r2,#148
+.  1216  000000F74  0FB021000  mla.w     r0,r2,r0,r1
+.  1220  000000F78  0F8900090  ldrb.w    r0,[r0,#144]
+.  1224  000000F7C  0F0100F01  tst.w     r0,#1
+.  1228  000000F80  0F000800A  beq.w     20 -> 1252
+        initStackCheck(stkAddr, stkAddr + stkSize)
+.  1232  000000F84      09801  ldr       r0,[sp,#4]
+.  1234  000000F86      06800  ldr       r0,[r0]
+.  1236  000000F88      09901  ldr       r1,[sp,#4]
+.  1238  000000F8A      06809  ldr       r1,[r1]
+.  1240  000000F8C      09A02  ldr       r2,[sp,#8]
+.  1242  000000F8E      04411  add       r1,r2
+      END
+.  1244  000000F90  0F7FFFE7A  bl.w      -780 -> 468
+.  1248  000000F94      0E000  b         0 -> 1252
+.  1250  000000F96      000C6  <LineNo: 198>
+    END
+  END AllocLoopStack;
+.  1252  000000F98      0B003  add       sp,#12
+.  1254  000000F9A      0BD00  pop       { pc }
+.  1256  000000F9C  020027EF0  <Global: Memory data>
+
+
+  PROCEDURE EnableStackCheck*(on: BOOLEAN);
+    VAR cid: INTEGER;
+  BEGIN
+.  1260  000000FA0      0B501  push      { r0, lr }
+.  1262  000000FA2      0B081  sub       sp,#4
+    Cores.GetCoreId(cid);
+.  1264  000000FA4      04668  mov       r0,sp
+.  1266  000000FA6  0F7FFFD6B  bl.w      Ext Proc #2
+.  1270  000000FAA      0E000  b         0 -> 1274
+.  1272  000000FAC      000CF  <LineNo: 207>
+    stacks[cid].stackCheckEnabled := on
+.  1274  000000FAE      09800  ldr       r0,[sp]
+.  1276  000000FB0      02801  cmp       r0,#1
+.  1278  000000FB2      0D301  bcc.n     2 -> 1284
+.  1280  000000FB4      0DF01  svc       1
+.  1282  000000FB6      000D0  <LineNo: 208>
+.  1284  000000FB8  0F8DF1014  ldr.w     r1,[pc,#20] -> 1308
+.  1288  000000FBC      02294  movs      r2,#148
+.  1290  000000FBE  0FB021000  mla.w     r0,r2,r0,r1
+  END EnableStackCheck;
+.  1294  000000FC2  0F89D1004  ldrb.w    r1,[sp,#4]
+.  1298  000000FC6  0F8801090  strb.w    r1,[r0,#144]
+.  1302  000000FCA      0B002  add       sp,#8
+.  1304  000000FCC      0BD00  pop       { pc }
+.  1306  000000FCE      0BF00  nop       
+.  1308  000000FD0  020027EF0  <Global: Memory data>
+
+
+  PROCEDURE ResetMainStack*;
+  (* set MSP to top of stack memory from kernel loopc *)
+  (* clear out the top of the main stack to get clean stack traces *)
+    CONST R11 = 11;
+    VAR cid, addr: INTEGER;
+  BEGIN
+.  1312  000000FD4      0B500  push      { lr }
+.  1314  000000FD6      0B082  sub       sp,#8
+    Cores.GetCoreId(cid);
+.  1316  000000FD8      04668  mov       r0,sp
+.  1318  000000FDA  0F7FFFD51  bl.w      Ext Proc #2
+.  1322  000000FDE      0E000  b         0 -> 1326
+.  1324  000000FE0      000DA  <LineNo: 218>
+    addr := DataMem[cid].stackStart;
+.  1326  000000FE2      09800  ldr       r0,[sp]
+.  1328  000000FE4      02801  cmp       r0,#1
+.  1330  000000FE6      0D301  bcc.n     2 -> 1336
+.  1332  000000FE8      0DF01  svc       1
+.  1334  000000FEA      000DB  <LineNo: 219>
+.  1336  000000FEC  0F8DF1018  ldr.w     r1,[pc,#24] -> 1364
+.  1340  000000FF0      000C2  lsls      r2,r0,#3
+.  1342  000000FF2  0EB020001  add.w     r0,r2,r1
+.  1346  000000FF6      06800  ldr       r0,[r0]
+.  1348  000000FF8      09001  str       r0,[sp,#4]
+    SYSTEM.LDREG(R11, addr);
+.  1350  000000FFA      09801  ldr       r0,[sp,#4]
+.  1352  000000FFC      04683  mov       r11,r0
+    SYSTEM.EMIT(MCU.MSR_MSP_R11) (* move r11 to msp *)
+  END ResetMainStack;
+.  1354  000000FFE  0F38B8808  .word     0x8808F38B /* EMIT */
+.  1358  000001002      0B002  add       sp,#8
+.  1360  000001004      0BD00  pop       { pc }
+.  1362  000001006      0BF00  nop       
+.  1364  000001008  020027F8C  <Global: Memory data>
+
+  (* === init and config === *)
+
+  PROCEDURE* SetMainStackSize*(mainStackSize: ARRAY OF INTEGER);
+  (* must be used before Kernel.Install *)
+    VAR cid: INTEGER;
+  BEGIN
+.  1368  00000100C      0B500  push      { lr }
+    cid := 0;
+.  1370  00000100E      02300  movs      r3,#0
+.  1372  000001010      0461A  mov       r2,r3
+    WHILE cid < NumCores DO
+.  1374  000001012      02A01  cmp       r2,#1
+.  1376  000001014  0F2808016  bge.w     44 -> 1424
+      stacks[cid].stacksBottom := Config.StackMem[cid].start - mainStackSize[cid];
+.  1380  000001018  0F8DF3030  ldr.w     r3,[pc,#48] -> 1432
+.  1384  00000101C      02494  movs      r4,#148
+.  1386  00000101E  0FB043302  mla.w     r3,r4,r2,r3
+.  1390  000001022  0F8DF4024  ldr.w     r4,[pc,#36] -> 1428
+.  1394  000001026      00095  lsls      r5,r2,#2
+.  1396  000001028  0EB050404  add.w     r4,r5,r4
+.  1400  00000102C      00095  lsls      r5,r2,#2
+.  1402  00000102E  0EB050600  add.w     r6,r5,r0
+.  1406  000001032      06824  ldr       r4,[r4]
+.  1408  000001034      06836  ldr       r6,[r6]
+.  1410  000001036  0EBA40406  sub.w     r4,r4,r6
+.  1414  00000103A  0F8C34088  str.w     r4,[r3,#136]
+      INC(cid)
+    END
+.  1418  00000103E      03201  adds      r2,#1
+.  1420  000001040  0F7FFBFE7  b.w       -50 -> 1374
+  END SetMainStackSize;
+.  1424  000001044      0BD00  pop       { pc }
+.  1426  000001046      0BF00  nop       
+.  1428  000001048  020027FC0  <Global: Config data>
+.  1432  00000104C  020027EF0  <Global: Memory data>
+
+
+  PROCEDURE Init*;
+    VAR cid: INTEGER;
+  BEGIN
+.  1436  000001050      0B500  push      { lr }
+.  1438  000001052      0B081  sub       sp,#4
+    MAU.SetNew(Allocate); MAU.SetDispose(Deallocate);
+.  1440  000001054  0F2AF5050  adr.w     r0,pc,#-1360 -> 84
+.  1444  000001058  0F7FFFC6C  bl.w      Ext Proc #3
+.  1448  00000105C      0E000  b         0 -> 1452
+.  1450  00000105E      000F1  <LineNo: 241>
+.  1452  000001060  0F2AF4080  adr.w     r0,pc,#-1152 -> 304
+.  1456  000001064  0F7FFFC70  bl.w      Ext Proc #4
+.  1460  000001068      0E000  b         0 -> 1464
+.  1462  00000106A      000F1  <LineNo: 241>
+    cid := 0;
+.  1464  00000106C      02000  movs      r0,#0
+.  1466  00000106E      09000  str       r0,[sp]
+    WHILE cid < NumCores DO
+.  1468  000001070      09800  ldr       r0,[sp]
+.  1470  000001072      02801  cmp       r0,#1
+.  1472  000001074  0F28080A8  bge.w     336 -> 1812
+      DataMem[cid].stackStart := Config.StackMem[cid].start;
+.  1476  000001078      09800  ldr       r0,[sp]
+.  1478  00000107A      02801  cmp       r0,#1
+.  1480  00000107C      0D301  bcc.n     2 -> 1486
+.  1482  00000107E      0DF01  svc       1
+.  1484  000001080      000F4  <LineNo: 244>
+.  1486  000001082  0F8DF1158  ldr.w     r1,[pc,#344] -> 1832
+.  1490  000001086      000C2  lsls      r2,r0,#3
+.  1492  000001088  0EB020001  add.w     r0,r2,r1
+.  1496  00000108C      09900  ldr       r1,[sp]
+.  1498  00000108E      02901  cmp       r1,#1
+.  1500  000001090      0D301  bcc.n     2 -> 1506
+.  1502  000001092      0DF01  svc       1
+.  1504  000001094      000F4  <LineNo: 244>
+.  1506  000001096  0F8DF2138  ldr.w     r2,[pc,#312] -> 1820
+.  1510  00000109A      0008B  lsls      r3,r1,#2
+.  1512  00000109C  0EB030102  add.w     r1,r3,r2
+.  1516  0000010A0      06809  ldr       r1,[r1]
+.  1518  0000010A2      06001  str       r1,[r0]
+      DataMem[cid].dataStart := Config.DataMem[cid].start;
+.  1520  0000010A4      09800  ldr       r0,[sp]
+.  1522  0000010A6      02801  cmp       r0,#1
+.  1524  0000010A8      0D301  bcc.n     2 -> 1530
+.  1526  0000010AA      0DF01  svc       1
+.  1528  0000010AC      000F5  <LineNo: 245>
+.  1530  0000010AE  0F8DF112C  ldr.w     r1,[pc,#300] -> 1832
+.  1534  0000010B2      000C2  lsls      r2,r0,#3
+.  1536  0000010B4  0EB020001  add.w     r0,r2,r1
+.  1540  0000010B8      09900  ldr       r1,[sp]
+.  1542  0000010BA      02901  cmp       r1,#1
+.  1544  0000010BC      0D301  bcc.n     2 -> 1550
+.  1546  0000010BE      0DF01  svc       1
+.  1548  0000010C0      000F5  <LineNo: 245>
+.  1550  0000010C2  0F8DF2110  ldr.w     r2,[pc,#272] -> 1824
+.  1554  0000010C6      000CB  lsls      r3,r1,#3
+.  1556  0000010C8  0EB030102  add.w     r1,r3,r2
+.  1560  0000010CC      06809  ldr       r1,[r1]
+.  1562  0000010CE      06041  str       r1,[r0,#4]
+      heaps[cid].heapTop := Config.HeapMem[cid].start;
+.  1564  0000010D0      09800  ldr       r0,[sp]
+.  1566  0000010D2      02801  cmp       r0,#1
+.  1568  0000010D4      0D301  bcc.n     2 -> 1574
+.  1570  0000010D6      0DF01  svc       1
+.  1572  0000010D8      000F6  <LineNo: 246>
+.  1574  0000010DA  0F8DF1104  ldr.w     r1,[pc,#260] -> 1836
+.  1578  0000010DE      000C2  lsls      r2,r0,#3
+.  1580  0000010E0  0EB020001  add.w     r0,r2,r1
+.  1584  0000010E4      09900  ldr       r1,[sp]
+.  1586  0000010E6      02901  cmp       r1,#1
+.  1588  0000010E8      0D301  bcc.n     2 -> 1594
+.  1590  0000010EA      0DF01  svc       1
+.  1592  0000010EC      000F6  <LineNo: 246>
+.  1594  0000010EE  0F8DF20E8  ldr.w     r2,[pc,#232] -> 1828
+.  1598  0000010F2      000CB  lsls      r3,r1,#3
+.  1600  0000010F4  0EB030102  add.w     r1,r3,r2
+.  1604  0000010F8      06809  ldr       r1,[r1]
+.  1606  0000010FA      06041  str       r1,[r0,#4]
+      heaps[cid].heapLimit := Config.HeapMem[cid].limit;
+.  1608  0000010FC      09800  ldr       r0,[sp]
+.  1610  0000010FE      02801  cmp       r0,#1
+.  1612  000001100      0D301  bcc.n     2 -> 1618
+.  1614  000001102      0DF01  svc       1
+.  1616  000001104      000F7  <LineNo: 247>
+.  1618  000001106  0F8DF10D8  ldr.w     r1,[pc,#216] -> 1836
+.  1622  00000110A      000C2  lsls      r2,r0,#3
+.  1624  00000110C  0EB020001  add.w     r0,r2,r1
+.  1628  000001110      09900  ldr       r1,[sp]
+.  1630  000001112      02901  cmp       r1,#1
+.  1632  000001114      0D301  bcc.n     2 -> 1638
+.  1634  000001116      0DF01  svc       1
+.  1636  000001118      000F7  <LineNo: 247>
+.  1638  00000111A  0F8DF20BC  ldr.w     r2,[pc,#188] -> 1828
+.  1642  00000111E      000CB  lsls      r3,r1,#3
+.  1644  000001120  0EB030102  add.w     r1,r3,r2
+.  1648  000001124      06849  ldr       r1,[r1,#4]
+.  1650  000001126      06001  str       r1,[r0]
+      stacks[cid].stacksBottom := Config.StackMem[cid].start - MainStackSize;
+.  1652  000001128      09800  ldr       r0,[sp]
+.  1654  00000112A      02801  cmp       r0,#1
+.  1656  00000112C      0D301  bcc.n     2 -> 1662
+.  1658  00000112E      0DF01  svc       1
+.  1660  000001130      000F8  <LineNo: 248>
+.  1662  000001132  0F8DF10B0  ldr.w     r1,[pc,#176] -> 1840
+.  1666  000001136      02294  movs      r2,#148
+.  1668  000001138  0FB021000  mla.w     r0,r2,r0,r1
+.  1672  00000113C      09900  ldr       r1,[sp]
+.  1674  00000113E      02901  cmp       r1,#1
+.  1676  000001140      0D301  bcc.n     2 -> 1682
+.  1678  000001142      0DF01  svc       1
+.  1680  000001144      000F8  <LineNo: 248>
+.  1682  000001146  0F8DF2088  ldr.w     r2,[pc,#136] -> 1820
+.  1686  00000114A      0008B  lsls      r3,r1,#2
+.  1688  00000114C  0EB030102  add.w     r1,r3,r2
+.  1692  000001150      06809  ldr       r1,[r1]
+.  1694  000001152  0F5A16100  sub.w     r1,r1,#2048
+.  1698  000001156  0F8C01088  str.w     r1,[r0,#136]
+      stacks[cid].stacksTop := Config.StackMem[cid].start;
+.  1702  00000115A      09800  ldr       r0,[sp]
+.  1704  00000115C      02801  cmp       r0,#1
+.  1706  00000115E      0D301  bcc.n     2 -> 1712
+.  1708  000001160      0DF01  svc       1
+.  1710  000001162      000F9  <LineNo: 249>
+.  1712  000001164  0F8DF107C  ldr.w     r1,[pc,#124] -> 1840
+.  1716  000001168      02294  movs      r2,#148
+.  1718  00000116A  0FB021000  mla.w     r0,r2,r0,r1
+.  1722  00000116E      09900  ldr       r1,[sp]
+.  1724  000001170      02901  cmp       r1,#1
+.  1726  000001172      0D301  bcc.n     2 -> 1732
+.  1728  000001174      0DF01  svc       1
+.  1730  000001176      000F9  <LineNo: 249>
+.  1732  000001178  0F8DF2054  ldr.w     r2,[pc,#84] -> 1820
+.  1736  00000117C      0008B  lsls      r3,r1,#2
+.  1738  00000117E  0EB030102  add.w     r1,r3,r2
+.  1742  000001182      06809  ldr       r1,[r1]
+.  1744  000001184  0F8C0108C  str.w     r1,[r0,#140]
+      stacks[cid].stackCheckEnabled := FALSE;
+.  1748  000001188      09800  ldr       r0,[sp]
+.  1750  00000118A      02801  cmp       r0,#1
+.  1752  00000118C      0D301  bcc.n     2 -> 1758
+.  1754  00000118E      0DF01  svc       1
+.  1756  000001190      000FA  <LineNo: 250>
+.  1758  000001192  0F8DF1050  ldr.w     r1,[pc,#80] -> 1840
+.  1762  000001196      02294  movs      r2,#148
+.  1764  000001198  0FB021000  mla.w     r0,r2,r0,r1
+.  1768  00000119C      02100  movs      r1,#0
+.  1770  00000119E  0F8801090  strb.w    r1,[r0,#144]
+      SYSTEM.PUT(DataMem[cid].stackStart, StackSeal);
+.  1774  0000011A2      09800  ldr       r0,[sp]
+.  1776  0000011A4      02801  cmp       r0,#1
+.  1778  0000011A6      0D301  bcc.n     2 -> 1784
+.  1780  0000011A8      0DF01  svc       1
+.  1782  0000011AA      000FB  <LineNo: 251>
+.  1784  0000011AC  0F8DF102C  ldr.w     r1,[pc,#44] -> 1832
+.  1788  0000011B0      000C2  lsls      r2,r0,#3
+.  1790  0000011B2  0EB020001  add.w     r0,r2,r1
+.  1794  0000011B6      06800  ldr       r0,[r0]
+.  1796  0000011B8  0F8DF1010  ldr.w     r1,[pc,#16] -> 1816
+.  1800  0000011BC      06001  str       r1,[r0]
+      INC(cid)
+    END
+.  1802  0000011BE      09800  ldr       r0,[sp]
+.  1804  0000011C0      03001  adds      r0,#1
+.  1806  0000011C2      09000  str       r0,[sp]
+.  1808  0000011C4  0F7FFBF54  b.w       -344 -> 1468
+  END Init;
+.  1812  0000011C8      0B001  add       sp,#4
+.  1814  0000011CA      0BD00  pop       { pc }
+.  1816  0000011CC  0FEF5EDA5  <Const:  -17437275>
+.  1820  0000011D0  020027FC0  <Global: Config data>
+.  1824  0000011D4  020027FCC  <Global: Config data>
+.  1828  0000011D8  020027FC4  <Global: Config data>
+.  1832  0000011DC  020027F8C  <Global: Memory data>
+.  1836  0000011E0  020027F84  <Global: Memory data>
+.  1840  0000011E4  020027EF0  <Global: Memory data>
+
+BEGIN
+.  1844  0000011E8      0B500  push      { lr }
+  Init
+END Memory.
+.  1846  0000011EA  0F7FFFF31  bl.w      -414 -> 1436
+.  1850  0000011EE      0E000  b         0 -> 1854
+.  1852  0000011F0      00101  <LineNo: 257>
+.  1854  0000011F2      0BD00  pop       { pc }
+ 

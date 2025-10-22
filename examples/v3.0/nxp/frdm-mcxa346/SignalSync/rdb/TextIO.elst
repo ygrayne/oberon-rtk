@@ -1,0 +1,136 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\frdm-mcxa346\SignalSync\SignalSync.mod>
+
+.     0  00000232C              <Pad: 0>
+MODULE TextIO;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  Text IO channels using writers and readers
+  --
+  * Device as abstraction for hardware IO peripheral devices.
+  * Writer to use in output modules, eg. Texts
+  * Reader to use in input modules, eg. Texts
+  --
+  Copyright (c) 2020-2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT Errors;
+
+  CONST
+    (* status/error codes *)
+    NoError* = 0;
+    BufferOverflow* = 1;
+    SyntaxError* = 2;
+    OutOfLimits* = 3;
+    NoInput* = 4;
+    FifoOverrun* = 5;
+
+    EOL* = 0AX; (* LF *)
+
+  TYPE
+    Device* = POINTER TO DeviceDesc;
+    DeviceDesc* = RECORD END;
+.     4  000002330      02330      00000  <Type:   0>
+.     8  000002334      02334      00000  <Type:   0>
+.    12  000002338      02338      00000  <Type:   0>
+.    16  00000233C      0233C      00000  <Type:   0>
+.    20  000002340      02340      00000  <Type:   0>
+
+    PutStringProc* = PROCEDURE(dev: Device; string: ARRAY OF CHAR; numChar: INTEGER);
+    GetStringProc* = PROCEDURE(dev: Device; VAR string: ARRAY OF CHAR; VAR numChar, res: INTEGER);
+    FlushOutProc* = PROCEDURE(dev: Device);
+
+    Writer* = POINTER TO WriterDesc;
+    WriterDesc* = RECORD
+      dev*: Device;
+      putString*: PutStringProc;
+      flush*: FlushOutProc
+    END;
+.    24  000002344      02344      0000C  <Type:   12>
+.    28  000002348      02348      00000  <Type:   0>
+.    32  00000234C      0234C      00000  <Type:   0>
+.    36  000002350      02350      00000  <Type:   0>
+.    40  000002354      02354      00000  <Type:   0>
+
+    Reader* = POINTER TO ReaderDesc;
+    ReaderDesc* = RECORD
+      dev*: Device;
+      getString*: GetStringProc
+    END;
+.    44  000002358      02358      00008  <Type:   8>
+.    48  00000235C      0235C      00000  <Type:   0>
+.    52  000002360      02360      00000  <Type:   0>
+.    56  000002364      02364      00000  <Type:   0>
+.    60  000002368      02368      00000  <Type:   0>
+
+
+  PROCEDURE OpenWriter*(w: Writer; dev: Device; psp: PutStringProc);
+  BEGIN
+.    64  00000236C      0B507  push      { r0, r1, r2, lr }
+    ASSERT(w # NIL, Errors.PreCond);
+.    66  00000236E      09800  ldr       r0,[sp]
+.    68  000002370      02800  cmp       r0,#0
+.    70  000002372      0D101  bne.n     2 -> 76
+.    72  000002374      0DF22  svc       34
+.    74  000002376      00035  <LineNo: 53>
+    w.dev := dev;
+.    76  000002378      09801  ldr       r0,[sp,#4]
+.    78  00000237A      09900  ldr       r1,[sp]
+.    80  00000237C      06008  str       r0,[r1]
+    w.putString := psp;
+.    82  00000237E      09802  ldr       r0,[sp,#8]
+.    84  000002380      09900  ldr       r1,[sp]
+.    86  000002382      06048  str       r0,[r1,#4]
+    w.flush := NIL
+  END OpenWriter;
+.    88  000002384      02000  movs      r0,#0
+.    90  000002386      09900  ldr       r1,[sp]
+.    92  000002388      06088  str       r0,[r1,#8]
+.    94  00000238A      0B003  add       sp,#12
+.    96  00000238C      0BD00  pop       { pc }
+.    98  00000238E      0BF00  nop       
+
+
+  PROCEDURE* InstallFlushOutProc*(w: Writer; fp: FlushOutProc);
+  BEGIN
+.   100  000002390      0B500  push      { lr }
+    ASSERT(w # NIL, Errors.PreCond);
+.   102  000002392      02800  cmp       r0,#0
+.   104  000002394      0D101  bne.n     2 -> 110
+.   106  000002396      0DF22  svc       34
+.   108  000002398      0003E  <LineNo: 62>
+    w.flush := fp
+  END InstallFlushOutProc;
+.   110  00000239A      06081  str       r1,[r0,#8]
+.   112  00000239C      0BD00  pop       { pc }
+.   114  00000239E      0BF00  nop       
+
+
+  PROCEDURE OpenReader*(r: Reader; dev: Device; gsp: GetStringProc);
+  BEGIN
+.   116  0000023A0      0B507  push      { r0, r1, r2, lr }
+    ASSERT(r # NIL, Errors.PreCond);
+.   118  0000023A2      09800  ldr       r0,[sp]
+.   120  0000023A4      02800  cmp       r0,#0
+.   122  0000023A6      0D101  bne.n     2 -> 128
+.   124  0000023A8      0DF22  svc       34
+.   126  0000023AA      00045  <LineNo: 69>
+    r.dev := dev;
+.   128  0000023AC      09801  ldr       r0,[sp,#4]
+.   130  0000023AE      09900  ldr       r1,[sp]
+.   132  0000023B0      06008  str       r0,[r1]
+    r.getString := gsp
+  END OpenReader;
+.   134  0000023B2      09802  ldr       r0,[sp,#8]
+.   136  0000023B4      09900  ldr       r1,[sp]
+.   138  0000023B6      06048  str       r0,[r1,#4]
+.   140  0000023B8      0B003  add       sp,#12
+.   142  0000023BA      0BD00  pop       { pc }
+
+END TextIO.
+.   144  0000023BC      0B500  push      { lr }
+.   146  0000023BE      0BD00  pop       { pc }
+ 

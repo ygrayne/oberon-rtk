@@ -1,0 +1,169 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\frdm-mcxa346\SignalSync\SignalSync.mod>
+
+.     0  0000046A0              <Pad: 0>
+MODULE Coroutines;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  Simple coroutines
+  --
+  MCU: MCX-A346
+  --
+  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, Errors;
+
+  TYPE
+    PROC* = PROCEDURE;
+    Coroutine* = POINTER TO CoroutineDesc;
+    CoroutineDesc* = RECORD
+      sp: INTEGER; (* stored stack pointer when transferring *)
+      proc: PROC; (* the coroutine's code *)
+      stAddr: INTEGER; (* stack address *)
+      stSize: INTEGER; (* stack size *)
+      id: INTEGER (* same as thread id *)
+    END;
+.     4  0000046A4      046A4      00014  <Type:   20>
+.     8  0000046A8      046A8      00000  <Type:   0>
+.    12  0000046AC      046AC      00000  <Type:   0>
+.    16  0000046B0      046B0      00000  <Type:   0>
+.    20  0000046B4      046B4      00000  <Type:   0>
+
+
+  PROCEDURE* Reset*(cor: Coroutine);
+    VAR addr: SET;
+  BEGIN
+.    24  0000046B8      0B500  push      { lr }
+    ASSERT(cor # NIL, Errors.PreCond);
+.    26  0000046BA      02800  cmp       r0,#0
+.    28  0000046BC      0D101  bne.n     2 -> 34
+.    30  0000046BE      0DF22  svc       34
+.    32  0000046C0      0001F  <LineNo: 31>
+    (* set up the stack memory for the initial 'Transfer' to 'cor' *)
+    cor.sp := cor.stAddr + cor.stSize;
+.    34  0000046C2      06882  ldr       r2,[r0,#8]
+.    36  0000046C4      068C3  ldr       r3,[r0,#12]
+.    38  0000046C6      0441A  add       r2,r3
+.    40  0000046C8      06002  str       r2,[r0]
+    (* skip top value = stack seal, see module Memory*)
+    DEC(cor.sp, 4);
+.    42  0000046CA      06802  ldr       r2,[r0]
+.    44  0000046CC      03A04  subs      r2,#4
+.    46  0000046CE      06002  str       r2,[r0]
+    (* put 'lr' *)
+    DEC(cor.sp, 4);
+.    48  0000046D0      06802  ldr       r2,[r0]
+.    50  0000046D2      03A04  subs      r2,#4
+.    52  0000046D4      06002  str       r2,[r0]
+    addr := SYSTEM.VAL(SET, cor.proc);
+.    54  0000046D6      06842  ldr       r2,[r0,#4]
+.    56  0000046D8      04611  mov       r1,r2
+    INCL(addr, 0); (* thumb bit *)
+.    58  0000046DA  0F0510101  orrs.w    r1,r1,#1
+    SYSTEM.PUT(cor.sp, addr);
+.    62  0000046DE      06802  ldr       r2,[r0]
+.    64  0000046E0      06011  str       r1,[r2]
+    (* keep slot for 't' *)
+    DEC(cor.sp, 4);
+.    66  0000046E2      06802  ldr       r2,[r0]
+.    68  0000046E4      03A04  subs      r2,#4
+.    70  0000046E6      06002  str       r2,[r0]
+    (* put 'f', see 'Transfer' *)
+    DEC(cor.sp, 4);
+.    72  0000046E8      06802  ldr       r2,[r0]
+.    74  0000046EA      03A04  subs      r2,#4
+.    76  0000046EC      06002  str       r2,[r0]
+    SYSTEM.PUT(cor.sp, SYSTEM.VAL(INTEGER, cor))
+    (* initialised stack: with SP = 0: 'f' = 'cor', +4: don't care, +8: 'lr' *)
+  END Reset;
+.    78  0000046EE      06802  ldr       r2,[r0]
+.    80  0000046F0      06010  str       r0,[r2]
+.    82  0000046F2      0BD00  pop       { pc }
+
+
+  PROCEDURE Allocate*(cor: Coroutine; p: PROC);
+  BEGIN
+.    84  0000046F4      0B503  push      { r0, r1, lr }
+    ASSERT(cor # NIL, Errors.PreCond);
+.    86  0000046F6      09800  ldr       r0,[sp]
+.    88  0000046F8      02800  cmp       r0,#0
+.    90  0000046FA      0D101  bne.n     2 -> 96
+.    92  0000046FC      0DF22  svc       34
+.    94  0000046FE      00034  <LineNo: 52>
+    cor.proc := p;
+.    96  000004700      09801  ldr       r0,[sp,#4]
+.    98  000004702      09900  ldr       r1,[sp]
+.   100  000004704      06048  str       r0,[r1,#4]
+    Reset(cor)
+.   102  000004706      09800  ldr       r0,[sp]
+  END Allocate;
+.   104  000004708  0F7FFFFD6  bl.w      -84 -> 24
+.   108  00000470C      0E000  b         0 -> 112
+.   110  00000470E      00036  <LineNo: 54>
+.   112  000004710      0B002  add       sp,#8
+.   114  000004712      0BD00  pop       { pc }
+
+
+  PROCEDURE* Init*(cor: Coroutine; stAddr, stSize, id: INTEGER);
+  BEGIN
+.   116  000004714      0B500  push      { lr }
+    ASSERT(cor # NIL, Errors.PreCond);
+.   118  000004716      02800  cmp       r0,#0
+.   120  000004718      0D101  bne.n     2 -> 126
+.   122  00000471A      0DF22  svc       34
+.   124  00000471C      0003C  <LineNo: 60>
+    cor.stAddr := stAddr;
+.   126  00000471E      06081  str       r1,[r0,#8]
+    cor.stSize := stSize;
+.   128  000004720      060C2  str       r2,[r0,#12]
+    cor.id := id
+  END Init;
+.   130  000004722      06103  str       r3,[r0,#16]
+.   132  000004724      0BD00  pop       { pc }
+.   134  000004726      0BF00  nop       
+
+
+  PROCEDURE Transfer*(f, t: Coroutine);
+    CONST SP = 13; LR = 14; R12 = 12;
+  BEGIN
+.   136  000004728      0B503  push      { r0, r1, lr }
+    (* enter "as" f, f's stack in use *)
+    (* prologue: push caller's 'lr' and parameters 'f' and 't' onto f's stack *)
+    (* stack: 0: 'f', +4: 't', +8: 'lr' *)
+    (* stack switching *)
+    (* save f's SP *)
+    f.sp := SYSTEM.REG(SP);
+.   138  00000472A      04668  mov       r0,sp
+.   140  00000472C      09900  ldr       r1,[sp]
+.   142  00000472E      06008  str       r0,[r1]
+    (* switch stack: load t's SP *)
+    (* 't' is still accessible on f's stack here *)
+    SYSTEM.LDREG(SP, t.sp);
+.   144  000004730      09801  ldr       r0,[sp,#4]
+.   146  000004732      06800  ldr       r0,[r0]
+.   148  000004734      04685  mov       sp,r0
+    (* now t's stack in use *)
+    (* stack: 0: 'f', +4: 't', +8: 'lr' *)
+    (* note: meaning of 'f' and 't' as per the procedure call when transferring AWAY from 't' *)
+    (* ie. 'f' is the coroutine on the stack here that we transfer to *)
+    SYSTEM.LDREG(R12, f.id);
+.   150  000004736      09800  ldr       r0,[sp]
+.   152  000004738      06900  ldr       r0,[r0,#16]
+.   154  00000473A      04684  mov       r12,r0
+    SYSTEM.LDREG(LR, 0); (* get clean stack trace -- overkill? :) *)
+.   156  00000473C  0F2400E00  movw      lr,#0
+    (* epilogue: adjust stack by +8, pop 'lr' from stack into 'pc' *)
+    (* continue "as" t with 'lr' as 'pc' value *)
+    (* Voila. *)
+  END Transfer;
+.   160  000004740      0B002  add       sp,#8
+.   162  000004742      0BD00  pop       { pc }
+
+END Coroutines.
+.   164  000004744      0B500  push      { lr }
+.   166  000004746      0BD00  pop       { pc }
+ 

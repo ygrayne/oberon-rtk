@@ -1,0 +1,64 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\frdm-mcxa346\SignalSync\SignalSync.mod>
+
+.     0  000004254              <Pad: 0>
+MODULE FPUctrl;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  FPU control/mgmt
+  --
+  IMPORTANT:
+    * 'Init' needs to called from the core whose FPU shall be initialised/enabled.
+    * See modules InitCoreOne and Cores.
+  --
+  MCU: MCX-A346
+  --
+  Copyright (c) 2024-2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2;
+
+  CONST
+    (* PPB_CPACR bits & values *)
+    CPACR_FPU_1 = 23;
+    CPACR_FPU_0 = 20;
+      (*
+      FPU_NoAccess   = 00H; (* 0000, disabled *)
+      FPU_PrivAccess = 05H; (* 0101, priviledged code access *)
+      *)
+      FPU_AllAccess  = 0FH; (* 1111, all code access *)
+
+  PROCEDURE Init*;
+     VAR val: INTEGER;
+  BEGIN
+.     4  000004258      0B500  push      { lr }
+.     6  00000425A      0B081  sub       sp,#4
+    SYSTEM.GET(MCU.PPB_CPACR, val);
+.     8  00000425C  0F8DF0024  ldr.w     r0,[pc,#36] -> 48
+.    12  000004260      06801  ldr       r1,[r0]
+.    14  000004262      09100  str       r1,[sp]
+    BFI(val, CPACR_FPU_1, CPACR_FPU_0, FPU_AllAccess);
+.    16  000004264      04668  mov       r0,sp
+.    18  000004266      0210F  movs      r1,#15
+.    20  000004268      06802  ldr       r2,[r0]
+.    22  00000426A  0F3615217  bfi       r2,r1,20,4
+.    26  00000426E      09200  str       r2,[sp]
+    SYSTEM.PUT(MCU.PPB_CPACR, val);
+.    28  000004270  0F8DF0010  ldr.w     r0,[pc,#16] -> 48
+.    32  000004274      09900  ldr       r1,[sp]
+.    34  000004276      06001  str       r1,[r0]
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
+.    36  000004278  0F3BF8F4F  dsb       
+  END Init;
+.    40  00000427C  0F3BF8F6F  isb       
+.    44  000004280      0B001  add       sp,#4
+.    46  000004282      0BD00  pop       { pc }
+.    48  000004284  0E000ED88  <Const:  -536810104>
+
+END FPUctrl.
+.    52  000004288      0B500  push      { lr }
+.    54  00000428A      0BD00  pop       { pc }
+ 

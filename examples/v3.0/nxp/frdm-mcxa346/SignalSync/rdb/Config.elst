@@ -1,0 +1,332 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\frdm-mcxa346\SignalSync\SignalSync.mod>
+
+.     0  000000688              <Pad: 0>
+MODULE Config;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  * Memory configuration data
+  * Set VTOR, install initial simple error/fault handlers
+  * Set core ID register via VTOR/vector table
+  * Reset some MCU registers left behind set by boot ROM
+  --
+  MCU: MCX-A346
+  Board: FRDM-MCXA346
+  --
+  One core
+  --
+  Copyright (c) 2023-2025 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, LinkOptions, MCU := MCU2, LED; (* LinkOptions must be first in list *)
+
+  CONST
+    NumCores = MCU.NumCores;
+
+  TYPE
+    DataDesc* = RECORD
+      start*, end*: INTEGER
+    END;
+.     4  00000068C      0068C      00008  <Type:   8>
+.     8  000000690      00690      00000  <Type:   0>
+.    12  000000694      00694      00000  <Type:   0>
+.    16  000000698      00698      00000  <Type:   0>
+.    20  00000069C      0069C      00000  <Type:   0>
+
+    HeapDesc* = RECORD
+      start*: INTEGER;
+      limit*: INTEGER
+    END;
+.    24  0000006A0      006A0      00008  <Type:   8>
+.    28  0000006A4      006A4      00000  <Type:   0>
+.    32  0000006A8      006A8      00000  <Type:   0>
+.    36  0000006AC      006AC      00000  <Type:   0>
+.    40  0000006B0      006B0      00000  <Type:   0>
+
+    StackDesc* = RECORD
+      start*: INTEGER
+    END;
+.    44  0000006B4      006B4      00004  <Type:   4>
+.    48  0000006B8      006B8      00000  <Type:   0>
+.    52  0000006BC      006BC      00000  <Type:   0>
+.    56  0000006C0      006C0      00000  <Type:   0>
+.    60  0000006C4      006C4      00000  <Type:   0>
+
+    CodeDesc* = RECORD
+      start*, end*: INTEGER
+    END;
+.    64  0000006C8      006C8      00008  <Type:   8>
+.    68  0000006CC      006CC      00000  <Type:   0>
+.    72  0000006D0      006D0      00000  <Type:   0>
+.    76  0000006D4      006D4      00000  <Type:   0>
+.    80  0000006D8      006D8      00000  <Type:   0>
+
+    ModDesc* = RECORD (* module data space *)
+      start*, end*: INTEGER
+    END;
+.    84  0000006DC      006DC      00008  <Type:   8>
+.    88  0000006E0      006E0      00000  <Type:   0>
+.    92  0000006E4      006E4      00000  <Type:   0>
+.    96  0000006E8      006E8      00000  <Type:   0>
+.   100  0000006EC      006EC      00000  <Type:   0>
+
+    ResDesc* = RECORD (* resources block at the end of the binary *)
+      start*: INTEGER
+    END;
+.   104  0000006F0      006F0      00004  <Type:   4>
+.   108  0000006F4      006F4      00000  <Type:   0>
+.   112  0000006F8      006F8      00000  <Type:   0>
+.   116  0000006FC      006FC      00000  <Type:   0>
+.   120  000000700      00700      00000  <Type:   0>
+
+    ExtDesc* = RECORD (* extended memory *)
+      start*, end*: INTEGER
+    END;
+.   124  000000704      00704      00008  <Type:   8>
+.   128  000000708      00708      00000  <Type:   0>
+.   132  00000070C      0070C      00000  <Type:   0>
+.   136  000000710      00710      00000  <Type:   0>
+.   140  000000714      00714      00000  <Type:   0>
+
+
+  VAR
+    DataMem*: ARRAY NumCores OF DataDesc;
+    HeapMem*: ARRAY NumCores OF HeapDesc;
+    StackMem*: ARRAY NumCores OF StackDesc;
+    ExtMem*: ARRAY NumCores OF ExtDesc;
+    ModMem*: ModDesc;
+    CodeMem*: CodeDesc;
+    ResMem*: ResDesc;
+
+
+  (* simple error/fault handlers for the startup sequence *)
+  PROCEDURE* errorHandler*[0];
+    VAR i: INTEGER;
+  BEGIN
+.   144  000000718  0F84DED04  push.w    { lr }
+    REPEAT
+      SYSTEM.PUT(LED.LXOR, {LED.Blue});
+.   148  00000071C  0F8DF1024  ldr.w     r1,[pc,#36] -> 188
+.   152  000000720  0F44F1200  mov.w     r2,#0200000H
+.   156  000000724      0600A  str       r2,[r1]
+      i := 0;
+.   158  000000726      02100  movs      r1,#0
+.   160  000000728      04608  mov       r0,r1
+      WHILE i < 1000000 DO INC(i) END
+.   162  00000072A  0F8DF201C  ldr.w     r2,[pc,#28] -> 192
+.   166  00000072E      04290  cmp       r0,r2
+.   168  000000730  0F2808003  bge.w     6 -> 178
+.   172  000000734      03001  adds      r0,#1
+.   174  000000736  0F7FFBFF8  b.w       -16 -> 162
+    UNTIL FALSE
+  END errorHandler;
+.   178  00000073A      04280  cmp       r0,r0
+.   180  00000073C  0F43FAFEE  beq.w     -36 -> 148
+.   184  000000740  0F85DFB04  pop.w     { pc }
+.   188  000000744  04010504C  <Const:  1074810956>
+.   192  000000748  0000F4240  <Const:  1000000>
+
+
+  PROCEDURE* faultHandler*[0];
+    VAR i: INTEGER;
+  BEGIN
+.   196  00000074C  0F84DED04  push.w    { lr }
+    REPEAT
+      SYSTEM.PUT(LED.LXOR, {LED.Red});
+.   200  000000750  0F8DF1024  ldr.w     r1,[pc,#36] -> 240
+.   204  000000754  0F44F2280  mov.w     r2,#0040000H
+.   208  000000758      0600A  str       r2,[r1]
+      i := 0;
+.   210  00000075A      02100  movs      r1,#0
+.   212  00000075C      04608  mov       r0,r1
+      WHILE i < 1000000 DO INC(i) END
+.   214  00000075E  0F8DF201C  ldr.w     r2,[pc,#28] -> 244
+.   218  000000762      04290  cmp       r0,r2
+.   220  000000764  0F2808003  bge.w     6 -> 230
+.   224  000000768      03001  adds      r0,#1
+.   226  00000076A  0F7FFBFF8  b.w       -16 -> 214
+    UNTIL FALSE
+  END faultHandler;
+.   230  00000076E      04280  cmp       r0,r0
+.   232  000000770  0F43FAFEE  beq.w     -36 -> 200
+.   236  000000774  0F85DFB04  pop.w     { pc }
+.   240  000000778  04010504C  <Const:  1074810956>
+.   244  00000077C  0000F4240  <Const:  1000000>
+
+
+  PROCEDURE* install(vectAddr: INTEGER; p: PROCEDURE);
+  BEGIN
+.   248  000000780      0B500  push      { lr }
+    INCL(SYSTEM.VAL(SET, p), 0); (* thumb code *)
+.   250  000000782  0F0510101  orrs.w    r1,r1,#1
+    SYSTEM.PUT(vectAddr, p)
+  END install;
+.   254  000000786      06001  str       r1,[r0]
+.   256  000000788      0BD00  pop       { pc }
+.   258  00000078A      0BF00  nop       
+
+
+  PROCEDURE init;
+    CONST Core0 = 0; R11 = 11;
+    VAR vtor: INTEGER;
+  BEGIN
+.   260  00000078C      0B500  push      { lr }
+.   262  00000078E      0B081  sub       sp,#4
+    DataMem[Core0].start := LinkOptions.DataStart;
+.   264  000000790  0F8DF0124  ldr.w     r0,[pc,#292] -> 560
+.   268  000000794  0F8DF1100  ldr.w     r1,[pc,#256] -> 528
+.   272  000000798      06809  ldr       r1,[r1]
+.   274  00000079A      06001  str       r1,[r0]
+    DataMem[Core0].end := LinkOptions.DataEnd;
+.   276  00000079C  0F8DF0118  ldr.w     r0,[pc,#280] -> 560
+.   280  0000007A0  0F8DF10F8  ldr.w     r1,[pc,#248] -> 532
+.   284  0000007A4      06809  ldr       r1,[r1]
+.   286  0000007A6      06041  str       r1,[r0,#4]
+    HeapMem[Core0].start := LinkOptions.HeapStart;
+.   288  0000007A8  0F8DF0110  ldr.w     r0,[pc,#272] -> 564
+.   292  0000007AC  0F8DF10F0  ldr.w     r1,[pc,#240] -> 536
+.   296  0000007B0      06809  ldr       r1,[r1]
+.   298  0000007B2      06001  str       r1,[r0]
+    HeapMem[Core0].limit := LinkOptions.HeapLimit;
+.   300  0000007B4  0F8DF0104  ldr.w     r0,[pc,#260] -> 564
+.   304  0000007B8  0F8DF10E8  ldr.w     r1,[pc,#232] -> 540
+.   308  0000007BC      06809  ldr       r1,[r1]
+.   310  0000007BE      06041  str       r1,[r0,#4]
+    StackMem[Core0].start := LinkOptions.StackStart;
+.   312  0000007C0  0F8DF00FC  ldr.w     r0,[pc,#252] -> 568
+.   316  0000007C4  0F8DF10E0  ldr.w     r1,[pc,#224] -> 544
+.   320  0000007C8      06809  ldr       r1,[r1]
+.   322  0000007CA      06001  str       r1,[r0]
+
+    CodeMem.start := LinkOptions.CodeStart;
+.   324  0000007CC  0F8DF00F4  ldr.w     r0,[pc,#244] -> 572
+.   328  0000007D0  0F8DF10D8  ldr.w     r1,[pc,#216] -> 548
+.   332  0000007D4      06809  ldr       r1,[r1]
+.   334  0000007D6      06001  str       r1,[r0]
+    CodeMem.end := LinkOptions.CodeEnd;
+.   336  0000007D8  0F8DF00E8  ldr.w     r0,[pc,#232] -> 572
+.   340  0000007DC  0F8DF10D0  ldr.w     r1,[pc,#208] -> 552
+.   344  0000007E0      06809  ldr       r1,[r1]
+.   346  0000007E2      06041  str       r1,[r0,#4]
+    ResMem.start := LinkOptions.ResourceStart;
+.   348  0000007E4  0F8DF00E0  ldr.w     r0,[pc,#224] -> 576
+.   352  0000007E8  0F8DF10C8  ldr.w     r1,[pc,#200] -> 556
+.   356  0000007EC      06809  ldr       r1,[r1]
+.   358  0000007EE      06001  str       r1,[r0]
+    ModMem.start := StackMem[Core0].start + 04H;
+.   360  0000007F0  0F8DF00D8  ldr.w     r0,[pc,#216] -> 580
+.   364  0000007F4  0F8DF10C8  ldr.w     r1,[pc,#200] -> 568
+.   368  0000007F8      06809  ldr       r1,[r1]
+.   370  0000007FA      03104  adds      r1,#4
+.   372  0000007FC      06001  str       r1,[r0]
+    ModMem.end := DataMem[Core0].end;
+.   374  0000007FE  0F8DF00CC  ldr.w     r0,[pc,#204] -> 580
+.   378  000000802  0F8DF10B4  ldr.w     r1,[pc,#180] -> 560
+.   382  000000806      06849  ldr       r1,[r1,#4]
+.   384  000000808      06041  str       r1,[r0,#4]
+
+    ExtMem[Core0].start := MCU.SRAM_X0_ALIAS;;
+.   386  00000080A  0F8DF00C4  ldr.w     r0,[pc,#196] -> 584
+.   390  00000080E  0F8DF107C  ldr.w     r1,[pc,#124] -> 516
+.   394  000000812      06001  str       r1,[r0]
+    ExtMem[Core0].end := MCU.SRAM_X0_ALIAS + MCU.SRAM_X0_Size;
+.   396  000000814  0F8DF00B8  ldr.w     r0,[pc,#184] -> 584
+.   400  000000818  0F8DF1074  ldr.w     r1,[pc,#116] -> 520
+.   404  00000081C      06041  str       r1,[r0,#4]
+
+    (* VTOR and initial simple error/fault handlers *)
+    (* UsageFault and friends are not enabled yet and escalate to HardFault *)
+    SYSTEM.PUT(MCU.PPB_VTOR, DataMem[Core0].start);
+.   406  00000081E  0F8DF0098  ldr.w     r0,[pc,#152] -> 560
+.   410  000000822  0F8DF1070  ldr.w     r1,[pc,#112] -> 524
+.   414  000000826      06800  ldr       r0,[r0]
+.   416  000000828      06008  str       r0,[r1]
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB);
+.   418  00000082A  0F3BF8F4F  dsb       
+.   422  00000082E  0F3BF8F6F  isb       
+    vtor := DataMem[Core0].start;
+.   426  000000832  0F8DF0084  ldr.w     r0,[pc,#132] -> 560
+.   430  000000836      06800  ldr       r0,[r0]
+.   432  000000838      09000  str       r0,[sp]
+    install(vtor + MCU.EXC_NMI_Offset, faultHandler);
+.   434  00000083A      09800  ldr       r0,[sp]
+.   436  00000083C      03008  adds      r0,#8
+.   438  00000083E      0BF00  nop       
+.   440  000000840  0F2AF01F8  adr.w     r1,pc,#-248 -> 196
+.   444  000000844  0F7FFFF9C  bl.w      -200 -> 248
+.   448  000000848      0E000  b         0 -> 452
+.   450  00000084A      00078  <LineNo: 120>
+    install(vtor + MCU.EXC_HardFault_Offset, faultHandler);
+.   452  00000084C      09800  ldr       r0,[sp]
+.   454  00000084E      0300C  adds      r0,#12
+.   456  000000850  0F2AF1108  adr.w     r1,pc,#-264 -> 196
+.   460  000000854  0F7FFFF94  bl.w      -216 -> 248
+.   464  000000858      0E000  b         0 -> 468
+.   466  00000085A      00079  <LineNo: 121>
+    install(vtor + MCU.EXC_SVC_Offset, errorHandler);
+.   468  00000085C      09800  ldr       r0,[sp]
+.   470  00000085E      0302C  adds      r0,#44
+.   472  000000860  0F2AF114C  adr.w     r1,pc,#-332 -> 144
+.   476  000000864  0F7FFFF8C  bl.w      -232 -> 248
+.   480  000000868      0E000  b         0 -> 484
+.   482  00000086A      0007A  <LineNo: 122>
+
+    (* the MCX-A346 does not provide a register to get the core ID *)
+    (* use value at address 0H of vector table as core ID *)
+    (* see Cores.GetCoreId *)
+    SYSTEM.GET(MCU.PPB_VTOR, vtor);
+.   484  00000086C  0F8DF0024  ldr.w     r0,[pc,#36] -> 524
+.   488  000000870      06801  ldr       r1,[r0]
+.   490  000000872      09100  str       r1,[sp]
+    SYSTEM.PUT(vtor, Core0);
+.   492  000000874      09800  ldr       r0,[sp]
+.   494  000000876      02100  movs      r1,#0
+.   496  000000878      06001  str       r1,[r0]
+
+
+    (* it appears exceptions are globally disabled via PRIMASK -- boot ROM? *)
+    (* init to reset value as per the M33 ref/arch manuals *)
+    SYSTEM.EMIT(MCU.CPSIE_I);
+.   498  00000087A      0B662  .word     0xB6620000 /* EMIT */
+    (* it appears CONTROL.FPCA is set, indicating FPU usage -- boot ROM? *)
+    (* which means all thread-level code interrupts will stack the FPU registers every time... *)
+    (* init CONTROL to reset value as per the M33 ref/arch manuals *)
+    SYSTEM.LDREG(R11, 0);
+.   502  00000087E  0F2400B00  movw      r11,#0
+    SYSTEM.EMIT(MCU.MSR_CTL_R11)
+  END init;
+.   506  000000882  0F38B8814  .word     0x8814F38B /* EMIT */
+.   510  000000886      0B001  add       sp,#4
+.   512  000000888      0BD00  pop       { pc }
+.   514  00000088A      0BF00  nop       
+.   516  00000088C  02003C000  <Const:  537116672>
+.   520  000000890  02003E000  <Const:  537124864>
+.   524  000000894  0E000ED08  <Const:  -536810232>
+.   528  000000898  020027FE4  <Global: LinkOptions data>
+.   532  00000089C  020027FE0  <Global: LinkOptions data>
+.   536  0000008A0  020027FF4  <Global: LinkOptions data>
+.   540  0000008A4  020027FF0  <Global: LinkOptions data>
+.   544  0000008A8  020027FEC  <Global: LinkOptions data>
+.   548  0000008AC  020027FD8  <Global: LinkOptions data>
+.   552  0000008B0  020027FD4  <Global: LinkOptions data>
+.   556  0000008B4  020027FE8  <Global: LinkOptions data>
+.   560  0000008B8  020027FCC  <Global: Config data>
+.   564  0000008BC  020027FC4  <Global: Config data>
+.   568  0000008C0  020027FC0  <Global: Config data>
+.   572  0000008C4  020027FA8  <Global: Config data>
+.   576  0000008C8  020027FA4  <Global: Config data>
+.   580  0000008CC  020027FB0  <Global: Config data>
+.   584  0000008D0  020027FB8  <Global: Config data>
+
+BEGIN
+.   588  0000008D4      0B500  push      { lr }
+  init
+END Config.
+.   590  0000008D6  0F7FFFF59  bl.w      -334 -> 260
+.   594  0000008DA      0E000  b         0 -> 598
+.   596  0000008DC      0008E  <LineNo: 142>
+.   598  0000008DE      0BD00  pop       { pc }
+ 

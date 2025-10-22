@@ -27,6 +27,8 @@ _*
 !/tools/pylib/*.py
 !/changes/
 
+!/examples/v3.0/nxp/frdm-mcxa346/SignalSync/rdb/*.elst
+
 !/examples/v1.0/pico/
 !/examples/v1.0/pico/DebugEval/
 !/examples/v1.0/pico/DebugEval/*.lst
