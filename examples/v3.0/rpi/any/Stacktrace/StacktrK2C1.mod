@@ -19,7 +19,7 @@ MODULE StacktrK2C1;
 
   CONST
     IntNo0 = MCU.IRQ_SW_0;
-    IntNo1 = MCU.IRQ_SW_0;
+    IntNo1 = MCU.IRQ_SW_1;
 
     ThreadStackSize = 1024;
     MillisecsPerTick = 10;

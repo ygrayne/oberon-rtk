@@ -83,7 +83,7 @@ MODULE UARTdev;
     END;
 
 
-    PROCEDURE Init*(dev: Device; uartNo: INTEGER);
+    PROCEDURE* Init*(dev: Device; uartNo: INTEGER);
       VAR base: INTEGER;
     BEGIN
       ASSERT(dev # NIL, Errors.PreCond);
@@ -144,7 +144,7 @@ MODULE UARTdev;
     END Configure;
 
 
-    PROCEDURE GetBaseCfg*(VAR cfg: DeviceCfg);
+    PROCEDURE* GetBaseCfg*(VAR cfg: DeviceCfg);
     BEGIN
       CLEAR(cfg);
       cfg.osr := 15;
@@ -153,7 +153,7 @@ MODULE UARTdev;
     END GetBaseCfg;
 
 
-    PROCEDURE Enable*(dev: Device);
+    PROCEDURE* Enable*(dev: Device);
       VAR val: INTEGER;
     BEGIN
       SYSTEM.GET(dev.CTRL, val);

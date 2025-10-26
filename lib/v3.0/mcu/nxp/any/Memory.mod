@@ -17,7 +17,7 @@ MODULE Memory;
   IMPORT SYSTEM, MCU := MCU2, Config, MAU, Cores;
 
   CONST
-    NumCores = MCU.NumCores;
+    NumCores = Config.NumCoresUsed;
     NumThreadStacks = 16;
     MainStackSize* = 2048; (* default, see SetMainStackSize below *)
     StackSeal* = 0FEF5EDA5H;
@@ -40,15 +40,7 @@ MODULE Memory;
       stackCheckEnabled: BOOLEAN
     END;
 
-    DataMemory* = RECORD
-      stackStart*: INTEGER;
-      dataStart*: INTEGER
-    END;
-
-    CoreDataMemory* = ARRAY NumCores OF DataMemory;
-
   VAR
-    DataMem*: CoreDataMemory;
     heaps: ARRAY NumCores OF CoreHeap;
     stacks: ARRAY NumCores OF CoreStacks;
 
@@ -216,7 +208,7 @@ MODULE Memory;
     VAR cid, addr: INTEGER;
   BEGIN
     Cores.GetCoreId(cid);
-    addr := DataMem[cid].stackStart;
+    addr := Config.StackMem[cid].start;
     SYSTEM.LDREG(R11, addr);
     SYSTEM.EMIT(MCU.MSR_MSP_R11) (* move r11 to msp *)
   END ResetMainStack;
@@ -241,14 +233,12 @@ MODULE Memory;
     MAU.SetNew(Allocate); MAU.SetDispose(Deallocate);
     cid := 0;
     WHILE cid < NumCores DO
-      DataMem[cid].stackStart := Config.StackMem[cid].start;
-      DataMem[cid].dataStart := Config.DataMem[cid].start;
       heaps[cid].heapTop := Config.HeapMem[cid].start;
       heaps[cid].heapLimit := Config.HeapMem[cid].limit;
       stacks[cid].stacksBottom := Config.StackMem[cid].start - MainStackSize;
       stacks[cid].stacksTop := Config.StackMem[cid].start;
       stacks[cid].stackCheckEnabled := FALSE;
-      SYSTEM.PUT(DataMem[cid].stackStart, StackSeal);
+      SYSTEM.PUT(Config.StackMem[cid].start, StackSeal);
       INC(cid)
     END
   END Init;

@@ -14,11 +14,14 @@ MODULE RuntimeErrorsOut;
   IMPORT
     RuntimeErrors, Stacktrace, Cores, TextIO, Texts, Errors, ProgData, Config;
 
-  CONST NumCores = RuntimeErrors.NumCores;
+  CONST
+    NumCores = Config.NumCoresUsed;
 
-  TYPE Name = ProgData.EntryString;
+  TYPE
+    Name = ProgData.EntryString;
 
-  VAR W: ARRAY NumCores OF TextIO.Writer;
+  VAR
+    W: ARRAY NumCores OF TextIO.Writer;
 
 
   PROCEDURE nameLength(s: Name): INTEGER;

@@ -5,6 +5,7 @@ MODULE Config;
   --
   * Memory configuration data
   * Set VTOR, install initial simple error/fault handlers
+  * Set core ID register via VTOR/vector table
   * Reset some MCU registers left behind set by boot ROM
   --
   MCU: MCX-A346
@@ -19,7 +20,7 @@ MODULE Config;
   IMPORT SYSTEM, LinkOptions, MCU := MCU2, LED; (* LinkOptions must be first in list *)
 
   CONST
-    NumCores = MCU.NumCores;
+    NumCoresUsed* = MCU.NumCores;
 
   TYPE
     DataDesc* = RECORD
@@ -53,10 +54,10 @@ MODULE Config;
 
 
   VAR
-    DataMem*: ARRAY NumCores OF DataDesc;
-    HeapMem*: ARRAY NumCores OF HeapDesc;
-    StackMem*: ARRAY NumCores OF StackDesc;
-    ExtMem*: ARRAY NumCores OF ExtDesc;
+    DataMem*: ARRAY NumCoresUsed OF DataDesc;
+    HeapMem*: ARRAY NumCoresUsed OF HeapDesc;
+    StackMem*: ARRAY NumCoresUsed OF StackDesc;
+    ExtMem*: ARRAY NumCoresUsed OF ExtDesc;
     ModMem*: ModDesc;
     CodeMem*: CodeDesc;
     ResMem*: ResDesc;
@@ -116,8 +117,15 @@ MODULE Config;
     SYSTEM.PUT(MCU.PPB_VTOR, DataMem[Core0].start);
     SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB);
     vtor := DataMem[Core0].start;
+    install(vtor + MCU.EXC_NMI_Offset, faultHandler);
     install(vtor + MCU.EXC_HardFault_Offset, faultHandler);
     install(vtor + MCU.EXC_SVC_Offset, errorHandler);
+
+    (* the MCX-A346 does not provide a register to get the core ID *)
+    (* use value at address 0H of vector table as core ID *)
+    (* see Cores.GetCoreId *)
+    SYSTEM.GET(MCU.PPB_VTOR, vtor);
+    SYSTEM.PUT(vtor, Core0);
 
     (* it appears exceptions are globally disabled via PRIMASK -- boot ROM? *)
     (* init to reset value as per the M33 ref/arch manuals *)

@@ -133,7 +133,7 @@ MODULE Clocks;
     UNSTABLE = 31;
 
 
-  PROCEDURE setDividers;
+  PROCEDURE* setDividers;
   BEGIN
     SYSTEM.PUT(MCU.SYSCON_FROLFDIV, SYSCON_FROLFDIV_val);
     REPEAT UNTIL ~SYSTEM.BIT(MCU.SYSCON_FROLFDIV, UNSTABLE);
@@ -145,7 +145,7 @@ MODULE Clocks;
   END setDividers;
 
 
-  PROCEDURE setSysTickClock;
+  PROCEDURE* setSysTickClock;
   (* set to 1 MHz *)
     CONST
       ClkSelReg = MCU.MRCC_CLKSEL + (MCU.CLK_SYSTICK * MCU.MRCC_CLK_Offset);
@@ -159,7 +159,7 @@ MODULE Clocks;
   END setSysTickClock;
 
 
-  PROCEDURE setODvoltage;
+  PROCEDURE* setODvoltage;
     VAR val: INTEGER;
   BEGIN
     (* core *)
@@ -184,7 +184,7 @@ MODULE Clocks;
   END setODvoltage;
 
 
-  PROCEDURE isFircFreq(freq: INTEGER): BOOLEAN;
+  PROCEDURE* isFircFreq(freq: INTEGER): BOOLEAN;
     RETURN  (freq = FIRC_45) OR
             (freq = FIRC_60) OR
             (freq = FIRC_90) OR
@@ -249,7 +249,7 @@ MODULE Clocks;
 
 
 
-  PROCEDURE selp(mdiv: INTEGER): INTEGER;
+  PROCEDURE* selp(mdiv: INTEGER): INTEGER;
     VAR a0, a: INTEGER;
   BEGIN
     a0 := (mdiv DIV 4) + 1;
@@ -261,7 +261,7 @@ MODULE Clocks;
     RETURN a
   END selp;
 
-  PROCEDURE seli(mdiv: INTEGER): INTEGER;
+  PROCEDURE* seli(mdiv: INTEGER): INTEGER;
     VAR a0, a: INTEGER;
   BEGIN
     ASSERT(mdiv < 122);

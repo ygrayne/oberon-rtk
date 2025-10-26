@@ -96,7 +96,7 @@ MODULE GPIO;
     END;
 
 
-  PROCEDURE ConfigurePad*(pin: INTEGER; cfg: PadCfg);
+  PROCEDURE* ConfigurePad*(pin: INTEGER; cfg: PadCfg);
     VAR pcr, val: INTEGER;
   BEGIN
     pcr := MCU.PORT0_BASE + ((pin DIV 32) * MCU.PORT_Offset);
@@ -115,7 +115,7 @@ MODULE GPIO;
   END ConfigurePad;
 
 
-  PROCEDURE GetPadConfig*(pin: INTEGER; VAR pcrVal: INTEGER);
+  PROCEDURE* GetPadConfig*(pin: INTEGER; VAR pcrVal: INTEGER);
     VAR pcr: INTEGER;
   BEGIN
     pcr := MCU.PORT0_BASE + ((pin DIV 32) * MCU.PORT_Offset);
@@ -124,13 +124,13 @@ MODULE GPIO;
   END GetPadConfig;
 
 
-  PROCEDURE GetPadBaseCfg*(VAR cfg: PadCfg);
+  PROCEDURE* GetPadBaseCfg*(VAR cfg: PadCfg);
   BEGIN
     CLEAR(cfg)
   END GetPadBaseCfg;
 
 
-  PROCEDURE LockPad*(pin: INTEGER);
+  PROCEDURE* LockPad*(pin: INTEGER);
     VAR pcr, val: INTEGER;
   BEGIN
     pcr := MCU.PORT0_BASE + ((pin DIV 32) * MCU.PORT_Offset);
@@ -152,7 +152,7 @@ MODULE GPIO;
   END SetFunction;
 
 
-  PROCEDURE ConnectInput*(pin: INTEGER);
+  PROCEDURE* ConnectInput*(pin: INTEGER);
   END ConnectInput;
 
 

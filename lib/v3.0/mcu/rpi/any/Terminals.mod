@@ -54,7 +54,7 @@ MODULE Terminals;
   END Open;
 
 
-  PROCEDURE Close*(termNo: INTEGER; VAR dev: TextIO.Device);
+  PROCEDURE* Close*(termNo: INTEGER; VAR dev: TextIO.Device);
   BEGIN
     dev := W[termNo].dev;
     W[termNo] := NIL

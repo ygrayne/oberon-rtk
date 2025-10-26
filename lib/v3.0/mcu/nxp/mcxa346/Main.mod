@@ -13,7 +13,7 @@ MODULE Main;
 **)
 
   IMPORT
-    SYSTEM, Config, Memory, MCU := MCU2, Cores, RuntimeErrors, RuntimeErrorsOut, StartUp, Clocks, Terminals,
+    SYSTEM, Config, Memory, MCU := MCU2, RuntimeErrors, RuntimeErrorsOut, StartUp, Clocks, Terminals,
     UARTdev, UARTstr, FPUctrl, GPIO, Out, In;
 
   CONST
@@ -37,7 +37,7 @@ MODULE Main;
   END cfgPins;
 
 
-  PROCEDURE enableFlashCache;
+  PROCEDURE* enableFlashCache;
     VAR val: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SYSCON_LPCAC_CTRL, val);
@@ -53,12 +53,15 @@ MODULE Main;
       uartDev: UARTdev.Device;
       uartCfg: UARTdev.DeviceCfg;
   BEGIN
+    (* init vector table *)
     RuntimeErrors.Init;
+
+    (* config the clocks *)
     (*Clocks.InitFIRC(Clocks.FIRC_180);*)
     Clocks.InitSPLL;
 
+    (* flash cache *)
     enableFlashCache;
-    Cores.SetCoreId(Core0);
 
     (* config pins and pads *)
     cfgPins(UARTt0_TxPinNo, UARTt0_RxPinNo);

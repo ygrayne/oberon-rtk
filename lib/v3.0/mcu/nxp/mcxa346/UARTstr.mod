@@ -38,7 +38,7 @@ MODULE UARTstr;
   END PutString;
 
 
-  PROCEDURE GetString*(dev: TextIO.Device; VAR s: ARRAY OF CHAR; VAR numChar, res: INTEGER);
+  PROCEDURE* GetString*(dev: TextIO.Device; VAR s: ARRAY OF CHAR; VAR numChar, res: INTEGER);
   END GetString;
 
 END UARTstr.

@@ -18,7 +18,7 @@ MODULE Config;
   IMPORT SYSTEM, LinkOptions, MCU := MCU2, LED; (* LinkOptions must be first in list *)
 
   CONST
-    NumCores = MCU.NumCores;
+    NumCoresUsed* = MCU.NumCores;
 
   TYPE
     DataDesc* = RECORD
@@ -51,10 +51,10 @@ MODULE Config;
     END;
 
   VAR
-    DataMem*: ARRAY NumCores OF DataDesc;
-    HeapMem*: ARRAY NumCores OF HeapDesc;
-    StackMem*: ARRAY NumCores OF StackDesc;
-    ExtMem*: ARRAY NumCores OF ExtDesc;
+    DataMem*: ARRAY NumCoresUsed OF DataDesc;
+    HeapMem*: ARRAY NumCoresUsed OF HeapDesc;
+    StackMem*: ARRAY NumCoresUsed OF StackDesc;
+    ExtMem*: ARRAY NumCoresUsed OF ExtDesc;
     ModMem*: ModDesc;
     CodeMem*: CodeDesc;
     ResMem*: ResDesc;
@@ -125,6 +125,7 @@ MODULE Config;
     vtor := DataMem[Core0].start;
     SYSTEM.PUT(MCU.PPB_VTOR, vtor);
     SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB);
+    install(vtor + MCU.EXC_NMI_Offset, faultHandler);
     install(vtor + MCU.EXC_HardFault_Offset, faultHandler);
     install(vtor + MCU.EXC_SVC_Offset, errorHandler)
   END init;

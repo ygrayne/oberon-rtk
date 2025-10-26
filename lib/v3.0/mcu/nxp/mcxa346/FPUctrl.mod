@@ -27,7 +27,7 @@ MODULE FPUctrl;
       *)
       FPU_AllAccess  = 0FH; (* 1111, all code access *)
 
-  PROCEDURE Init*;
+  PROCEDURE* Init*;
      VAR val: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.PPB_CPACR, val);

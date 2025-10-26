@@ -9,8 +9,6 @@ MODULE GPIO;
     RP2350A (30 GPIO: 0 .. 29)
     RP2350B (48 GPIO: 0 .. 47)
   --
-  Note the deprecated procedures and definitions.
-  --
   Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
@@ -254,7 +252,7 @@ MODULE GPIO;
 
   (* --- GPIO interrupts --- *)
 
-  PROCEDURE GetIntSummary*(VAR statusL, statusH: SET);
+  PROCEDURE* GetIntSummary*(VAR statusL, statusH: SET);
     VAR cid: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
@@ -268,7 +266,7 @@ MODULE GPIO;
   END GetIntSummary;
 
 
-  PROCEDURE SetIntEvents*(pin: INTEGER; events: SET);
+  PROCEDURE* SetIntEvents*(pin: INTEGER; events: SET);
     VAR cid, addr, shift: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
@@ -285,7 +283,7 @@ MODULE GPIO;
   END SetIntEvents;
 
 
-  PROCEDURE GetIntEvents*(pin: INTEGER; VAR events: SET);
+  PROCEDURE* GetIntEvents*(pin: INTEGER; VAR events: SET);
     VAR cid, addr, val, shift: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);
@@ -302,7 +300,7 @@ MODULE GPIO;
   END GetIntEvents;
 
 
-  PROCEDURE ClearAllIntEvents*(pin: INTEGER);
+  PROCEDURE* ClearAllIntEvents*(pin: INTEGER);
   (* can only clear the edge detection events, obviously *)
     CONST ClearMask = 0CH;
     VAR addr: INTEGER;

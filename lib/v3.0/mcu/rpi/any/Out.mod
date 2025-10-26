@@ -20,7 +20,7 @@ MODULE Out;
     W*: ARRAY NumTerminals OF TextIO.Writer; (* module var ok: read only *)
 
 
-  PROCEDURE Open*(W0, W1: TextIO.Writer);
+  PROCEDURE* Open*(W0, W1: TextIO.Writer);
   BEGIN
     ASSERT(W0 # NIL, Errors.PreCond);
     W[0] := W0;

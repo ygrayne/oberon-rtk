@@ -27,7 +27,7 @@ MODULE RuntimeErrors;
     SYSTEM, MCU := MCU2, LED, Config;
 
   CONST
-    NumCores* = MCU.NumCores;
+    NumCores* = Config.NumCoresUsed;
     TraceDepth* = 16;
 
     (* register offsets from stacked r0 *)
@@ -123,7 +123,7 @@ PROCEDURE excHandler[0];
   END excHandler;
 
 
-  PROCEDURE errorHandler[0];
+  PROCEDURE* errorHandler[0];
     (* default handler: simply blink LED *)
     VAR cid, cnt, i: INTEGER; er: ErrorDesc;
   BEGIN
@@ -173,7 +173,7 @@ PROCEDURE excHandler[0];
   BEGIN
     cid := 0;
     WHILE cid < NumCores DO
-      (* initialise vector tables for each core *)
+      (* initialise vector tables for each used core *)
       (* install exception handlers for all errors and faults *)
       vectorTableBase := Config.DataMem[cid].start;
       vectorTableTop := vectorTableBase + MCU.VectorTableSize;
@@ -187,7 +187,6 @@ PROCEDURE excHandler[0];
       install(vectorTableBase + MCU.EXC_DebugMon_Offset, excHandler);
       (* install default error handler *)
       install(vectorTableBase + MCU.EXC_PendSV_Offset, errorHandler);
-
       (* install excHandler across the rest of the vector table *)
       (* will catch any exception with a missing handler *)
       addr := vectorTableBase + MCU.EXC_SysTick_Offset;

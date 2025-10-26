@@ -14,9 +14,10 @@ MODULE Kernel;
 **)
 
   IMPORT
-    SYSTEM, MCU := MCU2, Cores, Exceptions, SysTick, Errors, LED;
+    SYSTEM, MCU := MCU2, Config, Cores, Exceptions, SysTick, Errors, LED;
 
   CONST
+    NumCores = Config.NumCoresUsed;
     ExcPrioBlock = MCU.ExcPrioHigh;
 
   TYPE
@@ -85,7 +86,7 @@ MODULE Kernel;
     END;
 
   VAR
-    coreCon: ARRAY MCU.NumCores OF CoreContext;
+    coreCon: ARRAY NumCores OF CoreContext;
     putToRdyQ: PROCEDURE(rq: ReadyQ; act: Actor);
 
   (* actors *)

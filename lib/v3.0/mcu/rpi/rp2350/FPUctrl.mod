@@ -37,7 +37,7 @@ MODULE FPUctrl;
     (* PPB_FPCCR bits *)
     FPCCR_TS = 26;
 
-  PROCEDURE Init*(nonSecAccess, treatAsSec: BOOLEAN);
+  PROCEDURE* Init*(nonSecAccess, treatAsSec: BOOLEAN);
      VAR x: INTEGER;
   BEGIN
     x := 0;

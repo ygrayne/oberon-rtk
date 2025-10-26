@@ -18,7 +18,7 @@ MODULE RuntimeErrors;
     SYSTEM, MCU := MCU2, LED, Config;
 
   CONST
-    NumCores* = MCU.NumCores;
+    NumCores = Config.NumCoresUsed;
     TraceDepth* = 16;
 
     (* register offsets from stacked r0 *)
@@ -115,7 +115,7 @@ MODULE RuntimeErrors;
   END excHandler;
 
 
-  PROCEDURE errorHandler[0];
+  PROCEDURE* errorHandler[0];
     (* default handler: simply blink LED *)
     VAR cid, errorLed, i: INTEGER; er: ErrorDesc;
   BEGIN

@@ -79,14 +79,7 @@ MODULE Stacktrace;
   (* get 16-bit data from an address that is possibly not word-aligned *)
     VAR b1, b2: BYTE;
   BEGIN
-    (*
-    SYSTEM.PUT(LED.LSET, {LED.Red});
-    Out.String("addr "); Out.Hex(addr, 0); Out.Ln;
-    *)
     SYSTEM.GET(addr + 1, b1);
-    (*
-    SYSTEM.PUT(LED.LSET, {LED.Green});
-    *)
     SYSTEM.GET(addr, b2);
     value := LSL(b1, 8) + b2;
   END getHalfWord;

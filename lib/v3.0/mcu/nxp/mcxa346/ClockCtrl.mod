@@ -40,7 +40,7 @@ MODULE ClockCtrl;
     CLK_OUT_CLK_SLOW*   = 6;
 
 
-  PROCEDURE ConfigDevClock*(device: INTEGER; clk, div: INTEGER);
+  PROCEDURE* ConfigDevClock*(device: INTEGER; clk, div: INTEGER);
   (* set functional clock *)
   (* use with clock disabled *)
   (* MCU.CLK_* devices *)

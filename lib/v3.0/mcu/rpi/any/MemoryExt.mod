@@ -28,7 +28,7 @@ MODULE MemoryExt;
   IMPORT SYSTEM, MCU := MCU2, Config, ProgData;
 
   CONST
-    NumCores = MCU.NumCores;
+    NumCores = Config.NumCoresUsed;
 
   TYPE
     CoreContext = RECORD

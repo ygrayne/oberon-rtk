@@ -14,7 +14,7 @@ MODULE StartUp;
   IMPORT SYSTEM, MCU := MCU2;
 
 
-  PROCEDURE ReleaseReset*(device: INTEGER);
+  PROCEDURE* ReleaseReset*(device: INTEGER);
   (* MCU.DEV_* devices *)
     VAR reg, devNo: INTEGER;
   BEGIN
@@ -25,7 +25,7 @@ MODULE StartUp;
   END ReleaseReset;
 
 
-  PROCEDURE ApplyReset*(device: INTEGER);
+  PROCEDURE* ApplyReset*(device: INTEGER);
   (* MCU.DEV_* devices *)
     VAR reg, devNo: INTEGER;
   BEGIN
@@ -36,7 +36,7 @@ MODULE StartUp;
   END ApplyReset;
 
 
-  PROCEDURE EnableClock*(device: INTEGER);
+  PROCEDURE* EnableClock*(device: INTEGER);
   (* bus clock *)
   (* MCU.DEV_* devices *)
     VAR reg, devNo: INTEGER;
@@ -48,7 +48,7 @@ MODULE StartUp;
   END EnableClock;
 
 
-  PROCEDURE DisableClock*(device: INTEGER);
+  PROCEDURE* DisableClock*(device: INTEGER);
   (* bus clock *)
   (* MCU.DEV_* devices *)
     VAR reg, devNo: INTEGER;

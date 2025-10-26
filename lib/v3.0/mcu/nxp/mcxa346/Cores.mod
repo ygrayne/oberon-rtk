@@ -18,7 +18,7 @@ MODULE Cores;
     runInit, runStart: PROCEDURE;
   *)
 
-  PROCEDURE SetCoreId*(id: INTEGER);
+  PROCEDURE* SetCoreId*(id: INTEGER);
     VAR vtor: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.PPB_VTOR, vtor);
@@ -26,7 +26,7 @@ MODULE Cores;
   END SetCoreId;
 
 
-  PROCEDURE GetCoreId*(VAR cid: INTEGER);
+  PROCEDURE* GetCoreId*(VAR cid: INTEGER);
   BEGIN
     SYSTEM.GET(MCU.PPB_VTOR, cid);
     SYSTEM.GET(cid, cid)

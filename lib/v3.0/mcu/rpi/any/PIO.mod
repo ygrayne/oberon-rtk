@@ -124,7 +124,7 @@ MODULE PIO;
     END;
 
 
-  PROCEDURE Init*(dev: Device; pioNo: INTEGER);
+  PROCEDURE* Init*(dev: Device; pioNo: INTEGER);
     VAR pioBase, i: INTEGER; smBase: ARRAY NumStateMachines OF INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.HeapOverflow);

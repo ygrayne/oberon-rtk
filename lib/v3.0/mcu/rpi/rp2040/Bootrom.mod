@@ -33,7 +33,7 @@ MODULE Bootrom;
     HelperFunc = PROCEDURE(tableAddr, code: INTEGER): INTEGER;
 
 
-  PROCEDURE CheckMagic*(): BOOLEAN;
+  PROCEDURE* CheckMagic*(): BOOLEAN;
     VAR value: INTEGER;
   BEGIN
     SYSTEM.GET(MagicAddr, value);
@@ -41,7 +41,7 @@ MODULE Bootrom;
   END CheckMagic;
 
 
-  PROCEDURE GetRevision*(VAR revision: INTEGER);
+  PROCEDURE* GetRevision*(VAR revision: INTEGER);
     VAR value: INTEGER;
   BEGIN
     SYSTEM.GET(MagicAddr, value);
@@ -49,12 +49,12 @@ MODULE Bootrom;
   END GetRevision;
 
 
-  PROCEDURE tableCode(c1, c2: CHAR): INTEGER;
+  PROCEDURE* tableCode(c1, c2: CHAR): INTEGER;
     RETURN LSL(ORD(c2), 8) + ORD(c1)
   END tableCode;
 
 
-  PROCEDURE getHelperFunc(VAR func: HelperFunc);
+  PROCEDURE* getHelperFunc(VAR func: HelperFunc);
     VAR helperFuncAddr: INTEGER;
   BEGIN
     SYSTEM.GET(HelperAddrAddr, helperFuncAddr);

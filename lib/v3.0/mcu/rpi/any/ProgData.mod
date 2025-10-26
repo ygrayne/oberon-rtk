@@ -110,7 +110,7 @@ MODULE ProgData;
       progDataRes: ProgDataRes;
 
 
-  PROCEDURE FindEntry*(codeAddr: INTEGER; VAR entryAddr: INTEGER);
+  PROCEDURE* FindEntry*(codeAddr: INTEGER; VAR entryAddr: INTEGER);
     VAR ca: INTEGER; found: BOOLEAN;
   BEGIN
     entryAddr := 0;
@@ -131,7 +131,7 @@ MODULE ProgData;
   END FindEntry;
 
 
-  PROCEDURE GetNextEntry*(thisEntryAddr: INTEGER; VAR nextEntryAddr: INTEGER);
+  PROCEDURE* GetNextEntry*(thisEntryAddr: INTEGER; VAR nextEntryAddr: INTEGER);
   BEGIN
     nextEntryAddr := 0;
     IF thisEntryAddr + NextEntryAddrOffset < progDataRes.dataEndAddr THEN
@@ -140,7 +140,7 @@ MODULE ProgData;
   END GetNextEntry;
 
 
-  PROCEDURE FindProcEntries*(codeAddr: INTEGER; VAR modEntryAddr, procEntryAddr: INTEGER);
+  PROCEDURE* FindProcEntries*(codeAddr: INTEGER; VAR modEntryAddr, procEntryAddr: INTEGER);
   (* will return '.init' of the program for all 'codeAddr' >= .init's code address *)
   (* this is a limitation of the available program meta data *)
     VAR entryAddr, etype, ca: INTEGER; found: BOOLEAN;
@@ -167,13 +167,13 @@ MODULE ProgData;
   END FindProcEntries;
 
 
-  PROCEDURE GetCodeAddr*(entryAddr: INTEGER; VAR codeAddr: INTEGER);
+  PROCEDURE* GetCodeAddr*(entryAddr: INTEGER; VAR codeAddr: INTEGER);
   BEGIN
     SYSTEM.GET(entryAddr + EntryAddrOffset, codeAddr)
   END GetCodeAddr;
 
 
-  PROCEDURE GetString*(entryAddr: INTEGER; VAR s: EntryString);
+  PROCEDURE* GetString*(entryAddr: INTEGER; VAR s: EntryString);
     VAR stringAddr, i: INTEGER; b: BYTE;
   BEGIN
     stringAddr := entryAddr + EntryStringOffset;
