@@ -3,7 +3,7 @@ MODULE Stacktr2;
   Oberon RTK Framework v2
   --
   Example/test program
-  https://oberon-rtk.org/examples/v2/syscall
+  https://oberon-rtk.org/docs/examples/v2/syscall
   --
   MCU: RP2040, RP2350
   Board: Pico, Pico 2

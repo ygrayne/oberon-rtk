@@ -4,7 +4,7 @@ MODULE RecoveryC0;
   --
   Example program, multi-threaded, multi-core
   Evaluate different run-time error recovery options and conditions.
-  Description: https://oberon-rtk.org/examples/v2/recovery/
+  Description: https://oberon-rtk.org/docs/examples/v2/recovery/
   --
   Kernel-v1
   Core 1 program: RecoveryC1

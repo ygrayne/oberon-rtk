@@ -3,7 +3,7 @@ MODULE SPIrtc2;
   Oberon RTK Framework v2
   --
   Example program, multi-threaded, one core
-  Description: https://oberon-rtk.org/examples/v2/spirtc2/
+  Description: https://oberon-rtk.org/docs/examples/v2/spirtc2/
   --
   MCU: RP2040, RP2350
   Board: Pico, Pico2

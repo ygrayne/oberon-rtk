@@ -3,7 +3,7 @@ MODULE CodeLoading;
   Oberon RTK Framework
   --
   Example program, single-threaded, one core
-  Description & instructions: https://oberon-rtk.org/examples/v2/codeloading/
+  Description & instructions: https://oberon-rtk.org/docs/examples/v2/codeloading/
   --
   MCU: RP2040
   Board: Pico

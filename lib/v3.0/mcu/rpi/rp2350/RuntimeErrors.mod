@@ -124,7 +124,7 @@ PROCEDURE excHandler[0];
 
 
   PROCEDURE* errorHandler[0];
-    (* default handler: simply blink LED *)
+  (* default handler: simply blink LED *)
     VAR cid, cnt, i: INTEGER; er: ErrorDesc;
   BEGIN
     SYSTEM.GET(MCU.SIO_CPUID, cid);

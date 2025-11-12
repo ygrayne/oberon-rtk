@@ -3,10 +3,10 @@ MODULE StacktrK2C0;
   Oberon RTK Framework v2
   --
   Example/test program
-  https://oberon-rtk.org/examples/v2/stacktrace
+  https://oberon-rtk.org/docs/examples/v2/stacktrace
   --
-  MCU: RP2040, RP2350
-  Board: Pico, Pico 2
+  MCU: RRP2350B
+  Board: Pico2-Ice
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

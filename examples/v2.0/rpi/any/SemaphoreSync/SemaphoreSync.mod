@@ -3,7 +3,7 @@ MODULE SemaphoreSync;
   Oberon RTK Framework v2
   --
   Example program, multi-threaded, single-core
-  Description: https://oberon-rtk.org/examples/v2/semaphoresync/
+  Description: https://oberon-rtk.org/docs/examples/v2/semaphoresync/
   --
   MCU: RP2040, RP2350
   Board: Pico, Pico2

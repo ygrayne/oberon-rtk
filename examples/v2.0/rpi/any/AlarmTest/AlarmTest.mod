@@ -3,7 +3,7 @@ MODULE AlarmTest;
   Oberon RTK Framework v2
   --
   Example program, single-threaded, one core
-  Description & instructions: https://oberon-rtk.org/examples/v2/alarmtest/
+  Description & instructions: https://oberon-rtk.org/docs/examples/v2/alarmtest/
   --
   MCU: RP2040, RP2350
   Board: Pico, Pico2

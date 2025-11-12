@@ -4,13 +4,13 @@ MODULE RecoveryC1;
   --
   Example program, multi-threaded, multi-core
   Evaluate different run-time error recovery options and conditions.
-  Description: https://oberon-rtk.org/examples/v2/recovery/
+  Description: https://oberon-rtk.org/docs/examples/v2/recovery/
   --
   Program for core 1
   Core 0 program: RecoveryC0
   --
-  MCU: RP2040, RP2350
-  Board: Pico, Pico 2
+  MCU: RRP2350B
+  Board: Pico2-Ice
   --
   Copyright (c) 2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/

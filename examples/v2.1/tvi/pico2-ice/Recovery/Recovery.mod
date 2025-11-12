@@ -5,7 +5,8 @@ MODULE Recovery;
   Recovery from runtime errors.
   Customised for example program.
   --
-  MCU: RP2040, RP2350
+  MCU: RRP2350B
+  Board: Pico2-Ice
   --
   Notes:
   * Uses register r12 to hold current's thread id, set in Coroutines.

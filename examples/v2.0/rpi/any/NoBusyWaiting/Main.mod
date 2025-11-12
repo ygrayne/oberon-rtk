@@ -4,7 +4,7 @@ MODULE Main;
   --
   Main module
   Custom version for example program NoBusyWaiting,
-  https://oberon-rtk.org/examples/v2/nobusywaiting
+  https://oberon-rtk.org/docs/examples/v2/nobusywaiting
   --
   MCU: RP2040, RP2350
   Board: Pico, Pico2

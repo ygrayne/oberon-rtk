@@ -5,8 +5,8 @@ MODULE K3base;
   Base test program for kernel-v3 prototype.
   https://oberon-rtk.org/docs/examples/v2/k3base/
   --
-  MCU: RP2350
-  Board: Pico2, Pico2-Ice
+  MCU: RRP2350B
+  Board: Pico2-Ice
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

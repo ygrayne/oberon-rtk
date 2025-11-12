@@ -19,6 +19,9 @@ MODULE Stacktrace;
   CONST
     TraceDepth = 16;
 
+    ExcRetMask = 0FFFFFF82H;
+    ExcRetVal = 0FFFFFF80H;
+
     AnnNone* = 0;
     AnnStackframe* = -1;
 
@@ -162,7 +165,7 @@ MODULE Stacktrace;
 
 
   PROCEDURE getAddr(VAR stackAddr, excRetVal: INTEGER; VAR isStackFrame: BOOLEAN);
-    CONST R11 = 11; ExcRetMask = 0FFFFFF82H; ExcRetVal = 0FFFFFF80H;
+    CONST R11 = 11;
     VAR stackVal, lr, res: INTEGER;
   BEGIN
     isStackFrame := FALSE;

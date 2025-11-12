@@ -3,7 +3,7 @@ MODULE BootromAccess;
   Oberon RTK Framework v2
   --
   Example program, single-threaded, single-core
-  Description: https://oberon-rtk.org/examples/v2/bootromaccess/
+  Description: https://oberon-rtk.org/docs/examples/v2/bootromaccess/
   --
   MCU: RP2040
   Board: Pico

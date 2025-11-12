@@ -4,7 +4,7 @@ MODULE WatchdogC0;
   --
   Example program, multi-threaded, dual-core
   Simple dual-core watchdog
-  See https://oberon-rtk.org/examples/v2/watchdog
+  See https://oberon-rtk.org/docs/examples/v2/watchdog
   --
   Kernel-v1
   Core 1 program: WatchdogC1

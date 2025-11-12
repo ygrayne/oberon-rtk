@@ -3,7 +3,7 @@ MODULE SignalSync;
   Oberon RTK Framework v3.0
   --
   Example program, multi-threaded, single-core
-  Description: https://oberon-rtk.org/examples/v2/signalsync/
+  Description: https://oberon-rtk.org/docs/examples/v2/signalsync/
   --
   MCU: RP2040, RP2350
   Board: Pico, Pico2

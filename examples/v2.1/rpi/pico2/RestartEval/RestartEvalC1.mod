@@ -4,7 +4,7 @@ MODULE RestartEvalC1;
   --
   Example program, multi-threaded, multi-core
   Evaluate different restart options and conditions.
-  Description: https://oberon-rtk.org/examples/v2.1/restarteval/
+  Description: https://oberon-rtk.org/docs/examples/v2.1/restarteval/
   --
   Program for core 1
   Core 0 program: RestartEvalC0
