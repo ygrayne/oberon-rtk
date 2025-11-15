@@ -3,7 +3,7 @@ MODULE StacktrK2C1;
   Oberon RTK Framework v3.0
   --
   Example/test program
-  https://oberon-rtk.org/examples/v2/stacktrace
+  https://oberon-rtk.org/docs/examples/v2/stacktrace
   --
   MCU: MCX-A346
   Board: FRDM-MCXA346
@@ -20,7 +20,7 @@ MODULE StacktrK2C1;
     IntNo1 = MCU.IRQ_SW_1;
 
     ThreadStackSize = 1024;
-    MillisecsPerTick = 10;
+    MicrosecsPerTick = 10000;
 
     CaseError = 0;
     CaseFault = 1;
@@ -71,8 +71,7 @@ MODULE StacktrK2C1;
   END h2;
 
   PROCEDURE h1;
-  (* FPU operation to test correct stack trace on RP2350 *)
-  (* on core 0 only: FPU on core 1 not enabled *)
+  (* FPU operation to test correct stack trace with FP context *)
     VAR r: REAL;
   BEGIN
     r := 1.0;
@@ -132,7 +131,7 @@ MODULE StacktrK2C1;
     Exceptions.InstallIntHandler(IntNo1, i0);
     Exceptions.SetIntPrio(IntNo1, MCU.ExcPrio2);
     Exceptions.EnableInt(IntNo1);
-    Kernel.Install(MillisecsPerTick);
+    Kernel.Install(MicrosecsPerTick);
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.ProgError);
     Kernel.Enable(t0);
     (* threads will use in their stacks, exceptions will use main stack *)

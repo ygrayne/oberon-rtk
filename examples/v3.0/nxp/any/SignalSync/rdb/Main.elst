@@ -1,0 +1,244 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
+
+.     0  0100041C0              <Pad: 0>
+MODULE Main;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  Main module
+  --
+  MCU: MCX-N947
+  Board: FRDM-MCXN947
+  --
+  Copyright (c) 2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT
+    SYSTEM, Config, Memory, MCU := MCU2, RuntimeErrors, RuntimeErrorsOut, StartUp, Clocks, Terminals,
+    UARTdev, UARTstr, FPUctrl, GPIO, Out, In;
+
+  CONST
+    Baudrate0 = 38400; (* terminal 0 *)
+    UARTt0 = UARTdev.UART4;
+    UARTt0_TxPinNo = MCU.PORT1 + 9; (* VCOM via USB MCU-Link *)
+    UARTt0_RxPinNo = MCU.PORT1 + 8;
+    TERM0 = Terminals.TERM0;
+
+
+  PROCEDURE cfgPins(txPin, rxPin: INTEGER);
+    VAR padCfg: GPIO.PadCfg;
+  BEGIN
+.     4  0100041C4      0B503  push      { r0, r1, lr }
+.     6  0100041C6      0B089  sub       sp,#36
+    StartUp.EnableClock(MCU.DEV_PORT1);
+.     8  0100041C8      0200E  movs      r0,#14
+.    10  0100041CA  0F7FCF8DD  bl.w      Ext Proc #3
+.    14  0100041CE      0E000  b         0 -> 18
+.    16  0100041D0      0001E  <LineNo: 30>
+    GPIO.GetPadBaseCfg(padCfg);
+.    18  0100041D2      04668  mov       r0,sp
+.    20  0100041D4  0F8DF1044  ldr.w     r1,[pc,#68] -> 92
+.    24  0100041D8  0F7FCFEF6  bl.w      Ext Proc #5
+.    28  0100041DC      0E000  b         0 -> 32
+.    30  0100041DE      0001F  <LineNo: 31>
+    GPIO.ConfigurePad(txPin, padCfg);
+.    32  0100041E0      09809  ldr       r0,[sp,#36]
+.    34  0100041E2      04669  mov       r1,sp
+.    36  0100041E4  0F8DF2034  ldr.w     r2,[pc,#52] -> 92
+.    40  0100041E8  0F7FCFEA2  bl.w      Ext Proc #3
+.    44  0100041EC      0E000  b         0 -> 48
+.    46  0100041EE      00020  <LineNo: 32>
+    GPIO.ConfigurePad(rxPin, padCfg);
+.    48  0100041F0      0980A  ldr       r0,[sp,#40]
+.    50  0100041F2      04669  mov       r1,sp
+.    52  0100041F4  0F8DF2024  ldr.w     r2,[pc,#36] -> 92
+.    56  0100041F8  0F7FCFE9A  bl.w      Ext Proc #3
+.    60  0100041FC      0E000  b         0 -> 64
+.    62  0100041FE      00021  <LineNo: 33>
+    GPIO.SetFunction(txPin, GPIO.Fflexcom0);
+.    64  010004200      09809  ldr       r0,[sp,#36]
+.    66  010004202      02102  movs      r1,#2
+.    68  010004204  0F7FCFF02  bl.w      Ext Proc #7
+.    72  010004208      0E000  b         0 -> 76
+.    74  01000420A      00022  <LineNo: 34>
+    GPIO.SetFunction(rxPin, GPIO.Fflexcom0)
+.    76  01000420C      0980A  ldr       r0,[sp,#40]
+.    78  01000420E      02102  movs      r1,#2
+  END cfgPins;
+.    80  010004210  0F7FCFEFC  bl.w      Ext Proc #7
+.    84  010004214      0E000  b         0 -> 88
+.    86  010004216      00023  <LineNo: 35>
+.    88  010004218      0B00B  add       sp,#44
+.    90  01000421A      0BD00  pop       { pc }
+.    92  01000421C  010000F08  <Global: GPIO code>
+
+
+  PROCEDURE* enableFlashCache;
+    CONST LPCAC_CTRL_DIS_LPCAC = 0;
+    VAR val: INTEGER;
+  BEGIN
+.    96  010004220      0B500  push      { lr }
+    SYSTEM.GET(MCU.SYSCON_LPCAC_CTRL, val);
+.    98  010004222  0F8DF1014  ldr.w     r1,[pc,#20] -> 120
+.   102  010004226      06808  ldr       r0,[r1]
+    BFI(val, LPCAC_CTRL_DIS_LPCAC, 0); (* remove disable cache *)
+.   104  010004228      04601  mov       r1,r0
+.   106  01000422A      02200  movs      r2,#0
+.   108  01000422C  0F3620000  bfi       r0,r2,0,1
+    SYSTEM.PUT(MCU.SYSCON_LPCAC_CTRL, val)
+  END enableFlashCache;
+.   112  010004230  0F8DF1004  ldr.w     r1,[pc,#4] -> 120
+.   116  010004234      06008  str       r0,[r1]
+.   118  010004236      0BD00  pop       { pc }
+.   120  010004238  040000824  <Const:  1073743908>
+
+
+  PROCEDURE init;
+    CONST Core0 = 0;
+    VAR
+      uartDev: UARTdev.Device;
+      uartCfg: UARTdev.DeviceCfg;
+  BEGIN
+.   124  01000423C      0B500  push      { lr }
+.   126  01000423E      0B086  sub       sp,#24
+    (* init vector table *)
+    RuntimeErrors.Init;
+.   128  010004240  0F7FDF8A8  bl.w      Ext Proc #5
+.   132  010004244      0E000  b         0 -> 136
+.   134  010004246      00038  <LineNo: 56>
+
+    (* config the clocks *)
+    Clocks.InitFIRC(Clocks.FIRC_144);
+.   136  010004248      02001  movs      r0,#1
+.   138  01000424A  0F7FFFABD  bl.w      Ext Proc #6
+.   142  01000424E      0E000  b         0 -> 146
+.   144  010004250      0003B  <LineNo: 59>
+    (*Clocks.InitSPLL;*)
+
+    (* flash cache *)
+    enableFlashCache;
+.   146  010004252  0F7FFFFE5  bl.w      -54 -> 96
+.   150  010004256      0E000  b         0 -> 154
+.   152  010004258      0003F  <LineNo: 63>
+
+    (* config pins and pads *)
+    cfgPins(UARTt0_TxPinNo, UARTt0_RxPinNo);
+.   154  01000425A      02029  movs      r0,#41
+.   156  01000425C      02128  movs      r1,#40
+.   158  01000425E  0F7FFFFB1  bl.w      -158 -> 4
+.   162  010004262      0E000  b         0 -> 166
+.   164  010004264      00042  <LineNo: 66>
+
+    (* define UART cfg *)
+    UARTdev.GetBaseCfg(uartCfg);
+.   166  010004266  0F11D0004  adds.w    r0,sp,#4
+.   170  01000426A  0F8DF10AC  ldr.w     r1,[pc,#172] -> 344
+.   174  01000426E  0F7FFFC9B  bl.w      Ext Proc #5
+.   178  010004272      0E000  b         0 -> 182
+.   180  010004274      00045  <LineNo: 69>
+    uartCfg.osr := 11;
+.   182  010004276      0200B  movs      r0,#11
+.   184  010004278      09001  str       r0,[sp,#4]
+    uartCfg.txfe := UARTdev.Enabled;
+.   186  01000427A      02001  movs      r0,#1
+.   188  01000427C      09002  str       r0,[sp,#8]
+    uartCfg.rxfe := UARTdev.Enabled;
+.   190  01000427E      02001  movs      r0,#1
+.   192  010004280      09003  str       r0,[sp,#12]
+    uartCfg.txwater := UARTdev.FifoSize - 1;
+.   194  010004282      02007  movs      r0,#7
+.   196  010004284      09004  str       r0,[sp,#16]
+    uartCfg.rxwater := UARTdev.FifoSize - 1;
+.   198  010004286      02007  movs      r0,#7
+.   200  010004288      09005  str       r0,[sp,#20]
+
+    (* open text IO to/from serial terminal *)
+    Terminals.InitUART(UARTt0, uartCfg, Baudrate0, uartDev);
+.   202  01000428A      02004  movs      r0,#4
+.   204  01000428C  0F11D0104  adds.w    r1,sp,#4
+.   208  010004290  0F8DF2084  ldr.w     r2,[pc,#132] -> 344
+.   212  010004294  0F2496300  movw      r3,#0009600H
+.   216  010004298      0466C  mov       r4,sp
+.   218  01000429A  0F7FFFCA3  bl.w      Ext Proc #4
+.   222  01000429E      0E000  b         0 -> 226
+.   224  0100042A0      0004D  <LineNo: 77>
+    Terminals.Open(TERM0, uartDev, UARTstr.PutString, UARTstr.GetString);
+.   226  0100042A2      02000  movs      r0,#0
+.   228  0100042A4      09900  ldr       r1,[sp]
+.   230  0100042A6  0F8DF2074  ldr.w     r2,[pc,#116] -> 348
+.   234  0100042AA  0F8DF3074  ldr.w     r3,[pc,#116] -> 352
+.   238  0100042AE  0F7FFFCC1  bl.w      Ext Proc #5
+.   242  0100042B2      0E000  b         0 -> 246
+.   244  0100042B4      0004E  <LineNo: 78>
+
+    (* init Out and In to use terminal *)
+    Out.Open(Terminals.W[0], NIL);
+.   246  0100042B6  0F8DF006C  ldr.w     r0,[pc,#108] -> 356
+.   250  0100042BA      06800  ldr       r0,[r0]
+.   252  0100042BC      02100  movs      r1,#0
+.   254  0100042BE  0F7FFFE4B  bl.w      Ext Proc #2
+.   258  0100042C2      0E000  b         0 -> 262
+.   260  0100042C4      00051  <LineNo: 81>
+    In.Open(Terminals.R[0], NIL);
+.   262  0100042C6  0F8DF0060  ldr.w     r0,[pc,#96] -> 360
+.   266  0100042CA      06800  ldr       r0,[r0]
+.   268  0100042CC      02100  movs      r1,#0
+.   270  0100042CE  0F7FFFF1F  bl.w      Ext Proc #1
+.   274  0100042D2      0E000  b         0 -> 278
+.   276  0100042D4      00052  <LineNo: 82>
+
+    (* init run-time error printing to serial terminal *)
+    (* use error output writer *)
+    Terminals.OpenErr(TERM0, UARTstr.PutString);
+.   278  0100042D6      02000  movs      r0,#0
+.   280  0100042D8  0F8DF1040  ldr.w     r1,[pc,#64] -> 348
+.   284  0100042DC  0F7FFFD52  bl.w      Ext Proc #7
+.   288  0100042E0      0E000  b         0 -> 292
+.   290  0100042E2      00056  <LineNo: 86>
+    RuntimeErrorsOut.SetWriter(Core0, Terminals.Werr[0]);
+.   292  0100042E4      02000  movs      r0,#0
+.   294  0100042E6  0F8DF1044  ldr.w     r1,[pc,#68] -> 364
+.   298  0100042EA      06809  ldr       r1,[r1]
+.   300  0100042EC  0F7FFF9BA  bl.w      Ext Proc #6
+.   304  0100042F0      0E000  b         0 -> 308
+.   306  0100042F2      00057  <LineNo: 87>
+    RuntimeErrors.InstallErrorHandler(Core0, RuntimeErrorsOut.ErrorHandler);
+.   308  0100042F4      02000  movs      r0,#0
+.   310  0100042F6  0F8DF1038  ldr.w     r1,[pc,#56] -> 368
+.   314  0100042FA  0F7FDF81F  bl.w      Ext Proc #3
+.   318  0100042FE      0E000  b         0 -> 322
+.   320  010004300      00058  <LineNo: 88>
+
+    (* core init *)
+    RuntimeErrors.EnableFaults;
+.   322  010004302  0F7FDF835  bl.w      Ext Proc #4
+.   326  010004306      0E000  b         0 -> 330
+.   328  010004308      0005B  <LineNo: 91>
+    FPUctrl.Init
+  END init;
+.   330  01000430A  0F7FFFE0F  bl.w      Ext Proc #1
+.   334  01000430E      0E000  b         0 -> 338
+.   336  010004310      0005C  <LineNo: 92>
+.   338  010004312      0B006  add       sp,#24
+.   340  010004314      0BD00  pop       { pc }
+.   342  010004316      0BF00  nop       
+.   344  010004318  0100039A8  <Global: UARTdev code>
+.   348  01000431C  010003ED0  <Global: UARTstr code>
+.   352  010004320  010003F20  <Global: UARTstr code>
+.   356  010004324  02001FEAC  <Global: Terminals data>
+.   360  010004328  02001FE9C  <Global: Terminals data>
+.   364  01000432C  02001FEA4  <Global: Terminals data>
+.   368  010004330  010003588  <Global: RuntimeErrorsOut code>
+
+BEGIN
+.   372  010004334      0B500  push      { lr }
+  init
+END Main.
+.   374  010004336  0F7FFFF81  bl.w      -254 -> 124
+.   378  01000433A      0E000  b         0 -> 382
+.   380  01000433C      00060  <LineNo: 96>
+.   382  01000433E      0BD00  pop       { pc }
+ 

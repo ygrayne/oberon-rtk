@@ -3,7 +3,7 @@ MODULE Stacktr2;
   Oberon RTK Framework v3.0
   --
   Example/test program
-  https://oberon-rtk.org/examples/v2/stacktrace
+  https://oberon-rtk.org/docs/examples/v2/stacktrace
   --
   MCU: MCX-A346
   Board: FRDM-MCXA346

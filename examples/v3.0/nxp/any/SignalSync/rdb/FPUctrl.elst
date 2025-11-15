@@ -1,0 +1,58 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
+
+.     0  010003F28              <Pad: 0>
+MODULE FPUctrl;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  FPU control/mgmt
+  --
+  IMPORTANT:
+    * 'Init' needs to called from the core whose FPU shall be initialised/enabled.
+    * See modules InitCoreOne and Cores.
+  --
+  MCU: MCX-N947
+  --
+  Copyright (c) 2024-2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2;
+
+  CONST
+    (* PPB_CPACR bits & values *)
+    CPACR_FPU_1 = 23;
+    CPACR_FPU_0 = 20;
+      (*
+      FPU_NoAccess   = 00H; (* 0000, disabled *)
+      FPU_PrivAccess = 05H; (* 0101, priviledged code access *)
+      *)
+      FPU_AllAccess  = 0FH; (* 1111, all code access *)
+
+  PROCEDURE* Init*;
+     VAR val: INTEGER;
+  BEGIN
+.     4  010003F2C      0B500  push      { lr }
+    SYSTEM.GET(MCU.PPB_CPACR, val);
+.     6  010003F2E  0F8DF101C  ldr.w     r1,[pc,#28] -> 36
+.    10  010003F32      06808  ldr       r0,[r1]
+    BFI(val, CPACR_FPU_1, CPACR_FPU_0, FPU_AllAccess);
+.    12  010003F34      04601  mov       r1,r0
+.    14  010003F36      0220F  movs      r2,#15
+.    16  010003F38  0F3625017  bfi       r0,r2,20,4
+    SYSTEM.PUT(MCU.PPB_CPACR, val);
+.    20  010003F3C  0F8DF100C  ldr.w     r1,[pc,#12] -> 36
+.    24  010003F40      06008  str       r0,[r1]
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
+.    26  010003F42  0F3BF8F4F  dsb       
+  END Init;
+.    30  010003F46  0F3BF8F6F  isb       
+.    34  010003F4A      0BD00  pop       { pc }
+.    36  010003F4C  0E000ED88  <Const:  -536810104>
+
+END FPUctrl.
+.    40  010003F50      0B500  push      { lr }
+.    42  010003F52      0BD00  pop       { pc }
+ 

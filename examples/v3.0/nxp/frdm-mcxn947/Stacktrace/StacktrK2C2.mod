@@ -5,8 +5,11 @@ MODULE StacktrK2C2;
   Example/test program
   https://oberon-rtk.org/docs/examples/v2/stacktrace
   --
-  MCU: MCX-A346
-  Board: FRDM-MCXA346
+  MCU: MCX-N947
+  Board: FRDM-MCXN947
+  --
+  Kernel-v1
+  Only one core used (for now).
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -20,7 +23,7 @@ MODULE StacktrK2C2;
     IntNo1 = MCU.IRQ_SW_1;
 
     ThreadStackSize = 1024;
-    MicrosecsPerTick = 10000;
+    MicrosecsPerTick = 10;
 
   VAR
     p: PROCEDURE;

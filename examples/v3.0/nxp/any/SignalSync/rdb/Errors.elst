@@ -1,0 +1,694 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
+
+.     0  010001C20              <Pad: 0>
+MODULE Errors;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  Definition of fault and error codes and corresponding message strings.
+  --
+  Copyright (c) 2019-2025 Gray, gray@grayraven.org
+**)
+
+  IMPORT Error, MCU := MCU2;
+
+  CONST
+    MaxMsgLength = 64;
+    OK* = 0;
+    NoError* = 0;
+    NotOK* = 1;
+    MaxErrNo* = 63;
+
+    (* MCU fault codes *)
+    (* all *)
+    NMI*          = MCU.EXC_NMI;
+    HardFault*    = MCU.EXC_HardFault;
+    (* M33 only *)
+    MemMgmtFault* = MCU.EXC_MemMgmtFault;
+    BusFault*     = MCU.EXC_BusFault;
+    UsageFault*   = MCU.EXC_UsageFault;
+    SecureFault*  = MCU.EXC_SecureFault;
+    DebugMon*     = MCU.EXC_DebugMon;
+
+    (* error types *)
+    ErrTypeErrorHandler* = 0;
+    ErrTypeErrorThread* = 1;
+    ErrTypeFaultHandler* = 2;
+    ErrTypeFaultThread* = 3;
+
+    (* Astrobe error codes, see Error.mod *)
+    FirstAstrobeCode = 1;
+    AstrobeUnused = {13..19};
+    LastAstrobeCode  = 25;
+
+    (* RTK error/assert codes *)
+    FirstRTKcode = 32;
+    Trace* = 33;
+    PreCond* = 34;
+    PostCond* = 35;
+    ConsCheck* = 36;
+    ProgError* = 37;
+    BufferOverflow* = 38;
+    BufferEmpty* = 39;
+    Timing* = 40;
+    HeapOverflow* = 41;
+    StackOverflow* = 42;
+    StorageOverflow* = 43;
+    StorageError* = 44;
+    UsageError* = 45;
+    DeviceError* = 46;
+    BadResourceData* = 47;
+    NotSupported* = 48;
+    NotImplemented* = 49;
+    NumThreads* = 50;
+    LastRTKcode = 50;
+
+    Config* = ProgError; (* legacy *)
+
+  TYPE
+    String* = ARRAY MaxMsgLength OF CHAR;
+
+
+  PROCEDURE* faultMessage(code: INTEGER; VAR msg: String);
+  BEGIN
+.     4  010001C24      0B500  push      { lr }
+    IF code = NMI THEN
+.     6  010001C26      02802  cmp       r0,#2
+.     8  010001C28  0F040800A  bne.w     20 -> 32
+      msg := "NMI"
+    ELSIF code = HardFault THEN
+.    12  010001C2C      0460A  mov       r2,r1
+.    14  010001C2E      0BF00  nop       
+.    16  010001C30      0A300  adr       r3,pc,#0 -> 20
+.    18  010001C32      0E001  b         2 -> 24
+.    20  010001C34  000494D4E  <String: "NMI.">
+.    24  010001C38      0681C  ldr       r4,[r3]
+.    26  010001C3A      06014  str       r4,[r2]
+.    28  010001C3C  0F000B89D  b.w       314 -> 346
+.    32  010001C40      02803  cmp       r0,#3
+.    34  010001C42  0F0408012  bne.w     36 -> 74
+      msg := "HardFault"
+    ELSIF code = MemMgmtFault THEN
+.    38  010001C46      0460A  mov       r2,r1
+.    40  010001C48      0A300  adr       r3,pc,#0 -> 44
+.    42  010001C4A      0E005  b         10 -> 56
+.    44  010001C4C  064726148  <String: "Hard">
+.    48  010001C50  06C756146  <String: "Faul">
+.    52  010001C54  000000074  <String: "t...">
+.    56  010001C58  0F8534B04  ldr.w     r4,[r3],#4
+.    60  010001C5C  0F8424B04  str.w     r4,[r2],#4
+.    64  010001C60  0F014447F  ands.w    r4,r4,#0FF000000H
+.    68  010001C64      0D1F8  bne.n     -16 -> 56
+.    70  010001C66  0F000B888  b.w       272 -> 346
+.    74  010001C6A      02804  cmp       r0,#4
+.    76  010001C6C  0F0408015  bne.w     42 -> 122
+      msg := "MemManageFault"
+    ELSIF code = BusFault THEN
+.    80  010001C70      0460A  mov       r2,r1
+.    82  010001C72      0BF00  nop       
+.    84  010001C74      0A300  adr       r3,pc,#0 -> 88
+.    86  010001C76      0E007  b         14 -> 104
+.    88  010001C78  04D6D654D  <String: "MemM">
+.    92  010001C7C  067616E61  <String: "anag">
+.    96  010001C80  075614665  <String: "eFau">
+.   100  010001C84  00000746C  <String: "lt..">
+.   104  010001C88  0F8534B04  ldr.w     r4,[r3],#4
+.   108  010001C8C  0F8424B04  str.w     r4,[r2],#4
+.   112  010001C90  0F014447F  ands.w    r4,r4,#0FF000000H
+.   116  010001C94      0D1F8  bne.n     -16 -> 104
+.   118  010001C96  0F000B870  b.w       224 -> 346
+.   122  010001C9A      02805  cmp       r0,#5
+.   124  010001C9C  0F0408013  bne.w     38 -> 166
+      msg := "BusFault"
+    ELSIF code = UsageFault THEN
+.   128  010001CA0      0460A  mov       r2,r1
+.   130  010001CA2      0BF00  nop       
+.   132  010001CA4      0A300  adr       r3,pc,#0 -> 136
+.   134  010001CA6      0E005  b         10 -> 148
+.   136  010001CA8  046737542  <String: "BusF">
+.   140  010001CAC  0746C7561  <String: "ault">
+.   144  010001CB0  000000000  <String: "....">
+.   148  010001CB4  0F8534B04  ldr.w     r4,[r3],#4
+.   152  010001CB8  0F8424B04  str.w     r4,[r2],#4
+.   156  010001CBC  0F014447F  ands.w    r4,r4,#0FF000000H
+.   160  010001CC0      0D1F8  bne.n     -16 -> 148
+.   162  010001CC2  0F000B85A  b.w       180 -> 346
+.   166  010001CC6      02806  cmp       r0,#6
+.   168  010001CC8  0F0408013  bne.w     38 -> 210
+      msg := "UsageFault"
+    ELSIF code = SecureFault THEN
+.   172  010001CCC      0460A  mov       r2,r1
+.   174  010001CCE      0BF00  nop       
+.   176  010001CD0      0A300  adr       r3,pc,#0 -> 180
+.   178  010001CD2      0E005  b         10 -> 192
+.   180  010001CD4  067617355  <String: "Usag">
+.   184  010001CD8  075614665  <String: "eFau">
+.   188  010001CDC  00000746C  <String: "lt..">
+.   192  010001CE0  0F8534B04  ldr.w     r4,[r3],#4
+.   196  010001CE4  0F8424B04  str.w     r4,[r2],#4
+.   200  010001CE8  0F014447F  ands.w    r4,r4,#0FF000000H
+.   204  010001CEC      0D1F8  bne.n     -16 -> 192
+.   206  010001CEE  0F000B844  b.w       136 -> 346
+.   210  010001CF2      02807  cmp       r0,#7
+.   212  010001CF4  0F0408013  bne.w     38 -> 254
+      msg := "SecureFault"
+    ELSIF code = DebugMon THEN
+.   216  010001CF8      0460A  mov       r2,r1
+.   218  010001CFA      0BF00  nop       
+.   220  010001CFC      0A300  adr       r3,pc,#0 -> 224
+.   222  010001CFE      0E005  b         10 -> 236
+.   224  010001D00  075636553  <String: "Secu">
+.   228  010001D04  061466572  <String: "reFa">
+.   232  010001D08  000746C75  <String: "ult.">
+.   236  010001D0C  0F8534B04  ldr.w     r4,[r3],#4
+.   240  010001D10  0F8424B04  str.w     r4,[r2],#4
+.   244  010001D14  0F014447F  ands.w    r4,r4,#0FF000000H
+.   248  010001D18      0D1F8  bne.n     -16 -> 236
+.   250  010001D1A  0F000B82E  b.w       92 -> 346
+.   254  010001D1E      0280C  cmp       r0,#12
+.   256  010001D20  0F0408013  bne.w     38 -> 298
+      msg := "DebugFault"
+    ELSE
+.   260  010001D24      0460A  mov       r2,r1
+.   262  010001D26      0BF00  nop       
+.   264  010001D28      0A300  adr       r3,pc,#0 -> 268
+.   266  010001D2A      0E005  b         10 -> 280
+.   268  010001D2C  075626544  <String: "Debu">
+.   272  010001D30  075614667  <String: "gFau">
+.   276  010001D34  00000746C  <String: "lt..">
+.   280  010001D38  0F8534B04  ldr.w     r4,[r3],#4
+.   284  010001D3C  0F8424B04  str.w     r4,[r2],#4
+.   288  010001D40  0F014447F  ands.w    r4,r4,#0FF000000H
+.   292  010001D44      0D1F8  bne.n     -16 -> 280
+      msg := "missing exception handler"
+.   294  010001D46  0F000B818  b.w       48 -> 346
+    END
+.   298  010001D4A      0460A  mov       r2,r1
+.   300  010001D4C      0A300  adr       r3,pc,#0 -> 304
+.   302  010001D4E      0E00D  b         26 -> 332
+.   304  010001D50  07373696D  <String: "miss">
+.   308  010001D54  020676E69  <String: "ing ">
+.   312  010001D58  065637865  <String: "exce">
+.   316  010001D5C  06F697470  <String: "ptio">
+.   320  010001D60  06168206E  <String: "n ha">
+.   324  010001D64  0656C646E  <String: "ndle">
+.   328  010001D68  000000072  <String: "r...">
+.   332  010001D6C  0F8534B04  ldr.w     r4,[r3],#4
+.   336  010001D70  0F8424B04  str.w     r4,[r2],#4
+.   340  010001D74  0F014447F  ands.w    r4,r4,#0FF000000H
+.   344  010001D78      0D1F8  bne.n     -16 -> 332
+  END faultMessage;
+.   346  010001D7A      0BD00  pop       { pc }
+
+
+  PROCEDURE errorMessage(code: INTEGER; VAR msg: String);
+  BEGIN
+.   348  010001D7C      0B503  push      { r0, r1, lr }
+    IF (code >= FirstRTKcode) & (code <= LastRTKcode) THEN
+.   350  010001D7E      09800  ldr       r0,[sp]
+.   352  010001D80      02820  cmp       r0,#32
+.   354  010001D82  0F2C081A9  blt.w     850 -> 1208
+.   358  010001D86      09800  ldr       r0,[sp]
+.   360  010001D88      02832  cmp       r0,#50
+.   362  010001D8A  0F30081A5  bgt.w     842 -> 1208
+      CASE code OF
+        Trace:
+.   366  010001D8E      0BF00  nop       
+.   368  010001D90      09800  ldr       r0,[sp]
+.   370  010001D92  0F1B00121  subs.w    r1,r0,#33
+.   374  010001D96  0F1B10F11  cmp.w     r1,#17
+.   378  010001D9A      0DD01  ble.n     2 -> 384
+.   380  010001D9C      0DF04  svc       4
+.   382  010001D9E      0005F  <LineNo: 95>
+.   384  010001DA0  0F2403204  movw      r2,#772
+.   388  010001DA4      0447A  add       r2,pc
+.   390  010001DA6  0E8D2F011  tbh       [r2,r1,lsl 1]
+          msg := "stack trace"
+      | PreCond:
+.   394  010001DAA      09801  ldr       r0,[sp,#4]
+.   396  010001DAC      0A100  adr       r1,pc,#0 -> 400
+.   398  010001DAE      0E005  b         10 -> 412
+.   400  010001DB0  063617473  <String: "stac">
+.   404  010001DB4  07274206B  <String: "k tr">
+.   408  010001DB8  000656361  <String: "ace.">
+.   412  010001DBC  0F8512B04  ldr.w     r2,[r1],#4
+.   416  010001DC0  0F8402B04  str.w     r2,[r0],#4
+.   420  010001DC4  0F012427F  ands.w    r2,r2,#0FF000000H
+.   424  010001DC8      0D1F8  bne.n     -16 -> 412
+.   426  010001DCA  0F000B983  b.w       774 -> 1204
+          msg := "precondition violation"
+      | PostCond:
+.   430  010001DCE      09801  ldr       r0,[sp,#4]
+.   432  010001DD0      0A100  adr       r1,pc,#0 -> 436
+.   434  010001DD2      0E00B  b         22 -> 460
+.   436  010001DD4  063657270  <String: "prec">
+.   440  010001DD8  069646E6F  <String: "ondi">
+.   444  010001DDC  06E6F6974  <String: "tion">
+.   448  010001DE0  06F697620  <String: " vio">
+.   452  010001DE4  06974616C  <String: "lati">
+.   456  010001DE8  000006E6F  <String: "on..">
+.   460  010001DEC  0F8512B04  ldr.w     r2,[r1],#4
+.   464  010001DF0  0F8402B04  str.w     r2,[r0],#4
+.   468  010001DF4  0F012427F  ands.w    r2,r2,#0FF000000H
+.   472  010001DF8      0D1F8  bne.n     -16 -> 460
+.   474  010001DFA  0F000B96B  b.w       726 -> 1204
+          msg := "postcondition violation"
+      | ConsCheck:
+.   478  010001DFE      09801  ldr       r0,[sp,#4]
+.   480  010001E00      0A100  adr       r1,pc,#0 -> 484
+.   482  010001E02      0E00B  b         22 -> 508
+.   484  010001E04  074736F70  <String: "post">
+.   488  010001E08  0646E6F63  <String: "cond">
+.   492  010001E0C  06F697469  <String: "itio">
+.   496  010001E10  06976206E  <String: "n vi">
+.   500  010001E14  074616C6F  <String: "olat">
+.   504  010001E18  0006E6F69  <String: "ion.">
+.   508  010001E1C  0F8512B04  ldr.w     r2,[r1],#4
+.   512  010001E20  0F8402B04  str.w     r2,[r0],#4
+.   516  010001E24  0F012427F  ands.w    r2,r2,#0FF000000H
+.   520  010001E28      0D1F8  bne.n     -16 -> 508
+.   522  010001E2A  0F000B953  b.w       678 -> 1204
+          msg := "consistency check violation"
+      | ProgError:
+.   526  010001E2E      09801  ldr       r0,[sp,#4]
+.   528  010001E30      0A100  adr       r1,pc,#0 -> 532
+.   530  010001E32      0E00D  b         26 -> 560
+.   532  010001E34  0736E6F63  <String: "cons">
+.   536  010001E38  065747369  <String: "iste">
+.   540  010001E3C  02079636E  <String: "ncy ">
+.   544  010001E40  063656863  <String: "chec">
+.   548  010001E44  06976206B  <String: "k vi">
+.   552  010001E48  074616C6F  <String: "olat">
+.   556  010001E4C  0006E6F69  <String: "ion.">
+.   560  010001E50  0F8512B04  ldr.w     r2,[r1],#4
+.   564  010001E54  0F8402B04  str.w     r2,[r0],#4
+.   568  010001E58  0F012427F  ands.w    r2,r2,#0FF000000H
+.   572  010001E5C      0D1F8  bne.n     -16 -> 560
+.   574  010001E5E  0F000B939  b.w       626 -> 1204
+          msg := "program design error"
+      | BufferOverflow:
+.   578  010001E62      09801  ldr       r0,[sp,#4]
+.   580  010001E64      0A100  adr       r1,pc,#0 -> 584
+.   582  010001E66      0E00B  b         22 -> 608
+.   584  010001E68  0676F7270  <String: "prog">
+.   588  010001E6C  0206D6172  <String: "ram ">
+.   592  010001E70  069736564  <String: "desi">
+.   596  010001E74  065206E67  <String: "gn e">
+.   600  010001E78  0726F7272  <String: "rror">
+.   604  010001E7C  000000000  <String: "....">
+.   608  010001E80  0F8512B04  ldr.w     r2,[r1],#4
+.   612  010001E84  0F8402B04  str.w     r2,[r0],#4
+.   616  010001E88  0F012427F  ands.w    r2,r2,#0FF000000H
+.   620  010001E8C      0D1F8  bne.n     -16 -> 608
+.   622  010001E8E  0F000B921  b.w       578 -> 1204
+          msg := "buffer overflow"
+      | BufferEmpty:
+.   626  010001E92      09801  ldr       r0,[sp,#4]
+.   628  010001E94      0A100  adr       r1,pc,#0 -> 632
+.   630  010001E96      0E007  b         14 -> 648
+.   632  010001E98  066667562  <String: "buff">
+.   636  010001E9C  06F207265  <String: "er o">
+.   640  010001EA0  066726576  <String: "verf">
+.   644  010001EA4  000776F6C  <String: "low.">
+.   648  010001EA8  0F8512B04  ldr.w     r2,[r1],#4
+.   652  010001EAC  0F8402B04  str.w     r2,[r0],#4
+.   656  010001EB0  0F012427F  ands.w    r2,r2,#0FF000000H
+.   660  010001EB4      0D1F8  bne.n     -16 -> 648
+.   662  010001EB6  0F000B90D  b.w       538 -> 1204
+          msg := "buffer empty"
+      | Timing:
+.   666  010001EBA      09801  ldr       r0,[sp,#4]
+.   668  010001EBC      0A100  adr       r1,pc,#0 -> 672
+.   670  010001EBE      0E007  b         14 -> 688
+.   672  010001EC0  066667562  <String: "buff">
+.   676  010001EC4  065207265  <String: "er e">
+.   680  010001EC8  07974706D  <String: "mpty">
+.   684  010001ECC  000000000  <String: "....">
+.   688  010001ED0  0F8512B04  ldr.w     r2,[r1],#4
+.   692  010001ED4  0F8402B04  str.w     r2,[r0],#4
+.   696  010001ED8  0F012427F  ands.w    r2,r2,#0FF000000H
+.   700  010001EDC      0D1F8  bne.n     -16 -> 688
+.   702  010001EDE  0F000B8F9  b.w       498 -> 1204
+          msg := "timing error"
+      | HeapOverflow:
+.   706  010001EE2      09801  ldr       r0,[sp,#4]
+.   708  010001EE4      0A100  adr       r1,pc,#0 -> 712
+.   710  010001EE6      0E007  b         14 -> 728
+.   712  010001EE8  0696D6974  <String: "timi">
+.   716  010001EEC  06520676E  <String: "ng e">
+.   720  010001EF0  0726F7272  <String: "rror">
+.   724  010001EF4  000000000  <String: "....">
+.   728  010001EF8  0F8512B04  ldr.w     r2,[r1],#4
+.   732  010001EFC  0F8402B04  str.w     r2,[r0],#4
+.   736  010001F00  0F012427F  ands.w    r2,r2,#0FF000000H
+.   740  010001F04      0D1F8  bne.n     -16 -> 728
+.   742  010001F06  0F000B8E5  b.w       458 -> 1204
+          msg := "heap overflow"
+      | StackOverflow:
+.   746  010001F0A      09801  ldr       r0,[sp,#4]
+.   748  010001F0C      0A100  adr       r1,pc,#0 -> 752
+.   750  010001F0E      0E007  b         14 -> 768
+.   752  010001F10  070616568  <String: "heap">
+.   756  010001F14  065766F20  <String: " ove">
+.   760  010001F18  06F6C6672  <String: "rflo">
+.   764  010001F1C  000000077  <String: "w...">
+.   768  010001F20  0F8512B04  ldr.w     r2,[r1],#4
+.   772  010001F24  0F8402B04  str.w     r2,[r0],#4
+.   776  010001F28  0F012427F  ands.w    r2,r2,#0FF000000H
+.   780  010001F2C      0D1F8  bne.n     -16 -> 768
+.   782  010001F2E  0F000B8D1  b.w       418 -> 1204
+          msg := "stack overflow"
+      | StorageOverflow:
+.   786  010001F32      09801  ldr       r0,[sp,#4]
+.   788  010001F34      0A100  adr       r1,pc,#0 -> 792
+.   790  010001F36      0E007  b         14 -> 808
+.   792  010001F38  063617473  <String: "stac">
+.   796  010001F3C  0766F206B  <String: "k ov">
+.   800  010001F40  06C667265  <String: "erfl">
+.   804  010001F44  00000776F  <String: "ow..">
+.   808  010001F48  0F8512B04  ldr.w     r2,[r1],#4
+.   812  010001F4C  0F8402B04  str.w     r2,[r0],#4
+.   816  010001F50  0F012427F  ands.w    r2,r2,#0FF000000H
+.   820  010001F54      0D1F8  bne.n     -16 -> 808
+.   822  010001F56  0F000B8BD  b.w       378 -> 1204
+          msg := "storage overflow"
+      | StorageError:
+.   826  010001F5A      09801  ldr       r0,[sp,#4]
+.   828  010001F5C      0A100  adr       r1,pc,#0 -> 832
+.   830  010001F5E      0E009  b         18 -> 852
+.   832  010001F60  0726F7473  <String: "stor">
+.   836  010001F64  020656761  <String: "age ">
+.   840  010001F68  07265766F  <String: "over">
+.   844  010001F6C  0776F6C66  <String: "flow">
+.   848  010001F70  000000000  <String: "....">
+.   852  010001F74  0F8512B04  ldr.w     r2,[r1],#4
+.   856  010001F78  0F8402B04  str.w     r2,[r0],#4
+.   860  010001F7C  0F012427F  ands.w    r2,r2,#0FF000000H
+.   864  010001F80      0D1F8  bne.n     -16 -> 852
+.   866  010001F82  0F000B8A7  b.w       334 -> 1204
+          msg := "storage error"
+      | UsageError:
+.   870  010001F86      09801  ldr       r0,[sp,#4]
+.   872  010001F88      0A100  adr       r1,pc,#0 -> 876
+.   874  010001F8A      0E007  b         14 -> 892
+.   876  010001F8C  0726F7473  <String: "stor">
+.   880  010001F90  020656761  <String: "age ">
+.   884  010001F94  06F727265  <String: "erro">
+.   888  010001F98  000000072  <String: "r...">
+.   892  010001F9C  0F8512B04  ldr.w     r2,[r1],#4
+.   896  010001FA0  0F8402B04  str.w     r2,[r0],#4
+.   900  010001FA4  0F012427F  ands.w    r2,r2,#0FF000000H
+.   904  010001FA8      0D1F8  bne.n     -16 -> 892
+.   906  010001FAA  0F000B893  b.w       294 -> 1204
+          msg := "usage error"
+      | BadResourceData:
+.   910  010001FAE      09801  ldr       r0,[sp,#4]
+.   912  010001FB0      0A100  adr       r1,pc,#0 -> 916
+.   914  010001FB2      0E005  b         10 -> 928
+.   916  010001FB4  067617375  <String: "usag">
+.   920  010001FB8  072652065  <String: "e er">
+.   924  010001FBC  000726F72  <String: "ror.">
+.   928  010001FC0  0F8512B04  ldr.w     r2,[r1],#4
+.   932  010001FC4  0F8402B04  str.w     r2,[r0],#4
+.   936  010001FC8  0F012427F  ands.w    r2,r2,#0FF000000H
+.   940  010001FCC      0D1F8  bne.n     -16 -> 928
+.   942  010001FCE  0F000B881  b.w       258 -> 1204
+          msg := "program resource data inconsistent"
+      | NotSupported:
+.   946  010001FD2      09801  ldr       r0,[sp,#4]
+.   948  010001FD4      0A100  adr       r1,pc,#0 -> 952
+.   950  010001FD6      0E011  b         34 -> 988
+.   952  010001FD8  0676F7270  <String: "prog">
+.   956  010001FDC  0206D6172  <String: "ram ">
+.   960  010001FE0  06F736572  <String: "reso">
+.   964  010001FE4  065637275  <String: "urce">
+.   968  010001FE8  074616420  <String: " dat">
+.   972  010001FEC  06E692061  <String: "a in">
+.   976  010001FF0  0736E6F63  <String: "cons">
+.   980  010001FF4  065747369  <String: "iste">
+.   984  010001FF8  00000746E  <String: "nt..">
+.   988  010001FFC  0F8512B04  ldr.w     r2,[r1],#4
+.   992  010002000  0F8402B04  str.w     r2,[r0],#4
+.   996  010002004  0F012427F  ands.w    r2,r2,#0FF000000H
+.  1000  010002008      0D1F8  bne.n     -16 -> 988
+.  1002  01000200A  0F000B863  b.w       198 -> 1204
+          msg := "functionality not supported"
+      | NotImplemented:
+.  1006  01000200E      09801  ldr       r0,[sp,#4]
+.  1008  010002010      0A100  adr       r1,pc,#0 -> 1012
+.  1010  010002012      0E00D  b         26 -> 1040
+.  1012  010002014  0636E7566  <String: "func">
+.  1016  010002018  06E6F6974  <String: "tion">
+.  1020  01000201C  074696C61  <String: "alit">
+.  1024  010002020  06F6E2079  <String: "y no">
+.  1028  010002024  075732074  <String: "t su">
+.  1032  010002028  0726F7070  <String: "ppor">
+.  1036  01000202C  000646574  <String: "ted.">
+.  1040  010002030  0F8512B04  ldr.w     r2,[r1],#4
+.  1044  010002034  0F8402B04  str.w     r2,[r0],#4
+.  1048  010002038  0F012427F  ands.w    r2,r2,#0FF000000H
+.  1052  01000203C      0D1F8  bne.n     -16 -> 1040
+.  1054  01000203E  0F000B849  b.w       146 -> 1204
+          msg := "functionality not (yet) implemented"
+      | NumThreads:
+.  1058  010002042      09801  ldr       r0,[sp,#4]
+.  1060  010002044      0A100  adr       r1,pc,#0 -> 1064
+.  1062  010002046      0E011  b         34 -> 1100
+.  1064  010002048  0636E7566  <String: "func">
+.  1068  01000204C  06E6F6974  <String: "tion">
+.  1072  010002050  074696C61  <String: "alit">
+.  1076  010002054  06F6E2079  <String: "y no">
+.  1080  010002058  079282074  <String: "t (y">
+.  1084  01000205C  020297465  <String: "et) ">
+.  1088  010002060  06C706D69  <String: "impl">
+.  1092  010002064  06E656D65  <String: "emen">
+.  1096  010002068  000646574  <String: "ted.">
+.  1100  01000206C  0F8512B04  ldr.w     r2,[r1],#4
+.  1104  010002070  0F8402B04  str.w     r2,[r0],#4
+.  1108  010002074  0F012427F  ands.w    r2,r2,#0FF000000H
+.  1112  010002078      0D1F8  bne.n     -16 -> 1100
+.  1114  01000207A  0F000B82B  b.w       86 -> 1204
+          msg := "too many threads"
+      END
+.  1118  01000207E      09801  ldr       r0,[sp,#4]
+.  1120  010002080      0A100  adr       r1,pc,#0 -> 1124
+.  1122  010002082      0E009  b         18 -> 1144
+.  1124  010002084  0206F6F74  <String: "too ">
+.  1128  010002088  0796E616D  <String: "many">
+.  1132  01000208C  072687420  <String: " thr">
+.  1136  010002090  073646165  <String: "eads">
+.  1140  010002094  000000000  <String: "....">
+.  1144  010002098  0F8512B04  ldr.w     r2,[r1],#4
+.  1148  01000209C  0F8402B04  str.w     r2,[r0],#4
+.  1152  0100020A0  0F012427F  ands.w    r2,r2,#0FF000000H
+.  1156  0100020A4      0D1F8  bne.n     -16 -> 1144
+.  1158  0100020A6  0F000B815  b.w       42 -> 1204
+    ELSIF (code >= FirstAstrobeCode) & (code <= LastAstrobeCode) & ~(code IN AstrobeUnused) THEN
+.  1162  0100020AA      0BF00  nop       
+.  1164  0100020AC      00000  <Case:   0>
+.  1166  0100020AE      00012  <Case:   18>
+.  1168  0100020B0      0002A  <Case:   42>
+.  1170  0100020B2      00042  <Case:   66>
+.  1172  0100020B4      0005C  <Case:   92>
+.  1174  0100020B6      00074  <Case:   116>
+.  1176  0100020B8      00088  <Case:   136>
+.  1178  0100020BA      0009C  <Case:   156>
+.  1180  0100020BC      000B0  <Case:   176>
+.  1182  0100020BE      000C4  <Case:   196>
+.  1184  0100020C0      000D8  <Case:   216>
+.  1186  0100020C2      000EE  <Case:   238>
+.  1188  0100020C4      00102  <Case:   258>
+.  1190  0100020C6      00193  <Case:   403>
+.  1192  0100020C8      00114  <Case:   276>
+.  1194  0100020CA      00132  <Case:   306>
+.  1196  0100020CC      0014C  <Case:   332>
+.  1198  0100020CE      0016A  <Case:   362>
+.  1200  0100020D0      0DF04  svc       4
+.  1202  0100020D2      00081  <LineNo: 129>
+.  1204  0100020D4  0F000B833  b.w       102 -> 1310
+.  1208  0100020D8      09800  ldr       r0,[sp]
+.  1210  0100020DA      02801  cmp       r0,#1
+.  1212  0100020DC  0F2C0801D  blt.w     58 -> 1274
+.  1216  0100020E0      09800  ldr       r0,[sp]
+.  1218  0100020E2      02819  cmp       r0,#25
+.  1220  0100020E4  0F3008019  bgt.w     50 -> 1274
+.  1224  0100020E8  0F44F207E  mov.w     r0,#00FE000H
+.  1228  0100020EC      09900  ldr       r1,[sp]
+.  1230  0100020EE      02201  movs      r2,#1
+.  1232  0100020F0      0408A  lsls      r2,r1
+.  1234  0100020F2  0EA100F02  tst.w     r0,r2
+.  1238  0100020F6  0F0408010  bne.w     32 -> 1274
+      Error.Msg(code, msg)
+.  1242  0100020FA      09800  ldr       r0,[sp]
+.  1244  0100020FC      09901  ldr       r1,[sp,#4]
+    ELSE
+.  1246  0100020FE  0F8DF2044  ldr.w     r2,[pc,#68] -> 1316
+.  1250  010002102      06812  ldr       r2,[r2]
+.  1252  010002104  0F1B20F00  cmp.w     r2,#0
+.  1256  010002108      0D101  bne.n     2 -> 1262
+.  1258  01000210A      0DF05  svc       5
+.  1260  01000210C      00084  <LineNo: 132>
+.  1262  01000210E      03201  adds      r2,#1
+.  1264  010002110      04790  blx       r2
+.  1266  010002112      0E000  b         0 -> 1270
+.  1268  010002114      00084  <LineNo: 132>
+      msg := "unknown error"
+.  1270  010002116  0F000B812  b.w       36 -> 1310
+    END
+.  1274  01000211A      09801  ldr       r0,[sp,#4]
+.  1276  01000211C      0A100  adr       r1,pc,#0 -> 1280
+.  1278  01000211E      0E007  b         14 -> 1296
+.  1280  010002120  06E6B6E75  <String: "unkn">
+.  1284  010002124  0206E776F  <String: "own ">
+.  1288  010002128  06F727265  <String: "erro">
+.  1292  01000212C  000000072  <String: "r...">
+.  1296  010002130  0F8512B04  ldr.w     r2,[r1],#4
+.  1300  010002134  0F8402B04  str.w     r2,[r0],#4
+.  1304  010002138  0F012427F  ands.w    r2,r2,#0FF000000H
+.  1308  01000213C      0D1F8  bne.n     -16 -> 1296
+  END errorMessage;
+.  1310  01000213E      0B002  add       sp,#8
+.  1312  010002140      0BD00  pop       { pc }
+.  1314  010002142      0BF00  nop       
+.  1316  010002144  02001FEDC  <Global: Error data>
+
+
+  PROCEDURE GetErrorMsg*(errType, errCode: INTEGER; VAR msg: String);
+  BEGIN
+.  1320  010002148      0B507  push      { r0, r1, r2, lr }
+    IF errType >= 2 THEN
+.  1322  01000214A      09800  ldr       r0,[sp]
+.  1324  01000214C      02802  cmp       r0,#2
+.  1326  01000214E  0F2C08008  blt.w     16 -> 1346
+      faultMessage(errCode, msg)
+.  1330  010002152      09801  ldr       r0,[sp,#4]
+.  1332  010002154      09902  ldr       r1,[sp,#8]
+    ELSE
+.  1334  010002156  0F7FFFD65  bl.w      -1334 -> 4
+.  1338  01000215A      0E000  b         0 -> 1342
+.  1340  01000215C      0008E  <LineNo: 142>
+      errorMessage(errCode, msg)
+.  1342  01000215E  0F000B806  b.w       12 -> 1358
+.  1346  010002162      09801  ldr       r0,[sp,#4]
+.  1348  010002164      09902  ldr       r1,[sp,#8]
+    END
+.  1350  010002166  0F7FFFE09  bl.w      -1006 -> 348
+.  1354  01000216A      0E000  b         0 -> 1358
+.  1356  01000216C      00090  <LineNo: 144>
+  END GetErrorMsg;
+.  1358  01000216E      0B003  add       sp,#12
+.  1360  010002170      0BD00  pop       { pc }
+.  1362  010002172      0BF00  nop       
+
+
+  PROCEDURE GetErrorType*(excType: INTEGER; VAR msg: String);
+  BEGIN
+.  1364  010002174      0B503  push      { r0, r1, lr }
+    IF excType = ErrTypeErrorHandler THEN
+.  1366  010002176      09800  ldr       r0,[sp]
+.  1368  010002178      02800  cmp       r0,#0
+.  1370  01000217A  0F040801C  bne.w     56 -> 1430
+      msg := "run-time error in handler mode"
+    ELSIF excType = ErrTypeErrorThread THEN
+.  1374  01000217E      09801  ldr       r0,[sp,#4]
+.  1376  010002180      0A100  adr       r1,pc,#0 -> 1380
+.  1378  010002182      0E00F  b         30 -> 1412
+.  1380  010002184  02D6E7572  <String: "run-">
+.  1384  010002188  0656D6974  <String: "time">
+.  1388  01000218C  072726520  <String: " err">
+.  1392  010002190  06920726F  <String: "or i">
+.  1396  010002194  06168206E  <String: "n ha">
+.  1400  010002198  0656C646E  <String: "ndle">
+.  1404  01000219C  06F6D2072  <String: "r mo">
+.  1408  0100021A0  000006564  <String: "de..">
+.  1412  0100021A4  0F8512B04  ldr.w     r2,[r1],#4
+.  1416  0100021A8  0F8402B04  str.w     r2,[r0],#4
+.  1420  0100021AC  0F012427F  ands.w    r2,r2,#0FF000000H
+.  1424  0100021B0      0D1F8  bne.n     -16 -> 1412
+.  1426  0100021B2  0F000B870  b.w       224 -> 1654
+.  1430  0100021B6      09800  ldr       r0,[sp]
+.  1432  0100021B8      02801  cmp       r0,#1
+.  1434  0100021BA  0F040801C  bne.w     56 -> 1494
+      msg := "run-time error in thread mode"
+    ELSIF excType = ErrTypeFaultHandler THEN
+.  1438  0100021BE      09801  ldr       r0,[sp,#4]
+.  1440  0100021C0      0A100  adr       r1,pc,#0 -> 1444
+.  1442  0100021C2      0E00F  b         30 -> 1476
+.  1444  0100021C4  02D6E7572  <String: "run-">
+.  1448  0100021C8  0656D6974  <String: "time">
+.  1452  0100021CC  072726520  <String: " err">
+.  1456  0100021D0  06920726F  <String: "or i">
+.  1460  0100021D4  06874206E  <String: "n th">
+.  1464  0100021D8  064616572  <String: "read">
+.  1468  0100021DC  0646F6D20  <String: " mod">
+.  1472  0100021E0  000000065  <String: "e...">
+.  1476  0100021E4  0F8512B04  ldr.w     r2,[r1],#4
+.  1480  0100021E8  0F8402B04  str.w     r2,[r0],#4
+.  1484  0100021EC  0F012427F  ands.w    r2,r2,#0FF000000H
+.  1488  0100021F0      0D1F8  bne.n     -16 -> 1476
+.  1490  0100021F2  0F000B850  b.w       160 -> 1654
+.  1494  0100021F6      09800  ldr       r0,[sp]
+.  1496  0100021F8      02802  cmp       r0,#2
+.  1498  0100021FA  0F040801A  bne.w     52 -> 1554
+      msg := "MCU fault in handler mode"
+    ELSIF excType = ErrTypeFaultThread THEN
+.  1502  0100021FE      09801  ldr       r0,[sp,#4]
+.  1504  010002200      0A100  adr       r1,pc,#0 -> 1508
+.  1506  010002202      0E00D  b         26 -> 1536
+.  1508  010002204  02055434D  <String: "MCU ">
+.  1512  010002208  06C756166  <String: "faul">
+.  1516  01000220C  06E692074  <String: "t in">
+.  1520  010002210  06E616820  <String: " han">
+.  1524  010002214  072656C64  <String: "dler">
+.  1528  010002218  0646F6D20  <String: " mod">
+.  1532  01000221C  000000065  <String: "e...">
+.  1536  010002220  0F8512B04  ldr.w     r2,[r1],#4
+.  1540  010002224  0F8402B04  str.w     r2,[r0],#4
+.  1544  010002228  0F012427F  ands.w    r2,r2,#0FF000000H
+.  1548  01000222C      0D1F8  bne.n     -16 -> 1536
+.  1550  01000222E  0F000B832  b.w       100 -> 1654
+.  1554  010002232      09800  ldr       r0,[sp]
+.  1556  010002234      02803  cmp       r0,#3
+.  1558  010002236  0F040801A  bne.w     52 -> 1614
+      msg := "MCU fault in thread mode"
+    ELSE
+.  1562  01000223A      09801  ldr       r0,[sp,#4]
+.  1564  01000223C      0A100  adr       r1,pc,#0 -> 1568
+.  1566  01000223E      0E00D  b         26 -> 1596
+.  1568  010002240  02055434D  <String: "MCU ">
+.  1572  010002244  06C756166  <String: "faul">
+.  1576  010002248  06E692074  <String: "t in">
+.  1580  01000224C  072687420  <String: " thr">
+.  1584  010002250  020646165  <String: "ead ">
+.  1588  010002254  065646F6D  <String: "mode">
+.  1592  010002258  000000000  <String: "....">
+.  1596  01000225C  0F8512B04  ldr.w     r2,[r1],#4
+.  1600  010002260  0F8402B04  str.w     r2,[r0],#4
+.  1604  010002264  0F012427F  ands.w    r2,r2,#0FF000000H
+.  1608  010002268      0D1F8  bne.n     -16 -> 1596
+      msg := "unknown exception"
+.  1610  01000226A  0F000B814  b.w       40 -> 1654
+    END
+.  1614  01000226E      09801  ldr       r0,[sp,#4]
+.  1616  010002270      0A100  adr       r1,pc,#0 -> 1620
+.  1618  010002272      0E009  b         18 -> 1640
+.  1620  010002274  06E6B6E75  <String: "unkn">
+.  1624  010002278  0206E776F  <String: "own ">
+.  1628  01000227C  065637865  <String: "exce">
+.  1632  010002280  06F697470  <String: "ptio">
+.  1636  010002284  00000006E  <String: "n...">
+.  1640  010002288  0F8512B04  ldr.w     r2,[r1],#4
+.  1644  01000228C  0F8402B04  str.w     r2,[r0],#4
+.  1648  010002290  0F012427F  ands.w    r2,r2,#0FF000000H
+.  1652  010002294      0D1F8  bne.n     -16 -> 1640
+  END GetErrorType;
+.  1654  010002296      0B002  add       sp,#8
+.  1656  010002298      0BD00  pop       { pc }
+.  1658  01000229A      0BF00  nop       
+
+END Errors.
+.  1660  01000229C      0B500  push      { lr }
+.  1662  01000229E      0BD00  pop       { pc }
+ 

@@ -1,0 +1,1086 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
+
+.     0  010000334              <Pad: 0>
+MODULE MCU2;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  MCU register and memory addresses, bits, values, assembly instructions
+  --
+  MCU: MCX-N947
+  --
+  Copyright (c) 2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  CONST
+    NumCores*         = 2;
+    NumUART*          = 9; (* flexcom: UART or SPI or I2C *)
+    NumSPI*           = 9;
+    NumI2C*           = 9;
+    NumCounterTimers* = 5;
+    NumPorts*         = 6;
+    NumGPIO*          = NumPorts * 32; (* not all functional/connected *)
+    NumInterrupts*    = 156; (* not all used/connected *)
+
+
+(* === base addresses === *)
+    (* -- AHB -- *)
+    (* non-secure *)
+    FLASH_PROG_NS_BASE*     = 000000000H; (* port P0 *)
+    FLASH_B0_IFR0_NS_BASE*  = 001000000H;
+    FLASH_B1_IFR0_NS_BASE*  = 001008000H;
+    FLASH_B0_IFR1_NS_BASE*  = 001100000H;
+    FLASH_B1_IFR1_NS_BASE*  = 001102000H;
+
+    ROM_NS_BASE*            = 003000000H; (* port P1 *)
+
+    SRAM_X_NS_BASE*         = 004000000H; (* port P2 *)
+
+    SRAM_A_NS_BASE*         = 020000000H; (* port p3 *)
+    SRAM_B_NS_BASE*         = 020008000H; (* port p4 *)
+    SRAM_C_NS_BASE*         = 020010000H; (* port p5 *)
+    SRAM_D_NS_BASE*         = 020020000H; (* port p6 *)
+    SRAM_E_NS_BASE*         = 020030000H; (* port p7 *)
+    SRAM_F_NS_BASE*         = 020040000H; (* port p8 *)
+    SRAM_G_NS_BASE*         = 020050000H; (* port p9 *)
+    SRAM_H_NS_BASE*         = 020060000H; (* port p10 *)
+
+
+    (* secure *)
+    SEC_Offset* = 010000000H;
+    FLASH_PROG_S_BASE*      = FLASH_PROG_NS_BASE + SEC_Offset;
+    FLASH_B0_IFR0_S_BASE*   = FLASH_B0_IFR0_NS_BASE + SEC_Offset;
+    FLASH_B1_IFR0_S_BASE*   = FLASH_B1_IFR0_NS_BASE + SEC_Offset;
+    FLASH_B0_IFR1_S_BASE*   = FLASH_B0_IFR1_NS_BASE + SEC_Offset;
+    FLASH_B1_IFR1_S_BASE*   = FLASH_B1_IFR1_NS_BASE + SEC_Offset;
+
+    ROM_S_BASE*             = ROM_NS_BASE + SEC_Offset;
+
+    SRAM_X_S_BASE*          = SRAM_X_NS_BASE + SEC_Offset;
+
+    SRAM_A_S_BASE*         = SRAM_A_NS_BASE + SEC_Offset;
+    SRAM_B_S_BASE*         = SRAM_B_NS_BASE + SEC_Offset;
+    SRAM_C_S_BASE*         = SRAM_C_NS_BASE + SEC_Offset;
+    SRAM_D_S_BASE*         = SRAM_D_NS_BASE + SEC_Offset;
+    SRAM_E_S_BASE*         = SRAM_E_NS_BASE + SEC_Offset;
+    SRAM_F_S_BASE*         = SRAM_F_NS_BASE + SEC_Offset;
+    SRAM_G_S_BASE*         = SRAM_G_NS_BASE + SEC_Offset;
+    SRAM_H_S_BASE*         = SRAM_H_NS_BASE + SEC_Offset;
+
+
+    (* sizes *)
+    FLASH_PROG_Size*    = 0200000H;   (* 2x 1M *)
+    FLASH_B0_IFR0_Size* = 08000H;     (* 32k *)
+    FLASH_B1_IFR0_Size* = 08000H;     (* 32k *)
+    FLASH_B0_IFR1_Size* = 02000H;     (* 8k *)
+    FLASH_B1_IFR1_Size* = 02000H;     (* 8k *)
+    ROM_Size*           = 040000H;    (* 256k *)
+    SRAM_X_Size*        = 018000H;    (* 96k *)
+    SRAM_A_Size*        = 08000H;     (* 32k *)
+    SRAM_B_Size*        = 08000H;     (* 32k *)
+    SRAM_C_Size*        = 010000H;    (* 64k *)
+    SRAM_D_Size*        = 010000H;    (* 64k *)
+    SRAM_E_Size*        = 010000H;    (* 64k *)
+    SRAM_F_Size*        = 010000H;    (* 64k *)
+    SRAM_G_Size*        = 010000H;    (* 64k *)
+    SRAM_H_Size*        = 08000H;     (* 32k *)
+
+
+    (* -- APB peripheral bridge 0 port P11 -- *)
+    (* -- APB 0 -- *)
+    SYSCON_BASE*    = 040000000H;
+    PINT0_BASE*     = 040004000H;
+    INPUTMUX0_BASE* = 040006000H;
+    CTIMER0_BASE*   = 04000C000H;
+    CTIMER1_BASE*   = 04000D000H;
+    CTIMER2_BASE*   = 04000E000H;
+    CTIMER3_BASE*   = 04000F000H;
+    CTIMER4_BASE*   = 040010000H;
+    FREQME0_BASE*   = 040011000H;
+    UTICK0_BASE*    = 040012000H;
+    MRT0_BASE*      = 040013000H;
+    WWDT0_BASE*     = 040016000H;
+    WWDT1_BASE*     = 040017000H;
+    CACHE64_POLSEL0_BASE* = 04001B000H;
+
+    (* -- APB 1 -- *)
+    I3C0_BASE*      = 040021000H;
+    I3C1_BASE*      = 040022000H;
+    GDET0_BASE*     = 040024000H;
+    GDET1_BASE*     = 040025000H;
+    ITRC0_BASE*     = 040026000H;
+    PKC0_BASE*      = 04002B000H;
+    PUF_BASE*       = 04002C000H;
+    BSP32_BASE*     = 040032000H;
+    SmartDMA_BASE*  = 040033000H;
+    PLU_BASE*       = 040034000H;
+
+    (* -- AIPS 0 -- *)
+    GPIO5_BASE*     = 040040000H;
+    GPIO5_ALIAS*    = 040041000H;
+    PORT5_BASE*     = 040042000H;
+    FMU0_BASE*      = 040043000H;
+    SCG0_BASE*      = 040044000H;
+    SPC0_BASE*      = 040045000H;
+    WUU0_BASE*      = 040046000H;
+    CMC0_BASE*      = 040048000H;
+    OSTIMER0_BASE*  = 040049000H;
+    LPTMR0_BASE*    = 04004A000H;
+    LPTMR1_BASE*    = 04004B000H;
+    RTC_SUBSYSTEM0_BASE*  = 04004C000H;
+    TSI0_BASE*      = 040050000H;
+    CMP0_BASE*      = 040051000H;
+    CMP1_BASE*      = 040052000H;
+    CMP2_BASE*      = 040053000H;
+    ELS_BASE*       = 040054000H;
+    TDET0_BASE*     = 040058000H;
+    VBAT0_BASE*     = 040059000H;
+    EIM0_BASE*      = 04005B000H;
+    ERM0_BASE*      = 04005C000H;
+    INTM0_BASE*     = 04005D000H;
+
+
+    (* -- APB peripheral bridge 1 port P11 -- *)
+    (* -- AIPS 1 -- *)
+    DMA0_MP_BASE*   = 040080000H;
+    DMA0_CH_BASE*   = 040081000H;
+      DMA0_CH_Offset* = 01000;
+
+    (* -- AHB -- *)
+    SCT0_BASE*      = 040091000H;
+    FLEXCOM0_BASE*  = 040092000H;
+    FLEXCOM1_BASE*  = 040093000H;
+    FLEXCOM2_BASE*  = 040094000H;
+    FLEXCOM3_BASE*  = 040095000H;
+    GPIO0_BASE*     = 040096000H;
+    GPIO0_ALIAS*    = 040097000H;
+    GPIO1_BASE*     = 040098000H;
+    GPIO1_ALIAS*    = 040099000H;
+    GPIO2_BASE*     = 04009A000H;
+    GPIO2_ALIAS*    = 04009B000H;
+    GPIO3_BASE*     = 04009C000H;
+    GPIO3_ALIAS*    = 04009D000H;
+    GPIO4_BASE*     = 04009E000H;
+    GPIO4_ALIAS*    = 04009F000H;
+
+    (* -- APB peripheral bridge 2 port P11 -- *)
+    (* -- AIPS 2 -- *)
+    DMA1_MP_BASE*   = 0400A0000H;
+    DMA1_CH_BASE*   = 0400A1000H;
+      DMA1_CH_Offset* = 01000;
+    SEMA0_BASE*     = 0400B1000H;
+
+    (* -- AHB -- *)
+    MAILBOX0_BASE*  = 0400B2000H;
+    PKC_RAM_BASE*   = 0400B3000H;
+    FLEXCOM4_BASE*  = 0400B4000H;
+    FLEXCOM5_BASE*  = 0400B5000H;
+    FLEXCOM6_BASE*  = 0400B6000H;
+    FLEXCOM7_BASE*  = 0400B7000H;
+    FLEXCOM8_BASE*  = 0400B8000H;
+    FLEXCOM9_BASE*  = 0400B9000H;
+    USB0_FSRAM_BASE* = 0400BA000H;
+    CDOG0_BASE*     = 0400BB000H;
+    CDOG1_BASE*     = 0400BC000H;
+    DM0_BASE*       = 0400BD000H;
+    NPU0_BASE*      = 0400BE000H;
+    PWRQUAD0_BASE*  = 0400BF000H;
+
+    (* -- APB peripheral bridge 3 port P11 -- *)
+    (* -- AIPS 3 -- *)
+    EWM0_BASE*      = 0400C000H;
+    CMX_PERFMON0_BASE* = 0400C1000H;
+    CMX_PERFMON1_BASE* = 0400C2000H;
+    MBC0_BASE*      = 0400C7000H;
+    FLEXSPIO0_BASE* = 0400C8000H;
+    OTPC0_BASE*     = 0400C9000H;
+    CRC0_BASE*      = 0400CB000H;
+    NXP0_BASE*      = 0400CC000H;
+    PMM0_BASE*      = 0400CE000H;
+    QDC0_BASE*      = 0400CF000H;
+    PMM1_BASE*      = 0400D0000H;
+    QDC1_BASE*      = 0400D1000H;
+    EVTG0_BASE*     = 0400D2000H;
+    CAN0_BASE*      = 0400D4000H;
+    CAN1_BASE*      = 0400D8000H;
+    USBDCD0_BASE*   = 0400DC000H;
+    USBFS0_BASE*    = 0400DD000H;
+
+    (* -- APB peripheral bridge 4 port P11 -- *)
+    (* -- AIPS 4 -- *)
+    ENET0_BASE*     = 040100000H;
+    EMBSIM0_BASE*   = 040103000H;
+    EMBSIM1_BASE*   = 040104000H;
+    FLEXIO0_BASE*   = 040105000H;
+    SAI0_BASE*      = 040106000H;
+    SAI1_BASE*      = 040107000H;
+    SINC0_BASE*     = 040108000H;
+    USDHC0_BASE*    = 040109000H;
+    USBHS1_PHY_BASE*  = 04010A000H;
+    USBHS1_BASE*    = 04010B000H;
+    MICFIL0_BASE*   = 04010C000H;
+    ADC0_BASE*      = 04010D000H;
+    ADC1_BASE*      = 04010E000H;
+    DAC0_BASE*      = 04010F000H;
+    OPAMP0_BASE*    = 040110000H;
+    VREF0_BASE*     = 040111000H;
+    DAC1_BASE*      = 040112000H;
+    OPAMP1_BASE*    = 040113000H;
+    DAC2_BASE*      = 040114000H;
+    OPAMP2_BASE*    = 040115000H;
+    PORT0_BASE*     = 040116000H;
+    PORT1_BASE*     = 040117000H;
+    PORT2_BASE*     = 040118000H;
+    PORT3_BASE*     = 040119000H;
+    PORT4_BASE*     = 04011A000H;
+
+    (* -- AHB -- *)
+    AHBSC_BASE*     = 040120000H;
+    AHBSC_ALIAS1*   = 040121000H;
+    AHBSC_ALIAS2*   = 040122000H;
+    AHBSC_ALIAS3*   = 040123000H;
+
+    (* -- PPB base addresses -- *)
+    PPB_BASE*       = 0E0000000H;
+
+
+(* == APB peripheral bridge 0 == *)
+
+    (* -- SYSCON -- *)
+    (* ref manual 17.4, p481 *)
+    SYSCON_AHBMATPRIO*      = SYSCON_BASE + 0010H;
+    SYSCON_NMISRC*          = SYSCON_BASE + 0048H;
+
+    (* device reset control *)
+    SYSCON_PRESET_CTRL0*      = SYSCON_BASE + 0100H;
+    SYSCON_PRESET_CTRL1*      = SYSCON_BASE + 0104H;
+    SYSCON_PRESET_CTRL2*      = SYSCON_BASE + 0108H;
+    SYSCON_PRESET_CTRL3*      = SYSCON_BASE + 010CH;
+    SYSCON_PRESET_CTRL0_SET*  = SYSCON_BASE + 0120H;
+    SYSCON_PRESET_CTRL1_SET*  = SYSCON_BASE + 0124H;
+    SYSCON_PRESET_CTRL2_SET*  = SYSCON_BASE + 0128H;
+    SYSCON_PRESET_CTRL3_SET*  = SYSCON_BASE + 012CH;
+    SYSCON_PRESET_CTRL0_CLR*  = SYSCON_BASE + 0140H;
+    SYSCON_PRESET_CTRL1_CLR*  = SYSCON_BASE + 0144H;
+    SYSCON_PRESET_CTRL2_CLR*  = SYSCON_BASE + 0148H;
+    SYSCON_PRESET_CTRL3_CLR*  = SYSCON_BASE + 014CH;
+      SYSCON_PRESET_Offset* = 4;
+
+    (* device AHB bus clock control *)
+    SYSCON_AHBCLK_CTRL0*      = SYSCON_BASE + 0200H;
+    SYSCON_AHBCLK_CTRL1*      = SYSCON_BASE + 0204H;
+    SYSCON_AHBCLK_CTRL2*      = SYSCON_BASE + 0208H;
+    SYSCON_AHBCLK_CTRL3*      = SYSCON_BASE + 020CH;
+    SYSCON_AHBCLK_CTRL0_SET*  = SYSCON_BASE + 0220H;
+    SYSCON_AHBCLK_CTRL1_SET*  = SYSCON_BASE + 0224H;
+    SYSCON_AHBCLK_CTRL2_SET*  = SYSCON_BASE + 0228H;
+    SYSCON_AHBCLK_CTRL3_SET*  = SYSCON_BASE + 022CH;
+    SYSCON_AHBCLK_CTRL0_CLR*  = SYSCON_BASE + 0240H;
+    SYSCON_AHBCLK_CTRL1_CLR*  = SYSCON_BASE + 0244H;
+    SYSCON_AHBCLK_CTRL2_CLR*  = SYSCON_BASE + 0248H;
+    SYSCON_AHBCLK_CTRL3_CLR*  = SYSCON_BASE + 024CH;
+      SYSCON_AHBCLK_Offset* = 4;
+
+    (* SYSCON_PRESET_CTRL0, SYSCON_AHBCLK_CTRL0 *)
+    DEV_ROM*        = 1; (* no reset *)
+    DEV_RAMB*       = 2; (* no reset *)
+    DEV_RAMC*       = 3; (* no reset *)
+    DEV_RAMD*       = 4; (* no reset *)
+    DEV_RAME*       = 5; (* no reset *)
+    DEV_RAMF*       = 6; (* no reset *)
+    DEV_RAMG*       = 7; (* no reset *)
+    DEV_RAMH*       = 8; (* no reset *)
+    DEV_FMU*        = 9;
+    DEV_FMC*        = 10; (* no reset *)
+    DEV_FLEXSPI*    = 11;
+    DEV_INPUTMUX0*  = 12;
+    DEV_PORT0*      = 13;
+    DEV_PORT1*      = 14;
+    DEV_PORT2*      = 15;
+    DEV_PORT3*      = 16;
+    DEV_PORT4*      = 17;
+    DEV_GPIO0*      = 19;
+    DEV_GPIO1*      = 20;
+    DEV_GPIO2*      = 21;
+    DEV_GPIO3*      = 22;
+    DEV_GPIO4*      = 23;
+    DEV_PINT0*      = 25;
+    DEV_DMA0*       = 26;
+    DEV_CRC0*       = 27;
+    DEV_WWDT0*      = 28;
+    DEV_WWDT1*      = 29; (* no reset *)
+    DEV_MAILBOX0*   = 31; (* no reset *)
+
+    (* SYSCON_PRESET_CTRL1, SYSCON_AHBCLK_CTRL1 *)
+    DEV_MRT0*       = 32 + 0;
+    DEV_FLEXCOM0*   = 32 + 11;
+    DEV_FLEXCOM1*   = 32 + 12;
+    DEV_FLEXCOM2*   = 32 + 13;
+    DEV_FLEXCOM3*   = 32 + 14;
+    DEV_FLEXCOM4*   = 32 + 15;
+    DEV_FLEXCOM5*   = 32 + 16;
+    DEV_FLEXCOM6*   = 32 + 17;
+    DEV_FLEXCOM7*   = 32 + 18;
+    DEV_FLEXCOM8*   = 32 + 19;
+    DEV_FLEXCOM9*   = 32 + 20;
+    DEV_CTIMER2*    = 32 + 22;
+    DEV_CTIMER0*    = 32 + 26;
+    DEV_CTIMER1*    = 32 + 27;
+
+    (* SYSCON_PRESET_CTRL2, SYSCON_AHBCLK_CTRL2 *)
+    DEV_DMA1*       = 64 + 1;
+    DEV_CTIMER3*    = 64 + 21;
+    DEV_CTIMER4*    = 64 + 22;
+
+    (* SYSCON_PRESET_CTRL3, SYSCON_AHBCLK_CTRL3 *)
+    DEV_I3C0*       = 96 + 0;
+    DEV_I3C1*       = 96 + 1;
+    DEV_SEMA42*     = 96 + 27;
+
+    (* global clock dividers *)
+    SYSCON_SLOWCLK_DIV*       = SYSCON_BASE + 0378H;
+    SYSCON_AHBCLK_DIV*        = SYSCON_BASE + 0380H;
+    SYSCON_FROHF_DIV*         = SYSCON_BASE + 0388H;
+    SYSCON_PLLCLK_DIV*        = SYSCON_BASE + 03C4H; (* see SYSCON_PLLCLKDIV_SEL *)
+    SYSCON_PLL1_CLK0_DIV*     = SYSCON_BASE + 03E4H;
+    SYSCON_PLL1_CLK1_DIV*     = SYSCON_BASE + 03E8H;
+
+    SYSCON_CLKUNLOCK*         = SYSCON_BASE + 03FCH;
+    SYSCON_NVM_CTRL*          = SYSCON_BASE + 0400H;
+    SYSCON_ROMCR*             = SYSCON_BASE + 0404H;
+    SYSCON_DMAINT*            = SYSCON_BASE + 0414H;
+    SYSCON_RAM_INTERLEAVE*    = SYSCON_BASE + 0470H;
+    SYSCON_PLLCLKDIV_SEL*     = SYSCON_BASE + 052CH;
+    SYSCON_ENET_PHY_INTFSEL*  = SYSCON_BASE + 05C0H;
+    SYSCON_ENET_SBD_FLOWCTRL* = SYSCON_BASE + 05C4H;
+
+    SYSCON_CPU_CTRL*          = SYSCON_BASE + 0800H;
+    SYSCON_CP_BOOT*           = SYSCON_BASE + 0804H;
+    SYSCON_CPU_STAT*          = SYSCON_BASE + 080CH;
+    SYSCON_LPCAC_CTRL*        = SYSCON_BASE + 0824H;
+    SYSCON_KEY_RETAIN_CTRL*   = SYSCON_BASE + 0950H;
+
+    SYSCON_REF_CLK_CTRL*      = SYSCON_BASE + 0960H; (* REF_CLK = FIRC 48 MHz fixed *)
+    SYSCON_REF_CLK_CTRL_SET*  = SYSCON_BASE + 0964H;
+    SYSCON_REF_CLK_CTRL_CLR*  = SYSCON_BASE + 0968H;
+
+    SYSCON_GDET0_CTRL*        = SYSCON_BASE + 096CH;
+    SYSCON_GDET1_CTRL*        = SYSCON_BASE + 0970H;
+
+    SYSCON_CLK_CTRL*          = SYSCON_BASE + 0A18H;
+    SYSCON_ETB_STATUS*        = SYSCON_BASE + 0B50H;
+    SYSCON_ETB_CNT_CTRL*      = SYSCON_BASE + 0B54H;
+    SYSCON_ETB_CNT_RELOAD*    = SYSCON_BASE + 0B58H;
+    SYSCON_ETB_CNT_VALUE*     = SYSCON_BASE + 0B5CH;
+    SYSCON_AUTOCLKGATE_OVERRIDE*   = SYSCON_BASE + 0E04H;
+    SYSCON_AUTOCLKGATE_OVERRIDEC*  = SYSCON_BASE + 0E2CH;
+    SYSCON_PWM0_SUBCTRL*      = SYSCON_BASE + 0E38H;
+    SYSCON_PWM1_SUBCTRL*      = SYSCON_BASE + 0E3CH;
+    SYSCON_CTIMER_GLBEN*      = SYSCON_BASE + 0E40H;
+    SYSCON_RAM_ECC_EN*        = SYSCON_BASE + 0E44H;
+
+
+    (* functional clocks selector and divider *)
+    CLKSEL_PLLCLKDIV* = SYSCON_BASE + 052CH; (* for SYSCON_PLLCLK_DIV *)
+
+    CLKSEL_SYSTICK0* = SYSCON_BASE + 0260H;
+    CLKSEL_SYSTICK1* = SYSCON_BASE + 0264H;
+    CLKDIV_SYSTICK0* = SYSCON_BASE + 0300H;
+    CLKDIV_SYSTICK1* = SYSCON_BASE + 0304H;
+
+    CLKSEL_TRACE*    = SYSCON_BASE + 0268H;
+    CLKDIV_TRACE*    = SYSCON_BASE + 0308H;
+
+    CLKSEL_TSI0*     = SYSCON_BASE + 0350H;
+    CLKDIV_TSI0*     = SYSCON_BASE + 037CH;
+
+    CLKSEL_CLKOUT*   = SYSCON_BASE + 0288H;
+    CLKDIV_CLKOUT*   = SYSCON_BASE + 0384H;
+
+    CLKSEL_CTIMER0*  = SYSCON_BASE + 026CH;
+    CLKSEL_CTIMER1*  = SYSCON_BASE + 0270H;
+    CLKSEL_CTIMER2*  = SYSCON_BASE + 0274H;
+    CLKSEL_CTIMER3*  = SYSCON_BASE + 0278H;
+    CLKSEL_CTIMER4*  = SYSCON_BASE + 027CH;
+    CLKDIV_CTIMER0*  = SYSCON_BASE + 03D0H;
+    CLKDIV_CTIMER1*  = SYSCON_BASE + 03D4H;
+    CLKDIV_CTIMER2*  = SYSCON_BASE + 03D8H;
+    CLKDIV_CTIMER3*  = SYSCON_BASE + 03DCH;
+    CLKDIV_CTIMER4*  = SYSCON_BASE + 03E0H;
+      CLK_CTIMER_Offset* = 4;
+
+    CLKSEL_FLEXCOM0* = SYSCON_BASE + 02B0H;
+    CLKSEL_FLEXCOM1* = SYSCON_BASE + 02B4H;
+    CLKSEL_FLEXCOM2* = SYSCON_BASE + 02B8H;
+    CLKSEL_FLEXCOM3* = SYSCON_BASE + 02BCH;
+    CLKSEL_FLEXCOM4* = SYSCON_BASE + 02C0H;
+    CLKSEL_FLEXCOM5* = SYSCON_BASE + 02C4H;
+    CLKSEL_FLEXCOM6* = SYSCON_BASE + 02C8H;
+    CLKSEL_FLEXCOM7* = SYSCON_BASE + 02CCH;
+    CLKSEL_FLEXCOM8* = SYSCON_BASE + 02D0H;
+    CLKSEL_FLEXCOM9* = SYSCON_BASE + 02D4H;
+    CLKDIV_FLEXCOM0* = SYSCON_BASE + 0850H;
+    CLKDIV_FLEXCOM1* = SYSCON_BASE + 0854H;
+    CLKDIV_FLEXCOM2* = SYSCON_BASE + 0858H;
+    CLKDIV_FLEXCOM3* = SYSCON_BASE + 085CH;
+    CLKDIV_FLEXCOM4* = SYSCON_BASE + 0860H;
+    CLKDIV_FLEXCOM5* = SYSCON_BASE + 0864H;
+    CLKDIV_FLEXCOM6* = SYSCON_BASE + 0868H;
+    CLKDIV_FLEXCOM7* = SYSCON_BASE + 086CH;
+    CLKDIV_FLEXCOM8* = SYSCON_BASE + 0870H;
+    CLKDIV_FLEXCOM9* = SYSCON_BASE + 0874H;
+      CLK_FLEXCOM_Offset*  = 4;
+
+    CLKSEL_ADC1*     = SYSCON_BASE + 0464H;
+    CLKDIV_ADC1*     = SYSCON_BASE + 0468H;
+
+    CLKSEL_DAC0*     = SYSCON_BASE + 0490H;
+    CLKSEL_DAC1*     = SYSCON_BASE + 0498H;
+    CLKSEL_DAC2*     = SYSCON_BASE + 04A0H;
+    CLKDIV_DAC0*     = SYSCON_BASE + 0494H;
+    CLKDIV_DAC1*     = SYSCON_BASE + 049CH;
+    CLKDIV_DAC3*     = SYSCON_BASE + 04A4H;
+
+    CLKSEL_I3C0_F*   = SYSCON_BASE + 0530H;
+    CLKSEL_I3C0_STC* = SYSCON_BASE + 0534H;
+    CLKSEL_I3C0_S*   = SYSCON_BASE + 0544H;
+    CLKSEL_I3C1_F*   = SYSCON_BASE + 0B30H;
+    CLKSEL_I3C1_STC* = SYSCON_BASE + 0B34H;
+    CLKSEL_I3C1_S*   = SYSCON_BASE + 0B44H;
+    CLKDIV_I3C0_F*   = SYSCON_BASE + 0540H;
+    CLKDIV_I3C0_STC* = SYSCON_BASE + 0538H;
+    CLKDIV_I3C0_S*   = SYSCON_BASE + 053CH;
+    CLKDIV_I3C1_F*   = SYSCON_BASE + 0B40H;
+    CLKDIV_I3C1_STC* = SYSCON_BASE + 0B38H;
+    CLKDIV_I3C1_S*   = SYSCON_BASE + 0B3CH;
+
+    CLKSEL_MICFIL*   = SYSCON_BASE + 0548H;
+    CLKDIV_MICFIL*   = SYSCON_BASE + 054CH;
+
+    CLKSEL_USDHC*    = SYSCON_BASE + 0558H;
+    CLKDIV_USDHC*    = SYSCON_BASE + 055CH;
+
+    CLKSEL_FLEXIO*   = SYSCON_BASE + 0560H;
+    CLKDIV_FLEXIO*   = SYSCON_BASE + 0564H;
+
+    CLKSEL_FLEXCAN0* = SYSCON_BASE + 05A0H;
+    CLKSEL_FLEXCAN1* = SYSCON_BASE + 05A8H;
+    CLKDIV_FLEXCAN0* = SYSCON_BASE + 05A4H;
+    CLKDIV_FLEXCAN1* = SYSCON_BASE + 05ACH;
+
+    CLKSEL_ENET_RMII* = SYSCON_BASE + 05B0H;
+    CLKSEL_ENET_PTP*  = SYSCON_BASE + 05B8H;
+    CLKDIV_ENET_RMII* = SYSCON_BASE + 05B4H;
+    CLKDIV_ENET_PTP*  = SYSCON_BASE + 05BCH;
+
+    CLKSEL_EWM0*     = SYSCON_BASE + 05D4H;
+
+    CLKSEL_WDT1*     = SYSCON_BASE + 05D8H;
+    CLKDIV_WDT1*     = SYSCON_BASE + 05DCH;
+
+    CLKSEL_OSTIMER0* = SYSCON_BASE + 05E0H;
+
+    CLKSEL_CMP0_F*   = SYSCON_BASE + 05F0H;
+    CLKSEL_CMP0_RR*  = SYSCON_BASE + 05F8H;
+    CLKSEL_CMP1_F*   = SYSCON_BASE + 0600H;
+    CLKSEL_CMP1_RR*  = SYSCON_BASE + 0608H;
+    CLKSEL_CMP2_F*   = SYSCON_BASE + 0610H;
+    CLKSEL_CMP2_RR*  = SYSCON_BASE + 0618H;
+    CLKDIV_CMP0_F*   = SYSCON_BASE + 05F4H;
+    CLKDIV_CMP0_RR*  = SYSCON_BASE + 05FCH;
+    CLKDIV_CMP1_F*   = SYSCON_BASE + 0604H;
+    CLKDIV_CMP1_RR*  = SYSCON_BASE + 060CH;
+    CLKDIV_CMP2_F*   = SYSCON_BASE + 0614H;
+    CLKDIV_CMP2_RR*  = SYSCON_BASE + 051CH;
+
+    CLKSEL_SAI0*     = SYSCON_BASE + 0880H;
+    CLKSEL_SAI1*     = SYSCON_BASE + 0884H;
+
+    CLKDIV_SAI0*     = SYSCON_BASE + 0888H;
+    CLKDIV_SAI1*     = SYSCON_BASE + 088CH;
+
+    CLKSEL_EMVSIM0*  = SYSCON_BASE + 0890H;
+    CLKSEL_EMVSIM1*  = SYSCON_BASE + 0894H;
+
+    CLKDIV_EMVSIM0*  = SYSCON_BASE + 0898H;
+    CLKDIV_EMVSIM1*  = SYSCON_BASE + 089CH;
+
+    (* -- CTIMER -- *)
+    CTIMER_Offset* = CTIMER1_BASE - CTIMER0_BASE;
+    CTIMER_IR_Offset*     = 000H;
+    CTIMER_TCR_Offset*    = 004H;
+    CTIMER_TC_Offset*     = 008H;
+    CTIMER_PR_Offset*     = 00CH;
+    CTIMER_PC_Offset*     = 010H;
+    CTIMER_MCR_Offset*    = 014H;
+    CTIMER_MR0_Offset*    = 018H;
+    CTIMER_MR1_Offset*    = 01CH;
+    CTIMER_MR2_Offset*    = 020H;
+    CTIMER_MR3_Offset*    = 024H;
+    CTIMER_CCR_Offset*    = 028H;
+    CTIMER_CR0_Offset*    = 02CH;
+    CTIMER_CR1_Offset*    = 030H;
+    CTIMER_CR2_Offset*    = 034H;
+    CTIMER_CR3_Offset*    = 038H;
+    CTIMER_EMR_Offset*    = 03CH;
+    CTIMER_CTCR_Offset*   = 070H;
+    CTIMER_PWMC_Offset*   = 074H;
+    CTIMER_MSR0_Offset*   = 078H;
+    CTIMER_MSR1_Offset*   = 07CH;
+    CTIMER_MSR2_Offset*   = 080H;
+    CTIMER_MSR3_Offset*   = 084H;
+
+
+    (* GDET glitch detectors *)
+    GDET0_APB_SFR*        = 080048000H;
+    GDET1_APB_SFR*        = 08004A000H;
+    GDET_ENABLE1_Offset*  = 0008H;
+    GDET_CONF_2_Offset*   = 000CH;
+    GDET_RESET_Offset*    = 0FF0H;
+    GDET_DLY_CTRL_Offset* = 0FFCH;
+
+
+    (* -- FMU flash management unit (MSF) -- *)
+    FMU_FSTAT*      = FMU0_BASE;
+    FMU_FCNFG*      = FMU0_BASE + 004H;
+    FMU_FCTRL*      = FMU0_BASE + 008H;
+
+    (* -- SCG system clock generator -- *)
+    (* ref manual 23.7.1, p912 *)
+    SCG_VERID*          = SCG0_BASE;
+    SCG_PARAM*          = SCG0_BASE + 0004H;
+    SCG_TRIM_LOCK*      = SCG0_BASE + 0008H;
+    SCG_CSR*            = SCG0_BASE + 0010H;
+    SCG_RCCR*           = SCG0_BASE + 0014H;
+
+    SCG_SOSC_CSR*       = SCG0_BASE + 0100H;
+    SCG_SOSC_CFG*       = SCG0_BASE + 0108H;
+
+    SCG_SIRC_CSR*       = SCG0_BASE + 0200H;
+    SCG_SIRC_TCFG*      = SCG0_BASE + 020CH;
+    SCG_SIRC_TRIM*      = SCG0_BASE + 0210H;
+    SCG_SIRC_STAT*      = SCG0_BASE + 0218H;
+
+    SCG_FIRC_CSR*       = SCG0_BASE + 0300H;
+    SCG_FIRC_CFG*       = SCG0_BASE + 0308H;
+    SCG_FIRC_TCFG*      = SCG0_BASE + 030CH;
+    SCG_FIRC_TRIM*      = SCG0_BASE + 0310H;
+    SCG_FIRC_STAT*      = SCG0_BASE + 0318H;
+
+    SCG_ROSC_CSR*       = SCG0_BASE + 0400H;
+
+    SCG_APLL_CSR*       = SCG0_BASE + 0500H;
+    SCG_APLL_CTRL*      = SCG0_BASE + 0504H;
+    SCG_APLL_STAT*      = SCG0_BASE + 0508H;
+    SCG_APLL_NDIV*      = SCG0_BASE + 050CH;
+    SCG_APLL_MDIV*      = SCG0_BASE + 0510H;
+    SCG_APLL_PDIV*      = SCG0_BASE + 0514H;
+    SCG_APLL_LOCKCNFG*  = SCG0_BASE + 0518H;
+    SCG_APLL_SSCGSTAT*  = SCG0_BASE + 0520H;
+    SCG_APLL_SSCG0*     = SCG0_BASE + 0524H;
+    SCG_APLL_SSCG1*     = SCG0_BASE + 0528H;
+    SCG_APLL_OVRD*      = SCG0_BASE + 05F4H;
+
+    SCG_SPLL_CSR*       = SCG0_BASE + 0600H;
+    SCG_SPLL_CTRL*      = SCG0_BASE + 0604H;
+    SCG_SPLL_STAT*      = SCG0_BASE + 0608H;
+    SCG_SPLL_NDIV*      = SCG0_BASE + 060CH;
+    SCG_SPLL_MDIV*      = SCG0_BASE + 0610H;
+    SCG_SPLL_PDIV*      = SCG0_BASE + 0614H;
+    SCG_SPLL_LOCKCNFG*  = SCG0_BASE + 0618H;
+    SCG_SPLL_SSCGSTAT*  = SCG0_BASE + 0620H;
+    SCG_SPLL_SSCG0*     = SCG0_BASE + 0624H;
+    SCG_SPLL_SSCG1*     = SCG0_BASE + 0628H;
+    SCG_SPLL_OVRD*      = SCG0_BASE + 06F4H;
+
+    SCG_UPLL_CSR*       = SCG0_BASE + 0700H;
+    SCG_LDO_CSR*        = SCG0_BASE + 0800H;
+
+
+    (* -- SPC system power controller -- *)
+    (* ref manual 26.7.1, p981 *)
+    SPC_SC*         = SPC0_BASE + 0010H;
+    SPC_SRAM_CTRL*  = SPC0_BASE + 0040H;
+    SPC_ACTIVE_CFG* = SPC0_BASE + 0100H;
+
+
+(* == APB peripheral bridge 1 == *)
+
+    (* -- FLEXCOM -- *)
+    (* ref manual 66.2.6, p2588 *)
+    (* two blocks: 0 .. 3: FLEXCOM0_BASE; 4 .. 9: FLEXCOM4_BASE *)
+    FLEXCOM_Offset*     = FLEXCOM1_BASE - FLEXCOM0_BASE;
+    FLEXCOM_ISTAT_Offset*   = 0FF4H;
+    FLEXCOM_PSELID_Offset*  = 0FF8H;
+
+    (* == (LP)UART == *)
+    (* ref manual 66.5.5, p2731 *)
+    UART_Offset*        = FLEXCOM_Offset;
+    UART_VERID_Offset*  = 000H;
+    UART_PARAM_Offset*  = 004H;
+    UART_GLOBAL_Offset* = 008H;
+    UART_PINCFG_Offset* = 00CH;
+    UART_BAUD_Offset*   = 010H;
+    UART_STAT_Offset*   = 014H;
+    UART_CTRL_Offset*   = 018H;
+    UART_DATA_Offset*   = 01CH;
+    UART_MATCH_Offset*  = 020H;
+    UART_MODIR_Offset*  = 024H;
+    UART_FIFO_Offset*   = 028H;
+    UART_WATER_Offset*  = 02CH;
+    UART_DATARO_Offset* = 030H;
+
+
+    (* -- GPIOx -- *)
+    (* two blocks: 0 .. 4: GPIO0_BASE; 5: GPIO5_BASE *)
+    GPIO_Offset* = GPIO1_BASE - GPIO0_BASE;
+    GPIO_PCNS_Offset* = 010H;   (* pin ctrl non-secure *)
+    GPIO_ICNS_Offset* = 010H;   (* interrupt ctrl non-secure *)
+    GPIO_PCNP_Offset* = 010H;   (* pin ctrl non-privileged *)
+    GPIO_ICNP_Offset* = 010H;   (* interrupt ctrl non-privileged *)
+    GPIO_PDOR_Offset* = 040H;   (* data output value *)
+    GPIO_PSOR_Offset* = 044H;   (* data output set masked *)
+    GPIO_PCOR_Offset* = 048H;   (* data output clear masked *)
+    GPIO_PTOR_Offset* = 04CH;   (* data output toggle masked *)
+    GPIO_PDIR_Offset* = 050H;   (* data input *)
+    GPIO_PDDR_Offset* = 054H;   (* data direction, reset = input [0] *)
+    GPIO_PIDR_Offset* = 058H;   (* input disable, reset = enabled [0] *)
+
+    (* use for parameter 'gpio' in GPIO.Set and friends *)
+    GPIO0* = GPIO0_BASE;
+    GPIO1* = GPIO1_BASE;
+    GPIO2* = GPIO2_BASE;
+    GPIO3* = GPIO3_BASE;
+    GPIO4* = GPIO4_BASE;
+    GPIO5* = GPIO5_BASE;
+
+    (* RPx-ish aliases *)
+    GPIO0_OUT_SET*  = GPIO0_BASE + GPIO_PSOR_Offset;
+    GPIO0_OUT_CLR*  = GPIO0_BASE + GPIO_PCOR_Offset;
+    GPIO0_OUT_XOR*  = GPIO0_BASE + GPIO_PTOR_Offset;
+
+    GPIO1_OUT_SET*  = GPIO1_BASE + GPIO_PSOR_Offset;
+    GPIO1_OUT_CLR*  = GPIO1_BASE + GPIO_PCOR_Offset;
+    GPIO1_OUT_XOR*  = GPIO1_BASE + GPIO_PTOR_Offset;
+
+    GPIO2_OUT_SET*  = GPIO2_BASE + GPIO_PSOR_Offset;
+    GPIO2_OUT_CLR*  = GPIO2_BASE + GPIO_PCOR_Offset;
+    GPIO2_OUT_XOR*  = GPIO2_BASE + GPIO_PTOR_Offset;
+
+    GPIO3_OUT_SET*  = GPIO3_BASE + GPIO_PSOR_Offset;
+    GPIO3_OUT_CLR*  = GPIO3_BASE + GPIO_PCOR_Offset;
+    GPIO3_OUT_XOR*  = GPIO3_BASE + GPIO_PTOR_Offset;
+
+    GPIO4_OUT_SET*  = GPIO4_BASE + GPIO_PSOR_Offset;
+    GPIO4_OUT_CLR*  = GPIO4_BASE + GPIO_PCOR_Offset;
+    GPIO4_OUT_XOR*  = GPIO4_BASE + GPIO_PTOR_Offset;
+
+    GPIO5_OUT_SET*  = GPIO5_BASE + GPIO_PSOR_Offset;
+    GPIO5_OUT_CLR*  = GPIO5_BASE + GPIO_PCOR_Offset;
+    GPIO5_OUT_XOR*  = GPIO5_BASE + GPIO_PTOR_Offset;
+
+
+    (* -- MBC memory block checker -- *)
+    MBC_MEM0_GLBCFG* = MBC0_BASE;
+    MBC_MEM1_GLBCFG* = MBC0_BASE + 0004H;
+    MBC_MEM2_GLBCFG* = MBC0_BASE + 0008H;
+    MBC_MEM3_GLBCFG* = MBC0_BASE + 000CH;
+    MBC_MEMN_GLBAC0* = MBC0_BASE + 0020H;
+    MBC_MEMN_GLBAC1* = MBC0_BASE + 0024H;
+    MBC_MEMN_GLBAC2* = MBC0_BASE + 0028H;
+    MBC_MEMN_GLBAC3* = MBC0_BASE + 002CH;
+    MBC_MEMN_GLBAC4* = MBC0_BASE + 0030H;
+    MBC_MEMN_GLBAC5* = MBC0_BASE + 0034H;
+    MBC_MEMN_GLBAC6* = MBC0_BASE + 0038H;
+    MBC_MEMN_GLBAC7* = MBC0_BASE + 003CH;
+
+    MBC_DOM0_MEM0_BLK_CFG_W0* = MBC0_BASE + 0040H;
+
+
+(* == APB peripheral bridge 2 == *)
+
+
+
+(* == APB peripheral bridge 3 == *)
+
+
+(* == APB peripheral bridge 4 == *)
+
+    (* -- PORTx -- *)
+    (* ref manual 75.6, p3579 *)
+    (* two blocks: 0 .. 4: PORT0_BASE; 5: PORT5_BASE *)
+    PORT_Offset* = PORT1_BASE - PORT0_BASE;
+    PORT_VERID_Offset*  = 000H;
+    PORT_GPCLR_Offset*  = 010H;
+    PORT_GPCHR_Offset*  = 014H;
+    PORT_CONFIG_Offset* = 020H;
+    PORT_EDFR_Offset*   = 040H;
+    PORT_EDIER_Offset*  = 044H;
+    PORT_EDCR_Offset*   = 048H;
+    PORT_CALIB0_Offset* = 060H;
+    PORT_CALIB1_Offset* = 064H;
+    PORT_PCR_Offset*    = 080H;
+
+    (* supported/implemented pins *)
+    PORT0_pins* = {0 .. 7, 8 .. 11, 12 .. 15, 16 .. 19, 20 .. 23, 24 .. 31};
+    PORT1_pins* = {0 .. 7, 8 .. 11, 12 .. 15, 16 .. 19, 20 .. 23, 30, 31};
+    PORT2_pins* = {0 .. 7, 8 .. 11};
+    PORT3_pins* = {0 .. 7, 8 .. 11, 12 .. 15, 16 .. 19, 20 .. 23};
+    PORT4_pins* = {0 .. 7,          12 .. 15, 16 .. 19, 20 .. 23};
+    PORT5_pins* = {0 .. 7, 8, 9};
+
+    (* PCR non-zero resets *)
+    P0_PCR0reset*  = 000001143H; (* TMS/SWDIO: ibe, mux = 1, dse, pe, ps = up *)
+    P0_PCR1reset*  = 000001102H; (* TCK/SWCLK: ibe, mux = 1, pe, ps = down *)
+    P0_PCR2reset*  = 000000140H; (* TDO/SWO: mux = 1, dse *)
+    P0_PCR3reset*  = 000001103H; (* TDI: ibe, mux = 1, pe, ps = up *)
+    P0_PCR6reset*  = 000001103H; (* ISPMODE: ibe, mux = 1, pe, ps = up *)
+    P5_PCR2reset*  = 000000100H;
+
+    (* ports with non-zero resets *)
+    PORT_reset* = {0, 5};
+
+    (* pin number = PORTx + pin index within port *)
+    PORT0* = 0;
+    PORT1* = 32;
+    PORT2* = 64;
+    PORT3* = 96;
+    PORT4* = 128;
+    PORT5* = 160;
+
+
+(* == PPB: private peripheral bus == *)
+
+    (* begin of SCS: System Control Space *)
+
+    (* -- implementation control block -- *)
+    PPB_ICTR*         = PPB_BASE + 0E004H;
+    PPB_ACTLR*        = PPB_BASE + 0E008H;
+
+    (* -- SysTick -- *)
+    PPB_SYST_CSR*     = PPB_BASE + 0E010H;
+    PPB_SYST_RVR*     = PPB_BASE + 0E014H;
+    PPB_SYST_CVR*     = PPB_BASE + 0E018H;
+    PPB_SYST_CALIB*   = PPB_BASE + 0E01CH;
+
+    (* -- NVIC -- *)
+    PPB_NVIC_ISER0*   = PPB_BASE + 0E100H;
+    PPB_NVIC_ICER0*   = PPB_BASE + 0E180H;
+    PPB_NVIC_ISPR0*   = PPB_BASE + 0E200H;
+    PPB_NVIC_ICPR0*   = PPB_BASE + 0E280H;
+    PPB_NVIC_IABR0*   = PPB_BASE + 0E300H;
+    PPB_NVIC_ITNS0*   = PPB_BASE + 0E380H;
+    PPB_NVIC_IPR0*    = PPB_BASE + 0E400H;
+
+    (* -- IRQ numbers -- *)
+    IRQ_BASE*           = 16; (* exc no = IRQ_BASE + IRQ number *)
+    IRQ_OR_ALL*         = 0;
+    IRQ_DMA0_CH0*       = 1;
+    IRQ_DMA0_CH1*       = 2;
+    IRQ_DMA0_CH2*       = 3;
+    IRQ_DMA0_CH3*       = 4;
+    IRQ_DMA0_CH4*       = 5;
+    IRQ_DMA0_CH5*       = 6;
+    IRQ_DMA0_CH6*       = 7;
+    IRQ_DMA0_CH7*       = 8;
+    IRQ_DMA0_CH8*       = 9;
+    IRQ_DMA0_CH9*       = 10;
+    IRQ_DMA0_CH10*      = 11;
+    IRQ_DMA0_CH11*      = 12;
+    IRQ_DMA0_CH12*      = 13;
+    IRQ_DMA0_CH13*      = 14;
+    IRQ_DMA0_CH14*      = 15;
+    IRQ_DMA0_CH15*      = 16;
+    IRQ_GPIO0_0*        = 17;
+    IRQ_GPIO0_1*        = 18;
+    IRQ_GPIO1_0*        = 19;
+    IRQ_GPIO1_1*        = 20;
+    IRQ_GPIO2_0*        = 21;
+    IRQ_GPIO2_1*        = 22;
+    IRQ_GPIO3_0*        = 23;
+    IRQ_GPIO3_1*        = 24;
+    IRQ_GPIO4_0*        = 25;
+    IRQ_GPIO4_1*        = 26;
+    IRQ_GPIO5_0*        = 27;
+    IRQ_GPIO5_1*        = 28;
+    IRQ_UTICK0*         = 29;
+    IRQ_MRT0*           = 30;
+    IRQ_CTIMER0*        = 31;
+    IRQ_CTIMER1*        = 32;
+    IRQ_SCT0*           = 33;
+    IRQ_CTIMER2*        = 34;
+    IRQ_FLEXCOM0*       = 35;
+    IRQ_FLEXCOM1*       = 36;
+    IRQ_FLEXCOM2*       = 37;
+    IRQ_FLEXCOM3*       = 38;
+    IRQ_FLEXCOM4*       = 39;
+    IRQ_FLEXCOM5*       = 40;
+    IRQ_FLEXCOM6*       = 41;
+    IRQ_FLEXCOM7*       = 42;
+    IRQ_FLEXCOM8*       = 43;
+    IRQ_FLEXCOM9*       = 44;
+    IRQ_ADC0*           = 45;
+    IRQ_ADC1*           = 46;
+    IRQ_PINT0*          = 47;
+    IRQ_MICFIL0*        = 48;
+    IRQ_Reserved_49*    = 49;
+    IRQ_USBFS0*         = 50;
+    IRQ_USBCD0*         = 51;
+    IRQ_RTC0*           = 52;
+    IRQ_SmartDMA0*      = 53;
+    IRQ_MAILBOX0*       = 54;
+    IRQ_CTIMER3*        = 55;
+    IRQ_CTIMER4*        = 56;
+    IRQ_OSTIMER0*       = 57;
+    IRQ_FlexSPI0*       = 58;
+    IRQ_SAM0*           = 59;
+    IRQ_SAM1*           = 60;
+    IRQ_USDHC0*         = 61;
+    IRQ_CAN0*           = 62;
+    IRQ_CAN1*           = 63;
+    IRQ_Reserved_64*    = 64;
+    IRQ_Reserved_65*    = 65;
+    IRQ_USBHS1_PHY*     = 66;
+    IRQ_USBHS1*         = 67;
+    IRQ_SEC_HYP_CALL*   = 68;
+    IRQ_Reserved_69*    = 69;
+    IRQ_PLU0*           = 70;
+    IRQ_FREQME0*        = 71;
+    IRQ_SEC_VIOLATION*  = 72;
+    IRQ_ELS*            = 73;
+    IRQ_PKC0*           = 74;
+    IRQ_PUF*            = 75;
+    IRQ_POWERQUAD*      = 76;
+    IRQ_DMA1_CH0*       = 77;
+    IRQ_DMA1_CH1*       = 78;
+    IRQ_DMA1_CH2*       = 79;
+    IRQ_DMA1_CH3*       = 80;
+    IRQ_DMA1_CH4*       = 81;
+    IRQ_DMA1_CH5*       = 82;
+    IRQ_DMA1_CH6*       = 83;
+    IRQ_DMA1_CH7*       = 84;
+    IRQ_DMA1_CH8*       = 85;
+    IRQ_DMA1_CH9*       = 86;
+    IRQ_DMA1_CH10*      = 87;
+    IRQ_DMA1_CH11*      = 88;
+    IRQ_DMA1_CH12*      = 89;
+    IRQ_DMA1_CH13*      = 90;
+    IRQ_DMA1_CH14*      = 91;
+    IRQ_DMA1_CH15*      = 92;
+    IRQ_CDOG0*          = 93;
+    IRQ_CDOG1*          = 94;
+    IRQ_I3C0*           = 95;
+    IRQ_I3C1*           = 96;
+    IRQ_NPU*            = 97;
+    IRQ_GDET*           = 98;
+    IRQ_VBAT0*          = 99;
+    IRQ_EWM0*           = 100;
+    IRQ_TSI0*           = 101;
+    IRQ_TSI1*           = 102;
+    IRQ_EMVSIM0*        = 103;
+    IRQ_EMVSIM1*        = 104;
+    IRQ_FLEXIO*         = 105;
+    IRQ_DAC0*           = 106;
+    IRQ_DAC1*           = 107;
+    IRQ_DAC2*           = 108;
+    IRQ_CMP0*           = 109;
+    IRQ_CMP1*           = 110;
+    IRQ_CMP2*           = 111;
+    IRQ_PWM0_RLDERR*    = 112;
+    IRQ_PWM0_FAULT*     = 113;
+    IRQ_PWM0_SUB0*      = 114;
+    IRQ_PWM0_SUB1*      = 115;
+    IRQ_PWM0_SUB2*      = 116;
+    IRQ_PWM0_SUB3*      = 117;
+    IRQ_PWM1_RLDERR*    = 118;
+    IRQ_PWM1_FAULT*     = 119;
+    IRQ_PWM1_SUB0*      = 120;
+    IRQ_PWM1_SUB1*      = 121;
+    IRQ_PWM1_SUB2*      = 122;
+    IRQ_PWM1_SUB3*      = 123;
+    IRQ_QDC0_COMP*      = 124;
+    IRQ_QDC0_HOME*      = 125;
+    IRQ_QDC0_WDG*       = 126;
+    IRQ_QDC0_IDX*       = 127;
+    IRQ_QDC1_COMP*      = 128;
+    IRQ_QDC1_HOME*      = 129;
+    IRQ_QDC1_WDG*       = 130;
+    IRQ_QDC1_IDX*       = 131;
+    IRQ_ITRC0*          = 132;
+    IRQ_BSP32*          = 133;
+    IRQ_ELS_ERROR*      = 134;
+    IRQ_PKC*            = 135;
+    IRQ_ERM0_SBIT_ERR*  = 136;
+    IRQ_ERM0_MBIT_ERR*  = 137;
+    IRQ_FMU0*           = 138;
+    IRQ_ENET*           = 139;
+    IRQ_ENET_PM*        = 140;
+    IRQ_ENET_LPI*       = 141;
+    IRQ_SINC0*          = 142;
+    IRQ_LPTMR0*         = 143;
+    IRQ_LPTMR1*         = 144;
+    IRQ_SCG0*           = 145;
+    IRQ_SPC0*           = 146;
+    IRQ_WUU0*           = 147;
+    IRQ_PORT_EFT*       = 148;
+    IRQ_ETB0*           = 149;
+    IRQ_Reserved_150*   = 150;
+    IRQ_Reserved_151*   = 151;
+    IRQ_WWDT0*          = 152;
+    IRQ_WWDT1*          = 153;
+    IRQ_CMC0*           = 154;
+    IRQ_CTI0*           = 155;
+
+
+    (* IRQ for SW use *)
+    IRQ_SW_0*   = IRQ_Reserved_49;
+    IRQ_SW_1*   = IRQ_Reserved_64;
+    IRQ_SW_2*   = IRQ_Reserved_65;
+    IRQ_SW_3*   = IRQ_Reserved_69;
+    IRQ_SW_4*   = IRQ_Reserved_150;
+    IRQ_SW_5*   = IRQ_Reserved_151;
+
+
+    (* -- system exception numbers -- *)
+    EXC_NMI*          = 2;
+    EXC_HardFault*    = 3;
+    EXC_MemMgmtFault* = 4;
+    EXC_BusFault*     = 5;
+    EXC_UsageFault*   = 6;
+    EXC_SecureFault*  = 7;
+    EXC_SVC*          = 11;
+    EXC_DebugMon*     = 12;
+    EXC_PendSV*       = 14;
+    EXC_SysTick*      = 15;
+
+    SysExc*  = {3, 4, 5, 6, 7, 11, 12, 14, 15};
+
+    (* -- exception priorities *)
+    ExcPrio0* = 000H; (* 0000 0000 *)
+    ExcPrio1* = 020H; (* 0010 0000 *)
+    ExcPrio2* = 040H; (* 0100 0000 *)
+    ExcPrio3* = 060H; (* 0110 0000 *)
+    ExcPrio4* = 080H; (* 1000 0000 *)
+    ExcPrio5* = 0A0H; (* 1010 0000 *)
+    ExcPrio6* = 0C0H; (* 1100 0000 *)
+    ExcPrio7* = 0E0H; (* 1110 0000 *)
+
+    NumExcPrio* = 8;
+
+    ExcPrioTop*    = ExcPrio0;
+    ExcPrioHigh*   = ExcPrio1;
+    ExcPrioMedium* = ExcPrio4;
+    ExcPrioLow*    = ExcPrio7;
+
+    (* -- vector table -- *)
+    VectorTableSize*        = 672; (* bytes: 16 sys exceptions + 121 interrupts, one word each *)
+    EXC_Reset_Offset*       = 004H;
+    EXC_NMI_Offset*         = 008H;
+    EXC_HardFault_Offset*   = 00CH;
+    EXC_BusFault_Offset*    = 014H;
+    EXC_UsageFault_Offset*  = 018H;
+    EXC_SVC_Offset*         = 02CH;
+    EXC_DebugMon_Offset*    = 030H;
+    EXC_PendSV_Offset*      = 038H;
+    EXC_SysTick_Offset*     = 03CH;
+
+    (* -- SCB system control block -- *)
+    PPB_ICSR*         = PPB_BASE + 0ED04H;
+    PPB_VTOR*         = PPB_BASE + 0ED08H;
+    PPB_AIRCR*        = PPB_BASE + 0ED0CH;
+    PPB_SCR*          = PPB_BASE + 0ED10H;
+    PPB_CCR*          = PPB_BASE + 0ED14H;
+
+    PPB_SHPR1*        = PPB_BASE + 0ED18H;
+    PPB_SHPR2*        = PPB_BASE + 0ED1CH;
+    PPB_SHPR3*        = PPB_BASE + 0ED20H;
+
+    PPB_SHCSR*        = PPB_BASE + 0ED24H;
+
+    PPB_CFSR*         = PPB_BASE + 0ED28H; (* UFSR [31:16], BFSR [15:8], MMFSR [7:0] *)
+    PPB_HFSR*         = PPB_BASE + 0ED2CH;
+    PPB_DFSR*         = PPB_BASE + 0ED30H;
+    PPB_MMFAR*        = PPB_BASE + 0ED34H;
+    PPB_BFAR*         = PPB_BASE + 0ED38H;
+    PPB_AFSR*         = PPB_BASE + 0ED3CH;
+    PPB_CPACR*        = PPB_BASE + 0ED88H;
+
+    (* -- sw interrupt generation -- *)
+    PPB_STIR*         = PPB_BASE + 0EF00H;
+
+(* ===== CPU registers ===== *)
+    (* CONTROL special register *)
+    CONTROL_SPSEL* = 1; (* enable PSP *)
+
+
+(* ===== assembly instructions ===== *)
+
+    NOP* = 046C0H;
+
+    (* read specical regs MRS *)
+    (* 0F3EF8 B 09H r11(B) PSP(09) *)
+    (* [11:8] = register Rn *)
+    (* [7:0] = special reg SYSm *)
+    MRS_R11_IPSR* = 0F3EF8B05H;  (* move IPSR to r11 *)
+    MRS_R03_IPSR* = 0F3EF8305H;  (* move IPSR to r3 *)
+    MRS_R00_IPSR* = 0F3EF8005H;  (* move IPSR to r0 *)
+
+    MRS_R11_XPSR* = 0F3EF8B03H;  (* move XPSR to r11 *)
+    MRS_R03_XPSR* = 0F3EF8303H;  (* move XPSR to r3 *)
+
+    MRS_R11_MSP*  = 0F3EF8B08H;  (* move MSP to r11 *)
+    MRS_R03_MSP*  = 0F3EF8308H;  (* move MSP to r3 *)
+    MRS_R00_MSP*  = 0F3EF8008H;  (* move MSP to r0 *)
+
+    MRS_R11_PSP*  = 0F3EF8B09H;  (* move PSP to r11 *)
+    MRS_R03_PSP*  = 0F3EF8309H;  (* move PSP to r3 *)
+    MRS_R00_PSP*  = 0F3EF8009H;  (* move PSP to r0 *)
+
+    MRS_R11_CTL*  = 0F3EF8B14H;  (* move CONTROL = 14H to r11 *)
+    MRS_R03_CTL*  = 0F3EF8314H;  (* move CONTROL = 14H to r3 *)
+
+    MRS_R03_BASEPRI* = 0F3EF8311H; (* move BASEPRI = 11H to r3 *)
+    MRS_R07_BASEPRI* = 0F3EF8711H; (* move BASEPRI = 11H to r7 *)
+    MRS_R11_BASEPRI* = 0F3EF8B11H; (* move BASEPRI = 11H to r11 *)
+
+    (* write special regs MSR *)
+    (* 0F38 B 88 09H r11(B) PSP(09) *)
+    (* [19:16] = register Rn *)
+    (* [7:0] = special register SYSm *)
+    MSR_PSP_R11* = 0F38B8809H;  (* move r11 to PSP *)
+    MSR_MSP_R11* = 0F38B8808H;  (* move r11 to MSP *)
+    MSR_CTL_R11* = 0F38B8814H;  (* move r11 to CONTROL *)
+
+    MSR_BASEPRI_R02* = 0F3828811H; (* move r02 to BASEPRI *)
+    MSR_BASEPRI_R03* = 0F3838811H; (* move r03 to BASEPRI *)
+    MSR_BASEPRI_R06* = 0F3868811H; (* move r06 to BASEPRI *)
+    MSR_BASEPRI_R07* = 0F3878811H; (* move r07 to BASEPRI *)
+    MSR_BASEPRI_R11* = 0F38B8811H; (* move r11 to BASEPRI *)
+
+    (* instruction & data sync *)
+    ISB* = 0F3BF8F6FH;
+    DSB* = 0F3BF8F4FH;
+
+    (* raise execution prio to 0 via PRIMASK *)
+    CPSIE_I* = 0B662H; (* enable:  1011 0110 0110 0010 *)
+    CPSID_I* = 0B672H; (* disable: 1011 0110 0111 0010 *)
+    (* raise execution prio to -1 = HardFault via FAULTMASK *)
+    (* clears on handler exit *)
+    CPSIE_F* = 0B662H; (* enable:  1011 0110 0110 0001 *)
+    CPSID_F* = 0B672H; (* disable: 1011 0110 0111 0001 *)
+
+    (* wait for event *)
+    WFE* = 0BF20H;
+
+    (* SVC *)
+    (* SVCinstr = 'SVC' + SVCvalue *)
+    SVC* = 0DF00H;
+
+
+END MCU2.
+.     4  010000338      0B500  push      { lr }
+.     6  01000033A      0BD00  pop       { pc }
+ 

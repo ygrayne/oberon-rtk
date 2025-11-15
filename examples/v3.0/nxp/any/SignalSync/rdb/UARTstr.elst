@@ -1,0 +1,107 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
+
+.     0  010003E98              <Pad: 0>
+MODULE UARTstr;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  UART string device driver, kernel not required (busy waiting)
+  --
+  MCU: MCX-N947
+  --
+  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, UARTdev, TextIO;
+
+
+  PROCEDURE* PutChar*(dev: TextIO.Device; ch: CHAR);
+    VAR dev0: UARTdev.Device;
+  BEGIN
+.     4  010003E9C      0B500  push      { lr }
+.     6  010003E9E      0B081  sub       sp,#4
+    dev0 := dev(UARTdev.Device);
+.     8  010003EA0  0F8502C04  ldr.w     r2,[r0,#-4]
+.    12  010003EA4      06852  ldr       r2,[r2,#4]
+.    14  010003EA6  0F8DF3024  ldr.w     r3,[pc,#36] -> 52
+.    18  010003EAA      0429A  cmp       r2,r3
+.    20  010003EAC      0D001  beq.n     2 -> 26
+.    22  010003EAE      0DF02  svc       2
+.    24  010003EB0      00014  <LineNo: 20>
+.    26  010003EB2      09000  str       r0,[sp]
+    REPEAT UNTIL SYSTEM.BIT(dev0.STAT, UARTdev.STAT_TDRE);
+.    28  010003EB4      09A00  ldr       r2,[sp]
+.    30  010003EB6      06952  ldr       r2,[r2,#20]
+.    32  010003EB8      06813  ldr       r3,[r2]
+.    34  010003EBA      0021B  lsls      r3,r3,#8
+.    36  010003EBC  0F57FAFFA  bpl.w     -12 -> 28
+    SYSTEM.PUT(dev0.DATA, ch)
+  END PutChar;
+.    40  010003EC0      09A00  ldr       r2,[sp]
+.    42  010003EC2      06A52  ldr       r2,[r2,#36]
+.    44  010003EC4      07011  strb      r1,[r2]
+.    46  010003EC6      0B001  add       sp,#4
+.    48  010003EC8      0BD00  pop       { pc }
+.    50  010003ECA      0BF00  nop       
+.    52  010003ECC  010003994  <Global: UARTdev code>
+
+
+  PROCEDURE* PutString*(dev: TextIO.Device; s: ARRAY OF CHAR; numChar: INTEGER);
+    VAR dev0: UARTdev.Device; i: INTEGER;
+  BEGIN
+.    56  010003ED0      0B500  push      { lr }
+.    58  010003ED2      0B081  sub       sp,#4
+    dev0 := dev(UARTdev.Device);
+.    60  010003ED4  0F8505C04  ldr.w     r5,[r0,#-4]
+.    64  010003ED8      0686D  ldr       r5,[r5,#4]
+.    66  010003EDA  0F8DF6040  ldr.w     r6,[pc,#64] -> 132
+.    70  010003EDE      042B5  cmp       r5,r6
+.    72  010003EE0      0D001  beq.n     2 -> 78
+.    74  010003EE2      0DF02  svc       2
+.    76  010003EE4      0001D  <LineNo: 29>
+.    78  010003EE6      09000  str       r0,[sp]
+    IF numChar > LEN(s) THEN numChar := LEN(s) END;
+.    80  010003EE8      04293  cmp       r3,r2
+.    82  010003EEA  0F3408001  ble.w     2 -> 88
+.    86  010003EEE      04613  mov       r3,r2
+    i := 0;
+.    88  010003EF0      02500  movs      r5,#0
+.    90  010003EF2      0462C  mov       r4,r5
+    WHILE i < numChar DO
+.    92  010003EF4      0429C  cmp       r4,r3
+.    94  010003EF6  0F280800F  bge.w     30 -> 128
+      IF SYSTEM.BIT(dev0.STAT, UARTdev.STAT_TDRE) THEN
+.    98  010003EFA      09D00  ldr       r5,[sp]
+.   100  010003EFC      0696D  ldr       r5,[r5,#20]
+.   102  010003EFE      0682E  ldr       r6,[r5]
+.   104  010003F00      00236  lsls      r6,r6,#8
+.   106  010003F02  0F1408007  bpl.w     14 -> 124
+        SYSTEM.PUT(dev0.DATA, s[i]);
+.   110  010003F06  0EB140501  adds.w    r5,r4,r1
+.   114  010003F0A      09E00  ldr       r6,[sp]
+.   116  010003F0C      06A76  ldr       r6,[r6,#36]
+.   118  010003F0E      0782D  ldrb      r5,[r5]
+.   120  010003F10      07035  strb      r5,[r6]
+        INC(i)
+      END
+.   122  010003F12      03401  adds      r4,#1
+    END
+.   124  010003F14  0F7FFBFEE  b.w       -36 -> 92
+  END PutString;
+.   128  010003F18      0B001  add       sp,#4
+.   130  010003F1A      0BD00  pop       { pc }
+.   132  010003F1C  010003994  <Global: UARTdev code>
+
+
+  PROCEDURE* GetString*(dev: TextIO.Device; VAR s: ARRAY OF CHAR; VAR numChar, res: INTEGER);
+  END GetString;
+.   136  010003F20      0B500  push      { lr }
+.   138  010003F22      0BD00  pop       { pc }
+
+END UARTstr.
+.   140  010003F24      0B500  push      { lr }
+.   142  010003F26      0BD00  pop       { pc }
+ 

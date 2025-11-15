@@ -1,0 +1,91 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
+
+.     0  0100007F8              <Pad: 0>
+MODULE Cores;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  Core handling
+  --
+  MCU: MCX-N947
+  --
+  Copyright (c) 2023-2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2;
+
+  (*
+  VAR
+    runInit, runStart: PROCEDURE;
+  *)
+
+  PROCEDURE* SetCoreId*(id: INTEGER);
+    VAR vtor: INTEGER;
+  BEGIN
+.     4  0100007FC      0B500  push      { lr }
+    SYSTEM.GET(MCU.PPB_VTOR, vtor);
+.     6  0100007FE  0F8DF2008  ldr.w     r2,[pc,#8] -> 16
+.    10  010000802      06811  ldr       r1,[r2]
+    SYSTEM.PUT(vtor, id)
+  END SetCoreId;
+.    12  010000804      06008  str       r0,[r1]
+.    14  010000806      0BD00  pop       { pc }
+.    16  010000808  0E000ED08  <Const:  -536810232>
+
+
+  PROCEDURE* GetCoreId*(VAR cid: INTEGER);
+  BEGIN
+.    20  01000080C      0B500  push      { lr }
+    SYSTEM.GET(MCU.PPB_VTOR, cid);
+.    22  01000080E  0F8DF1010  ldr.w     r1,[pc,#16] -> 40
+.    26  010000812      0680A  ldr       r2,[r1]
+.    28  010000814      06002  str       r2,[r0]
+    SYSTEM.GET(cid, cid)
+  END GetCoreId;
+.    30  010000816      06801  ldr       r1,[r0]
+.    32  010000818      0680A  ldr       r2,[r1]
+.    34  01000081A      06002  str       r2,[r0]
+.    36  01000081C      0BD00  pop       { pc }
+.    38  01000081E      0BF00  nop       
+.    40  010000820  0E000ED08  <Const:  -536810232>
+
+
+  PROCEDURE* CoreId*(): INTEGER;
+    VAR cid: INTEGER;
+  BEGIN
+.    44  010000824      0B500  push      { lr }
+    SYSTEM.GET(MCU.PPB_VTOR, cid);
+.    46  010000826  0F8DF1008  ldr.w     r1,[pc,#8] -> 56
+.    50  01000082A      06808  ldr       r0,[r1]
+    SYSTEM.GET(cid, cid)
+    RETURN cid
+.    52  01000082C      06800  ldr       r0,[r0]
+  END CoreId;
+.    54  01000082E      0BD00  pop       { pc }
+.    56  010000830  0E000ED08  <Const:  -536810232>
+
+(*
+  PROCEDURE init;
+  BEGIN
+    IF runInit # NIL THEN
+      runInit
+    END;
+    runStart
+  END init;
+
+
+  PROCEDURE StartCoreOne*(startProc, initProc: PROCEDURE);
+    CONST Core1 = 1;
+  BEGIN
+    runInit := initProc;
+    runStart := startProc;
+
+  END StartCoreOne;
+*)
+END Cores.
+.    60  010000834      0B500  push      { lr }
+.    62  010000836      0BD00  pop       { pc }
+ 

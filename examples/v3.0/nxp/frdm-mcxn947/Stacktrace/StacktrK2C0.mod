@@ -5,10 +5,11 @@ MODULE StacktrK2C0;
   Example/test program
   https://oberon-rtk.org/docs/examples/v2/stacktrace
   --
-  MCU: MCX-A346
-  Board: FRDM-MCXA346
+  MCU: MCX-N947
+  Board: FRDM-MCXN947
    --
   Kernel-v1
+  Only one core used (for now).
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -24,7 +25,7 @@ MODULE StacktrK2C0;
 
     CaseError = 0;
     CaseFault = 1;
-    Case = CaseFault;
+    Case = CaseError;
 
   VAR
     p: PROCEDURE;

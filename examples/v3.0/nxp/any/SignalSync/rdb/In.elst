@@ -1,0 +1,133 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
+
+.     0  01000410C              <Pad: 0>
+MODULE In;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  Input via two TextIO.Reader.
+  --
+  MCU: MCX-A346, MCX-N947
+  --
+  Copyright (c) 2020-2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT Cores, Errors, TextIO, Texts;
+
+  CONST
+    NumTerminals = 2;
+
+    (* error codes, from TextIO *)
+    NoError* = TextIO.NoError;
+    BufferOverflow* = TextIO.BufferOverflow;
+    SyntaxError* = TextIO.SyntaxError;
+    OutOfLimits* = TextIO.OutOfLimits;
+    NoInput* = TextIO.NoInput;
+    FifoOverrun* = TextIO.FifoOverrun;
+
+
+  VAR
+    R: ARRAY NumTerminals OF TextIO.Reader;
+
+  PROCEDURE Open*(R0, R1: TextIO.Reader);
+  BEGIN
+.     4  010004110      0B503  push      { r0, r1, lr }
+    ASSERT(R0 # NIL, Errors.PreCond);
+.     6  010004112      09800  ldr       r0,[sp]
+.     8  010004114      02800  cmp       r0,#0
+.    10  010004116      0D101  bne.n     2 -> 16
+.    12  010004118      0DF22  svc       34
+.    14  01000411A      00021  <LineNo: 33>
+    R[0] := R0;
+.    16  01000411C  0F8DF0010  ldr.w     r0,[pc,#16] -> 36
+.    20  010004120      09900  ldr       r1,[sp]
+.    22  010004122      06001  str       r1,[r0]
+    R[1] := R1
+.    24  010004124  0F8DF0008  ldr.w     r0,[pc,#8] -> 36
+  END Open;
+.    28  010004128      09901  ldr       r1,[sp,#4]
+.    30  01000412A      06041  str       r1,[r0,#4]
+.    32  01000412C      0B002  add       sp,#8
+.    34  01000412E      0BD00  pop       { pc }
+.    36  010004130  02001FE8C  <Global: In data>
+
+
+  PROCEDURE String*(VAR str: ARRAY OF CHAR; VAR res: INTEGER);
+    VAR cid: INTEGER;
+  BEGIN
+.    40  010004134      0B507  push      { r0, r1, r2, lr }
+.    42  010004136      0B081  sub       sp,#4
+    Cores.GetCoreId(cid);
+.    44  010004138      04668  mov       r0,sp
+.    46  01000413A  0F7FCFB67  bl.w      Ext Proc #2
+.    50  01000413E      0E000  b         0 -> 54
+.    52  010004140      0002A  <LineNo: 42>
+    Texts.ReadString(R[cid], str, res)
+.    54  010004142      09800  ldr       r0,[sp]
+.    56  010004144      02802  cmp       r0,#2
+.    58  010004146      0D301  bcc.n     2 -> 64
+.    60  010004148      0DF01  svc       1
+.    62  01000414A      0002B  <LineNo: 43>
+.    64  01000414C  0F8DF101C  ldr.w     r1,[pc,#28] -> 96
+.    68  010004150      00082  lsls      r2,r0,#2
+.    70  010004152  0EB020001  add.w     r0,r2,r1
+.    74  010004156      06800  ldr       r0,[r0]
+.    76  010004158      09901  ldr       r1,[sp,#4]
+.    78  01000415A      09A02  ldr       r2,[sp,#8]
+.    80  01000415C      09B03  ldr       r3,[sp,#12]
+  END String;
+.    82  01000415E  0F7FEFC67  bl.w      Ext Proc #11
+.    86  010004162      0E000  b         0 -> 90
+.    88  010004164      0002B  <LineNo: 43>
+.    90  010004166      0B004  add       sp,#16
+.    92  010004168      0BD00  pop       { pc }
+.    94  01000416A      0BF00  nop       
+.    96  01000416C  02001FE8C  <Global: In data>
+
+
+  PROCEDURE Int*(VAR int, res: INTEGER);
+    VAR cid: INTEGER;
+  BEGIN
+.   100  010004170      0B503  push      { r0, r1, lr }
+.   102  010004172      0B081  sub       sp,#4
+    Cores.GetCoreId(cid);
+.   104  010004174      04668  mov       r0,sp
+.   106  010004176  0F7FCFB49  bl.w      Ext Proc #2
+.   110  01000417A      0E000  b         0 -> 114
+.   112  01000417C      00032  <LineNo: 50>
+    Texts.ReadInt(R[cid], int, res)
+.   114  01000417E      09800  ldr       r0,[sp]
+.   116  010004180      02802  cmp       r0,#2
+.   118  010004182      0D301  bcc.n     2 -> 124
+.   120  010004184      0DF01  svc       1
+.   122  010004186      00033  <LineNo: 51>
+.   124  010004188  0F8DF1018  ldr.w     r1,[pc,#24] -> 152
+.   128  01000418C      00082  lsls      r2,r0,#2
+.   130  01000418E  0EB020001  add.w     r0,r2,r1
+.   134  010004192      06800  ldr       r0,[r0]
+.   136  010004194      09901  ldr       r1,[sp,#4]
+.   138  010004196      09A02  ldr       r2,[sp,#8]
+  END Int;
+.   140  010004198  0F7FEFC6C  bl.w      Ext Proc #12
+.   144  01000419C      0E000  b         0 -> 148
+.   146  01000419E      00033  <LineNo: 51>
+.   148  0100041A0      0B003  add       sp,#12
+.   150  0100041A2      0BD00  pop       { pc }
+.   152  0100041A4  02001FE8C  <Global: In data>
+
+BEGIN
+.   156  0100041A8      0B500  push      { lr }
+  R[0] := NIL; R[1] := NIL
+.   158  0100041AA  0F8DF0010  ldr.w     r0,[pc,#16] -> 176
+.   162  0100041AE      02100  movs      r1,#0
+.   164  0100041B0      06001  str       r1,[r0]
+.   166  0100041B2  0F8DF0008  ldr.w     r0,[pc,#8] -> 176
+END In.
+.   170  0100041B6      02100  movs      r1,#0
+.   172  0100041B8      06041  str       r1,[r0,#4]
+.   174  0100041BA      0BD00  pop       { pc }
+.   176  0100041BC  02001FE8C  <Global: In data>
+ 

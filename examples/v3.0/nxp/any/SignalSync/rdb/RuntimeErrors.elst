@@ -1,0 +1,476 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
+
+.     0  010001180              <Pad: 0>
+MODULE RuntimeErrors;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  Exception handling: run-time errors and faults
+  --
+  * Error: run-time errors, including ASSERT, triggered by SVC calls in software
+  * Fault: hardware faults, triggered by MCU hardware
+  --
+  MCU: MCX-N947
+  --
+  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT
+    SYSTEM, MCU := MCU2, LED, Config;
+
+  CONST
+    NumCores = Config.NumCoresUsed;
+    TraceDepth* = 16;
+
+    (* register offsets from stacked r0 *)
+    PCoffset = 24;
+
+    (* register numbers *)
+    SP = 13;
+
+    (* PPB_SHCSR bits *)
+    SECUREFAULTENA  = 19;
+    USGFAULTENA     = 18;
+    BUSFAULTENA     = 17;
+    MEMFAULTENA     = 16;
+
+    (* EXC_RETURN bits *)
+    (*EXC_RET_S     = 6;*)  (* = 1: secure stack frame, faulty code was running in secure domain *)
+    (*EXC_RET_DCRS  = 5;*)  (* = 0: all CPU regs stacked by hardware, extended state context *)
+    (*EXC_RET_FType = 4;*)  (* = 0: all FPU regs stacked by hardware, extended FPU context *)
+    EXC_RET_Mode  = 3;      (* = 1: thread mode, faulty code was running in thread mode *)
+    EXC_RET_SPSEL = 2;      (* = 1: PSP used for stacking *)
+    (*EXC_RET_ES    = 0;*)  (* = 1: exception running in secure domain *)
+
+    (* MCU.PPB_ICSR bits *)
+    PENDSVSET = 28;
+
+
+  TYPE
+    (* data collected for an error/fault *)
+    ErrorDesc* = RECORD
+      core*: BYTE;       (* MCU core *)
+      errCode*: BYTE;    (* error or fault code *)
+      errType*: BYTE;    (* type of error: error or fault, handler or thread mode *)
+      errAddr*: INTEGER; (* error/fault code address *)
+      errLineNo*: INTEGER;      (* error source code line no, if available *)
+      stackframeBase*: INTEGER; (* address of exception frame stack *)
+      excRetVal*: INTEGER;
+      xpsr*: INTEGER
+    END;
+.     4  010001184  010001184      00018  <Type:   24>
+.     8  010001188  010001188      00000  <Type:   0>
+.    12  01000118C  01000118C      00000  <Type:   0>
+.    16  010001190  010001190      00000  <Type:   0>
+.    20  010001194  010001194      00000  <Type:   0>
+
+
+  VAR
+    ErrorRec*: ARRAY NumCores OF ErrorDesc;
+
+
+  PROCEDURE excHandler[0];
+    CONST FaultCodeBase = 2; R11 = 11;
+    VAR
+      cid, excNo, stackframeBase, excRetAddr, excRetVal, retAddr: INTEGER;
+      b0, b1: BYTE; icsr: SET;
+      er: ErrorDesc;
+  BEGIN
+.    24  010001198  0F84DED04  push.w    { lr }
+.    28  01000119C      0B08E  sub       sp,#56
+    SYSTEM.GET(MCU.PPB_VTOR, cid);
+.    30  01000119E  0F8DF0100  ldr.w     r0,[pc,#256] -> 288
+.    34  0100011A2      06801  ldr       r1,[r0]
+.    36  0100011A4      09100  str       r1,[sp]
+    SYSTEM.GET(cid, cid);
+.    38  0100011A6      09800  ldr       r0,[sp]
+.    40  0100011A8      06801  ldr       r1,[r0]
+.    42  0100011AA      09100  str       r1,[sp]
+    excRetAddr := SYSTEM.REG(SP) + 56; (* addr of EXC_RETURN value on stack *)
+.    44  0100011AC      04668  mov       r0,sp
+.    46  0100011AE      03038  adds      r0,#56
+.    48  0100011B0      09003  str       r0,[sp,#12]
+    SYSTEM.GET(excRetAddr, excRetVal);
+.    50  0100011B2      09803  ldr       r0,[sp,#12]
+.    52  0100011B4      06801  ldr       r1,[r0]
+.    54  0100011B6      09104  str       r1,[sp,#16]
+    IF EXC_RET_SPSEL IN BITS(excRetVal) THEN (* PSP used for stacking *)
+.    56  0100011B8      09804  ldr       r0,[sp,#16]
+.    58  0100011BA  0F0100F04  tst.w     r0,#4
+.    62  0100011BE  0F0008006  beq.w     12 -> 78
+      SYSTEM.EMIT(MCU.MRS_R11_PSP);
+.    66  0100011C2  0F3EF8B09  .word     0x8B09F3EF /* EMIT */
+      stackframeBase := SYSTEM.REG(R11)
+    ELSE (* MSP used *)
+.    70  0100011C6      04658  mov       r0,r11
+.    72  0100011C8      09002  str       r0,[sp,#8]
+      stackframeBase := excRetAddr + 4;
+.    74  0100011CA  0F000B803  b.w       6 -> 84
+.    78  0100011CE      09803  ldr       r0,[sp,#12]
+.    80  0100011D0      03004  adds      r0,#4
+.    82  0100011D2      09002  str       r0,[sp,#8]
+    END;
+    SYSTEM.GET(stackframeBase + PCoffset, retAddr);
+.    84  0100011D4      09802  ldr       r0,[sp,#8]
+.    86  0100011D6      03018  adds      r0,#24
+.    88  0100011D8      06801  ldr       r1,[r0]
+.    90  0100011DA      09105  str       r1,[sp,#20]
+    SYSTEM.EMIT(MCU.MRS_R11_XPSR);
+.    92  0100011DC  0F3EF8B03  .word     0x8B03F3EF /* EMIT */
+    er.xpsr := SYSTEM.REG(R11);
+.    96  0100011E0      04658  mov       r0,r11
+.    98  0100011E2      0900D  str       r0,[sp,#52]
+    er.core := cid;
+.   100  0100011E4      09800  ldr       r0,[sp]
+.   102  0100011E6  0F88D0020  strb.w    r0,[sp,#32]
+    er.excRetVal := excRetVal;
+.   106  0100011EA      09804  ldr       r0,[sp,#16]
+.   108  0100011EC      0900C  str       r0,[sp,#48]
+    er.errAddr := retAddr;
+.   110  0100011EE      09805  ldr       r0,[sp,#20]
+.   112  0100011F0      09009  str       r0,[sp,#36]
+    er.stackframeBase := stackframeBase;
+.   114  0100011F2      09802  ldr       r0,[sp,#8]
+.   116  0100011F4      0900B  str       r0,[sp,#44]
+
+    SYSTEM.EMIT(MCU.MRS_R11_IPSR);
+.   118  0100011F6  0F3EF8B05  .word     0x8B05F3EF /* EMIT */
+    excNo := SYSTEM.REG(R11);
+.   122  0100011FA      04658  mov       r0,r11
+.   124  0100011FC      09001  str       r0,[sp,#4]
+    IF excNo = MCU.EXC_SVC THEN (* SVC exception *)
+.   126  0100011FE      09801  ldr       r0,[sp,#4]
+.   128  010001200      0280B  cmp       r0,#11
+.   130  010001202  0F040801C  bne.w     56 -> 190
+      (* get source line number *)
+      SYSTEM.GET(retAddr + 1, b1);
+.   134  010001206      09805  ldr       r0,[sp,#20]
+.   136  010001208      03001  adds      r0,#1
+.   138  01000120A      07801  ldrb      r1,[r0]
+.   140  01000120C  0F88D1019  strb.w    r1,[sp,#25]
+      SYSTEM.GET(retAddr, b0);
+.   144  010001210      09805  ldr       r0,[sp,#20]
+.   146  010001212      07801  ldrb      r1,[r0]
+.   148  010001214  0F88D1018  strb.w    r1,[sp,#24]
+      er.errLineNo := LSL(b1, 8) + b0;
+.   152  010001218  0F89D0019  ldrb.w    r0,[sp,#25]
+.   156  01000121C      00200  lsls      r0,r0,#8
+.   158  01000121E  0F89D1018  ldrb.w    r1,[sp,#24]
+.   162  010001222      04408  add       r0,r1
+.   164  010001224      0900A  str       r0,[sp,#40]
+      (* get imm svc value = error code *)
+      SYSTEM.GET(retAddr - 2, er.errCode); (* svc instr is two bytes, imm value is lower byte *)
+.   166  010001226      09805  ldr       r0,[sp,#20]
+.   168  010001228      03802  subs      r0,#2
+.   170  01000122A      07801  ldrb      r1,[r0]
+.   172  01000122C  0F88D1021  strb.w    r1,[sp,#33]
+      (* type: 0 = error in handler mode, 1 = error in thread mode *)
+      er.errType := BFX(excRetVal, EXC_RET_Mode);
+.   176  010001230      09804  ldr       r0,[sp,#16]
+.   178  010001232  0F3C000C0  ubfx      r0,r0,3,1
+.   182  010001236  0F88D0022  strb.w    r0,[sp,#34]
+    ELSE (* all others *)
+      er.errLineNo := 0;
+.   186  01000123A  0F000B80B  b.w       22 -> 212
+.   190  01000123E      02000  movs      r0,#0
+.   192  010001240      0900A  str       r0,[sp,#40]
+      er.errCode := excNo;
+.   194  010001242      09801  ldr       r0,[sp,#4]
+.   196  010001244  0F88D0021  strb.w    r0,[sp,#33]
+      (* type: 2 = fault in handler mode, 3 = fault in thread mode *)
+      er.errType := FaultCodeBase + BFX(excRetVal, EXC_RET_Mode);
+.   200  010001248      09804  ldr       r0,[sp,#16]
+.   202  01000124A  0F3C000C0  ubfx      r0,r0,3,1
+.   206  01000124E      03002  adds      r0,#2
+.   208  010001250  0F88D0022  strb.w    r0,[sp,#34]
+    END;
+    ErrorRec[cid] := er;
+.   212  010001254      09800  ldr       r0,[sp]
+.   214  010001256      02801  cmp       r0,#1
+.   216  010001258      0D301  bcc.n     2 -> 222
+.   218  01000125A      0DF01  svc       1
+.   220  01000125C      0006C  <LineNo: 108>
+.   222  01000125E  0F8DF1048  ldr.w     r1,[pc,#72] -> 296
+.   226  010001262      02218  movs      r2,#24
+.   228  010001264  0FB021000  mla.w     r0,r2,r0,r1
+.   232  010001268      02106  movs      r1,#6
+.   234  01000126A  0F11D0220  adds.w    r2,sp,#32
+.   238  01000126E  0F8523B04  ldr.w     r3,[r2],#4
+.   242  010001272  0F8403B04  str.w     r3,[r0],#4
+.   246  010001276      03901  subs      r1,#1
+.   248  010001278      0D1F9  bne.n     -14 -> 238
+
+    (* set PendSV pending to trigger error handler *)
+    SYSTEM.GET(MCU.PPB_ICSR, icsr);
+.   250  01000127A  0F8DF0028  ldr.w     r0,[pc,#40] -> 292
+.   254  01000127E      06801  ldr       r1,[r0]
+.   256  010001280      09107  str       r1,[sp,#28]
+    icsr := icsr + {PENDSVSET};
+.   258  010001282      09807  ldr       r0,[sp,#28]
+.   260  010001284  0F0505080  orrs.w    r0,r0,#010000000H
+.   264  010001288      09007  str       r0,[sp,#28]
+    SYSTEM.PUT(MCU.PPB_ICSR, icsr);
+.   266  01000128A  0F8DF0018  ldr.w     r0,[pc,#24] -> 292
+.   270  01000128E      09907  ldr       r1,[sp,#28]
+.   272  010001290      06001  str       r1,[r0]
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
+.   274  010001292  0F3BF8F4F  dsb       
+  END excHandler;
+.   278  010001296  0F3BF8F6F  isb       
+.   282  01000129A      0B00E  add       sp,#56
+.   284  01000129C  0F85DFB04  pop.w     { pc }
+.   288  0100012A0  0E000ED08  <Const:  -536810232>
+.   292  0100012A4  0E000ED04  <Const:  -536810236>
+.   296  0100012A8  02001FEE0  <Global: RuntimeErrors data>
+
+
+
+  PROCEDURE* errorHandler[0];
+  (* default handler: simply blink LED *)
+    VAR cid, cnt, i: INTEGER; er: ErrorDesc;
+  BEGIN
+.   300  0100012AC  0E92D4070  push.w    { r4, r5, r6, lr }
+.   304  0100012B0      0B086  sub       sp,#24
+    SYSTEM.GET(MCU.PPB_VTOR, cid);
+.   306  0100012B2  0F8DF3068  ldr.w     r3,[pc,#104] -> 412
+.   310  0100012B6      06818  ldr       r0,[r3]
+    SYSTEM.GET(cid, cid);
+.   312  0100012B8      06800  ldr       r0,[r0]
+    er := ErrorRec[cid];
+.   314  0100012BA  0F8DF3070  ldr.w     r3,[pc,#112] -> 428
+.   318  0100012BE      02418  movs      r4,#24
+.   320  0100012C0  0FB043300  mla.w     r3,r4,r0,r3
+.   324  0100012C4      02406  movs      r4,#6
+.   326  0100012C6      0466D  mov       r5,sp
+.   328  0100012C8  0F8536B04  ldr.w     r6,[r3],#4
+.   332  0100012CC  0F8456B04  str.w     r6,[r5],#4
+.   336  0100012D0      03C01  subs      r4,#1
+.   338  0100012D2      0D1F9  bne.n     -14 -> 328
+    IF er.errType IN {0, 1} THEN
+.   340  0100012D4      02303  movs      r3,#3
+.   342  0100012D6  0F89D4002  ldrb.w    r4,[sp,#2]
+.   346  0100012DA      02501  movs      r5,#1
+.   348  0100012DC      040A5  lsls      r5,r4
+.   350  0100012DE  0EA130F05  tst.w     r3,r5
+.   354  0100012E2  0F0008005  beq.w     10 -> 368
+      cnt := 1000000
+    ELSE
+.   358  0100012E6  0F8DF3038  ldr.w     r3,[pc,#56] -> 416
+.   362  0100012EA      04619  mov       r1,r3
+      cnt := 5000000
+.   364  0100012EC  0F000B803  b.w       6 -> 374
+    END;
+.   368  0100012F0  0F8DF3030  ldr.w     r3,[pc,#48] -> 420
+.   372  0100012F4      04619  mov       r1,r3
+    REPEAT
+      SYSTEM.PUT(LED.LXOR0, {LED.Red});
+.   374  0100012F6  0F8DF3030  ldr.w     r3,[pc,#48] -> 424
+.   378  0100012FA  0F2404400  movw      r4,#1024
+.   382  0100012FE      0601C  str       r4,[r3]
+      i := 0;
+.   384  010001300      02300  movs      r3,#0
+.   386  010001302      0461A  mov       r2,r3
+      WHILE i < cnt DO INC(i) END
+.   388  010001304      0428A  cmp       r2,r1
+.   390  010001306  0F2808003  bge.w     6 -> 400
+.   394  01000130A      03201  adds      r2,#1
+.   396  01000130C  0F7FFBFFA  b.w       -12 -> 388
+    UNTIL FALSE
+  END errorHandler;
+.   400  010001310      04280  cmp       r0,r0
+.   402  010001312  0F43FAFF0  beq.w     -32 -> 374
+.   406  010001316      0B006  add       sp,#24
+.   408  010001318  0E8BD8070  pop.w     { r4, r5, r6, pc }
+.   412  01000131C  0E000ED08  <Const:  -536810232>
+.   416  010001320  0000F4240  <Const:  1000000>
+.   420  010001324  0004C4B40  <Const:  5000000>
+.   424  010001328  04009604C  <Const:  1074356300>
+.   428  01000132C  02001FEE0  <Global: RuntimeErrors data>
+
+
+  PROCEDURE* install(vectAddr: INTEGER; p: PROCEDURE);
+  BEGIN
+.   432  010001330      0B500  push      { lr }
+    INCL(SYSTEM.VAL(SET, p), 0); (* thumb code *)
+.   434  010001332  0F0510101  orrs.w    r1,r1,#1
+    SYSTEM.PUT(vectAddr, p)
+  END install;
+.   438  010001336      06001  str       r1,[r0]
+.   440  010001338      0BD00  pop       { pc }
+.   442  01000133A      0BF00  nop       
+
+
+  PROCEDURE InstallErrorHandler*(cid: INTEGER; eh: PROCEDURE);
+    VAR vectorTableBase: INTEGER;
+  BEGIN
+.   444  01000133C      0B503  push      { r0, r1, lr }
+.   446  01000133E      0B081  sub       sp,#4
+    vectorTableBase := Config.DataMem[cid].start;
+.   448  010001340      09801  ldr       r0,[sp,#4]
+.   450  010001342      02801  cmp       r0,#1
+.   452  010001344      0D301  bcc.n     2 -> 458
+.   454  010001346      0DF01  svc       1
+.   456  010001348      00095  <LineNo: 149>
+.   458  01000134A  0F8DF1020  ldr.w     r1,[pc,#32] -> 492
+.   462  01000134E      000C2  lsls      r2,r0,#3
+.   464  010001350  0EB020001  add.w     r0,r2,r1
+.   468  010001354      06800  ldr       r0,[r0]
+.   470  010001356      09000  str       r0,[sp]
+    install(vectorTableBase + MCU.EXC_PendSV_Offset, eh);
+.   472  010001358      09800  ldr       r0,[sp]
+.   474  01000135A      03038  adds      r0,#56
+.   476  01000135C      09902  ldr       r1,[sp,#8]
+.   478  01000135E  0F7FFFFE7  bl.w      -50 -> 432
+.   482  010001362      0E000  b         0 -> 486
+.   484  010001364      00096  <LineNo: 150>
+  END InstallErrorHandler;
+.   486  010001366      0B003  add       sp,#12
+.   488  010001368      0BD00  pop       { pc }
+.   490  01000136A      0BF00  nop       
+.   492  01000136C  02001FFCC  <Global: Config data>
+
+
+  PROCEDURE* EnableFaults*;
+  (* call from code running on core 0 AND on core 1*)
+    VAR x: SET;
+  BEGIN
+.   496  010001370      0B500  push      { lr }
+    SYSTEM.GET(MCU.PPB_SHCSR, x);
+.   498  010001372  0F8DF101C  ldr.w     r1,[pc,#28] -> 528
+.   502  010001376      06808  ldr       r0,[r1]
+    x := x + {MEMFAULTENA, BUSFAULTENA, USGFAULTENA, SECUREFAULTENA};
+.   504  010001378  0F4502170  orrs.w    r1,r0,#00F0000H
+.   508  01000137C      04608  mov       r0,r1
+    SYSTEM.PUT(MCU.PPB_SHCSR, x);
+.   510  01000137E  0F8DF1010  ldr.w     r1,[pc,#16] -> 528
+.   514  010001382      06008  str       r0,[r1]
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
+.   516  010001384  0F3BF8F4F  dsb       
+  END EnableFaults;
+.   520  010001388  0F3BF8F6F  isb       
+.   524  01000138C      0BD00  pop       { pc }
+.   526  01000138E      0BF00  nop       
+.   528  010001390  0E000ED24  <Const:  -536810204>
+
+
+  PROCEDURE Init*;
+    VAR cid, addr, vectorTableBase, vectorTableTop: INTEGER;
+  BEGIN
+.   532  010001394      0B500  push      { lr }
+.   534  010001396      0B084  sub       sp,#16
+    cid := 0;
+.   536  010001398      02000  movs      r0,#0
+.   538  01000139A      09000  str       r0,[sp]
+    WHILE cid < NumCores DO
+.   540  01000139C      09800  ldr       r0,[sp]
+.   542  01000139E      02801  cmp       r0,#1
+.   544  0100013A0  0F2808062  bge.w     196 -> 744
+      (* initialise vector tables for each core *)
+      (* install exception handlers for all errors and faults *)
+      vectorTableBase := Config.DataMem[cid].start;
+.   548  0100013A4      09800  ldr       r0,[sp]
+.   550  0100013A6      02801  cmp       r0,#1
+.   552  0100013A8      0D301  bcc.n     2 -> 558
+.   554  0100013AA      0DF01  svc       1
+.   556  0100013AC      000AC  <LineNo: 172>
+.   558  0100013AE  0F8DF10BC  ldr.w     r1,[pc,#188] -> 748
+.   562  0100013B2      000C2  lsls      r2,r0,#3
+.   564  0100013B4  0EB020001  add.w     r0,r2,r1
+.   568  0100013B8      06800  ldr       r0,[r0]
+.   570  0100013BA      09002  str       r0,[sp,#8]
+      vectorTableTop := vectorTableBase + MCU.VectorTableSize;
+.   572  0100013BC      09802  ldr       r0,[sp,#8]
+.   574  0100013BE  0F5007028  add.w     r0,r0,#672
+.   578  0100013C2      09003  str       r0,[sp,#12]
+      install(vectorTableBase + MCU.EXC_NMI_Offset, excHandler);
+.   580  0100013C4      09802  ldr       r0,[sp,#8]
+.   582  0100013C6      03008  adds      r0,#8
+.   584  0100013C8  0F2AF2134  adr.w     r1,pc,#-564 -> 24
+.   588  0100013CC  0F7FFFFB0  bl.w      -160 -> 432
+.   592  0100013D0      0E000  b         0 -> 596
+.   594  0100013D2      000AE  <LineNo: 174>
+      install(vectorTableBase + MCU.EXC_HardFault_Offset, excHandler);
+.   596  0100013D4      09802  ldr       r0,[sp,#8]
+.   598  0100013D6      0300C  adds      r0,#12
+.   600  0100013D8  0F2AF2144  adr.w     r1,pc,#-580 -> 24
+.   604  0100013DC  0F7FFFFA8  bl.w      -176 -> 432
+.   608  0100013E0      0E000  b         0 -> 612
+.   610  0100013E2      000AF  <LineNo: 175>
+      install(vectorTableBase + MCU.EXC_BusFault_Offset, excHandler);
+.   612  0100013E4      09802  ldr       r0,[sp,#8]
+.   614  0100013E6      03014  adds      r0,#20
+.   616  0100013E8  0F2AF2154  adr.w     r1,pc,#-596 -> 24
+.   620  0100013EC  0F7FFFFA0  bl.w      -192 -> 432
+.   624  0100013F0      0E000  b         0 -> 628
+.   626  0100013F2      000B0  <LineNo: 176>
+      install(vectorTableBase + MCU.EXC_UsageFault_Offset, excHandler);
+.   628  0100013F4      09802  ldr       r0,[sp,#8]
+.   630  0100013F6      03018  adds      r0,#24
+.   632  0100013F8  0F2AF2164  adr.w     r1,pc,#-612 -> 24
+.   636  0100013FC  0F7FFFF98  bl.w      -208 -> 432
+.   640  010001400      0E000  b         0 -> 644
+.   642  010001402      000B1  <LineNo: 177>
+      install(vectorTableBase + MCU.EXC_SVC_Offset, excHandler);
+.   644  010001404      09802  ldr       r0,[sp,#8]
+.   646  010001406      0302C  adds      r0,#44
+.   648  010001408  0F2AF2174  adr.w     r1,pc,#-628 -> 24
+.   652  01000140C  0F7FFFF90  bl.w      -224 -> 432
+.   656  010001410      0E000  b         0 -> 660
+.   658  010001412      000B2  <LineNo: 178>
+      install(vectorTableBase + MCU.EXC_DebugMon_Offset, excHandler);
+.   660  010001414      09802  ldr       r0,[sp,#8]
+.   662  010001416      03030  adds      r0,#48
+.   664  010001418  0F2AF2184  adr.w     r1,pc,#-644 -> 24
+.   668  01000141C  0F7FFFF88  bl.w      -240 -> 432
+.   672  010001420      0E000  b         0 -> 676
+.   674  010001422      000B3  <LineNo: 179>
+      (* install default error handler *)
+      install(vectorTableBase + MCU.EXC_PendSV_Offset, errorHandler);
+.   676  010001424      09802  ldr       r0,[sp,#8]
+.   678  010001426      03038  adds      r0,#56
+.   680  010001428  0F2AF1180  adr.w     r1,pc,#-384 -> 300
+.   684  01000142C  0F7FFFF80  bl.w      -256 -> 432
+.   688  010001430      0E000  b         0 -> 692
+.   690  010001432      000B5  <LineNo: 181>
+
+      (* install excHandler across the rest of the vector table *)
+      (* will catch any exception with a missing handler *)
+      addr := vectorTableBase + MCU.EXC_SysTick_Offset;
+.   692  010001434      09802  ldr       r0,[sp,#8]
+.   694  010001436      0303C  adds      r0,#60
+.   696  010001438      09001  str       r0,[sp,#4]
+      WHILE addr < vectorTableTop DO
+.   698  01000143A      09801  ldr       r0,[sp,#4]
+.   700  01000143C      09903  ldr       r1,[sp,#12]
+.   702  01000143E      04288  cmp       r0,r1
+.   704  010001440  0F280800D  bge.w     26 -> 734
+        install(addr, excHandler); INC(addr, 4)
+.   708  010001444      09801  ldr       r0,[sp,#4]
+.   710  010001446      0BF00  nop       
+.   712  010001448  0F2AF21B4  adr.w     r1,pc,#-692 -> 24
+.   716  01000144C  0F7FFFF70  bl.w      -288 -> 432
+.   720  010001450      0E000  b         0 -> 724
+.   722  010001452      000BB  <LineNo: 187>
+      END;
+.   724  010001454      09801  ldr       r0,[sp,#4]
+.   726  010001456      03004  adds      r0,#4
+.   728  010001458      09001  str       r0,[sp,#4]
+.   730  01000145A  0F7FFBFEE  b.w       -36 -> 698
+      INC(cid)
+    END
+.   734  01000145E      09800  ldr       r0,[sp]
+.   736  010001460      03001  adds      r0,#1
+.   738  010001462      09000  str       r0,[sp]
+.   740  010001464  0F7FFBF9A  b.w       -204 -> 540
+  END Init;
+.   744  010001468      0B004  add       sp,#16
+.   746  01000146A      0BD00  pop       { pc }
+.   748  01000146C  02001FFCC  <Global: Config data>
+
+END RuntimeErrors.
+.   752  010001470      0B500  push      { lr }
+.   754  010001472      0BD00  pop       { pc }
+ 
