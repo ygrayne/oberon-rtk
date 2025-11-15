@@ -5,53 +5,56 @@ MODULE Clocks;
   --
   Clocks configuration and initialisation at start-up.
   --
-  MCU: MCX-A346
+  Note: this is a module with custom-made clock init procedures, with little or
+  no parametrisation. Clock configuration changes require to edit the procedures.
+  Reason: there are many different possible clock configurations, which could
+  be implemented with complex, parameterisable init procedures, but given we only
+  call these procedures once at start-up, it's just not worth the time and effort
+  for implementaiton and testing.
+  --
+  MCU: MCX-N947
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Errors; (*, TextIO, Texts, Main;*)
+  IMPORT SYSTEM, MCU := MCU2, Errors;
 
   CONST
     (* oscillators *)
     (* frequency configurable *)
-    FIRC_FRQ* = 180 * 1000000;  (* 45, 60, 90, 180 MHz, see InitFIRC *)
-    SPLL_FRQ* = 160 * 1000000;  (* see InitSPLL *)
+    FIRC_FRQ* = 144 * 1000000;  (* 48, 144 MHz, see InitFIRC *)
+    SPLL_FRQ* = 120 * 1000000;  (* see InitSPLL *)
+    APLL_FRQ* = 120 * 1000000;  (* see InitAPLL *)
 
     (* frequency fixed *)
     SIRC_FRQ*     =  12 * 1000000;    (* gate: SIRC_CLK_PERIPH_EN = 1 (reset) *)
     CLK_1M_FRQ*   =  SIRC_FRQ DIV 12; (* always on *)
     ROSC_FRQ*     =         16384;
-    SOSC_FRQ*     =   8 * 1000000;
-    CLK_45M_FRQ*  =  45 * 1000000;     (* gate: FIRC_SCLK_PERIPH_EN = 1 *)
+    SOSC_FRQ*     =  24 * 1000000;    (* if enabled *)
+    CLK_48M_FRQ*  =  48 * 1000000;    (* gate: FIRC_SCLK_PERIPH_EN = 1 *)
 
     (* derived clocks *)
     (* dividers SYSCON, actual div = (val + 1) *)
     SYSCON_AHBCLK_DIV_val*  = 0;  (* MAIN_CLK divider *)
     SYSCON_FROHF_DIV_val*   = 0;  (* FIRC divider *)
-    SYSCON_FROLF_DIV_val*   = 0;  (* SIRC divider *)
     SYSCON_PLL1CLK_DIV_val* = 0;  (* SPLL divider *)
+    SYSCON_PLL0CLK_DIV_val* = 0;  (* APLL divider *)
 
     FIRC_GATED_FRQ* = FIRC_FRQ; (* gate: FIRC_FCLK_PERIPH_EN = 1 *)
     FIRC_DIV_FRQ*   = FIRC_FRQ DIV (SYSCON_FROHF_DIV_val + 1);
-    SIRC_DIV_FRQ*   = SIRC_FRQ DIV (SYSCON_FROLF_DIV_val + 1);
     SPLL_DIV_FRQ*   = SPLL_FRQ DIV (SYSCON_PLL1CLK_DIV_val + 1);
+    APLL_DIV_FRQ*   = APLL_FRQ DIV (SYSCON_PLL0CLK_DIV_val + 1);
 
 
     (* SCG_FIRCCFG bits and values *)
-    FREQ_SEL_1 = 3;
-    FREQ_SEL_0 = 1;
-      FREQ_SEL_val_45  = 1;
-      FREQ_SEL_val_60  = 3;
-      FREQ_SEL_val_90  = 5;
-      FREQ_SEL_val_180 = 7;
+    RANGE = 0;
+      RANGE_val_48 = 0;
+      RANGE_val_144 = 1;
 
     (* value aliases *)
-    FIRC_45*  = FREQ_SEL_val_45;
-    FIRC_60*  = FREQ_SEL_val_60;
-    FIRC_90*  = FREQ_SEL_val_90;
-    FIRC_180* = FREQ_SEL_val_180;
+    FIRC_48*  = RANGE_val_48;
+    FIRC_144* = RANGE_val_144;
 
     (* SCG_FIRCCSR bits and values *)
     LK = 23;
@@ -104,13 +107,15 @@ MODULE Clocks;
     PDIV_0 = 0;
 
     (*  SCG_RCCR and SCG_CSR bits and values *)
-    SCS_1 = 26;
+    SCS_1 = 27;
     SCS_0 = 24;
       SCS_val_SOSC = 1;
       SCS_val_SIRC = 2;
       SCS_val_FIRC = 3;
       SCS_val_ROSC = 4;
+      SCS_val_APLL = 5;
       SCS_val_SPLL = 6;
+      SCS_val_UPLL = 7;
 
     (* SCG_LDOCSR bits and values *)
     VOUT_OK = 31;
@@ -119,17 +124,44 @@ MODULE Clocks;
     (* SPC_ACTIVE_CFG bits and values *)
     CORELDO_VDD_LVL_1 = 3;
     CORELDO_VDD_LVL_0 = 2;
-      CORELDO_VDD_LVL_val_SD = 1; (* reset *)
-      CORELDO_VDD_LVL_val_OD = 3;
+      CORELDO_VDD_LVL_val_MD = 1; (* 1.0 V, reset *)
+      CORELDO_VDD_LVL_val_SD = 2; (* 1.1 V *)
+      CORELDO_VDD_LVL_val_OD = 3; (* 1.2 V *)
+    DCDC_VDD_LVL_1    = 11;
+    DCDC_VDD_LVL_0    = 10;
+      DCDC_VDD_LVL_val_MD = CORELDO_VDD_LVL_val_MD;
+      DCDC_VDD_LVL_val_SD = CORELDO_VDD_LVL_val_SD;
+      DCDC_VDD_LVL_val_OD = CORELDO_VDD_LVL_val_OD;
+
+    (* SPC_SC bits and values *)
+    SPC_SC_BUSY = 0;
+
+
+    (* SPC_SRAM_CTRL bits and values *)
+    SPC_SRAM_CTRL_REQ   = 30;
+    SPC_SRAM_CTRL_ACK   = 31;
+    SPC_SRAM_CTRL_VSM_1 = 1;
+    SPC_SRAM_CTRL_VSM_0 = 0;
+      SPC_SRAM_CTRL_VSM_10V = 1;
+      SPC_SRAM_CTRL_VSM_11V = 2;
 
     (* FMU_FCTRL bits and values *)
     RWSC_1 = 3;
     RWSC_0 = 0;
-      RWSC_val_200  = 4;
-      RWSC_val_160  = 3;
-      RWSC_val_120  = 2;
-      RWSC_val_80   = 1;
-      RWSC_val_40   = 0;
+      RWSC_val_OD_150  = 3; (* reset value *)
+      RWSC_val_OD_100  = 2;
+      RWSC_val_OD_64   = 1;
+      RWSC_val_OD_36   = 0;
+
+      RWSC_val_SD_100  = RWSC_val_OD_100;
+      RWSC_val_SD_64   = RWSC_val_OD_64;
+      RWSC_val_SD_36   = RWSC_val_OD_36;
+
+      RWSC_val_MD_50   = RWSC_val_OD_64;
+      RWSC_val_MD_24   = RWSC_val_OD_36;
+
+    (* SYSCON_CLK_CTRL bits and values *)
+    CLK_CTRL_CLK_1M_EN = 6;
 
     (* all divider registers bits and values *)
     UNSTABLE = 31;
@@ -138,12 +170,47 @@ MODULE Clocks;
     MAIN_CLK_FRQ*, SYS_CLK_FRQ*, BUS_CLK_FRQ*, SLOW_CLK_FRQ*: INTEGER;
 
 
+  PROCEDURE* SetSysTickClock*;
+  (* 1 MHz *)
+    CONST
+      (*CLKDIV_OUT = 0;*)
+      CLK_1M = 1;
+      (*CLKDIV_UNSTABLE = 31;*)
+    VAR (*div: INTEGER;*) val: SET;
+  BEGIN
+    (*
+    SYSTEM.GET(MCU.SYSCON_CLK_CTRL, val);
+    val := val + {CLK_CTRL_CLK_1M_EN};
+    SYSTEM.PUT(MCU.SYSCON_CLK_CTRL, val);
+    *)
+    SYSTEM.PUT(MCU.CLKSEL_SYSTICK0, CLK_1M);
+    SYSTEM.GET(MCU.CLKDIV_SYSTICK0, val);
+    val := val + {30}; (* halt unused divider *)
+    SYSTEM.PUT(MCU.CLKDIV_SYSTICK0, val);
+    (*
+    div := (MAIN_CLK_FRQ DIV freq) - 1;
+    SYSTEM.PUT(MCU.CLKSEL_SYSTICK0, CLKDIV_OUT);
+    SYSTEM.PUT(MCU.CLKDIV_SYSTICK0, div);
+    REPEAT UNTIL ~SYSTEM.BIT(MCU.CLKDIV_SYSTICK0, CLKDIV_UNSTABLE)
+    *)
+  END SetSysTickClock;
+
+
+  PROCEDURE* enableClk1M;
+    VAR val: SET;
+  BEGIN
+    SYSTEM.GET(MCU.SYSCON_CLK_CTRL, val);
+    val := val + {CLK_CTRL_CLK_1M_EN};
+    SYSTEM.PUT(MCU.SYSCON_CLK_CTRL, val)
+  END enableClk1M;
+
+
   PROCEDURE* setClockValues(mainClockFreq: INTEGER);
   BEGIN
     MAIN_CLK_FRQ := mainClockFreq;
     SYS_CLK_FRQ := MAIN_CLK_FRQ DIV (SYSCON_AHBCLK_DIV_val + 1);
     BUS_CLK_FRQ := SYS_CLK_FRQ DIV 2;  (* fixed divider *)
-    SLOW_CLK_FRQ := SYS_CLK_FRQ DIV 6;  (* fixed divider *)
+    SLOW_CLK_FRQ := SYS_CLK_FRQ DIV 4;  (* fixed divider *)
   END setClockValues;
 
 
@@ -154,48 +221,36 @@ MODULE Clocks;
   END setDivider;
 
 
-  PROCEDURE* SetSysTickClock*;
-  (* 1 MHz *)
-    CONST
-      CLK_1M = 1;
-      CLKDIV_UNSTABLE = 31;
-  BEGIN
-    SYSTEM.PUT(MCU.CLKSEL_SYSTICK0, CLK_1M);
-    SYSTEM.PUT(MCU.CLKDIV_SYSTICK0, 0);
-    REPEAT UNTIL ~SYSTEM.BIT(MCU.CLKDIV_SYSTICK0, CLKDIV_UNSTABLE)
-  END SetSysTickClock;
-
-
   PROCEDURE* setODvoltage;
     VAR val: INTEGER;
   BEGIN
+    (* glitch detectors are off, see Config.mod *)
+
     (* core *)
     SYSTEM.GET(MCU.SPC_ACTIVE_CFG, val);
+    BFI(val, DCDC_VDD_LVL_1, DCDC_VDD_LVL_0, DCDC_VDD_LVL_val_OD);
     BFI(val, CORELDO_VDD_LVL_1, CORELDO_VDD_LVL_0, CORELDO_VDD_LVL_val_OD);
     SYSTEM.PUT(MCU.SPC_ACTIVE_CFG, val);
-    REPEAT UNTIL ~SYSTEM.BIT(MCU.SPC_SC, 0);
+    REPEAT UNTIL ~SYSTEM.BIT(MCU.SPC_SC, SPC_SC_BUSY);
 
     (* SRAM *)
-    SYSTEM.GET(MCU.SPC_SRAMCTL, val);
-    BFI(val, 1, 0, 2);
-    SYSTEM.PUT(MCU.SPC_SRAMCTL, val);
-
-    SYSTEM.GET(MCU.SPC_SRAMCTL, val);
-    BFI(val, 30, 1);
-    SYSTEM.PUT(MCU.SPC_SRAMCTL, val);
+    SYSTEM.GET(MCU.SPC_SRAM_CTRL, val);
+    BFI(val, SPC_SRAM_CTRL_VSM_1, SPC_SRAM_CTRL_VSM_0, SPC_SRAM_CTRL_VSM_11V);
+    SYSTEM.PUT(MCU.SPC_SRAM_CTRL, val);
+    SYSTEM.GET(MCU.SPC_SRAM_CTRL, val);
+    BFI(val, SPC_SRAM_CTRL_REQ, 1);
+    SYSTEM.PUT(MCU.SPC_SRAM_CTRL, val);
     REPEAT
-      SYSTEM.GET(MCU.SPC_SRAMCTL, val)
-    UNTIL 31 IN BITS(val);
-    BFI(val, 30, 0);
-    SYSTEM.PUT(MCU.SPC_SRAMCTL, val)
+      SYSTEM.GET(MCU.SPC_SRAM_CTRL, val)
+    UNTIL SPC_SRAM_CTRL_ACK IN BITS(val);
+    BFI(val, SPC_SRAM_CTRL_REQ, 0);
+    SYSTEM.PUT(MCU.SPC_SRAM_CTRL, val)
   END setODvoltage;
 
 
   PROCEDURE* isFircFreq(freq: INTEGER): BOOLEAN;
-    RETURN  (freq = FIRC_45) OR
-            (freq = FIRC_60) OR
-            (freq = FIRC_90) OR
-            (freq = FIRC_180)
+    RETURN  (freq = FIRC_48) OR
+            (freq = FIRC_144)
   END isFircFreq;
 
 
@@ -204,7 +259,7 @@ MODULE Clocks;
   BEGIN
     ASSERT(isFircFreq(freq), Errors.PreCond);
 
-    (* overdrive voltage to core and SRAM *)
+    (* overdrive voltage (OD) to core and SRAM *)
     setODvoltage;
 
     (* temporarily set system clock to SIRC *)
@@ -218,12 +273,12 @@ MODULE Clocks;
     SYSTEM.PUT(MCU.SCG_FIRC_CSR, 0);
 
     (* set FIRC frequency *)
-    SYSTEM.PUT(MCU.SCG_FIRC_CFG, LSL(freq, FREQ_SEL_0));
+    SYSTEM.PUT(MCU.SCG_FIRC_CFG, freq);
 
     (* config FIRC *)
     SYSTEM.GET(MCU.SCG_FIRC_CSR, val);
-    BFI(val, FIRC_SCLK_PERIPH_EN, 0);
-    BFI(val, FIRC_FCLK_PERIPH_EN, 0);
+    BFI(val, FIRC_SCLK_PERIPH_EN, 1);
+    BFI(val, FIRC_FCLK_PERIPH_EN, 1);
     BFI(val, FIRC_EN, 1);
     SYSTEM.PUT(MCU.SCG_FIRC_CSR, val);
     REPEAT UNTIL SYSTEM.BIT(MCU.SCG_FIRC_CSR, FIRC_VLD);
@@ -231,10 +286,8 @@ MODULE Clocks;
     (* set flash memory wait cycles *)
     SYSTEM.GET(MCU.FMU_FCTRL, val);
     CASE freq OF
-      FREQ_SEL_val_45: set := RWSC_val_80
-    | FREQ_SEL_val_60: set := RWSC_val_80
-    | FREQ_SEL_val_90: set := RWSC_val_120
-    | FREQ_SEL_val_180: set := RWSC_val_200
+      RANGE_val_48: set := RWSC_val_OD_64
+    | RANGE_val_144: set := RWSC_val_OD_150
     END;
     BFI(val, RWSC_1, RWSC_0, set);
     SYSTEM.PUT(MCU.FMU_FCTRL, val);
@@ -248,21 +301,20 @@ MODULE Clocks;
 
     (* set clock dividers, await stable *)
     setDivider(MCU.SYSCON_AHBCLK_DIV, SYSCON_AHBCLK_DIV_val);
-    setDivider(MCU.SYSCON_FROLF_DIV, SYSCON_FROLF_DIV_val);
     setDivider(MCU.SYSCON_FROHF_DIV, SYSCON_FROHF_DIV_val);
-    REPEAT UNTIL ~SYSTEM.BIT(MCU.SYSCON_BUSCLK_DIV, UNSTABLE);
     REPEAT UNTIL ~SYSTEM.BIT(MCU.SYSCON_SLOWCLK_DIV, UNSTABLE);
 
+    enableClk1M;
+
     CASE freq OF
-      FREQ_SEL_val_45: setClockValues(45000000)
-    | FREQ_SEL_val_60: setClockValues(60000000)
-    | FREQ_SEL_val_90: setClockValues(90000000)
-    | FREQ_SEL_val_180: setClockValues(180000000)
+      RANGE_val_48: setClockValues(48000000)
+    | RANGE_val_144: setClockValues(144000000)
     END
+
   END InitFIRC;
 
 
-
+(* TODO
   PROCEDURE* selp(mdiv: INTEGER): INTEGER;
     VAR a0, a: INTEGER;
   BEGIN
@@ -290,8 +342,8 @@ MODULE Clocks;
 
 
   PROCEDURE InitSPLL*;
-  (* source: use 8 MHz SOSC *)
-  (* set to 160 MHz *)
+  (* source: use 24 MHz SOSC *)
+  (* set to 120 MHz *)
     CONST
       NDIV = 1; PDIV = 1; MDIV = 20;
       BypassNDIV = 1; BypassPDIV = 1; BypassPDIV2 = 1;
@@ -370,13 +422,14 @@ MODULE Clocks;
 
     (* set clock dividers, await stable *)
     setDivider(MCU.SYSCON_AHBCLK_DIV, SYSCON_AHBCLK_DIV_val);
-    setDivider(MCU.SYSCON_FROLF_DIV, SYSCON_FROLF_DIV_val);
-    setDivider(MCU.SYSCON_PLL1CLK_DIV, SYSCON_PLL1CLK_DIV_val);
+    setDivider(MCU.SYSCON_PLL1_CLK0_DIV, SYSCON_PLL1CLK_DIV_val);
     REPEAT UNTIL ~SYSTEM.BIT(MCU.SYSCON_BUSCLK_DIV, UNSTABLE);
     REPEAT UNTIL ~SYSTEM.BIT(MCU.SYSCON_SLOWCLK_DIV, UNSTABLE);
 
-    setClockValues(SPLL_FRQ)
+    (*setSysTickClock;*)
+    setClockValues(160000000)
   END InitSPLL;
+*)
 
 END Clocks.
 

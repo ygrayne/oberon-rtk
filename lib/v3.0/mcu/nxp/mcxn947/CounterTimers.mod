@@ -1,11 +1,11 @@
 MODULE CounterTimers;
 (**
-  Oberon RTK Framework v3.0
+  Oberon RTK Framework v2
   --
   Counter timers CTIMER.
   Basic timer functionality only for now.
   --
-  MCU: MCX-A346
+  MCU: MCX-N947
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -42,7 +42,11 @@ MODULE CounterTimers;
     ASSERT(ctimNo IN CounterTimers, Errors.ProgError);
     base := MCU.CTIMER0_BASE + (ctimNo * MCU.CTIMER_Offset);
     dev.ctimerNo := ctimNo;
-    dev.devNo := MCU.DEV_CTIMER0 + ctimNo;
+    CASE ctimNo OF
+      CTIMER0, CTIMER1: dev.devNo := MCU.DEV_CTIMER0 + ctimNo
+    | CTIMER2: dev.devNo := MCU.DEV_CTIMER2
+    | CTIMER3, CTIMER4: dev.devNo := MCU.DEV_CTIMER3 + ctimNo - 3
+    END;
     dev.clkSel := MCU.CLKSEL_CTIMER0 + (ctimNo * MCU.CLK_CTIMER_Offset);
     dev.clkDiv := MCU.CLKDIV_CTIMER0 + (ctimNo * MCU.CLK_CTIMER_Offset);
     dev.TCR := base + MCU.CTIMER_TCR_Offset;
@@ -54,8 +58,7 @@ MODULE CounterTimers;
 
   PROCEDURE Configure*(dev: Device; clkSel, clkDiv, pre: INTEGER);
   BEGIN
-    (* release reset on CTIMER device, set clock *)
-    StartUp.ReleaseReset(dev.devNo);
+    (* set clock, enable clock *)
     ClockCtrl.ConfigDevClock(dev.clkSel, dev.clkDiv, clkSel, clkDiv);
     StartUp.EnableClock(dev.devNo);
 

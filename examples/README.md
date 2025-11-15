@@ -23,5 +23,7 @@ More info: [https://oberon-rtk.org/docs/examples/](https://oberon-rtk.org/docs/e
     + pico: Pico/RP2040 boards
     + pico2: Pico2/RP2350 boards
   + nxp
+    + any: any NXP board supported
     + frdm-mcxa346: FRDM-MCXA346 board
+    + frdm-mcxn947: FRDM-MCXN947 board
 ```

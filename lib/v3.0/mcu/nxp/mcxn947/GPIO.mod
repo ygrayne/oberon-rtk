@@ -5,7 +5,7 @@ MODULE GPIO;
   --
   General Purpose IO (GPIO)
   --
-  MCU: MCX-A346
+  MCU: MCX-N947
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -51,6 +51,14 @@ MODULE GPIO;
 
     (* functions *)
     (* check port map to select applicable value for a specific pin *)
+
+    Fio0*       = 0;
+    Fclkout0*   = 1;
+    Fewm0*      = 1;
+    Ffreqme0*   = 1;
+    Fflexcom0*  = 2;
+
+(*
     Fio0*       = 0;
     Fcan0*      = 11;
     Fclkout0*   = 1;
@@ -75,7 +83,7 @@ MODULE GPIO;
     Fuart2*     = 8;
     Futick0*    = 5;
     Fwuu0*      = 13;
-
+*)
 
   TYPE
     PadCfg* = RECORD            (* PCR: first value: reset/base state *)

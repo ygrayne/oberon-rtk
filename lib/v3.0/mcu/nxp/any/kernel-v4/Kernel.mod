@@ -7,7 +7,7 @@ MODULE Kernel;
   Interrupt-driven asynchronous tasks and synchronous background tasks.
   General ticker service.
   --
-  MCU: MCX-A346
+  MCU: MCX-A346, MCX-N947
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -433,7 +433,7 @@ MODULE Kernel;
   PROCEDURE tickHandler[0];
     VAR cid: INTEGER; ctx: CoreContext; act: Actor;
   BEGIN
-    SYSTEM.PUT(LED.LXOR, {LED.Green});
+    LED.Toggle({LED.Green});
     Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     GetFromActQ(ctx.tickActQ, act);
@@ -452,7 +452,7 @@ MODULE Kernel;
     Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     REPEAT
-      SYSTEM.EMITH(MCU.WFE);
+      SYSTEM.EMITH(MCU.WFI);
       IF SysTick.Tick() THEN
         GetFromActQ(ctx.loopActQ, act);
         GetTailFromActQ(ctx.loopActQ, tail);
@@ -483,7 +483,7 @@ MODULE Kernel;
   END Run;
 
 
-  PROCEDURE Install*(millisecsPerTick, tickPrio: INTEGER);
+  PROCEDURE Install*(microsecsPerTick, tickPrio: INTEGER);
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
     Cores.GetCoreId(cid);
@@ -494,7 +494,7 @@ MODULE Kernel;
     NewRdyQ(ctx.loopRdyQ, cid, 0);
     (* tick *)
     NewActQ(ctx.tickActQ);
-    SysTick.Init(millisecsPerTick, tickPrio, tickHandler)
+    SysTick.Config(microsecsPerTick, tickPrio, tickHandler)
   END Install;
 
 BEGIN

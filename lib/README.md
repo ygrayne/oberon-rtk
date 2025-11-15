@@ -1,6 +1,6 @@
 # Oberon RTK Modules Library
 
-Versions lib/v1.0, lib/v2.0, lib/2.1
+Versions lib/v1.0, lib/v2.0, lib/2.1, lib/v3.0
 
 ```
 + lib
@@ -49,7 +49,8 @@ Versions lib/v1.0, lib/v2.0, lib/2.1
       + tvi: tiny vision
         + pico2-ice
       + nxp
-        + any: any nxp board
+        + frdm-mcxa436
+        + frdm-mcxn947
     + mcu: MCU-specific
       + rpi: raspberry pi
         + any: any rpi mcu
@@ -58,6 +59,7 @@ Versions lib/v1.0, lib/v2.0, lib/2.1
       + nxp: nxp semi
         + any: any nxp mcu
         + mcxa346: MCX-A346
+        + mcxn947: MCX-N947
 ```
 
 [https://oberon-rtk.org/docs/lib/](https://oberon-rtk.org/docs/lib/)

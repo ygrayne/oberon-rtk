@@ -5,8 +5,8 @@ MODULE Main;
   --
   Main module
   --
-  MCU: MCX-A346
-  Board: FRDM-MCXA346
+  MCU: MCX-N947
+  Board: FRDM-MCXN947
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -18,31 +18,29 @@ MODULE Main;
 
   CONST
     Baudrate0 = 38400; (* terminal 0 *)
-    UARTt0 = UARTdev.UART2;
-    UARTt0_TxPinNo = MCU.PORT2 + 2;
-    UARTt0_RxPinNo = MCU.PORT2 + 3;
+    UARTt0 = UARTdev.UART4;
+    UARTt0_TxPinNo = MCU.PORT1 + 9; (* VCOM via USB MCU-Link *)
+    UARTt0_RxPinNo = MCU.PORT1 + 8;
     TERM0 = Terminals.TERM0;
 
 
   PROCEDURE cfgPins(txPin, rxPin: INTEGER);
     VAR padCfg: GPIO.PadCfg;
   BEGIN
-    StartUp.ReleaseReset(MCU.DEV_PORT2);
-    StartUp.EnableClock(MCU.DEV_PORT2);
+    StartUp.EnableClock(MCU.DEV_PORT1);
     GPIO.GetPadBaseCfg(padCfg);
     GPIO.ConfigurePad(txPin, padCfg);
     GPIO.ConfigurePad(rxPin, padCfg);
-    GPIO.SetFunction(txPin, GPIO.Fuart1);
-    GPIO.SetFunction(rxPin, GPIO.Fuart1)
+    GPIO.SetFunction(txPin, GPIO.Fflexcom0);
+    GPIO.SetFunction(rxPin, GPIO.Fflexcom0)
   END cfgPins;
 
 
   PROCEDURE* enableFlashCache;
-    CONST LPCAC_CTRL_DIS_LPCAC = 0; LPCAC_CTRL_MEM_REQ = 8;
+    CONST LPCAC_CTRL_DIS_LPCAC = 0;
     VAR val: INTEGER;
   BEGIN
     SYSTEM.GET(MCU.SYSCON_LPCAC_CTRL, val);
-    BFI(val, LPCAC_CTRL_MEM_REQ, 1); (* set RAMX1 as cache memory *)
     BFI(val, LPCAC_CTRL_DIS_LPCAC, 0); (* remove disable cache *)
     SYSTEM.PUT(MCU.SYSCON_LPCAC_CTRL, val)
   END enableFlashCache;
@@ -58,8 +56,8 @@ MODULE Main;
     RuntimeErrors.Init;
 
     (* config the clocks *)
-    (*Clocks.InitFIRC(Clocks.FIRC_90);*)
-    Clocks.InitSPLL;
+    Clocks.InitFIRC(Clocks.FIRC_144);
+    (*Clocks.InitSPLL;*)
 
     (* flash cache *)
     enableFlashCache;

@@ -39,9 +39,9 @@ MODULE LED;
 
     LEDx = {LEDredPinNo, LEDgreenPinNo, LEDbluePinNo};
 
-    LSET* = MCU.RGPIO3_BASE + MCU.RGPIO_PCOR_Offset; (* clear pin for LED = on *)
-    LCLR* = MCU.RGPIO3_BASE + MCU.RGPIO_PSOR_Offset;
-    LXOR* = MCU.RGPIO3_BASE + MCU.RGPIO_PTOR_Offset;
+    LSET* = MCU.GPIO3_BASE + MCU.GPIO_PCOR_Offset; (* clear pin for LED = on *)
+    LCLR* = MCU.GPIO3_BASE + MCU.GPIO_PSOR_Offset;
+    LXOR* = MCU.GPIO3_BASE + MCU.GPIO_PTOR_Offset;
 
 
   PROCEDURE Set*(leds: SET);

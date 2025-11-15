@@ -29,13 +29,18 @@ MODULE MCU2;
 
 (* === base addresses === *)
     (* -- AHB -- *)
-    FLASH_BASE*     = 000000000H; (* port T0 *)
-    FLASH_Size*     = 0100000H;   (* 1M *)
-    ROM_BASE*       = 003000000H; (* 24k, port T1 *)
-    SRAM_X0_BASE*   = 004000000H; (* port T2 *)
-    SRAM_X0_Size*   = 02000H;     (* 8k *)
-    SRAM_X1_BASE*   = 004002000H; (* port T2 *)
-    SRAM_X1_Size*   = 02000H;     (* 8k *)
+    FLASH_PROG_BASE*      = 000000000H; (* port T0 *)
+    FLASH_PROG_Size*      = 0100000H;   (* 1M *)
+    FLASH_B0_IFR0_BASE*   = 001000000H; (* port T0 *)
+    FLASH_B0_IFR0_Size*   = 08000H;     (* 32k *)
+    FLASH_B0_IFR1_BASE*   = 001100000H; (* port T0 *)
+    FLASH_B0_IFR1_Size*   = 02000H;     (* 8k *)
+    ROM_BASE*             = 003000000H; (* port T1 *)
+    ROM_Size*             = 06000H;     (* 24k *)
+    SRAM_X0_BASE*         = 004000000H; (* port T2 *)
+    SRAM_X0_Size*         = 02000H;     (* 8k *)
+    SRAM_X1_BASE*         = 004002000H; (* port T2 *)
+    SRAM_X1_Size*         = 02000H;     (* 8k *)
 
     SRAM_A0_BASE*   = 020000000H; (* port T3 *)
     SRAM_A0_Size*   = 02000H;     (* 8k *)
@@ -70,7 +75,7 @@ MODULE MCU2;
 
     SRAM_X0_ALIAS*  = 02003C000H; (* 8k, port T2 *)
 
-    (* -- APB peripheral bridge 0 port T6-- *)
+    (* -- APB peripheral bridge 0 port T6 -- *)
     INPUTMUX0_BASE* = 040001000H;
     CTIMER0_BASE*   = 040004000H;
     CTIMER1_BASE*   = 040005000H;
@@ -140,11 +145,11 @@ MODULE MCU2;
 
     (* -- AHB fast peripherals port T6-- *)
     CDOG0_BASE*     = 040100000H;
-    RGPIO0_BASE*    = 040102000H;
-    RGPIO1_BASE*    = 040103000H;
-    RGPIO2_BASE*    = 040104000H;
-    RGPIO3_BASE*    = 040105000H;
-    RGPIO4_BASE*    = 040106000H;
+    GPIO0_BASE*     = 040102000H;
+    GPIO1_BASE*     = 040103000H;
+    GPIO2_BASE*     = 040104000H;
+    GPIO3_BASE*     = 040105000H;
+    GPIO4_BASE*     = 040106000H;
     CDOG1_BASE*     = 040107000H;
     MAU_BASE*       = 040108000H;
 
@@ -197,32 +202,32 @@ MODULE MCU2;
 
     (* == SCG system clock generator == *)
     (* ref manual 23.7.1, p912 *)
-    SCG_VERID*      = SCG0_BASE;
-    SCG_PARAM*      = SCG0_BASE + 0004H;
-    SCG_TRIM_LOCK*  = SCG0_BASE + 0008H;
-    SCG_CSR*        = SCG0_BASE + 0010H;
-    SCG_RCCR*       = SCG0_BASE + 0014H;
-    SCG_SOSCCSR*    = SCG0_BASE + 0100H;
-    SCG_SOSCCFG*    = SCG0_BASE + 0108H;
-    SCG_SIRCCSR*    = SCG0_BASE + 0200H;
-    SCG_SIRCTCFG*   = SCG0_BASE + 020CH;
-    SCG_SIRCTRIM*   = SCG0_BASE + 0210H;
-    SCG_SIRCSTAT*   = SCG0_BASE + 0218H;
-    SCG_FIRCCSR*    = SCG0_BASE + 0300H;
-    SCG_FIRCCFG*    = SCG0_BASE + 0308H;
-    SCG_FIRCTRIM*   = SCG0_BASE + 0310H;
-    SCG_ROSCCSR*    = SCG0_BASE + 0400H;
-    SCG_SPLLCSR*    = SCG0_BASE + 0600H;
-    SCG_SPLLCTRL*   = SCG0_BASE + 0604H;
-    SCG_SPLLSTAT*   = SCG0_BASE + 0608H;
-    SCG_SPLLNDIV*   = SCG0_BASE + 060CH;
-    SCG_SPLLMDIV*   = SCG0_BASE + 0610H;
-    SCG_SPLLPDIV*   = SCG0_BASE + 0614H;
-    SCG_SPLLLOCK_CNFG*  = SCG0_BASE + 0618H;
-    SCG_SPLLSSCG*   = SCG0_BASE + 0620H;
-    SCG_SPLLSSCG0*  = SCG0_BASE + 0624H;
-    SCG_SPLLSSCG1*  = SCG0_BASE + 0628H;
-    SCG_LDOCSR*     = SCG0_BASE + 0800H;
+    SCG_VERID*          = SCG0_BASE;
+    SCG_PARAM*          = SCG0_BASE + 0004H;
+    SCG_TRIM_LOCK*      = SCG0_BASE + 0008H;
+    SCG_CSR*            = SCG0_BASE + 0010H;
+    SCG_RCCR*           = SCG0_BASE + 0014H;
+    SCG_SOSC_CSR*       = SCG0_BASE + 0100H;
+    SCG_SOSC_CFG*       = SCG0_BASE + 0108H;
+    SCG_SIRC_CSR*       = SCG0_BASE + 0200H;
+    SCG_SIRC_TCFG*      = SCG0_BASE + 020CH;
+    SCG_SIRC_TRIM*      = SCG0_BASE + 0210H;
+    SCG_SIRC_STAT*      = SCG0_BASE + 0218H;
+    SCG_FIRC_CSR*       = SCG0_BASE + 0300H;
+    SCG_FIRC_CFG*       = SCG0_BASE + 0308H;
+    SCG_FIRC_TRIM*      = SCG0_BASE + 0310H;
+    SCG_ROSC_CSR*       = SCG0_BASE + 0400H;
+    SCG_SPLL_CSR*       = SCG0_BASE + 0600H;
+    SCG_SPLL_CTRL*      = SCG0_BASE + 0604H;
+    SCG_SPLL_STAT*      = SCG0_BASE + 0608H;
+    SCG_SPLL_NDIV*      = SCG0_BASE + 060CH;
+    SCG_SPLL_MDIV*      = SCG0_BASE + 0610H;
+    SCG_SPLL_PDIV*      = SCG0_BASE + 0614H;
+    SCG_SPLL_LOCK_CNFG* = SCG0_BASE + 0618H;
+    SCG_SPLL_SSCG*      = SCG0_BASE + 0620H;
+    SCG_SPLL_SSCG0*     = SCG0_BASE + 0624H;
+    SCG_SPLL_SSCG1*     = SCG0_BASE + 0628H;
+    SCG_LDO_CSR*        = SCG0_BASE + 0800H;
 
     (* == SPC system power controller == *)
     (* ref manual 26.7.1, p981 *)
@@ -233,11 +238,13 @@ MODULE MCU2;
     (* == SYSCON == *)
     (* ref manual 14.5.1, p483 *)
     SYSCON_AHBMATPRIO*  = SYSCON_BASE + 0210H;
-    SYSCON_SLOWCLKDIV*  = SYSCON_BASE + 0378H;
-    SYSCON_BUSCLKDIV*   = SYSCON_BASE + 037CH;
-    SYSCON_AHBCLKDIV*   = SYSCON_BASE + 0380H;
-    SYSCON_FROHFDIV*    = SYSCON_BASE + 0388H;
-    SYSCON_FROLFDIV*    = SYSCON_BASE + 038CH;
+    SYSCON_NMISRC*      = SYSCON_BASE + 0248H;
+    SYSCON_SLOWCLK_DIV* = SYSCON_BASE + 0378H;
+    SYSCON_BUSCLK_DIV*  = SYSCON_BASE + 037CH;
+    SYSCON_AHBCLK_DIV*  = SYSCON_BASE + 0380H;
+    SYSCON_FROHF_DIV*   = SYSCON_BASE + 0388H;
+    SYSCON_FROLF_DIV*   = SYSCON_BASE + 038CH;
+    SYSCON_PLL1CLK_DIV* = SYSCON_BASE + 03E4H;
     SYSCON_CLKUNLOCK*   = SYSCON_BASE + 03FCH;
     SYSCON_LPCAC_CTRL*  = SYSCON_BASE + 0824H;
 
@@ -307,24 +314,90 @@ MODULE MCU2;
     DEV_GPIO4*      = 64 + 8;
 
     (* MRCC_CLKSEL, MRCC_CLKDIV *)
-    CLK_CTIMER0*    = 1;
-    CLK_CTIMER1*    = 2;
-    CLK_CTIMER2*    = 3;
-    CLK_CTIMER3*    = 4;
-    CLK_CTIMER4*    = 5;
-    CLK_FLXIO0*     = 7;
-    CLK_I2C0*       = 8;
-    CLK_I2C1*       = 9;
-    CLK_SPI0*       = 10;
-    CLK_SPI1*       = 11;
-    CLK_UART0*      = 12;
-    CLK_UART1*      = 13;
-    CLK_UART2*      = 14;
-    CLK_UART3*      = 15;
-    CLK_UART4*      = 16;
-    CLK_UART5*      = 32;
-    CLK_CLKOUT*     = 34;
-    CLK_SYSTICK*    = 35;
+    CLKSEL_CTIMER0*   = SYSCON_BASE + 00A8H;
+    CLKSEL_CTIMER1*   = SYSCON_BASE + 00B0H;
+    CLKSEL_CTIMER2*   = SYSCON_BASE + 00B8H;
+    CLKSEL_CTIMER3*   = SYSCON_BASE + 00C0H;
+    CLKSEL_CTIMER4*   = SYSCON_BASE + 00C8H;
+    CLKDIV_CTIMER0*   = CLKSEL_CTIMER0 + 04H;
+    CLKDIV_CTIMER1*   = CLKSEL_CTIMER1 + 04H;
+    CLKDIV_CTIMER2*   = CLKSEL_CTIMER2 + 04H;
+    CLKDIV_CTIMER3*   = CLKSEL_CTIMER3 + 04H;
+    CLKDIV_CTIMER4*   = CLKSEL_CTIMER4 + 04H;
+      CLK_CTIMER_Offset* = 8;
+
+    CLKDIV_WWDT0*     = SYSCON_BASE + 0D4H;
+
+    CLKSEL_FLEXIO0*   = SYSCON_BASE + 00D8H;
+    CLKDIV_FLEXIO0*   = CLKSEL_FLEXIO0 + 04H;
+
+    CLKSEL_I2C0*      = SYSCON_BASE + 00E0H;
+    CLKSEL_I2C1*      = SYSCON_BASE + 00E8H;
+    CLKSEL_I2C2*      = SYSCON_BASE + 0190H;
+    CLKSEL_I2C3*      = SYSCON_BASE + 0198H;
+    CLKDIV_I2C0*      = CLKSEL_I2C0 + 04H;
+    CLKDIV_I2C1*      = CLKSEL_I2C1 + 04H;
+    CLKDIV_I2C2*      = CLKSEL_I2C2 + 04H;
+    CLKDIV_I2C3*      = CLKSEL_I2C3 + 04H;
+
+    CLKSEL_SPI0*      = SYSCON_BASE + 00F0H;
+    CLKSEL_SPI1*      = SYSCON_BASE + 00F8H;
+    CLKDIV_SPI0*      = CLKSEL_SPI0 + 04H;
+    CLKDIV_SPI1*      = CLKSEL_SPI1 + 04H;
+
+    CLKSEL_UART0*     = SYSCON_BASE + 0100H;
+    CLKSEL_UART1*     = SYSCON_BASE + 0108H;
+    CLKSEL_UART2*     = SYSCON_BASE + 0110H;
+    CLKSEL_UART3*     = SYSCON_BASE + 0118H;
+    CLKSEL_UART4*     = SYSCON_BASE + 0120H;
+    CLKSEL_UART5*     = SYSCON_BASE + 01A0H;
+    CLKDIV_UART0*     = CLKSEL_UART0 + 04H;
+    CLKDIV_UART1*     = CLKSEL_UART1 + 04H;
+    CLKDIV_UART2*     = CLKSEL_UART2 + 04H;
+    CLKDIV_UART3*     = CLKSEL_UART3 + 04H;
+    CLKDIV_UART4*     = CLKSEL_UART4 + 04H;
+    CLKDIV_UART5*     = CLKSEL_UART5 + 04H;
+      CLK_UART_Offset*  = 8;
+
+    CLKSEL_USB0*      = SYSCON_BASE + 0128H;
+    CLKDIV_USB0*      = CLKSEL_USB0 + 04H;
+
+    CLKSEL_LPTMR0*    = SYSCON_BASE + 0130H;
+    CLKDIV_LPTMR0*    = CLKSEL_LPTMR0 + 04H;
+
+    CLKSEL_OSTIMER0*  = 0138H;
+    CLKDIV_OSTIMER0*  = CLKSEL_OSTIMER0 + 04H;
+
+    CLKSEL_ADC0*      = SYSCON_BASE + 0140H;
+    CLKDIV_ADC0*      = CLKSEL_ADC0 + 04H;
+
+    CLKSEL_CMP0_RR*   = SYSCON_BASE + 0150H;
+    CLKSEL_CMP1_RR*   = SYSCON_BASE + 0160H;
+    CLKSEL_CMP2_RR*   = SYSCON_BASE + 0170H;
+    CLKDIV_CMP0_F*    = SYSCON_BASE + 014CH;
+    CLKDIV_CMP0_RR*   = CLKSEL_CMP0_RR + 04H;
+    CLKDIV_CMP1_F*    = SYSCON_BASE + 015CH;
+    CLKDIV_CMP1_RR*   = CLKSEL_CMP1_RR + 04H;
+    CLKDIV_CMP2_F*    = SYSCON_BASE + 016CH;
+    CLKDIV_CMP2_RR*   = CLKSEL_CMP2_RR + 04H;
+
+    CLKSEL_DAC0*      = SYSCON_BASE + 0178H;
+    CLKDIV_DAC0*      = CLKSEL_DAC0 + 04H;
+
+    CLKSEL_CAN0*      = SYSCON_BASE + 0180H;
+    CLKSEL_CAN1*      = SYSCON_BASE + 0188H;
+    CLKDIV_CAN0*      = CLKSEL_CAN0 + 04H;
+    CLKDIV_CAN1*      = CLKSEL_CAN1 + 04H;
+
+    CLKSEL_DBG_TRACE* = SYSCON_BASE + 01A8H;
+    CLKDIV_DBG_TRACE* = CLKSEL_DBG_TRACE + 04H;
+
+    CLKSEL_CLKOUT*    = SYSCON_BASE + 01B0H;
+    CLKDIV_CLKOUT*    = CLKSEL_CLKOUT + 04H;
+
+    CLKSEL_SYSTICK0*   = SYSCON_BASE + 01B8H;
+    CLKDIV_SYSTICK0*   = CLKSEL_SYSTICK0 + 04H;
+
 
     (* == FMU flash management unit == *)
     FMU_FCTRL*      = FMU0_BASE + 008H;
@@ -389,42 +462,42 @@ MODULE MCU2;
 (* == AHB fast peripherals == *)
 
     (* == GPIO == *)
-    RGPIO_Offset* = RGPIO1_BASE - RGPIO0_BASE;
-    RGPIO_PDOR_Offset* = 040H;  (* data output value *)
-    RGPIO_PSOR_Offset* = 044H;  (* data output set masked *)
-    RGPIO_PCOR_Offset* = 048H;  (* data output clear masked *)
-    RGPIO_PTOR_Offset* = 04CH;  (* data output toggle masked *)
-    RGPIO_PDIR_Offset* = 050H;  (* data input *)
-    RGPIO_PDDR_Offset* = 054H;  (* data direction, reset = input [0] *)
-    RGPIO_PIDR_Offset* = 058H;  (* input disable, reset = enabled [0] *)
+    GPIO_Offset* = GPIO1_BASE - GPIO0_BASE;
+    GPIO_PDOR_Offset* = 040H;  (* data output value *)
+    GPIO_PSOR_Offset* = 044H;  (* data output set masked *)
+    GPIO_PCOR_Offset* = 048H;  (* data output clear masked *)
+    GPIO_PTOR_Offset* = 04CH;  (* data output toggle masked *)
+    GPIO_PDIR_Offset* = 050H;  (* data input *)
+    GPIO_PDDR_Offset* = 054H;  (* data direction, reset = input [0] *)
+    GPIO_PIDR_Offset* = 058H;  (* input disable, reset = enabled [0] *)
 
     (* use for parameter 'gpio' in GPIO.Set and friends *)
-    GPIO0* = RGPIO0_BASE;
-    GPIO1* = RGPIO1_BASE;
-    GPIO2* = RGPIO2_BASE;
-    GPIO3* = RGPIO3_BASE;
-    GPIO4* = RGPIO4_BASE;
+    GPIO0* = GPIO0_BASE;
+    GPIO1* = GPIO1_BASE;
+    GPIO2* = GPIO2_BASE;
+    GPIO3* = GPIO3_BASE;
+    GPIO4* = GPIO4_BASE;
 
     (* RPx-ish aliases *)
-    GPIO0_OUT_SET*  = RGPIO0_BASE + RGPIO_PSOR_Offset;
-    GPIO0_OUT_CLR*  = RGPIO0_BASE + RGPIO_PCOR_Offset;
-    GPIO0_OUT_XOR*  = RGPIO0_BASE + RGPIO_PTOR_Offset;
+    GPIO0_OUT_SET*  = GPIO0_BASE + GPIO_PSOR_Offset;
+    GPIO0_OUT_CLR*  = GPIO0_BASE + GPIO_PCOR_Offset;
+    GPIO0_OUT_XOR*  = GPIO0_BASE + GPIO_PTOR_Offset;
 
-    GPIO1_OUT_SET*  = RGPIO1_BASE + RGPIO_PSOR_Offset;
-    GPIO1_OUT_CLR*  = RGPIO1_BASE + RGPIO_PCOR_Offset;
-    GPIO1_OUT_XOR*  = RGPIO1_BASE + RGPIO_PTOR_Offset;
+    GPIO1_OUT_SET*  = GPIO1_BASE + GPIO_PSOR_Offset;
+    GPIO1_OUT_CLR*  = GPIO1_BASE + GPIO_PCOR_Offset;
+    GPIO1_OUT_XOR*  = GPIO1_BASE + GPIO_PTOR_Offset;
 
-    GPIO2_OUT_SET*  = RGPIO2_BASE + RGPIO_PSOR_Offset;
-    GPIO2_OUT_CLR*  = RGPIO2_BASE + RGPIO_PCOR_Offset;
-    GPIO2_OUT_XOR*  = RGPIO2_BASE + RGPIO_PTOR_Offset;
+    GPIO2_OUT_SET*  = GPIO2_BASE + GPIO_PSOR_Offset;
+    GPIO2_OUT_CLR*  = GPIO2_BASE + GPIO_PCOR_Offset;
+    GPIO2_OUT_XOR*  = GPIO2_BASE + GPIO_PTOR_Offset;
 
-    GPIO3_OUT_SET*  = RGPIO3_BASE + RGPIO_PSOR_Offset;
-    GPIO3_OUT_CLR*  = RGPIO3_BASE + RGPIO_PCOR_Offset;
-    GPIO3_OUT_XOR*  = RGPIO3_BASE + RGPIO_PTOR_Offset;
+    GPIO3_OUT_SET*  = GPIO3_BASE + GPIO_PSOR_Offset;
+    GPIO3_OUT_CLR*  = GPIO3_BASE + GPIO_PCOR_Offset;
+    GPIO3_OUT_XOR*  = GPIO3_BASE + GPIO_PTOR_Offset;
 
-    GPIO4_OUT_SET*  = RGPIO3_BASE + RGPIO_PSOR_Offset;
-    GPIO4_OUT_CLR*  = RGPIO3_BASE + RGPIO_PCOR_Offset;
-    GPIO4_OUT_XOR*  = RGPIO3_BASE + RGPIO_PTOR_Offset;
+    GPIO4_OUT_SET*  = GPIO4_BASE + GPIO_PSOR_Offset;
+    GPIO4_OUT_CLR*  = GPIO4_BASE + GPIO_PCOR_Offset;
+    GPIO4_OUT_XOR*  = GPIO4_BASE + GPIO_PTOR_Offset;
 
 
 (* == PPB: private peripheral bus == *)
@@ -713,8 +786,9 @@ MODULE MCU2;
     CPSIE_F* = 0B662H; (* enable:  1011 0110 0110 0001 *)
     CPSID_F* = 0B672H; (* disable: 1011 0110 0111 0001 *)
 
-    (* wait for event *)
+    (* wait for event/interrupt *)
     WFE* = 0BF20H;
+    WFI* = 0BF30H;
 
     (* SVC *)
     (* SVCinstr = 'SVC' + SVCvalue *)

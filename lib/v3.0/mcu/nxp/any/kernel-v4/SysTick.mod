@@ -8,7 +8,7 @@ MODULE SysTick;
   Enable interrupt and install an interrupt handler
   so we can use WFE/WFI in kernel loop.
   --
-  MCU: MCX-A346
+  MCU: MCX-A346, MCX-N947
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -22,8 +22,6 @@ MODULE SysTick;
     SYST_CSR_COUNTFLAG = 16;
     SYST_CSR_ENABLE = 0;
     SYST_CSR_TICKINT = 1;
-
-    CountPerMillisecond = Clocks.FRO_1M DIV 1000;
 
 
   PROCEDURE* Tick*(): BOOLEAN;
@@ -41,15 +39,17 @@ MODULE SysTick;
   END tickHandler;
 
 
-  PROCEDURE Init*(millisecondsPerTick, prio: INTEGER; handler: PROCEDURE);
-    VAR cntReload: INTEGER;
+  PROCEDURE Config*(usPerTick, prio: INTEGER; handler: PROCEDURE);
+  (* SysTick clock freq = 1 MHz *)
+    VAR cntRld: INTEGER;
   BEGIN
     IF handler = NIL THEN handler := tickHandler END;
     Exceptions.InstallSysExcHandler(MCU.EXC_SysTick, handler);
     Exceptions.SetSysExcPrio(MCU.EXC_SysTick, prio);
-    cntReload := millisecondsPerTick * CountPerMillisecond - 1;
-    SYSTEM.PUT(MCU.PPB_SYST_RVR, cntReload);
+    Clocks.SetSysTickClock; (* 1 MHz *)
+    cntRld := usPerTick - 1;
+    SYSTEM.PUT(MCU.PPB_SYST_RVR, cntRld);
     SYSTEM.PUT(MCU.PPB_SYST_CVR, 0) (* clear counter *)
-  END Init;
+  END Config;
 
 END SysTick.

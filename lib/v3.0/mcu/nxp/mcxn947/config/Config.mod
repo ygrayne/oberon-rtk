@@ -6,12 +6,12 @@ MODULE Config;
   * Memory configuration data
   * Set VTOR, install initial simple error/fault handlers
   * Set core ID register via VTOR/vector table
-  * Reset some MCU registers left behind set by boot ROM
+  * Other basic low level set-up
   --
-  MCU: MCX-A346
-  Board: FRDM-MCXA346
+  One core only (all SRAM allocated to core 0)
   --
-  One core
+  MCU: MCX-N947
+  Board: FRDM-MCXN947
   --
   Copyright (c) 2023-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -20,10 +20,10 @@ MODULE Config;
   IMPORT SYSTEM, LinkOptions, MCU := MCU2, StartUp; (* LinkOptions must be first in list *)
 
   CONST
-    NumCoresUsed* = MCU.NumCores;
+    NumCoresUsed* = 1;
 
-    ErrorLEDpinNo = 18; (* red, port 3 *)
-    LXOR* = MCU.GPIO3_BASE + MCU.GPIO_PTOR_Offset;
+    ErrorLEDpinNo = 10;   (* red, port 0 *)
+    LXOR = MCU.GPIO0_BASE + MCU.GPIO_PTOR_Offset;
 
   TYPE
     DataDesc* = RECORD
@@ -55,7 +55,6 @@ MODULE Config;
       start*, end*: INTEGER
     END;
 
-
   VAR
     DataMem*: ARRAY NumCoresUsed OF DataDesc;
     HeapMem*: ARRAY NumCoresUsed OF HeapDesc;
@@ -71,13 +70,11 @@ MODULE Config;
   PROCEDURE initLED;
     VAR addr: INTEGER; val: SET;
   BEGIN
-    StartUp.ReleaseReset(MCU.DEV_PORT3);
-    StartUp.ReleaseReset(MCU.DEV_GPIO3);
-    StartUp.EnableClock(MCU.DEV_PORT3);
-    StartUp.EnableClock(MCU.DEV_GPIO3);
-    addr := MCU.GPIO3 + MCU.GPIO_PDDR_Offset;
+    StartUp.EnableClock(MCU.DEV_PORT0);
+    StartUp.EnableClock(MCU.DEV_GPIO0);
+    addr := MCU.GPIO0 + MCU.GPIO_PDDR_Offset;
     SYSTEM.GET(addr, val);
-    val := val + {ErrorLEDpinNo};
+    INCL(val, ErrorLEDpinNo);
     SYSTEM.PUT(addr, val)
   END initLED;
 
@@ -112,7 +109,7 @@ MODULE Config;
 
 
   PROCEDURE init;
-    CONST Core0 = 0; R11 = 11;
+    CONST Core0 = 0;
     VAR vtor: INTEGER;
   BEGIN
     DataMem[Core0].start := LinkOptions.DataStart;
@@ -127,8 +124,8 @@ MODULE Config;
     ModMem.start := StackMem[Core0].start + 04H;
     ModMem.end := DataMem[Core0].end;
 
-    ExtMem[Core0].start := MCU.SRAM_X0_ALIAS;;
-    ExtMem[Core0].end := MCU.SRAM_X0_ALIAS + MCU.SRAM_X0_Size;
+    ExtMem[Core0].start := MCU.SRAM_X_S_BASE;
+    ExtMem[Core0].end := MCU.SRAM_X_S_BASE + MCU.SRAM_X_Size;
 
     (* VTOR and initial simple error/fault handlers *)
     (* UsageFault and friends are not enabled yet and escalate to HardFault *)
@@ -141,20 +138,16 @@ MODULE Config;
     install(vtor + MCU.EXC_HardFault_Offset, faultHandler);
     install(vtor + MCU.EXC_SVC_Offset, errorHandler);
 
-    (* the MCX-A346 does not provide a register to get the core ID *)
+    (* the MCX-N947 does not provide a register to get the core ID *)
     (* use value at address 0H of vector table as core ID *)
     (* see Cores.GetCoreId *)
     SYSTEM.GET(MCU.PPB_VTOR, vtor);
     SYSTEM.PUT(vtor, Core0);
 
-    (* it appears exceptions are globally disabled via PRIMASK -- boot ROM? *)
-    (* init to reset value as per the M33 ref/arch manuals *)
-    SYSTEM.EMIT(MCU.CPSIE_I);
-    (* it appears CONTROL.FPCA is set, indicating FPU usage -- boot ROM? *)
-    (* which means all thread-level code interrupts will stack the FPU registers every time... *)
-    (* init CONTROL to reset value as per the M33 ref/arch manuals *)
-    SYSTEM.LDREG(R11, 0);
-    SYSTEM.EMIT(MCU.MSR_CTL_R11)
+    (* disble glitch detectors *)
+    SYSTEM.PUT(MCU.GDET0_BASE + MCU.GDET_ENABLE1_Offset, 0);
+    SYSTEM.PUT(MCU.GDET1_BASE + MCU.GDET_ENABLE1_Offset, 0)
+
   END init;
 
 BEGIN

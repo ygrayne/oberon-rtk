@@ -8,7 +8,7 @@ MODULE RuntimeErrors;
   * Error: run-time errors, including ASSERT, triggered by SVC calls in software
   * Fault: hardware faults, triggered by MCU hardware
   --
-  MCU: MCX-A346
+  MCU: MCX-N947
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -114,6 +114,8 @@ MODULE RuntimeErrors;
     SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
   END excHandler;
 
+
+
   PROCEDURE* errorHandler[0];
   (* default handler: simply blink LED *)
     VAR cid, cnt, i: INTEGER; er: ErrorDesc;
@@ -127,7 +129,7 @@ MODULE RuntimeErrors;
       cnt := 5000000
     END;
     REPEAT
-      SYSTEM.PUT(LED.LXOR, {LED.Red});
+      SYSTEM.PUT(LED.LXOR0, {LED.Red});
       i := 0;
       WHILE i < cnt DO INC(i) END
     UNTIL FALSE

@@ -5,9 +5,9 @@ MODULE StartUp;
   --
   Start-up control
   --
-  MCU: MCX-A346
+  MCU: MCX-N947
   --
-  Note: MCU starts with resets applied.
+  Note: MCU starts with resets released.
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -21,7 +21,7 @@ MODULE StartUp;
     VAR reg, devNo: INTEGER;
   BEGIN
     reg := device DIV 32;
-    reg := MCU.MRCC_GLB_RST0_SET + (reg * MCU.MRCC_GLB_RST_Offset);
+    reg := MCU.SYSCON_PRESET_CTRL0_CLR + (reg * MCU.SYSCON_PRESET_Offset);
     devNo := device MOD 32;
     SYSTEM.PUT(reg, {devNo})
   END ReleaseReset;
@@ -32,7 +32,7 @@ MODULE StartUp;
     VAR reg, devNo: INTEGER;
   BEGIN
     reg := device DIV 32;
-    reg := MCU.MRCC_GLB_RST0_CLR + (reg * MCU.MRCC_GLB_RST_Offset);
+    reg := MCU.SYSCON_PRESET_CTRL0_SET + (reg * MCU.SYSCON_PRESET_Offset);
     devNo := device MOD 32;
     SYSTEM.PUT(reg, {devNo})
   END ApplyReset;
@@ -44,7 +44,7 @@ MODULE StartUp;
     VAR reg, devNo: INTEGER;
   BEGIN
     reg := device DIV 32;
-    reg := MCU.MRCC_GLB_CC0_SET + (reg * MCU.MRCC_GLB_CC_Offset);
+    reg := MCU.SYSCON_AHBCLK_CTRL0_SET + (reg * MCU.SYSCON_AHBCLK_Offset);
     devNo := device MOD 32;
     SYSTEM.PUT(reg, {devNo})
   END EnableClock;
@@ -56,7 +56,7 @@ MODULE StartUp;
     VAR reg, devNo: INTEGER;
   BEGIN
     reg := device DIV 32;
-    reg := MCU.MRCC_GLB_CC0_CLR + (reg * MCU.MRCC_GLB_CC_Offset);
+    reg := MCU.SYSCON_AHBCLK_CTRL0_CLR + (reg * MCU.SYSCON_AHBCLK_Offset);
     devNo := device MOD 32;
     SYSTEM.PUT(reg, {devNo})
   END DisableClock;

@@ -5,7 +5,7 @@ MODULE RuntimeErrorsOut;
   --
   Human-readable output for run-time errors.
   --
-  MCU: MCX-A346
+  MCU: MCX-A346, MCX-N947
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/

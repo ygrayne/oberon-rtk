@@ -9,7 +9,7 @@ MODULE Terminals;
   See module Out for a use case
   Each terminal can only be opened once.
   --
-  MCU: MCX-A346
+  MCU: MCX-A346, MCX-N947
   --
   Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

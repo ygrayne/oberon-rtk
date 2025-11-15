@@ -11,13 +11,13 @@ MODULE Kernel;
   Cooperative scheduling
   No support for interrupts
   --
-  MCU: MCX-A346
+  MCU: MCX-A346, MCX-N947
   --
   Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Config, Coroutines, Memory, SysTick, Cores, MCU := MCU2, Errors;
+  IMPORT SYSTEM, Config, Coroutines, Memory, SysTick, Cores, MCU := MCU2, Errors, Out;
 
   CONST
     MaxNumThreads* = 16;
@@ -378,7 +378,7 @@ MODULE Kernel;
 
   (* installation *)
 
-  PROCEDURE Install*(millisecsPerTick: INTEGER);
+  PROCEDURE Install*(microsecsPerTick: INTEGER);
     VAR i, stkAddr, cid: INTEGER; ctx: CoreContext;
   BEGIN
     Cores.GetCoreId(cid);
@@ -389,7 +389,7 @@ MODULE Kernel;
     ctx.Ct := NIL; ctx.ct := NIL;
     ctx.queued := {};
     ctx.numThreads := 0;
-    ctx.loopPeriod := millisecsPerTick;
+    ctx.loopPeriod := microsecsPerTick;
     NEW(ctx.jump); ASSERT(ctx.jump # NIL, Errors.HeapOverflow);
     NEW(ctx.loop); ASSERT(ctx.loop # NIL, Errors.HeapOverflow);
     Memory.AllocLoopStack(stkAddr, LoopStackSize); ASSERT(stkAddr # 0, Errors.StorageOverflow);
@@ -407,7 +407,7 @@ MODULE Kernel;
       INC(i)
     END;
     (* configure sys tick *)
-    SysTick.Init(millisecsPerTick * SloMo)
+    SysTick.Config(microsecsPerTick)
   END Install;
 
 BEGIN

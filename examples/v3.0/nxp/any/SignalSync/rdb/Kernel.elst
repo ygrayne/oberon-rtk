@@ -21,7 +21,7 @@ MODULE Kernel;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Config, Clocks, Coroutines, Memory, SysTick, Cores, MCU := MCU2, Errors, Out;
+  IMPORT SYSTEM, Config, Coroutines, Memory, SysTick, Cores, MCU := MCU2, Errors, Out;
 
   CONST
     MaxNumThreads* = 16;
@@ -1151,7 +1151,7 @@ MODULE Kernel;
 
   (* installation *)
 
-  PROCEDURE Install*(millisecsPerTick: INTEGER);
+  PROCEDURE Install*(microsecsPerTick: INTEGER);
     VAR i, stkAddr, cid: INTEGER; ctx: CoreContext;
   BEGIN
 .  1812  010004B60      0B501  push      { r0, lr }
@@ -1217,7 +1217,7 @@ MODULE Kernel;
 .  1938  010004BDE      02000  movs      r0,#0
 .  1940  010004BE0      09903  ldr       r1,[sp,#12]
 .  1942  010004BE2      064C8  str       r0,[r1,#76]
-    ctx.loopPeriod := millisecsPerTick;
+    ctx.loopPeriod := microsecsPerTick;
 .  1944  010004BE4      09804  ldr       r0,[sp,#16]
 .  1946  010004BE6      09903  ldr       r1,[sp,#12]
 .  1948  010004BE8      06508  str       r0,[r1,#80]
@@ -1373,12 +1373,8 @@ MODULE Kernel;
 .  2264  010004D24      09000  str       r0,[sp]
 .  2266  010004D26  0F7FFBF9F  b.w       -194 -> 2076
     (* configure sys tick *)
-    SysTick.Config(millisecsPerTick)
+    SysTick.Config(microsecsPerTick)
 .  2270  010004D2A      09804  ldr       r0,[sp,#16]
-    (*
-    Clocks.SetSysTickClock(1000000);
-    SysTick.Init(millisecsPerTick * SloMo)
-    *)
   END Install;
 .  2272  010004D2C  0F7FFFB74  bl.w      Ext Proc #3
 .  2276  010004D30      0E000  b         0 -> 2280
@@ -1398,7 +1394,7 @@ BEGIN
 .  2308  010004D50      02820  cmp       r0,#32
 .  2310  010004D52      0DD01  ble.n     2 -> 2316
 .  2312  010004D54      0DF25  svc       37
-.  2314  010004D56      001A2  <LineNo: 418>
+.  2314  010004D56      0019E  <LineNo: 414>
   Done := SuspendMe; Yield := Next
 .  2316  010004D58  0F2AF60DC  adr.w     r0,pc,#-1756 -> 564
 .  2320  010004D5C  0F8DF1010  ldr.w     r1,[pc,#16] -> 2340

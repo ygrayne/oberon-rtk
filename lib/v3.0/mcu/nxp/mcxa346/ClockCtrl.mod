@@ -11,48 +11,68 @@ MODULE ClockCtrl;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2;
+  IMPORT SYSTEM;
 
   CONST
-    ClkRegOffset = 4;
-
     (* bits in CLKDIV *)
     CLKDIV_UNSTABLE = 31;
 
-    (* clocks for 'clk' parameter (functional clock) *)
-    CLK_FRO_LF_DIV*   = 0;  (* CTIMER, I2C, SPI, UART, LPTMR *)
-    CLK_FRO_HF_GATED* = 1;  (* CTIMER *)
-    CLK_FRO_HF_DIV*   = 2;  (* I2C, SPI, UART, LPTMR *)
-    CLK_CLK_IN*       = 3;  (* CTIMER, I2C, SPI, UART, LPTMR *)
-    CLK_CLK_16K*      = 4;  (* CTIMER, UART *)
-    CLK_CLK_1M*       = 5;  (* CTIMER, I2C, SPI, UART, LPTMR *)
-    CLK_PLL_CLK_DIV*  = 6;  (* CTIMER, I2C, SPI, UART, LPTMR *)
+    (* device functional clock selectors *)
+    CTIMER_SIRC_DIV*    = 0;
+    CTIMER_FIRC_GATED*  = 1;
+    CTIMER_FIRC_DIV*    = 2;
+    CTIMER_SOSC*        = 3;
+    CTIMER_ROSC*        = 4;
+    CTIMER_CLK_1M*      = 5;
+    CTIMER_SPLL_DIV*    = 6;
+    CTIMER_NONE*        = 7; (* reset *)
 
-    CLK_ST_CPU_CLK*      = 0;  (* SYSTICK *)
-    CLK_ST_CLK_1M*       = 1;
-    CLK_ST_OUT_CLK_16K*  = 2;
+    I2C_SIRC_DIV*       = 0;
+    I2C_FIRC_DIV*       = 2;
+    I2C_SOSC*           = 3;
+    I2C_CLK_1M*         = 5;
+    I2C_SPLL_DIV*       = 6;
+    I2C_NONE*           = 7; (* reset *)
 
-    CLK_OUT_FRO_12M*    = 0; (* CLK_CLKOUT *)
-    CLK_OUT_FRO_HF_DIV* = 1;
-    CLK_OUT_CLK_IN*     = 2;
-    CLK_OUT_CLK_16K*    = 3;
-    CLK_OUT_PLL_CLK*    = 5;
-    CLK_OUT_CLK_SLOW*   = 6;
+    SPI_SIRC_DIV*       = 0;
+    SPI_FIRC_DIV*       = 2;
+    SPI_SOSC*           = 3;
+    SPI_CLK_1M*         = 5;
+    SPI_SPLL_DIV*       = 6;
+    SPI_NONE*           = 7; (* reset *)
+
+    UART_SIRC_DIV*      = 0;
+    UART_FIRC_DIV*      = 2;
+    UART_SOSC*          = 3;
+    UART_ROSC*          = 4;
+    UART_CLK_1M*        = 5;
+    UART_SPLL_DIV*      = 6;
+    UART_NONE*          = 7; (* reset *)
 
 
-  PROCEDURE* ConfigDevClock*(device: INTEGER; clk, div: INTEGER);
+    CLKOUT_SIRC*        = 0;
+    CLKOUT_FIRC_DIV*    = 1;
+    CLKOUT_SOSC*        = 2;
+    CLKOUT_ROSC*        = 3;
+    CLKOUT_SPLL*        = 5;
+    CLKOUT_SLOW_CLK*    = 6;
+    CLKOUT_NONE*        = 7; (* reset *)
+
+    SYSTICK_SYS_CLK*    = 0;
+    SYSTICK_CLK_1M*     = 1;
+    SYSTICK_ROSC*       = 2;
+    SYSTICK_NONE*       = 3; (* reset *)
+
+
+  PROCEDURE* ConfigDevClock*(clkSel, clkDiv: INTEGER; clk, div: INTEGER);
   (* set functional clock *)
   (* use with clock disabled *)
-  (* MCU.CLK_* devices *)
-    VAR selReg, divReg: INTEGER;
   BEGIN
-    selReg := MCU.MRCC_CLKSEL + (device * MCU.MRCC_CLK_Offset);
-    divReg := selReg + ClkRegOffset;
     clk := clk MOD 8H;
     div := div MOD 10H;
-    SYSTEM.PUT(selReg, clk);
-    SYSTEM.PUT(divReg, div);
-    REPEAT UNTIL ~SYSTEM.BIT(divReg, CLKDIV_UNSTABLE)
+    SYSTEM.PUT(clkSel, clk);
+    SYSTEM.PUT(clkDiv, div);
+    REPEAT UNTIL ~SYSTEM.BIT(clkDiv, CLKDIV_UNSTABLE)
   END ConfigDevClock;
 
 END ClockCtrl.

@@ -10,7 +10,7 @@ MODULE UARTdev;
   --
   The GPIO pins and pads used must be configured by the client module or program.
   --
-  MCU: MCX-A346
+  MCU: MCX-N947
   --
   Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -25,17 +25,29 @@ MODULE UARTdev;
     UART3* = 3;
     UART4* = 4;
     UART5* = 5;
-    UARTs = {UART0 .. UART5};
+    UART6* = 6;
+    UART7* = 7;
+    UART8* = 8;
+    UART9* = 9;
+    UARTs = {UART0 .. UART9};
     NumUART* = MCU.NumUART;
 
     Disabled* = 0;
     Enabled* = 1;
 
-    ClkFreq = Clocks.SIRC_DIV_FRQ;
-    ClkSel = ClockCtrl.UART_SIRC_DIV;
+    ClkFreq = Clocks.SIRC_FRQ;
+    ClkSel = ClockCtrl.FLEXCOM_SIRC;
     ClkDiv = 0; (* actual div is ClkDiv + 1 *)
 
-    FifoSize* = 4;
+    FifoSize* = 8;
+
+    (* FLEXCOM bits and values *)
+    PSELID_PERSEL_1 = 2;
+    PSELID_PERSEL_0 = 0;
+      PSELID_PERSEL_val_UART = 1;
+      PSELID_PERSEL_val_SPI  = 2;
+      PSELID_PERSEL_val_I2C  = 3;
+      PSELID_PERSEL_val_UI   = 7; (* UART and I2C *)
 
     (* BAUD bits and values *)
     BAUD_OSR_1 = 28;
@@ -52,13 +64,14 @@ MODULE UARTdev;
 
     (* FIFO bits and values *)
     FIFO_TXEMPT* = 23;
+    FIFO_RXEMPT* = 22;
     FIFO_TXFE = 7;
     FIFO_RXFE = 3;
 
     (* WATER bits and values *)
-    WATER_RX_1 = 17;
+    WATER_RX_1 = 18;
     WATER_RX_0 = 16;
-    WATER_TX_1 = 1;
+    WATER_TX_1 = 2;
     WATER_TX_0 = 0;
 
 
@@ -68,8 +81,9 @@ MODULE UARTdev;
       uartNo*: INTEGER;
       devNo*, clkSel, clkDiv: INTEGER;
       BAUD, STAT*: INTEGER;
-      FIFO, CTRL, WATER: INTEGER;
-      DATA*: INTEGER
+      CTRL, FIFO, WATER: INTEGER;
+      DATA*: INTEGER;
+      PSELID: INTEGER
     END;
 
 
@@ -86,23 +100,24 @@ MODULE UARTdev;
     BEGIN
       ASSERT(dev # NIL, Errors.PreCond);
       ASSERT(uartNo IN UARTs, Errors.PreCond);
-      IF uartNo < UART5 THEN
-        base := MCU.LPUART0_BASE + (uartNo * MCU.UART_Offset);
-        dev.devNo := MCU.DEV_UART0 + uartNo;
-        dev.clkSel := MCU.CLKSEL_UART0 + (uartNo * MCU.CLK_UART_Offset);
-        dev.clkDiv := MCU.CLKDIV_UART0 + (uartNo * MCU.CLK_UART_Offset)
+      IF uartNo < UART4 THEN
+        base := MCU.FLEXCOM0_BASE + (uartNo * MCU.FLEXCOM_Offset);
+        dev.devNo := MCU.DEV_FLEXCOM0 + uartNo;
+        dev.clkSel := MCU.CLKSEL_FLEXCOM0 + (uartNo * MCU.CLK_FLEXCOM_Offset);
+        dev.clkDiv := MCU.CLKDIV_FLEXCOM0 + (uartNo * MCU.CLK_FLEXCOM_Offset)
       ELSE
-        base := MCU.LPUART5_BASE;
-        dev.devNo := MCU.DEV_UART5;
-        dev.clkSel := MCU.CLKSEL_UART5;
-        dev.clkDiv := MCU.CLKDIV_UART5
+        base := MCU.FLEXCOM4_BASE + ((uartNo - 4) * MCU.FLEXCOM_Offset);
+        dev.devNo := MCU.DEV_FLEXCOM0 + uartNo;
+        dev.clkSel := MCU.CLKSEL_FLEXCOM4 + ((uartNo - 4) * MCU.CLK_FLEXCOM_Offset);
+        dev.clkDiv := MCU.CLKDIV_FLEXCOM4 + ((uartNo - 4) * MCU.CLK_FLEXCOM_Offset)
       END;
       dev.BAUD := base + MCU.UART_BAUD_Offset;
       dev.STAT := base + MCU.UART_STAT_Offset;
       dev.CTRL := base + MCU.UART_CTRL_Offset;
       dev.DATA := base + MCU.UART_DATA_Offset;
       dev.FIFO := base + MCU.UART_FIFO_Offset;
-      dev.WATER := base + MCU.UART_WATER_Offset
+      dev.WATER := base + MCU.UART_WATER_Offset;
+      dev.PSELID := base + MCU.FLEXCOM_PSELID_Offset
     END Init;
 
 
@@ -110,10 +125,14 @@ MODULE UARTdev;
       VAR val, x: INTEGER;
     BEGIN
 
-      (* release reset on UART device, set clock *)
-      StartUp.ReleaseReset(dev.devNo);
+      (* set clock *)
       ClockCtrl.ConfigDevClock(dev.clkSel, dev.clkDiv, ClkSel, ClkDiv);
       StartUp.EnableClock(dev.devNo);
+
+      (* configure FLEXCOM function *)
+      SYSTEM.GET(dev.PSELID, val);
+      BFI(val, PSELID_PERSEL_1, PSELID_PERSEL_0, PSELID_PERSEL_val_UART);
+      SYSTEM.PUT(dev.PSELID, val);
 
       (* disable transmitter and receiver *)
       SYSTEM.GET(dev.CTRL, val);

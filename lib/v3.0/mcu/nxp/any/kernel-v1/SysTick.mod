@@ -5,7 +5,7 @@ MODULE SysTick;
   --
   System tick
   --
-  MCU: MCX-A346
+  MCU: MCX-A346, MCX-N947
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -14,11 +14,9 @@ MODULE SysTick;
   IMPORT SYSTEM, MCU := MCU2, Clocks;
 
   CONST
-    (* bits *)
+    (* CSR bits *)
     SYST_CSR_COUNTFLAG = 16;
     SYST_CSR_ENABLE = 0;
-
-    CountPerMillisecond = Clocks.FRO_1M DIV 1000;
 
 
   PROCEDURE* Tick*(): BOOLEAN;
@@ -32,12 +30,13 @@ MODULE SysTick;
   END Enable;
 
 
-  PROCEDURE* Init*(millisecondsPerTick: INTEGER);
-    VAR cntReload: INTEGER;
+  PROCEDURE Config*(usPerTick: INTEGER);
+    VAR cntRld: INTEGER;
   BEGIN
-    cntReload := millisecondsPerTick * CountPerMillisecond - 1;
-    SYSTEM.PUT(MCU.PPB_SYST_RVR, cntReload);
+    Clocks.SetSysTickClock;
+    cntRld := usPerTick - 1;
+    SYSTEM.PUT(MCU.PPB_SYST_RVR, cntRld);
     SYSTEM.PUT(MCU.PPB_SYST_CVR, 0) (* clear counter *)
-  END Init;
+  END Config;
 
 END SysTick.
