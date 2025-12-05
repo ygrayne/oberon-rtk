@@ -5,7 +5,7 @@ MODULE StartUp;
   --
   Start-up control
   --
-  MCU: MCX-A346
+  MCU: MCXA346
   --
   Note: MCU starts with resets applied.
   --

@@ -5,7 +5,7 @@ MODULE Cores;
   --
   Core handling
   --
-  MCU: MCX-A346
+  MCU: MCXA346
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

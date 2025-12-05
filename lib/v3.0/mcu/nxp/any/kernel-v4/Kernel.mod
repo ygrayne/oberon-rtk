@@ -7,7 +7,7 @@ MODULE Kernel;
   Interrupt-driven asynchronous tasks and synchronous background tasks.
   General ticker service.
   --
-  MCU: MCX-A346, MCX-N947
+  MCU: MCXA346, MCXN947
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

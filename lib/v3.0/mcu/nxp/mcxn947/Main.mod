@@ -5,7 +5,7 @@ MODULE Main;
   --
   Main module
   --
-  MCU: MCX-N947
+  MCU: MCXN947
   Board: FRDM-MCXN947
   --
   Copyright (c) 2025 Gray gray@grayraven.org

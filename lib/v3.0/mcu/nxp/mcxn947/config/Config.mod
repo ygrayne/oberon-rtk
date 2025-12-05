@@ -10,7 +10,7 @@ MODULE Config;
   --
   One core only (all SRAM allocated to core 0)
   --
-  MCU: MCX-N947
+  MCU: MCXN947
   Board: FRDM-MCXN947
   --
   Copyright (c) 2023-2025 Gray, gray@grayraven.org
@@ -138,7 +138,7 @@ MODULE Config;
     install(vtor + MCU.EXC_HardFault_Offset, faultHandler);
     install(vtor + MCU.EXC_SVC_Offset, errorHandler);
 
-    (* the MCX-N947 does not provide a register to get the core ID *)
+    (* the MCXN947 does not provide a register to get the core ID *)
     (* use value at address 0H of vector table as core ID *)
     (* see Cores.GetCoreId *)
     SYSTEM.GET(MCU.PPB_VTOR, vtor);

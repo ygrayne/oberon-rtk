@@ -8,7 +8,7 @@ MODULE SysTick;
   Enable interrupt and install an interrupt handler
   so we can use WFE/WFI in kernel loop.
   --
-  MCU: MCX-A346, MCX-N947
+  MCU: MCXA346, MCXN947
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/

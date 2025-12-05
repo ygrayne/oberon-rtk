@@ -44,11 +44,6 @@ MODULE GPIO;
 
     (* -- pads -- *)
 
-    (* pad output *)
-    OutputHiZ* = 1; (* pad output = disabled *)
-    OutputConn* = 0;
-
-
     (* BANK0_GPIO bits and values *)
     PADS_OD*            = 7;
     PADS_IE*            = 6;
@@ -176,6 +171,8 @@ MODULE GPIO;
   END GetPadBaseCfg;
 
 
+  (* the connect/disconnect procedures operate on the pad *)
+
   PROCEDURE* ConnectOutput*(pinNo: INTEGER);
     VAR addr: INTEGER;
   BEGIN
@@ -246,7 +243,6 @@ MODULE GPIO;
 
 
   PROCEDURE* Toggle*(gpio: INTEGER; pinMask: SET);
-  (* atomic *)
   BEGIN
     SYSTEM.PUT(gpio + MCU.SIO_GPIO_OUT_XOR_Offset, pinMask)
   END Toggle;
@@ -312,6 +308,8 @@ MODULE GPIO;
     SYSTEM.PUT(MCU.SIO_GPIO_OE_SET, pinMask)
   END EnableOutputL;
 
+
+  (* disabling output sets pin to hi-z (tri-state) *)
 
   PROCEDURE* DisableOutput*(gpio: INTEGER; pinMask: SET);
   BEGIN

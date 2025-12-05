@@ -58,10 +58,6 @@ MODULE GPIO;
 
     (* --- pads --- *)
 
-    (* pad output *)
-    OutputHiZ* = 1; (* pad output = disabled *)
-    OutputConn* = 0;
-
     (* PADS config bits and values, both banks *)
     PADS_ISO*         = 8;
     PADS_OD*          = 7;
@@ -205,6 +201,7 @@ MODULE GPIO;
     cfg.schmittTrigEn := Enabled
   END GetPadBaseCfg;
 
+  (* the connect/disconnect procedures operate on the pad *)
 
   PROCEDURE* ConnectOutput*(pin: INTEGER);
     VAR addr: INTEGER;
@@ -215,7 +212,6 @@ MODULE GPIO;
 
 
   PROCEDURE* DisconnectOutput*(pin: INTEGER);
-  (** set hi-z **)
     VAR addr: INTEGER;
   BEGIN
     addr := MCU.PADS_BANK0_GPIO0 + MCU.ASET + (pin * MCU.PADS_BANK0_GPIO_Offset);
@@ -451,6 +447,7 @@ MODULE GPIO;
     SYSTEM.PUT(MCU.SIO_GPIO_HI_OE_SET, pinMaskH)
   END EnableOutputH;
 
+  (* disabling output sets pin to hi-z (tri-state) *)
 
   PROCEDURE* DisableOutput*(gpio: INTEGER; pinMask: SET);
   BEGIN

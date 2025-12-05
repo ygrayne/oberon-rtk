@@ -5,7 +5,7 @@ MODULE GPIO;
   --
   General Purpose IO (GPIO)
   --
-  MCU: MCX-N947
+  MCU: MCXN947
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

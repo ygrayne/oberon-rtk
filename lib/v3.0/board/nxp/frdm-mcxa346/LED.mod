@@ -5,7 +5,7 @@ MODULE LED;
   --
   Green, red and blue LEDs
   --
-  MCU: MCX-A346
+  MCU: MCXA346
   Board: FRDM-MCXA346
   --
   * LEDs are active low.

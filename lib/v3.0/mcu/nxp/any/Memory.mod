@@ -6,7 +6,7 @@ MODULE Memory;
   * heap memory allocation
   * stacks allocation
   --
-  MCU: MCX-A346, MCX-N947
+  MCU: MCXA346, MCXN947
   --
   Copyright (c) 2023-2025 Gray, gray@grayraven.org
   Portions copyright (c) 2012-2021 CFB Software, https://www.astrobe.com

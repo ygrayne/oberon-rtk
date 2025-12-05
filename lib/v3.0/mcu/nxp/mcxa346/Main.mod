@@ -5,7 +5,7 @@ MODULE Main;
   --
   Main module
   --
-  MCU: MCX-A346
+  MCU: MCXA346
   Board: FRDM-MCXA346
   --
   Copyright (c) 2025 Gray gray@grayraven.org

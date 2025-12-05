@@ -5,7 +5,7 @@ MODULE UARTstr;
   --
   UART string device driver, kernel not required (busy waiting)
   --
-  MCU: MCX-A346
+  MCU: MCXA346
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/

@@ -5,7 +5,7 @@ MODULE Clocks;
   --
   Clocks configuration and initialisation at start-up.
   --
-  MCU: MCX-A346
+  MCU: MCXA346
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

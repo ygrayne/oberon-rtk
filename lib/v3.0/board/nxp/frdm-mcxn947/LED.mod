@@ -5,7 +5,7 @@ MODULE LED;
   --
   Green, red and blue LEDs
   --
-  MCU: MCX-N947
+  MCU: MCXN947
   Board: FRDM-MCXN947
   --
   * LEDs are active low.

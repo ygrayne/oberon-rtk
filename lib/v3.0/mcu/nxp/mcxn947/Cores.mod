@@ -5,7 +5,7 @@ MODULE Cores;
   --
   Core handling
   --
-  MCU: MCX-N947
+  MCU: MCXN947
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

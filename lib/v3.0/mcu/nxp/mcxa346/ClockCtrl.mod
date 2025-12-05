@@ -5,7 +5,7 @@ MODULE ClockCtrl;
   --
   Clock control
   --
-  MCU: MCX-A346
+  MCU: MCXA346
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

@@ -9,7 +9,7 @@ MODULE FPUctrl;
     * 'Init' needs to called from the core whose FPU shall be initialised/enabled.
     * See modules InitCoreOne and Cores.
   --
-  MCU: MCX-A346
+  MCU: MCXA346
   --
   Copyright (c) 2024-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

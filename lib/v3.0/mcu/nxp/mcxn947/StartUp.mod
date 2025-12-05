@@ -5,7 +5,7 @@ MODULE StartUp;
   --
   Start-up control
   --
-  MCU: MCX-N947
+  MCU: MCXN947
   --
   Note: MCU starts with resets released.
   --

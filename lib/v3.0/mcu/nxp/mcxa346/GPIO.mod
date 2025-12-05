@@ -5,7 +5,7 @@ MODULE GPIO;
   --
   General Purpose IO (GPIO)
   --
-  MCU: MCX-A346
+  MCU: MCXA346
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -88,11 +88,6 @@ MODULE GPIO;
       slewRate*: INTEGER;       (* fast/slow *)
       pullEn*: INTEGER;         (* disabled/enabled *)
       pullSel*: INTEGER         (* down/up *)
-    END;
-
-    Pin* = RECORD
-      pinNo: INTEGER;
-      port: INTEGER
     END;
 
 

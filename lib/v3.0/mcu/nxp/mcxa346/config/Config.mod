@@ -8,7 +8,7 @@ MODULE Config;
   * Set core ID register via VTOR/vector table
   * Reset some MCU registers left behind set by boot ROM
   --
-  MCU: MCX-A346
+  MCU: MCXA346
   Board: FRDM-MCXA346
   --
   One core
@@ -141,7 +141,7 @@ MODULE Config;
     install(vtor + MCU.EXC_HardFault_Offset, faultHandler);
     install(vtor + MCU.EXC_SVC_Offset, errorHandler);
 
-    (* the MCX-A346 does not provide a register to get the core ID *)
+    (* the MCXA346 does not provide a register to get the core ID *)
     (* use value at address 0H of vector table as core ID *)
     (* see Cores.GetCoreId *)
     SYSTEM.GET(MCU.PPB_VTOR, vtor);
