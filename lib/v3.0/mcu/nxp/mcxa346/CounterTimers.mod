@@ -35,7 +35,7 @@ MODULE CounterTimers;
     END;
 
 
-  PROCEDURE Init*(dev: Device; ctimNo: INTEGER);
+  PROCEDURE* Init*(dev: Device; ctimNo: INTEGER);
     VAR base: INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
@@ -67,7 +67,7 @@ MODULE CounterTimers;
   END Configure;
 
 
-  PROCEDURE Enable*(dev: Device);
+  PROCEDURE* Enable*(dev: Device);
     VAR val: SET;
   BEGIN
     SYSTEM.GET(dev.TCR, val);
@@ -75,7 +75,7 @@ MODULE CounterTimers;
   END Enable;
 
 
-  PROCEDURE GetCount*(dev: Device; VAR cnt: INTEGER);
+  PROCEDURE* GetCount*(dev: Device; VAR cnt: INTEGER);
   BEGIN
     SYSTEM.GET(dev.TC, cnt)
   END GetCount;

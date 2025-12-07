@@ -8,7 +8,7 @@ Versions lib/v1.0, lib/v2.0, lib/2.1, lib/v3.0
     + any: generic, hardware independent
     + board: board-specific, possibly with external components and wiring
       + rp2040: RP2040 boards
-        + any: any make based on RP2040
+        + any
         + pico: Pico/RP2040
     + mcu: MCU-specific
       + m0: Cortex-M0/M0+ mcu
@@ -17,33 +17,33 @@ Versions lib/v1.0, lib/v2.0, lib/2.1, lib/v3.0
     + any: generic, hardware independent
     + board: board-specific, possibly with external components and wiring
       + rpi: raspberry pi
-        + any: any rpi board
+        + any
         + pico: Pico/RP2040
         + pico2: Pico2/RP2350
     + mcu: MCU-specific
       + rpi: raspberry pi
-        + any: any rpi mcu
+        + any
         + rp2040: RP2040
         + rp2350: RP2350
   + v2.1:
     + any: generic, hardware independent
     + board: board-specific, possibly with external components and wiring
       + rpi: raspberry pi
-        + any: any rpi board
+        + any
         + pico: Pico/RP2040
         + pico2: Pico2/RP2350
       + tvi: tiny vision
         + pico2-ice
     + mcu: MCU-specific
       + rpi: raspberry pi
-        + any: any rpi mcu
+        + any
         + rp2040: RP2040
         + rp2350: RP2350
   + v3.0:
     + any: generic, hardware independent
     + board: board-specific, possibly with external components and wiring
       + rpi: raspberry pi
-        + any: any rpi board
+        + any
         + pico: Pico/RP2040
         + pico2: Pico2/RP2350
       + tvi: tiny vision
@@ -51,15 +51,20 @@ Versions lib/v1.0, lib/v2.0, lib/2.1, lib/v3.0
       + nxp
         + frdm-mcxa436
         + frdm-mcxn947
+      + stm
+        + b-u585i-iot
     + mcu: MCU-specific
       + rpi: raspberry pi
-        + any: any rpi mcu
+        + any
         + rp2040: RP2040
         + rp2350: RP2350
       + nxp: nxp semi
-        + any: any nxp mcu
-        + mcxa346: MCX-A346
-        + mcxn947: MCX-N947
+        + any
+        + mcxa346: MCXA346
+        + mcxn947: MCXN947
+      + stm: st micro
+        + any
+        + stm32u585: STMU585
 ```
 
 [https://oberon-rtk.org/docs/lib/](https://oberon-rtk.org/docs/lib/)

@@ -1,7 +1,7 @@
 . <tool: Astrobe for RP2350>
 . <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
 
-.     0  010003BE0              <Pad: 0>
+.     0  000003E48              <Pad: 0>
 MODULE Terminals;
 (**
   Oberon RTK Framework
@@ -13,7 +13,7 @@ MODULE Terminals;
   See module Out for a use case
   Each terminal can only be opened once.
   --
-  MCU: MCX-A346, MCX-N947
+  MCU: MCXA346, MCXN947
   --
   Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -38,202 +38,202 @@ MODULE Terminals;
   PROCEDURE InitUART*(uartNo: INTEGER; uartCfg: UARTdev.DeviceCfg; baudrate: INTEGER; VAR dev: UARTdev.Device);
   (* utility procedure *)
   BEGIN
-.     4  010003BE4      0B51F  push      { r0, r1, r2, r3, r4, lr }
+.     4  000003E4C      0B51F  push      { r0, r1, r2, r3, r4, lr }
     NEW(dev); ASSERT(dev # NIL, Errors.HeapOverflow);
-.     6  010003BE6      09804  ldr       r0,[sp,#16]
-.     8  010003BE8  0F8DF1044  ldr.w     r1,[pc,#68] -> 80
-.    12  010003BEC  0F7FCFD46  bl.w      Ext Proc #1
-.    16  010003BF0      0E000  b         0 -> 20
-.    18  010003BF2      00025  <LineNo: 37>
-.    20  010003BF4      09804  ldr       r0,[sp,#16]
-.    22  010003BF6      06800  ldr       r0,[r0]
-.    24  010003BF8      02800  cmp       r0,#0
-.    26  010003BFA      0D101  bne.n     2 -> 32
-.    28  010003BFC      0DF29  svc       41
-.    30  010003BFE      00025  <LineNo: 37>
+.     6  000003E4E      09804  ldr       r0,[sp,#16]
+.     8  000003E50  0F8DF1044  ldr.w     r1,[pc,#68] -> 80
+.    12  000003E54  0F7FCFC18  bl.w      Ext Proc #1
+.    16  000003E58      0E000  b         0 -> 20
+.    18  000003E5A      00025  <LineNo: 37>
+.    20  000003E5C      09804  ldr       r0,[sp,#16]
+.    22  000003E5E      06800  ldr       r0,[r0]
+.    24  000003E60      02800  cmp       r0,#0
+.    26  000003E62      0D101  bne.n     2 -> 32
+.    28  000003E64      0DF29  svc       41
+.    30  000003E66      00025  <LineNo: 37>
     UARTdev.Init(dev, uartNo);
-.    32  010003C00      09804  ldr       r0,[sp,#16]
-.    34  010003C02      06800  ldr       r0,[r0]
-.    36  010003C04      09900  ldr       r1,[sp]
-.    38  010003C06  0F7FFFED9  bl.w      Ext Proc #3
-.    42  010003C0A      0E000  b         0 -> 46
-.    44  010003C0C      00026  <LineNo: 38>
+.    32  000003E68      09804  ldr       r0,[sp,#16]
+.    34  000003E6A      06800  ldr       r0,[r0]
+.    36  000003E6C      09900  ldr       r1,[sp]
+.    38  000003E6E  0F7FFFEED  bl.w      Ext Proc #3
+.    42  000003E72      0E000  b         0 -> 46
+.    44  000003E74      00026  <LineNo: 38>
     UARTdev.Configure(dev, uartCfg, baudrate);
-.    46  010003C0E      09804  ldr       r0,[sp,#16]
-.    48  010003C10      06800  ldr       r0,[r0]
-.    50  010003C12      09901  ldr       r1,[sp,#4]
-.    52  010003C14      09A02  ldr       r2,[sp,#8]
-.    54  010003C16      09B03  ldr       r3,[sp,#12]
-.    56  010003C18  0F7FFFF2C  bl.w      Ext Proc #4
-.    60  010003C1C      0E000  b         0 -> 64
-.    62  010003C1E      00027  <LineNo: 39>
+.    46  000003E76      09804  ldr       r0,[sp,#16]
+.    48  000003E78      06800  ldr       r0,[r0]
+.    50  000003E7A      09901  ldr       r1,[sp,#4]
+.    52  000003E7C      09A02  ldr       r2,[sp,#8]
+.    54  000003E7E      09B03  ldr       r3,[sp,#12]
+.    56  000003E80  0F7FFFF34  bl.w      Ext Proc #4
+.    60  000003E84      0E000  b         0 -> 64
+.    62  000003E86      00027  <LineNo: 39>
     UARTdev.Enable(dev)
-.    64  010003C20      09804  ldr       r0,[sp,#16]
-.    66  010003C22      06800  ldr       r0,[r0]
+.    64  000003E88      09804  ldr       r0,[sp,#16]
+.    66  000003E8A      06800  ldr       r0,[r0]
   END InitUART;
-.    68  010003C24  0F7FFFFD0  bl.w      Ext Proc #6
-.    72  010003C28      0E000  b         0 -> 76
-.    74  010003C2A      00028  <LineNo: 40>
-.    76  010003C2C      0B005  add       sp,#20
-.    78  010003C2E      0BD00  pop       { pc }
-.    80  010003C30  010003994  <Global: UARTdev code>
+.    68  000003E8C  0F7FFFFD0  bl.w      Ext Proc #6
+.    72  000003E90      0E000  b         0 -> 76
+.    74  000003E92      00028  <LineNo: 40>
+.    76  000003E94      0B005  add       sp,#20
+.    78  000003E96      0BD00  pop       { pc }
+.    80  000003E98      03C24  <Global: UARTdev code>
 
 
   PROCEDURE Open*(termNo: INTEGER; dev: TextIO.Device; psp: TextIO.PutStringProc; gsp: TextIO.GetStringProc);
   BEGIN
-.    84  010003C34      0B50F  push      { r0, r1, r2, r3, lr }
+.    84  000003E9C      0B50F  push      { r0, r1, r2, r3, lr }
     ASSERT(termNo IN {TERM0, TERM1}, Errors.PreCond);
-.    86  010003C36      02003  movs      r0,#3
-.    88  010003C38      09900  ldr       r1,[sp]
-.    90  010003C3A      02201  movs      r2,#1
-.    92  010003C3C      0408A  lsls      r2,r1
-.    94  010003C3E  0EA100F02  tst.w     r0,r2
-.    98  010003C42      0D101  bne.n     2 -> 104
-.   100  010003C44      0DF22  svc       34
-.   102  010003C46      0002E  <LineNo: 46>
+.    86  000003E9E      02003  movs      r0,#3
+.    88  000003EA0      09900  ldr       r1,[sp]
+.    90  000003EA2      02201  movs      r2,#1
+.    92  000003EA4      0408A  lsls      r2,r1
+.    94  000003EA6  0EA100F02  tst.w     r0,r2
+.    98  000003EAA      0D101  bne.n     2 -> 104
+.   100  000003EAC      0DF22  svc       34
+.   102  000003EAE      0002E  <LineNo: 46>
     ASSERT(dev # NIL, Errors.PreCond);
-.   104  010003C48      09801  ldr       r0,[sp,#4]
-.   106  010003C4A      02800  cmp       r0,#0
-.   108  010003C4C      0D101  bne.n     2 -> 114
-.   110  010003C4E      0DF22  svc       34
-.   112  010003C50      0002F  <LineNo: 47>
+.   104  000003EB0      09801  ldr       r0,[sp,#4]
+.   106  000003EB2      02800  cmp       r0,#0
+.   108  000003EB4      0D101  bne.n     2 -> 114
+.   110  000003EB6      0DF22  svc       34
+.   112  000003EB8      0002F  <LineNo: 47>
     IF W[termNo] = NIL THEN
-.   114  010003C52      09800  ldr       r0,[sp]
-.   116  010003C54      02802  cmp       r0,#2
-.   118  010003C56      0D301  bcc.n     2 -> 124
-.   120  010003C58      0DF01  svc       1
-.   122  010003C5A      00030  <LineNo: 48>
-.   124  010003C5C  0F8DF10DC  ldr.w     r1,[pc,#220] -> 348
-.   128  010003C60      00082  lsls      r2,r0,#2
-.   130  010003C62  0EB020001  add.w     r0,r2,r1
-.   134  010003C66      06800  ldr       r0,[r0]
-.   136  010003C68      02800  cmp       r0,#0
-.   138  010003C6A  0F0408060  bne.w     192 -> 334
+.   114  000003EBA      09800  ldr       r0,[sp]
+.   116  000003EBC      02802  cmp       r0,#2
+.   118  000003EBE      0D301  bcc.n     2 -> 124
+.   120  000003EC0      0DF01  svc       1
+.   122  000003EC2      00030  <LineNo: 48>
+.   124  000003EC4  0F8DF10DC  ldr.w     r1,[pc,#220] -> 348
+.   128  000003EC8      00082  lsls      r2,r0,#2
+.   130  000003ECA  0EB020001  add.w     r0,r2,r1
+.   134  000003ECE      06800  ldr       r0,[r0]
+.   136  000003ED0      02800  cmp       r0,#0
+.   138  000003ED2  0F0408060  bne.w     192 -> 334
       NEW(W[termNo]); ASSERT(W[termNo] # NIL, Errors.HeapOverflow);
-.   142  010003C6E      09800  ldr       r0,[sp]
-.   144  010003C70      02802  cmp       r0,#2
-.   146  010003C72      0D301  bcc.n     2 -> 152
-.   148  010003C74      0DF01  svc       1
-.   150  010003C76      00031  <LineNo: 49>
-.   152  010003C78  0F8DF10C0  ldr.w     r1,[pc,#192] -> 348
-.   156  010003C7C      00082  lsls      r2,r0,#2
-.   158  010003C7E  0EB020001  add.w     r0,r2,r1
-.   162  010003C82  0F8DF10B0  ldr.w     r1,[pc,#176] -> 340
-.   166  010003C86  0F7FCFCF9  bl.w      Ext Proc #1
-.   170  010003C8A      0E000  b         0 -> 174
-.   172  010003C8C      00031  <LineNo: 49>
-.   174  010003C8E      09800  ldr       r0,[sp]
-.   176  010003C90      02802  cmp       r0,#2
-.   178  010003C92      0D301  bcc.n     2 -> 184
-.   180  010003C94      0DF01  svc       1
-.   182  010003C96      00031  <LineNo: 49>
-.   184  010003C98  0F8DF10A0  ldr.w     r1,[pc,#160] -> 348
-.   188  010003C9C      00082  lsls      r2,r0,#2
-.   190  010003C9E  0EB020001  add.w     r0,r2,r1
-.   194  010003CA2      06800  ldr       r0,[r0]
-.   196  010003CA4      02800  cmp       r0,#0
-.   198  010003CA6      0D101  bne.n     2 -> 204
-.   200  010003CA8      0DF29  svc       41
-.   202  010003CAA      00031  <LineNo: 49>
+.   142  000003ED6      09800  ldr       r0,[sp]
+.   144  000003ED8      02802  cmp       r0,#2
+.   146  000003EDA      0D301  bcc.n     2 -> 152
+.   148  000003EDC      0DF01  svc       1
+.   150  000003EDE      00031  <LineNo: 49>
+.   152  000003EE0  0F8DF10C0  ldr.w     r1,[pc,#192] -> 348
+.   156  000003EE4      00082  lsls      r2,r0,#2
+.   158  000003EE6  0EB020001  add.w     r0,r2,r1
+.   162  000003EEA  0F8DF10B0  ldr.w     r1,[pc,#176] -> 340
+.   166  000003EEE  0F7FCFBCB  bl.w      Ext Proc #1
+.   170  000003EF2      0E000  b         0 -> 174
+.   172  000003EF4      00031  <LineNo: 49>
+.   174  000003EF6      09800  ldr       r0,[sp]
+.   176  000003EF8      02802  cmp       r0,#2
+.   178  000003EFA      0D301  bcc.n     2 -> 184
+.   180  000003EFC      0DF01  svc       1
+.   182  000003EFE      00031  <LineNo: 49>
+.   184  000003F00  0F8DF10A0  ldr.w     r1,[pc,#160] -> 348
+.   188  000003F04      00082  lsls      r2,r0,#2
+.   190  000003F06  0EB020001  add.w     r0,r2,r1
+.   194  000003F0A      06800  ldr       r0,[r0]
+.   196  000003F0C      02800  cmp       r0,#0
+.   198  000003F0E      0D101  bne.n     2 -> 204
+.   200  000003F10      0DF29  svc       41
+.   202  000003F12      00031  <LineNo: 49>
       NEW(R[termNo]); ASSERT(R[termNo] # NIL, Errors.HeapOverflow);
-.   204  010003CAC      09800  ldr       r0,[sp]
-.   206  010003CAE      02802  cmp       r0,#2
-.   208  010003CB0      0D301  bcc.n     2 -> 214
-.   210  010003CB2      0DF01  svc       1
-.   212  010003CB4      00032  <LineNo: 50>
-.   214  010003CB6  0F8DF1088  ldr.w     r1,[pc,#136] -> 352
-.   218  010003CBA      00082  lsls      r2,r0,#2
-.   220  010003CBC  0EB020001  add.w     r0,r2,r1
-.   224  010003CC0  0F8DF1074  ldr.w     r1,[pc,#116] -> 344
-.   228  010003CC4  0F7FCFCDA  bl.w      Ext Proc #1
-.   232  010003CC8      0E000  b         0 -> 236
-.   234  010003CCA      00032  <LineNo: 50>
-.   236  010003CCC      09800  ldr       r0,[sp]
-.   238  010003CCE      02802  cmp       r0,#2
-.   240  010003CD0      0D301  bcc.n     2 -> 246
-.   242  010003CD2      0DF01  svc       1
-.   244  010003CD4      00032  <LineNo: 50>
-.   246  010003CD6  0F8DF1068  ldr.w     r1,[pc,#104] -> 352
-.   250  010003CDA      00082  lsls      r2,r0,#2
-.   252  010003CDC  0EB020001  add.w     r0,r2,r1
-.   256  010003CE0      06800  ldr       r0,[r0]
-.   258  010003CE2      02800  cmp       r0,#0
-.   260  010003CE4      0D101  bne.n     2 -> 266
-.   262  010003CE6      0DF29  svc       41
-.   264  010003CE8      00032  <LineNo: 50>
+.   204  000003F14      09800  ldr       r0,[sp]
+.   206  000003F16      02802  cmp       r0,#2
+.   208  000003F18      0D301  bcc.n     2 -> 214
+.   210  000003F1A      0DF01  svc       1
+.   212  000003F1C      00032  <LineNo: 50>
+.   214  000003F1E  0F8DF1088  ldr.w     r1,[pc,#136] -> 352
+.   218  000003F22      00082  lsls      r2,r0,#2
+.   220  000003F24  0EB020001  add.w     r0,r2,r1
+.   224  000003F28  0F8DF1074  ldr.w     r1,[pc,#116] -> 344
+.   228  000003F2C  0F7FCFBAC  bl.w      Ext Proc #1
+.   232  000003F30      0E000  b         0 -> 236
+.   234  000003F32      00032  <LineNo: 50>
+.   236  000003F34      09800  ldr       r0,[sp]
+.   238  000003F36      02802  cmp       r0,#2
+.   240  000003F38      0D301  bcc.n     2 -> 246
+.   242  000003F3A      0DF01  svc       1
+.   244  000003F3C      00032  <LineNo: 50>
+.   246  000003F3E  0F8DF1068  ldr.w     r1,[pc,#104] -> 352
+.   250  000003F42      00082  lsls      r2,r0,#2
+.   252  000003F44  0EB020001  add.w     r0,r2,r1
+.   256  000003F48      06800  ldr       r0,[r0]
+.   258  000003F4A      02800  cmp       r0,#0
+.   260  000003F4C      0D101  bne.n     2 -> 266
+.   262  000003F4E      0DF29  svc       41
+.   264  000003F50      00032  <LineNo: 50>
       TextIO.OpenWriter(W[termNo], dev, psp);
-.   266  010003CEA      09800  ldr       r0,[sp]
-.   268  010003CEC      02802  cmp       r0,#2
-.   270  010003CEE      0D301  bcc.n     2 -> 276
-.   272  010003CF0      0DF01  svc       1
-.   274  010003CF2      00033  <LineNo: 51>
-.   276  010003CF4  0F8DF1044  ldr.w     r1,[pc,#68] -> 348
-.   280  010003CF8      00082  lsls      r2,r0,#2
-.   282  010003CFA  0EB020001  add.w     r0,r2,r1
-.   286  010003CFE      06800  ldr       r0,[r0]
-.   288  010003D00      09901  ldr       r1,[sp,#4]
-.   290  010003D02      09A02  ldr       r2,[sp,#8]
-.   292  010003D04  0F7FEFAEC  bl.w      Ext Proc #4
-.   296  010003D08      0E000  b         0 -> 300
-.   298  010003D0A      00033  <LineNo: 51>
+.   266  000003F52      09800  ldr       r0,[sp]
+.   268  000003F54      02802  cmp       r0,#2
+.   270  000003F56      0D301  bcc.n     2 -> 276
+.   272  000003F58      0DF01  svc       1
+.   274  000003F5A      00033  <LineNo: 51>
+.   276  000003F5C  0F8DF1044  ldr.w     r1,[pc,#68] -> 348
+.   280  000003F60      00082  lsls      r2,r0,#2
+.   282  000003F62  0EB020001  add.w     r0,r2,r1
+.   286  000003F66      06800  ldr       r0,[r0]
+.   288  000003F68      09901  ldr       r1,[sp,#4]
+.   290  000003F6A      09A02  ldr       r2,[sp,#8]
+.   292  000003F6C  0F7FEF97C  bl.w      Ext Proc #4
+.   296  000003F70      0E000  b         0 -> 300
+.   298  000003F72      00033  <LineNo: 51>
       TextIO.OpenReader(R[termNo], dev, gsp)
-.   300  010003D0C      09800  ldr       r0,[sp]
-.   302  010003D0E      02802  cmp       r0,#2
-.   304  010003D10      0D301  bcc.n     2 -> 310
-.   306  010003D12      0DF01  svc       1
-.   308  010003D14      00034  <LineNo: 52>
-.   310  010003D16  0F8DF1028  ldr.w     r1,[pc,#40] -> 352
-.   314  010003D1A      00082  lsls      r2,r0,#2
-.   316  010003D1C  0EB020001  add.w     r0,r2,r1
-.   320  010003D20      06800  ldr       r0,[r0]
-.   322  010003D22      09901  ldr       r1,[sp,#4]
-.   324  010003D24      09A03  ldr       r2,[sp,#12]
+.   300  000003F74      09800  ldr       r0,[sp]
+.   302  000003F76      02802  cmp       r0,#2
+.   304  000003F78      0D301  bcc.n     2 -> 310
+.   306  000003F7A      0DF01  svc       1
+.   308  000003F7C      00034  <LineNo: 52>
+.   310  000003F7E  0F8DF1028  ldr.w     r1,[pc,#40] -> 352
+.   314  000003F82      00082  lsls      r2,r0,#2
+.   316  000003F84  0EB020001  add.w     r0,r2,r1
+.   320  000003F88      06800  ldr       r0,[r0]
+.   322  000003F8A      09901  ldr       r1,[sp,#4]
+.   324  000003F8C      09A03  ldr       r2,[sp,#12]
     END
-.   326  010003D26  0F7FEFAF5  bl.w      Ext Proc #6
-.   330  010003D2A      0E000  b         0 -> 334
-.   332  010003D2C      00034  <LineNo: 52>
+.   326  000003F8E  0F7FEF985  bl.w      Ext Proc #6
+.   330  000003F92      0E000  b         0 -> 334
+.   332  000003F94      00034  <LineNo: 52>
   END Open;
-.   334  010003D2E      0B004  add       sp,#16
-.   336  010003D30      0BD00  pop       { pc }
-.   338  010003D32      0BF00  nop       
-.   340  010003D34  0100022B8  <Global: TextIO code>
-.   344  010003D38  0100022CC  <Global: TextIO code>
-.   348  010003D3C  02001FEAC  <Global: Terminals data>
-.   352  010003D40  02001FE9C  <Global: Terminals data>
+.   334  000003F96      0B004  add       sp,#16
+.   336  000003F98      0BD00  pop       { pc }
+.   338  000003F9A      0BF00  nop       
+.   340  000003F9C      02240  <Global: TextIO code>
+.   344  000003FA0      02254  <Global: TextIO code>
+.   348  000003FA4  020027EAC  <Global: Terminals data>
+.   352  000003FA8  020027E9C  <Global: Terminals data>
 
 
   PROCEDURE Close*(termNo: INTEGER; VAR dev: TextIO.Device);
   BEGIN
-.   356  010003D44      0B503  push      { r0, r1, lr }
+.   356  000003FAC      0B503  push      { r0, r1, lr }
     dev := W[termNo].dev;
-.   358  010003D46      09800  ldr       r0,[sp]
-.   360  010003D48      02802  cmp       r0,#2
-.   362  010003D4A      0D301  bcc.n     2 -> 368
-.   364  010003D4C      0DF01  svc       1
-.   366  010003D4E      0003B  <LineNo: 59>
-.   368  010003D50  0F8DF102C  ldr.w     r1,[pc,#44] -> 416
-.   372  010003D54      00082  lsls      r2,r0,#2
-.   374  010003D56  0EB020001  add.w     r0,r2,r1
-.   378  010003D5A      06800  ldr       r0,[r0]
-.   380  010003D5C      06800  ldr       r0,[r0]
-.   382  010003D5E      09901  ldr       r1,[sp,#4]
-.   384  010003D60      06008  str       r0,[r1]
+.   358  000003FAE      09800  ldr       r0,[sp]
+.   360  000003FB0      02802  cmp       r0,#2
+.   362  000003FB2      0D301  bcc.n     2 -> 368
+.   364  000003FB4      0DF01  svc       1
+.   366  000003FB6      0003B  <LineNo: 59>
+.   368  000003FB8  0F8DF102C  ldr.w     r1,[pc,#44] -> 416
+.   372  000003FBC      00082  lsls      r2,r0,#2
+.   374  000003FBE  0EB020001  add.w     r0,r2,r1
+.   378  000003FC2      06800  ldr       r0,[r0]
+.   380  000003FC4      06800  ldr       r0,[r0]
+.   382  000003FC6      09901  ldr       r1,[sp,#4]
+.   384  000003FC8      06008  str       r0,[r1]
     W[termNo] := NIL
-.   386  010003D62      09800  ldr       r0,[sp]
-.   388  010003D64      02802  cmp       r0,#2
-.   390  010003D66      0D301  bcc.n     2 -> 396
-.   392  010003D68      0DF01  svc       1
-.   394  010003D6A      0003C  <LineNo: 60>
-.   396  010003D6C  0F8DF1010  ldr.w     r1,[pc,#16] -> 416
-.   400  010003D70      00082  lsls      r2,r0,#2
-.   402  010003D72  0EB020001  add.w     r0,r2,r1
+.   386  000003FCA      09800  ldr       r0,[sp]
+.   388  000003FCC      02802  cmp       r0,#2
+.   390  000003FCE      0D301  bcc.n     2 -> 396
+.   392  000003FD0      0DF01  svc       1
+.   394  000003FD2      0003C  <LineNo: 60>
+.   396  000003FD4  0F8DF1010  ldr.w     r1,[pc,#16] -> 416
+.   400  000003FD8      00082  lsls      r2,r0,#2
+.   402  000003FDA  0EB020001  add.w     r0,r2,r1
   END Close;
-.   406  010003D76      02100  movs      r1,#0
-.   408  010003D78      06001  str       r1,[r0]
-.   410  010003D7A      0B002  add       sp,#8
-.   412  010003D7C      0BD00  pop       { pc }
-.   414  010003D7E      0BF00  nop       
-.   416  010003D80  02001FEAC  <Global: Terminals data>
+.   406  000003FDE      02100  movs      r1,#0
+.   408  000003FE0      06001  str       r1,[r0]
+.   410  000003FE2      0B002  add       sp,#8
+.   412  000003FE4      0BD00  pop       { pc }
+.   414  000003FE6      0BF00  nop       
+.   416  000003FE8  020027EAC  <Global: Terminals data>
 
 
   PROCEDURE OpenErr*(termNo: INTEGER; psp: TextIO.PutStringProc);
@@ -244,127 +244,127 @@ MODULE Terminals;
     See module Main for an example.
   **)
   BEGIN
-.   420  010003D84      0B503  push      { r0, r1, lr }
+.   420  000003FEC      0B503  push      { r0, r1, lr }
     ASSERT(termNo IN {TERM0, TERM1}, Errors.PreCond);
-.   422  010003D86      02003  movs      r0,#3
-.   424  010003D88      09900  ldr       r1,[sp]
-.   426  010003D8A      02201  movs      r2,#1
-.   428  010003D8C      0408A  lsls      r2,r1
-.   430  010003D8E  0EA100F02  tst.w     r0,r2
-.   434  010003D92      0D101  bne.n     2 -> 440
-.   436  010003D94      0DF22  svc       34
-.   438  010003D96      00048  <LineNo: 72>
+.   422  000003FEE      02003  movs      r0,#3
+.   424  000003FF0      09900  ldr       r1,[sp]
+.   426  000003FF2      02201  movs      r2,#1
+.   428  000003FF4      0408A  lsls      r2,r1
+.   430  000003FF6  0EA100F02  tst.w     r0,r2
+.   434  000003FFA      0D101  bne.n     2 -> 440
+.   436  000003FFC      0DF22  svc       34
+.   438  000003FFE      00048  <LineNo: 72>
     ASSERT(W[termNo] # NIL, Errors.ProgError); (* main terminal must be open *)
-.   440  010003D98      09800  ldr       r0,[sp]
-.   442  010003D9A      02802  cmp       r0,#2
-.   444  010003D9C      0D301  bcc.n     2 -> 450
-.   446  010003D9E      0DF01  svc       1
-.   448  010003DA0      00049  <LineNo: 73>
-.   450  010003DA2  0F8DF10AC  ldr.w     r1,[pc,#172] -> 624
-.   454  010003DA6      00082  lsls      r2,r0,#2
-.   456  010003DA8  0EB020001  add.w     r0,r2,r1
-.   460  010003DAC      06800  ldr       r0,[r0]
-.   462  010003DAE      02800  cmp       r0,#0
-.   464  010003DB0      0D101  bne.n     2 -> 470
-.   466  010003DB2      0DF25  svc       37
-.   468  010003DB4      00049  <LineNo: 73>
+.   440  000004000      09800  ldr       r0,[sp]
+.   442  000004002      02802  cmp       r0,#2
+.   444  000004004      0D301  bcc.n     2 -> 450
+.   446  000004006      0DF01  svc       1
+.   448  000004008      00049  <LineNo: 73>
+.   450  00000400A  0F8DF10AC  ldr.w     r1,[pc,#172] -> 624
+.   454  00000400E      00082  lsls      r2,r0,#2
+.   456  000004010  0EB020001  add.w     r0,r2,r1
+.   460  000004014      06800  ldr       r0,[r0]
+.   462  000004016      02800  cmp       r0,#0
+.   464  000004018      0D101  bne.n     2 -> 470
+.   466  00000401A      0DF25  svc       37
+.   468  00000401C      00049  <LineNo: 73>
     IF Werr[termNo] = NIL THEN
-.   470  010003DB6      09800  ldr       r0,[sp]
-.   472  010003DB8      02802  cmp       r0,#2
-.   474  010003DBA      0D301  bcc.n     2 -> 480
-.   476  010003DBC      0DF01  svc       1
-.   478  010003DBE      0004A  <LineNo: 74>
-.   480  010003DC0  0F8DF1090  ldr.w     r1,[pc,#144] -> 628
-.   484  010003DC4      00082  lsls      r2,r0,#2
-.   486  010003DC6  0EB020001  add.w     r0,r2,r1
-.   490  010003DCA      06800  ldr       r0,[r0]
-.   492  010003DCC      02800  cmp       r0,#0
-.   494  010003DCE  0F040803B  bne.w     118 -> 616
+.   470  00000401E      09800  ldr       r0,[sp]
+.   472  000004020      02802  cmp       r0,#2
+.   474  000004022      0D301  bcc.n     2 -> 480
+.   476  000004024      0DF01  svc       1
+.   478  000004026      0004A  <LineNo: 74>
+.   480  000004028  0F8DF1090  ldr.w     r1,[pc,#144] -> 628
+.   484  00000402C      00082  lsls      r2,r0,#2
+.   486  00000402E  0EB020001  add.w     r0,r2,r1
+.   490  000004032      06800  ldr       r0,[r0]
+.   492  000004034      02800  cmp       r0,#0
+.   494  000004036  0F040803B  bne.w     118 -> 616
       NEW(Werr[termNo]); ASSERT(Werr[termNo] # NIL, Errors.HeapOverflow);
-.   498  010003DD2      09800  ldr       r0,[sp]
-.   500  010003DD4      02802  cmp       r0,#2
-.   502  010003DD6      0D301  bcc.n     2 -> 508
-.   504  010003DD8      0DF01  svc       1
-.   506  010003DDA      0004B  <LineNo: 75>
-.   508  010003DDC  0F8DF1074  ldr.w     r1,[pc,#116] -> 628
-.   512  010003DE0      00082  lsls      r2,r0,#2
-.   514  010003DE2  0EB020001  add.w     r0,r2,r1
-.   518  010003DE6  0F8DF1064  ldr.w     r1,[pc,#100] -> 620
-.   522  010003DEA  0F7FCFC47  bl.w      Ext Proc #1
-.   526  010003DEE      0E000  b         0 -> 530
-.   528  010003DF0      0004B  <LineNo: 75>
-.   530  010003DF2      09800  ldr       r0,[sp]
-.   532  010003DF4      02802  cmp       r0,#2
-.   534  010003DF6      0D301  bcc.n     2 -> 540
-.   536  010003DF8      0DF01  svc       1
-.   538  010003DFA      0004B  <LineNo: 75>
-.   540  010003DFC  0F8DF1054  ldr.w     r1,[pc,#84] -> 628
-.   544  010003E00      00082  lsls      r2,r0,#2
-.   546  010003E02  0EB020001  add.w     r0,r2,r1
-.   550  010003E06      06800  ldr       r0,[r0]
-.   552  010003E08      02800  cmp       r0,#0
-.   554  010003E0A      0D101  bne.n     2 -> 560
-.   556  010003E0C      0DF29  svc       41
-.   558  010003E0E      0004B  <LineNo: 75>
+.   498  00000403A      09800  ldr       r0,[sp]
+.   500  00000403C      02802  cmp       r0,#2
+.   502  00000403E      0D301  bcc.n     2 -> 508
+.   504  000004040      0DF01  svc       1
+.   506  000004042      0004B  <LineNo: 75>
+.   508  000004044  0F8DF1074  ldr.w     r1,[pc,#116] -> 628
+.   512  000004048      00082  lsls      r2,r0,#2
+.   514  00000404A  0EB020001  add.w     r0,r2,r1
+.   518  00000404E  0F8DF1064  ldr.w     r1,[pc,#100] -> 620
+.   522  000004052  0F7FCFB19  bl.w      Ext Proc #1
+.   526  000004056      0E000  b         0 -> 530
+.   528  000004058      0004B  <LineNo: 75>
+.   530  00000405A      09800  ldr       r0,[sp]
+.   532  00000405C      02802  cmp       r0,#2
+.   534  00000405E      0D301  bcc.n     2 -> 540
+.   536  000004060      0DF01  svc       1
+.   538  000004062      0004B  <LineNo: 75>
+.   540  000004064  0F8DF1054  ldr.w     r1,[pc,#84] -> 628
+.   544  000004068      00082  lsls      r2,r0,#2
+.   546  00000406A  0EB020001  add.w     r0,r2,r1
+.   550  00000406E      06800  ldr       r0,[r0]
+.   552  000004070      02800  cmp       r0,#0
+.   554  000004072      0D101  bne.n     2 -> 560
+.   556  000004074      0DF29  svc       41
+.   558  000004076      0004B  <LineNo: 75>
       TextIO.OpenWriter(Werr[termNo], W[termNo].dev, psp);
-.   560  010003E10      09800  ldr       r0,[sp]
-.   562  010003E12      02802  cmp       r0,#2
-.   564  010003E14      0D301  bcc.n     2 -> 570
-.   566  010003E16      0DF01  svc       1
-.   568  010003E18      0004C  <LineNo: 76>
-.   570  010003E1A  0F8DF1038  ldr.w     r1,[pc,#56] -> 628
-.   574  010003E1E      00082  lsls      r2,r0,#2
-.   576  010003E20  0EB020001  add.w     r0,r2,r1
-.   580  010003E24      06800  ldr       r0,[r0]
-.   582  010003E26      09900  ldr       r1,[sp]
-.   584  010003E28      02902  cmp       r1,#2
-.   586  010003E2A      0D301  bcc.n     2 -> 592
-.   588  010003E2C      0DF01  svc       1
-.   590  010003E2E      0004C  <LineNo: 76>
-.   592  010003E30  0F8DF201C  ldr.w     r2,[pc,#28] -> 624
-.   596  010003E34      0008B  lsls      r3,r1,#2
-.   598  010003E36  0EB030102  add.w     r1,r3,r2
-.   602  010003E3A      06809  ldr       r1,[r1]
-.   604  010003E3C      06809  ldr       r1,[r1]
-.   606  010003E3E      09A01  ldr       r2,[sp,#4]
-.   608  010003E40  0F7FEFA4E  bl.w      Ext Proc #4
-.   612  010003E44      0E000  b         0 -> 616
-.   614  010003E46      0004C  <LineNo: 76>
+.   560  000004078      09800  ldr       r0,[sp]
+.   562  00000407A      02802  cmp       r0,#2
+.   564  00000407C      0D301  bcc.n     2 -> 570
+.   566  00000407E      0DF01  svc       1
+.   568  000004080      0004C  <LineNo: 76>
+.   570  000004082  0F8DF1038  ldr.w     r1,[pc,#56] -> 628
+.   574  000004086      00082  lsls      r2,r0,#2
+.   576  000004088  0EB020001  add.w     r0,r2,r1
+.   580  00000408C      06800  ldr       r0,[r0]
+.   582  00000408E      09900  ldr       r1,[sp]
+.   584  000004090      02902  cmp       r1,#2
+.   586  000004092      0D301  bcc.n     2 -> 592
+.   588  000004094      0DF01  svc       1
+.   590  000004096      0004C  <LineNo: 76>
+.   592  000004098  0F8DF201C  ldr.w     r2,[pc,#28] -> 624
+.   596  00000409C      0008B  lsls      r3,r1,#2
+.   598  00000409E  0EB030102  add.w     r1,r3,r2
+.   602  0000040A2      06809  ldr       r1,[r1]
+.   604  0000040A4      06809  ldr       r1,[r1]
+.   606  0000040A6      09A01  ldr       r2,[sp,#4]
+.   608  0000040A8  0F7FEF8DE  bl.w      Ext Proc #4
+.   612  0000040AC      0E000  b         0 -> 616
+.   614  0000040AE      0004C  <LineNo: 76>
     END
   END OpenErr;
-.   616  010003E48      0B002  add       sp,#8
-.   618  010003E4A      0BD00  pop       { pc }
-.   620  010003E4C  0100022B8  <Global: TextIO code>
-.   624  010003E50  02001FEAC  <Global: Terminals data>
-.   628  010003E54  02001FEA4  <Global: Terminals data>
+.   616  0000040B0      0B002  add       sp,#8
+.   618  0000040B2      0BD00  pop       { pc }
+.   620  0000040B4      02240  <Global: TextIO code>
+.   624  0000040B8  020027EAC  <Global: Terminals data>
+.   628  0000040BC  020027EA4  <Global: Terminals data>
 
 
 BEGIN
-.   632  010003E58      0B500  push      { lr }
+.   632  0000040C0      0B500  push      { lr }
   W[0] := NIL; W[1] := NIL;
-.   634  010003E5A  0F8DF0030  ldr.w     r0,[pc,#48] -> 684
-.   638  010003E5E      02100  movs      r1,#0
-.   640  010003E60      06001  str       r1,[r0]
-.   642  010003E62  0F8DF0028  ldr.w     r0,[pc,#40] -> 684
-.   646  010003E66      02100  movs      r1,#0
-.   648  010003E68      06041  str       r1,[r0,#4]
+.   634  0000040C2  0F8DF0030  ldr.w     r0,[pc,#48] -> 684
+.   638  0000040C6      02100  movs      r1,#0
+.   640  0000040C8      06001  str       r1,[r0]
+.   642  0000040CA  0F8DF0028  ldr.w     r0,[pc,#40] -> 684
+.   646  0000040CE      02100  movs      r1,#0
+.   648  0000040D0      06041  str       r1,[r0,#4]
   R[0] := NIL; R[1] := NIL;
-.   650  010003E6A  0F8DF0024  ldr.w     r0,[pc,#36] -> 688
-.   654  010003E6E      02100  movs      r1,#0
-.   656  010003E70      06001  str       r1,[r0]
-.   658  010003E72  0F8DF001C  ldr.w     r0,[pc,#28] -> 688
-.   662  010003E76      02100  movs      r1,#0
-.   664  010003E78      06041  str       r1,[r0,#4]
+.   650  0000040D2  0F8DF0024  ldr.w     r0,[pc,#36] -> 688
+.   654  0000040D6      02100  movs      r1,#0
+.   656  0000040D8      06001  str       r1,[r0]
+.   658  0000040DA  0F8DF001C  ldr.w     r0,[pc,#28] -> 688
+.   662  0000040DE      02100  movs      r1,#0
+.   664  0000040E0      06041  str       r1,[r0,#4]
   Werr[0] := NIL; Werr[1] := NIL
-.   666  010003E7A  0F8DF0018  ldr.w     r0,[pc,#24] -> 692
-.   670  010003E7E      02100  movs      r1,#0
-.   672  010003E80      06001  str       r1,[r0]
-.   674  010003E82  0F8DF0010  ldr.w     r0,[pc,#16] -> 692
+.   666  0000040E2  0F8DF0018  ldr.w     r0,[pc,#24] -> 692
+.   670  0000040E6      02100  movs      r1,#0
+.   672  0000040E8      06001  str       r1,[r0]
+.   674  0000040EA  0F8DF0010  ldr.w     r0,[pc,#16] -> 692
 END Terminals.
-.   678  010003E86      02100  movs      r1,#0
-.   680  010003E88      06041  str       r1,[r0,#4]
-.   682  010003E8A      0BD00  pop       { pc }
-.   684  010003E8C  02001FEAC  <Global: Terminals data>
-.   688  010003E90  02001FE9C  <Global: Terminals data>
-.   692  010003E94  02001FEA4  <Global: Terminals data>
+.   678  0000040EE      02100  movs      r1,#0
+.   680  0000040F0      06041  str       r1,[r0,#4]
+.   682  0000040F2      0BD00  pop       { pc }
+.   684  0000040F4  020027EAC  <Global: Terminals data>
+.   688  0000040F8  020027E9C  <Global: Terminals data>
+.   692  0000040FC  020027EA4  <Global: Terminals data>
  

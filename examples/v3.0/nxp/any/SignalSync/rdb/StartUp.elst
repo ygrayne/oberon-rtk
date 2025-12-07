@@ -1,7 +1,7 @@
 . <tool: Astrobe for RP2350>
 . <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
 
-.     0  01000033C              <Pad: 0>
+.     0  00000033C              <Pad: 0>
 MODULE StartUp;
 (**
   Oberon RTK Framework
@@ -9,9 +9,9 @@ MODULE StartUp;
   --
   Start-up control
   --
-  MCU: MCX-N947
+  MCU: MCXA346
   --
-  Note: MCU starts with resets released.
+  Note: MCU starts with resets applied.
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -24,50 +24,50 @@ MODULE StartUp;
   (* MCU.DEV_* devices *)
     VAR reg, devNo: INTEGER;
   BEGIN
-.     4  010000340      0B500  push      { lr }
+.     4  000000340      0B500  push      { lr }
     reg := device DIV 32;
-.     6  010000342      01143  asrs      r3,r0,#5
-.     8  010000344      04619  mov       r1,r3
-    reg := MCU.SYSCON_PRESET_CTRL0_CLR + (reg * MCU.SYSCON_PRESET_Offset);
-.    10  010000346      0008B  lsls      r3,r1,#2
-.    12  010000348  0F8DF4014  ldr.w     r4,[pc,#20] -> 36
-.    16  01000034C      04423  add       r3,r4
-.    18  01000034E      04619  mov       r1,r3
+.     6  000000342      01143  asrs      r3,r0,#5
+.     8  000000344      04619  mov       r1,r3
+    reg := MCU.MRCC_GLB_RST0_SET + (reg * MCU.MRCC_GLB_RST_Offset);
+.    10  000000346      0010B  lsls      r3,r1,#4
+.    12  000000348  0F8DF4014  ldr.w     r4,[pc,#20] -> 36
+.    16  00000034C      04423  add       r3,r4
+.    18  00000034E      04619  mov       r1,r3
     devNo := device MOD 32;
-.    20  010000350  0F000031F  and.w     r3,r0,#31
-.    24  010000354      0461A  mov       r2,r3
+.    20  000000350  0F000031F  and.w     r3,r0,#31
+.    24  000000354      0461A  mov       r2,r3
     SYSTEM.PUT(reg, {devNo})
-.    26  010000356      02401  movs      r4,#1
-.    28  010000358  0FA14F302  lsls.w    r3,r4,r2
+.    26  000000356      02401  movs      r4,#1
+.    28  000000358  0FA14F302  lsls.w    r3,r4,r2
   END ReleaseReset;
-.    32  01000035C      0600B  str       r3,[r1]
-.    34  01000035E      0BD00  pop       { pc }
-.    36  010000360  040000140  <Const:  1073742144>
+.    32  00000035C      0600B  str       r3,[r1]
+.    34  00000035E      0BD00  pop       { pc }
+.    36  000000360  040091004  <Const:  1074335748>
 
 
   PROCEDURE* ApplyReset*(device: INTEGER);
   (* MCU.DEV_* devices *)
     VAR reg, devNo: INTEGER;
   BEGIN
-.    40  010000364      0B500  push      { lr }
+.    40  000000364      0B500  push      { lr }
     reg := device DIV 32;
-.    42  010000366      01143  asrs      r3,r0,#5
-.    44  010000368      04619  mov       r1,r3
-    reg := MCU.SYSCON_PRESET_CTRL0_SET + (reg * MCU.SYSCON_PRESET_Offset);
-.    46  01000036A      0008B  lsls      r3,r1,#2
-.    48  01000036C  0F8DF4014  ldr.w     r4,[pc,#20] -> 72
-.    52  010000370      04423  add       r3,r4
-.    54  010000372      04619  mov       r1,r3
+.    42  000000366      01143  asrs      r3,r0,#5
+.    44  000000368      04619  mov       r1,r3
+    reg := MCU.MRCC_GLB_RST0_CLR + (reg * MCU.MRCC_GLB_RST_Offset);
+.    46  00000036A      0010B  lsls      r3,r1,#4
+.    48  00000036C  0F8DF4014  ldr.w     r4,[pc,#20] -> 72
+.    52  000000370      04423  add       r3,r4
+.    54  000000372      04619  mov       r1,r3
     devNo := device MOD 32;
-.    56  010000374  0F000031F  and.w     r3,r0,#31
-.    60  010000378      0461A  mov       r2,r3
+.    56  000000374  0F000031F  and.w     r3,r0,#31
+.    60  000000378      0461A  mov       r2,r3
     SYSTEM.PUT(reg, {devNo})
-.    62  01000037A      02401  movs      r4,#1
-.    64  01000037C  0FA14F302  lsls.w    r3,r4,r2
+.    62  00000037A      02401  movs      r4,#1
+.    64  00000037C  0FA14F302  lsls.w    r3,r4,r2
   END ApplyReset;
-.    68  010000380      0600B  str       r3,[r1]
-.    70  010000382      0BD00  pop       { pc }
-.    72  010000384  040000120  <Const:  1073742112>
+.    68  000000380      0600B  str       r3,[r1]
+.    70  000000382      0BD00  pop       { pc }
+.    72  000000384  040091008  <Const:  1074335752>
 
 
   PROCEDURE* EnableClock*(device: INTEGER);
@@ -75,25 +75,25 @@ MODULE StartUp;
   (* MCU.DEV_* devices *)
     VAR reg, devNo: INTEGER;
   BEGIN
-.    76  010000388      0B500  push      { lr }
+.    76  000000388      0B500  push      { lr }
     reg := device DIV 32;
-.    78  01000038A      01143  asrs      r3,r0,#5
-.    80  01000038C      04619  mov       r1,r3
-    reg := MCU.SYSCON_AHBCLK_CTRL0_SET + (reg * MCU.SYSCON_AHBCLK_Offset);
-.    82  01000038E      0008B  lsls      r3,r1,#2
-.    84  010000390  0F8DF4014  ldr.w     r4,[pc,#20] -> 108
-.    88  010000394      04423  add       r3,r4
-.    90  010000396      04619  mov       r1,r3
+.    78  00000038A      01143  asrs      r3,r0,#5
+.    80  00000038C      04619  mov       r1,r3
+    reg := MCU.MRCC_GLB_CC0_SET + (reg * MCU.MRCC_GLB_CC_Offset);
+.    82  00000038E      0010B  lsls      r3,r1,#4
+.    84  000000390  0F8DF4014  ldr.w     r4,[pc,#20] -> 108
+.    88  000000394      04423  add       r3,r4
+.    90  000000396      04619  mov       r1,r3
     devNo := device MOD 32;
-.    92  010000398  0F000031F  and.w     r3,r0,#31
-.    96  01000039C      0461A  mov       r2,r3
+.    92  000000398  0F000031F  and.w     r3,r0,#31
+.    96  00000039C      0461A  mov       r2,r3
     SYSTEM.PUT(reg, {devNo})
-.    98  01000039E      02401  movs      r4,#1
-.   100  0100003A0  0FA14F302  lsls.w    r3,r4,r2
+.    98  00000039E      02401  movs      r4,#1
+.   100  0000003A0  0FA14F302  lsls.w    r3,r4,r2
   END EnableClock;
-.   104  0100003A4      0600B  str       r3,[r1]
-.   106  0100003A6      0BD00  pop       { pc }
-.   108  0100003A8  040000220  <Const:  1073742368>
+.   104  0000003A4      0600B  str       r3,[r1]
+.   106  0000003A6      0BD00  pop       { pc }
+.   108  0000003A8  040091044  <Const:  1074335812>
 
 
   PROCEDURE* DisableClock*(device: INTEGER);
@@ -101,27 +101,27 @@ MODULE StartUp;
   (* MCU.DEV_* devices *)
     VAR reg, devNo: INTEGER;
   BEGIN
-.   112  0100003AC      0B500  push      { lr }
+.   112  0000003AC      0B500  push      { lr }
     reg := device DIV 32;
-.   114  0100003AE      01143  asrs      r3,r0,#5
-.   116  0100003B0      04619  mov       r1,r3
-    reg := MCU.SYSCON_AHBCLK_CTRL0_CLR + (reg * MCU.SYSCON_AHBCLK_Offset);
-.   118  0100003B2      0008B  lsls      r3,r1,#2
-.   120  0100003B4  0F8DF4014  ldr.w     r4,[pc,#20] -> 144
-.   124  0100003B8      04423  add       r3,r4
-.   126  0100003BA      04619  mov       r1,r3
+.   114  0000003AE      01143  asrs      r3,r0,#5
+.   116  0000003B0      04619  mov       r1,r3
+    reg := MCU.MRCC_GLB_CC0_CLR + (reg * MCU.MRCC_GLB_CC_Offset);
+.   118  0000003B2      0010B  lsls      r3,r1,#4
+.   120  0000003B4  0F8DF4014  ldr.w     r4,[pc,#20] -> 144
+.   124  0000003B8      04423  add       r3,r4
+.   126  0000003BA      04619  mov       r1,r3
     devNo := device MOD 32;
-.   128  0100003BC  0F000031F  and.w     r3,r0,#31
-.   132  0100003C0      0461A  mov       r2,r3
+.   128  0000003BC  0F000031F  and.w     r3,r0,#31
+.   132  0000003C0      0461A  mov       r2,r3
     SYSTEM.PUT(reg, {devNo})
-.   134  0100003C2      02401  movs      r4,#1
-.   136  0100003C4  0FA14F302  lsls.w    r3,r4,r2
+.   134  0000003C2      02401  movs      r4,#1
+.   136  0000003C4  0FA14F302  lsls.w    r3,r4,r2
   END DisableClock;
-.   140  0100003C8      0600B  str       r3,[r1]
-.   142  0100003CA      0BD00  pop       { pc }
-.   144  0100003CC  040000240  <Const:  1073742400>
+.   140  0000003C8      0600B  str       r3,[r1]
+.   142  0000003CA      0BD00  pop       { pc }
+.   144  0000003CC  040091048  <Const:  1074335816>
 
 END StartUp.
-.   148  0100003D0      0B500  push      { lr }
-.   150  0100003D2      0BD00  pop       { pc }
+.   148  0000003D0      0B500  push      { lr }
+.   150  0000003D2      0BD00  pop       { pc }
  

@@ -12,7 +12,7 @@ MODULE ProgData;
   https://oberon-rtk.org/licences/
   --
   Structure:
-  resource header -- at Config.ResourceStart
+  resource header -- at Config.ResMem.start
   entry
   entry
   ...

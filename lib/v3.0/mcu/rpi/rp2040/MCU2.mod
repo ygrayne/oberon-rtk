@@ -124,7 +124,7 @@ MODULE MCU2;
 
     (* == CLOCKS == *)
     (* datasheet 2.15.7, p195 *)
-    (* clk_gpout0 - 3 *)
+    (* clk_gpout0 .. 3 *)
     CLK_GPOUT0_CTRL*      = CLOCKS_BASE;
     CLK_GPOUT0_DIV*       = CLOCKS_BASE + 004H;
     CLK_GPOUT1_CTRL*      = CLOCKS_BASE + 00CH;
@@ -1005,22 +1005,23 @@ MODULE MCU2;
     EXC_IRQ0_Offset*          = 040H;
 
 
-    (* -- exception priorities -- *)
-    ExcPrio0* = 000H;     (* 0000 0000 *)
-    ExcPrio1* = ExcPrio0;
-    ExcPrio2* = 040H;     (* 0100 0000 *)
-    ExcPrio3* = ExcPrio2;
-    ExcPrio4* = 080H;     (* 1000 0000 *)
-    ExcPrio5* = ExcPrio4;
-    ExcPrio6* = 0C0H;     (* 1100 0000 *)
-    ExcPrio7* = ExcPrio6;
+    (* -- exception priorities, 2 bits -- *)
+    ExcPrio0* = 000H;   (* 0000 0000 *)
+    ExcPrio2* = 040H;   (* 0100 0000 *)
+    ExcPrio4* = 080H;   (* 1000 0000 *)
+    ExcPrio6* = 0C0H;   (* 1100 0000 *)
+
+    ExcPrio00* = 000H;  (* 0000 0000 *)
+    ExcPrio40* = 040H;  (* 0100 0000 *)
+    ExcPrio80* = 080H;  (* 1000 0000 *)
+    ExcPrioC0* = 0C0H;  (* 1100 0000 *)
 
     NumExcPrio* = 4;
 
-    ExcPrioTop*    = ExcPrio0;
-    ExcPrioHigh*   = ExcPrio2;
-    ExcPrioMedium* = ExcPrio4;
-    ExcPrioLow*    = ExcPrio6;
+    ExcPrioTop*    = ExcPrio00;
+    ExcPrioHigh*   = ExcPrio40;
+    ExcPrioMedium* = ExcPrio80;
+    ExcPrioLow*    = ExcPrioC0;
 
     (* -- SCB system control block -- *)
     PPB_CPUID*        = PPB_BASE + 0ED00H;

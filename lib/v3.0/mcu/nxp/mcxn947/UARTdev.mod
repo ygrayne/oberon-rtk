@@ -10,7 +10,7 @@ MODULE UARTdev;
   --
   The GPIO pins and pads used must be configured by the client module or program.
   --
-  MCU: MCX-N947
+  MCU: MCXN947
   --
   Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -100,6 +100,7 @@ MODULE UARTdev;
     BEGIN
       ASSERT(dev # NIL, Errors.PreCond);
       ASSERT(uartNo IN UARTs, Errors.PreCond);
+      dev.uartNo := uartNo;
       IF uartNo < UART4 THEN
         base := MCU.FLEXCOM0_BASE + (uartNo * MCU.FLEXCOM_Offset);
         dev.devNo := MCU.DEV_FLEXCOM0 + uartNo;

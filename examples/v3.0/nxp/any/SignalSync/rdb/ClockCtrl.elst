@@ -1,7 +1,7 @@
 . <tool: Astrobe for RP2350>
 . <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
 
-.     0  01000396C              <Pad: 0>
+.     0  000003BFC              <Pad: 0>
 MODULE ClockCtrl;
 (**
   Oberon RTK Framework
@@ -9,7 +9,7 @@ MODULE ClockCtrl;
   --
   Clock control
   --
-  MCU: MCX-N947
+  MCU: MCXA346
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -18,76 +18,79 @@ MODULE ClockCtrl;
   IMPORT SYSTEM;
 
   CONST
-    (* bits in CLK_DIV *)
+    (* bits in CLKDIV *)
     CLKDIV_UNSTABLE = 31;
 
     (* device functional clock selectors *)
-    SYSTICK_DIV*    = 0; (* note: divider in front of systick clksel mux *)
-    SYSTICK_CLK_1M* = 1;
-    SYSTICK_CLK_LP* = 2;
-    SYSTICK_NONE*   = 7; (* reset *)
+    CTIMER_SIRC_DIV*    = 0;
+    CTIMER_FIRC_GATED*  = 1;
+    CTIMER_FIRC_DIV*    = 2;
+    CTIMER_SOSC*        = 3;
+    CTIMER_ROSC*        = 4;
+    CTIMER_CLK_1M*      = 5;
+    CTIMER_SPLL_DIV*    = 6;
+    CTIMER_NONE*        = 7; (* reset *)
 
-    TRACE_DIV*       = 0;
-    TRACE_CLK_1M*    = 1;
-    TRACE_CLK_LP*    = 2;
-    TRACE_NONE*      = 7; (* reset *)
+    I2C_SIRC_DIV*       = 0;
+    I2C_FIRC_DIV*       = 2;
+    I2C_SOSC*           = 3;
+    I2C_CLK_1M*         = 5;
+    I2C_SPLL_DIV*       = 6;
+    I2C_NONE*           = 7; (* reset *)
 
-    CTIMER_CLK_1M*     = 0;
-    CTIMER_APLL*       = 1;
-    CTIMER_SPLL*       = 2;
-    CTIMER_FIRC*       = 3;
-    CTIMER_SIRC*       = 4;
-    CTIMER_SAI0_MCLK*  = 5;
-    CTIMER_CLK_LP*     = 6;
-    CTIMER_SAI1_MCLK*  = 8;
-    CTIMER_SAI0_TX*    = 9;
-    CTIMER_SAI0_RX*    = 10;
-    CTIMER_SAI1_TX*    = 11;
-    CTIMER_SAI1_RX*    = 12;
-    CTIMER_NONE*       = 15; (* reset *)
+    SPI_SIRC_DIV*       = 0;
+    SPI_FIRC_DIV*       = 2;
+    SPI_SOSC*           = 3;
+    SPI_CLK_1M*         = 5;
+    SPI_SPLL_DIV*       = 6;
+    SPI_NONE*           = 7; (* reset *)
 
-    CLKOUT_MAIN*       = 0;
-    CLKOUT_APLL*       = 1;
-    CLKOUT_SOSC*       = 2;
-    CLKOUT_FIRC*       = 3;
-    CLKOUT_SIRC*       = 4;
-    CLKOUT_SPLL*       = 5;
-    CLKOUT_CLK_LP*     = 6;
-    CLKOUT_PLL_USB*    = 7;
-    CLKOUT_NONE*       = 15; (* reset *)
+    UART_SIRC_DIV*      = 0;
+    UART_FIRC_DIV*      = 2;
+    UART_SOSC*          = 3;
+    UART_ROSC*          = 4;
+    UART_CLK_1M*        = 5;
+    UART_SPLL_DIV*      = 6;
+    UART_NONE*          = 7; (* reset *)
 
-    FLEXCOM_PLL_DIV*   = 1;
-    FLEXCOM_SIRC*      = 2;
-    FLEXCOM_FIRC_DIV*  = 3;
-    FLEXCOM_CLK_1M*    = 4;
-    FLEXCOM_PLL_USB*   = 5;
-    FLEXCOM_CLK_LP*    = 6;
-    FLEXCOM_NONE*      = 7; (* reset *)
+
+    CLKOUT_SIRC*        = 0;
+    CLKOUT_FIRC_DIV*    = 1;
+    CLKOUT_SOSC*        = 2;
+    CLKOUT_ROSC*        = 3;
+    CLKOUT_SPLL*        = 5;
+    CLKOUT_SLOW_CLK*    = 6;
+    CLKOUT_NONE*        = 7; (* reset *)
+
+    SYSTICK_SYS_CLK*    = 0;
+    SYSTICK_CLK_1M*     = 1;
+    SYSTICK_ROSC*       = 2;
+    SYSTICK_NONE*       = 3; (* reset *)
 
 
   PROCEDURE* ConfigDevClock*(clkSel, clkDiv: INTEGER; clk, div: INTEGER);
   (* set functional clock *)
   (* use with clock disabled *)
   BEGIN
-.     4  010003970      0B500  push      { lr }
-    clk := clk MOD 10H;
-.     6  010003972  0F002040F  and.w     r4,r2,#15
-.    10  010003976      04622  mov       r2,r4
-    div := div MOD 100H;
-.    12  010003978  0F00304FF  and.w     r4,r3,#255
-.    16  01000397C      04623  mov       r3,r4
+.     4  000003C00      0B500  push      { lr }
+    clk := clk MOD 8H;
+.     6  000003C02  0F0020407  and.w     r4,r2,#7
+.    10  000003C06      04622  mov       r2,r4
+    div := div MOD 10H;
+.    12  000003C08  0F003040F  and.w     r4,r3,#15
+.    16  000003C0C      04623  mov       r3,r4
     SYSTEM.PUT(clkSel, clk);
-.    18  01000397E      06002  str       r2,[r0]
+.    18  000003C0E      06002  str       r2,[r0]
     SYSTEM.PUT(clkDiv, div);
-.    20  010003980      0600B  str       r3,[r1]
+.    20  000003C10      0600B  str       r3,[r1]
     REPEAT UNTIL ~SYSTEM.BIT(clkDiv, CLKDIV_UNSTABLE)
   END ConfigDevClock;
-.    22  010003982      0680C  ldr       r4,[r1]
-.    24  010003984      00024  movs      r4,r4
-.    26  010003986  0F53FAFFC  bmi.w     -8 -> 22
-.    30  01000398A      0BD00  pop       { pc }
+.    22  000003C12      0680C  ldr       r4,[r1]
+.    24  000003C14      00024  movs      r4,r4
+.    26  000003C16  0F53FAFFC  bmi.w     -8 -> 22
+.    30  000003C1A      0BD00  pop       { pc }
 
 END ClockCtrl.
-.    32  01000398C      0B500  push      { lr }
-.    34  01000398E      0BD00  pop       { pc }
+.    32  000003C1C      0B500  push      { lr }
+.    34  000003C1E      0BD00  pop       { pc }
  

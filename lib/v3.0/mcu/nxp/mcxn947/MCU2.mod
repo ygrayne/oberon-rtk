@@ -5,7 +5,7 @@ MODULE MCU2;
   --
   MCU register and memory addresses, bits, values, assembly instructions
   --
-  MCU: MCX-N947
+  MCU: MCXN947
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -954,7 +954,7 @@ MODULE MCU2;
 
     SysExc*  = {3, 4, 5, 6, 7, 11, 12, 14, 15};
 
-    (* -- exception priorities *)
+    (* -- exception priorities, 3 bits *)
     ExcPrio0* = 000H; (* 0000 0000 *)
     ExcPrio1* = 020H; (* 0010 0000 *)
     ExcPrio2* = 040H; (* 0100 0000 *)
@@ -964,15 +964,25 @@ MODULE MCU2;
     ExcPrio6* = 0C0H; (* 1100 0000 *)
     ExcPrio7* = 0E0H; (* 1110 0000 *)
 
+    ExcPrio00* = 000H; (* 0000 0000 *)
+    ExcPrio20* = 020H; (* 0010 0000 *)
+    ExcPrio40* = 040H; (* 0100 0000 *)
+    ExcPrio60* = 060H; (* 0110 0000 *)
+    ExcPrio80* = 080H; (* 1000 0000 *)
+    ExcPrioA0* = 0A0H; (* 1010 0000 *)
+    ExcPrioC0* = 0C0H; (* 1100 0000 *)
+    ExcPrioE0* = 0E0H; (* 1110 0000 *)
+
     NumExcPrio* = 8;
 
-    ExcPrioTop*    = ExcPrio0;
-    ExcPrioHigh*   = ExcPrio1;
-    ExcPrioMedium* = ExcPrio4;
-    ExcPrioLow*    = ExcPrio7;
+    ExcPrioTop*    = ExcPrio00;
+    ExcPrioHigh*   = ExcPrio20;
+    ExcPrioMedium* = ExcPrio80;
+    ExcPrioLow*    = ExcPrioE0;
+
 
     (* -- vector table -- *)
-    VectorTableSize*        = 672; (* bytes: 16 sys exceptions + 121 interrupts, one word each *)
+    VectorTableSize*        = 688; (* bytes: 16 sys exceptions + 156 interrupts, one word each *)
     EXC_Reset_Offset*       = 004H;
     EXC_NMI_Offset*         = 008H;
     EXC_HardFault_Offset*   = 00CH;
@@ -982,6 +992,7 @@ MODULE MCU2;
     EXC_DebugMon_Offset*    = 030H;
     EXC_PendSV_Offset*      = 038H;
     EXC_SysTick_Offset*     = 03CH;
+    EXC_IRQ0_Offset*        = 040H;
 
     (* -- SCB system control block -- *)
     PPB_ICSR*         = PPB_BASE + 0ED04H;

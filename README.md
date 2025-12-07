@@ -7,8 +7,6 @@
 
 Oberon RTK provides embedded multi-threading kernels allowing to divide, and program, the controller program as set of separate [control processes](https://oberon-rtk.org/concepts/basics/control-processes/).
 
-The use of the kernels is not mandatory for the Oberon RTK library/framework in general, which can be used to program any kind of application using one or two cores.
-
 # More Information
 
 Cf. [oberon-rtk.org](https://oberon-rtk.org)

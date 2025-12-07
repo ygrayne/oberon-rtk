@@ -1436,7 +1436,7 @@ MODULE MCU2;
     EXC_SysTick_Offset*       = 03CH;
     EXC_IRQ0_Offset*          = 040H;
 
-    (* -- exception priorities -- *)
+    (* -- exception priorities, 3 bits -- *)
     ExcPrio0* = 000H; (* 0000 0000 *)
     ExcPrio1* = 020H; (* 0010 0000 *)
     ExcPrio2* = 040H; (* 0100 0000 *)
@@ -1446,12 +1446,21 @@ MODULE MCU2;
     ExcPrio6* = 0C0H; (* 1100 0000 *)
     ExcPrio7* = 0E0H; (* 1110 0000 *)
 
+    ExcPrio00* = 000H; (* 0000 0000 *)
+    ExcPrio20* = 020H; (* 0010 0000 *)
+    ExcPrio40* = 040H; (* 0100 0000 *)
+    ExcPrio60* = 060H; (* 0110 0000 *)
+    ExcPrio80* = 080H; (* 1000 0000 *)
+    ExcPrioA0* = 0A0H; (* 1010 0000 *)
+    ExcPrioC0* = 0C0H; (* 1100 0000 *)
+    ExcPrioE0* = 0E0H; (* 1110 0000 *)
+
     NumExcPrio* = 8;
 
-    ExcPrioTop*    = ExcPrio0;
-    ExcPrioHigh*   = ExcPrio1;
-    ExcPrioMedium* = ExcPrio4;
-    ExcPrioLow*    = ExcPrio7;
+    ExcPrioTop*    = ExcPrio00;
+    ExcPrioHigh*   = ExcPrio20;
+    ExcPrioMedium* = ExcPrio80;
+    ExcPrioLow*    = ExcPrioE0;
 
     (* -- SCB system control block -- *)
     PPB_CPUID*        = PPB_BASE + 0ED00H;

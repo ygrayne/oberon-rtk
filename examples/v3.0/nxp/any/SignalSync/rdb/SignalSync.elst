@@ -1,7 +1,7 @@
 . <tool: Astrobe for RP2350>
 . <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
 
-.     0  010004E50              <Pad: 0>
+.     0  0000050C8              <Pad: 0>
 MODULE SignalSync;
 (**
   Oberon RTK Framework v3.0
@@ -33,367 +33,367 @@ MODULE SignalSync;
 
   PROCEDURE writeThreadInfo(tid, cid: INTEGER);
   BEGIN
-.     4  010004E54      0B503  push      { r0, r1, lr }
+.     4  0000050CC      0B503  push      { r0, r1, lr }
     Out.String("c"); Out.Int(cid, 0);
-.     6  010004E56      0BF00  nop       
-.     8  010004E58      0A000  adr       r0,pc,#0 -> 12
-.    10  010004E5A      0E001  b         2 -> 16
-.    12  010004E5C  000000063  <String: "c...">
-.    16  010004E60      02102  movs      r1,#2
-.    18  010004E62  0F7FFF8A3  bl.w      Ext Proc #4
-.    22  010004E66      0E000  b         0 -> 26
-.    24  010004E68      00020  <LineNo: 32>
-.    26  010004E6A      09801  ldr       r0,[sp,#4]
-.    28  010004E6C      02100  movs      r1,#0
-.    30  010004E6E  0F7FFF8D3  bl.w      Ext Proc #6
-.    34  010004E72      0E000  b         0 -> 38
-.    36  010004E74      00020  <LineNo: 32>
+.     6  0000050CE      0BF00  nop       
+.     8  0000050D0      0A000  adr       r0,pc,#0 -> 12
+.    10  0000050D2      0E001  b         2 -> 16
+.    12  0000050D4  000000063  <String: "c...">
+.    16  0000050D8      02102  movs      r1,#2
+.    18  0000050DA  0F7FFF89B  bl.w      Ext Proc #4
+.    22  0000050DE      0E000  b         0 -> 26
+.    24  0000050E0      00020  <LineNo: 32>
+.    26  0000050E2      09801  ldr       r0,[sp,#4]
+.    28  0000050E4      02100  movs      r1,#0
+.    30  0000050E6  0F7FFF8CB  bl.w      Ext Proc #6
+.    34  0000050EA      0E000  b         0 -> 38
+.    36  0000050EC      00020  <LineNo: 32>
     Out.String("-t"); Out.Int(tid, 0)
-.    38  010004E76      0BF00  nop       
-.    40  010004E78      0A000  adr       r0,pc,#0 -> 44
-.    42  010004E7A      0E001  b         2 -> 48
-.    44  010004E7C  00000742D  <String: "-t..">
-.    48  010004E80      02103  movs      r1,#3
-.    50  010004E82  0F7FFF893  bl.w      Ext Proc #4
-.    54  010004E86      0E000  b         0 -> 58
-.    56  010004E88      00021  <LineNo: 33>
-.    58  010004E8A      09800  ldr       r0,[sp]
-.    60  010004E8C      02100  movs      r1,#0
+.    38  0000050EE      0BF00  nop       
+.    40  0000050F0      0A000  adr       r0,pc,#0 -> 44
+.    42  0000050F2      0E001  b         2 -> 48
+.    44  0000050F4  00000742D  <String: "-t..">
+.    48  0000050F8      02103  movs      r1,#3
+.    50  0000050FA  0F7FFF88B  bl.w      Ext Proc #4
+.    54  0000050FE      0E000  b         0 -> 58
+.    56  000005100      00021  <LineNo: 33>
+.    58  000005102      09800  ldr       r0,[sp]
+.    60  000005104      02100  movs      r1,#0
   END writeThreadInfo;
-.    62  010004E8E  0F7FFF8C3  bl.w      Ext Proc #6
-.    66  010004E92      0E000  b         0 -> 70
-.    68  010004E94      00021  <LineNo: 33>
-.    70  010004E96      0B002  add       sp,#8
-.    72  010004E98      0BD00  pop       { pc }
-.    74  010004E9A      0BF00  nop       
+.    62  000005106  0F7FFF8BB  bl.w      Ext Proc #6
+.    66  00000510A      0E000  b         0 -> 70
+.    68  00000510C      00021  <LineNo: 33>
+.    70  00000510E      0B002  add       sp,#8
+.    72  000005110      0BD00  pop       { pc }
+.    74  000005112      0BF00  nop       
 
 
   PROCEDURE t0c;
   BEGIN
-.    76  010004E9C      0B500  push      { lr }
+.    76  000005114      0B500  push      { lr }
     LED.Set({LED.Pico});
-.    78  010004E9E  0F04F6000  mov.w     r0,#08000000H
-.    82  010004EA2  0F7FCF8EB  bl.w      Ext Proc #1
-.    86  010004EA6      0E000  b         0 -> 90
-.    88  010004EA8      00027  <LineNo: 39>
+.    78  000005116  0F44F2000  mov.w     r0,#0080000H
+.    82  00000511A  0F7FBFFAB  bl.w      Ext Proc #1
+.    86  00000511E      0E000  b         0 -> 90
+.    88  000005120      00027  <LineNo: 39>
     Kernel.SetPeriod(T0period, 0);
-.    90  010004EAA      02032  movs      r0,#50
-.    92  010004EAC      02100  movs      r1,#0
-.    94  010004EAE  0F7FFFCB3  bl.w      Ext Proc #16
-.    98  010004EB2      0E000  b         0 -> 102
-.   100  010004EB4      00028  <LineNo: 40>
+.    90  000005122      02032  movs      r0,#50
+.    92  000005124      02100  movs      r1,#0
+.    94  000005126  0F7FFFCB3  bl.w      Ext Proc #16
+.    98  00000512A      0E000  b         0 -> 102
+.   100  00000512C      00028  <LineNo: 40>
     REPEAT
       LED.Toggle({LED.Pico});
-.   102  010004EB6  0F04F6000  mov.w     r0,#08000000H
-.   106  010004EBA  0F7FCF90F  bl.w      Ext Proc #3
-.   110  010004EBE      0E000  b         0 -> 114
-.   112  010004EC0      0002A  <LineNo: 42>
+.   102  00000512E  0F44F2000  mov.w     r0,#0080000H
+.   106  000005132  0F7FBFFB3  bl.w      Ext Proc #3
+.   110  000005136      0E000  b         0 -> 114
+.   112  000005138      0002A  <LineNo: 42>
       Kernel.Next
     UNTIL FALSE
-.   114  010004EC2  0F7FFFBA5  bl.w      Ext Proc #7
-.   118  010004EC6      0E000  b         0 -> 122
-.   120  010004EC8      0002B  <LineNo: 43>
+.   114  00000513A  0F7FFFBA5  bl.w      Ext Proc #7
+.   118  00000513E      0E000  b         0 -> 122
+.   120  000005140      0002B  <LineNo: 43>
   END t0c;
-.   122  010004ECA      04280  cmp       r0,r0
-.   124  010004ECC  0F43FAFF3  beq.w     -26 -> 102
-.   128  010004ED0      0BD00  pop       { pc }
-.   130  010004ED2      0BF00  nop       
+.   122  000005142      04280  cmp       r0,r0
+.   124  000005144  0F43FAFF3  beq.w     -26 -> 102
+.   128  000005148      0BD00  pop       { pc }
+.   130  00000514A      0BF00  nop       
 
 
   PROCEDURE t1c;
     VAR tid, cid: INTEGER;
   BEGIN
-.   132  010004ED4      0B500  push      { lr }
-.   134  010004ED6      0B082  sub       sp,#8
+.   132  00000514C      0B500  push      { lr }
+.   134  00000514E      0B082  sub       sp,#8
     cid := Cores.CoreId();
-.   136  010004ED8  0F7FBFCA4  bl.w      Ext Proc #3
-.   140  010004EDC      0E000  b         0 -> 144
-.   142  010004EDE      00033  <LineNo: 51>
-.   144  010004EE0      09001  str       r0,[sp,#4]
+.   136  000005150  0F7FBFB6E  bl.w      Ext Proc #3
+.   140  000005154      0E000  b         0 -> 144
+.   142  000005156      00033  <LineNo: 51>
+.   144  000005158      09001  str       r0,[sp,#4]
     tid := Kernel.Tid();
-.   146  010004EE2  0F7FFFCD9  bl.w      Ext Proc #18
-.   150  010004EE6      0E000  b         0 -> 154
-.   152  010004EE8      00034  <LineNo: 52>
-.   154  010004EEA      09000  str       r0,[sp]
+.   146  00000515A  0F7FFFCD9  bl.w      Ext Proc #18
+.   150  00000515E      0E000  b         0 -> 154
+.   152  000005160      00034  <LineNo: 52>
+.   154  000005162      09000  str       r0,[sp]
     REPEAT
       writeThreadInfo(tid, cid);
-.   156  010004EEC      09800  ldr       r0,[sp]
-.   158  010004EEE      09901  ldr       r1,[sp,#4]
-.   160  010004EF0  0F7FFFFB0  bl.w      -160 -> 4
-.   164  010004EF4      0E000  b         0 -> 168
-.   166  010004EF6      00036  <LineNo: 54>
+.   156  000005164      09800  ldr       r0,[sp]
+.   158  000005166      09901  ldr       r1,[sp,#4]
+.   160  000005168  0F7FFFFB0  bl.w      -160 -> 4
+.   164  00000516C      0E000  b         0 -> 168
+.   166  00000516E      00036  <LineNo: 54>
       Out.String(" await sig"); Out.Ln;
-.   168  010004EF8      0A000  adr       r0,pc,#0 -> 172
-.   170  010004EFA      0E005  b         10 -> 184
-.   172  010004EFC  061776120  <String: " awa">
-.   176  010004F00  073207469  <String: "it s">
-.   180  010004F04  000006769  <String: "ig..">
-.   184  010004F08      0210B  movs      r1,#11
-.   186  010004F0A  0F7FFF84F  bl.w      Ext Proc #4
-.   190  010004F0E      0E000  b         0 -> 194
-.   192  010004F10      00037  <LineNo: 55>
-.   194  010004F12  0F7FFF867  bl.w      Ext Proc #5
-.   198  010004F16      0E000  b         0 -> 202
-.   200  010004F18      00037  <LineNo: 55>
+.   168  000005170      0A000  adr       r0,pc,#0 -> 172
+.   170  000005172      0E005  b         10 -> 184
+.   172  000005174  061776120  <String: " awa">
+.   176  000005178  073207469  <String: "it s">
+.   180  00000517C  000006769  <String: "ig..">
+.   184  000005180      0210B  movs      r1,#11
+.   186  000005182  0F7FFF847  bl.w      Ext Proc #4
+.   190  000005186      0E000  b         0 -> 194
+.   192  000005188      00037  <LineNo: 55>
+.   194  00000518A  0F7FFF85F  bl.w      Ext Proc #5
+.   198  00000518E      0E000  b         0 -> 202
+.   200  000005190      00037  <LineNo: 55>
       Signals.Await(sig);
-.   202  010004F1A  0F8DF0044  ldr.w     r0,[pc,#68] -> 272
-.   206  010004F1E      06800  ldr       r0,[r0]
-.   208  010004F20  0F7FFFF62  bl.w      Ext Proc #2
-.   212  010004F24      0E000  b         0 -> 216
-.   214  010004F26      00038  <LineNo: 56>
+.   202  000005192  0F8DF0044  ldr.w     r0,[pc,#68] -> 272
+.   206  000005196      06800  ldr       r0,[r0]
+.   208  000005198  0F7FFFF62  bl.w      Ext Proc #2
+.   212  00000519C      0E000  b         0 -> 216
+.   214  00000519E      00038  <LineNo: 56>
       writeThreadInfo(tid, cid);
-.   216  010004F28      09800  ldr       r0,[sp]
-.   218  010004F2A      09901  ldr       r1,[sp,#4]
-.   220  010004F2C  0F7FFFF92  bl.w      -220 -> 4
-.   224  010004F30      0E000  b         0 -> 228
-.   226  010004F32      00039  <LineNo: 57>
+.   216  0000051A0      09800  ldr       r0,[sp]
+.   218  0000051A2      09901  ldr       r1,[sp,#4]
+.   220  0000051A4  0F7FFFF92  bl.w      -220 -> 4
+.   224  0000051A8      0E000  b         0 -> 228
+.   226  0000051AA      00039  <LineNo: 57>
       Out.String(" ==> sig"); Out.Ln
-.   228  010004F34      0A000  adr       r0,pc,#0 -> 232
-.   230  010004F36      0E005  b         10 -> 244
-.   232  010004F38  03E3D3D20  <String: " ==>">
-.   236  010004F3C  067697320  <String: " sig">
-.   240  010004F40  000000000  <String: "....">
-.   244  010004F44      02109  movs      r1,#9
-.   246  010004F46  0F7FFF831  bl.w      Ext Proc #4
-.   250  010004F4A      0E000  b         0 -> 254
-.   252  010004F4C      0003A  <LineNo: 58>
+.   228  0000051AC      0A000  adr       r0,pc,#0 -> 232
+.   230  0000051AE      0E005  b         10 -> 244
+.   232  0000051B0  03E3D3D20  <String: " ==>">
+.   236  0000051B4  067697320  <String: " sig">
+.   240  0000051B8  000000000  <String: "....">
+.   244  0000051BC      02109  movs      r1,#9
+.   246  0000051BE  0F7FFF829  bl.w      Ext Proc #4
+.   250  0000051C2      0E000  b         0 -> 254
+.   252  0000051C4      0003A  <LineNo: 58>
     UNTIL FALSE
-.   254  010004F4E  0F7FFF849  bl.w      Ext Proc #5
-.   258  010004F52      0E000  b         0 -> 262
-.   260  010004F54      0003A  <LineNo: 58>
+.   254  0000051C6  0F7FFF841  bl.w      Ext Proc #5
+.   258  0000051CA      0E000  b         0 -> 262
+.   260  0000051CC      0003A  <LineNo: 58>
   END t1c;
-.   262  010004F56      04280  cmp       r0,r0
-.   264  010004F58  0F43FAFC8  beq.w     -112 -> 156
-.   268  010004F5C      0B002  add       sp,#8
-.   270  010004F5E      0BD00  pop       { pc }
-.   272  010004F60  02001FE5C  <Global: SignalSync data>
+.   262  0000051CE      04280  cmp       r0,r0
+.   264  0000051D0  0F43FAFC8  beq.w     -112 -> 156
+.   268  0000051D4      0B002  add       sp,#8
+.   270  0000051D6      0BD00  pop       { pc }
+.   272  0000051D8  020027E5C  <Global: SignalSync data>
 
 
   PROCEDURE t3c;
     VAR tid, cid, cnt: INTEGER;
   BEGIN
-.   276  010004F64      0B500  push      { lr }
-.   278  010004F66      0B083  sub       sp,#12
+.   276  0000051DC      0B500  push      { lr }
+.   278  0000051DE      0B083  sub       sp,#12
     Kernel.SetPeriod(T3period, T3period);
-.   280  010004F68      02064  movs      r0,#100
-.   282  010004F6A      02164  movs      r1,#100
-.   284  010004F6C  0F7FFFC54  bl.w      Ext Proc #16
-.   288  010004F70      0E000  b         0 -> 292
-.   290  010004F72      00042  <LineNo: 66>
+.   280  0000051E0      02064  movs      r0,#100
+.   282  0000051E2      02164  movs      r1,#100
+.   284  0000051E4  0F7FFFC54  bl.w      Ext Proc #16
+.   288  0000051E8      0E000  b         0 -> 292
+.   290  0000051EA      00042  <LineNo: 66>
     cid := Cores.CoreId();
-.   292  010004F74  0F7FBFC56  bl.w      Ext Proc #3
-.   296  010004F78      0E000  b         0 -> 300
-.   298  010004F7A      00043  <LineNo: 67>
-.   300  010004F7C      09001  str       r0,[sp,#4]
+.   292  0000051EC  0F7FBFB20  bl.w      Ext Proc #3
+.   296  0000051F0      0E000  b         0 -> 300
+.   298  0000051F2      00043  <LineNo: 67>
+.   300  0000051F4      09001  str       r0,[sp,#4]
     tid := Kernel.Tid();
-.   302  010004F7E  0F7FFFC8B  bl.w      Ext Proc #18
-.   306  010004F82      0E000  b         0 -> 310
-.   308  010004F84      00044  <LineNo: 68>
-.   310  010004F86      09000  str       r0,[sp]
+.   302  0000051F6  0F7FFFC8B  bl.w      Ext Proc #18
+.   306  0000051FA      0E000  b         0 -> 310
+.   308  0000051FC      00044  <LineNo: 68>
+.   310  0000051FE      09000  str       r0,[sp]
     cnt := 0;
-.   312  010004F88      02000  movs      r0,#0
-.   314  010004F8A      09002  str       r0,[sp,#8]
+.   312  000005200      02000  movs      r0,#0
+.   314  000005202      09002  str       r0,[sp,#8]
     REPEAT
       writeThreadInfo(tid, cid);
-.   316  010004F8C      09800  ldr       r0,[sp]
-.   318  010004F8E      09901  ldr       r1,[sp,#4]
-.   320  010004F90  0F7FFFF60  bl.w      -320 -> 4
-.   324  010004F94      0E000  b         0 -> 328
-.   326  010004F96      00047  <LineNo: 71>
+.   316  000005204      09800  ldr       r0,[sp]
+.   318  000005206      09901  ldr       r1,[sp,#4]
+.   320  000005208  0F7FFFF60  bl.w      -320 -> 4
+.   324  00000520C      0E000  b         0 -> 328
+.   326  00000520E      00047  <LineNo: 71>
       Signals.Send(sig);
-.   328  010004F98  0F8DF0050  ldr.w     r0,[pc,#80] -> 412
-.   332  010004F9C      06800  ldr       r0,[r0]
-.   334  010004F9E  0F7FFFF2F  bl.w      Ext Proc #3
-.   338  010004FA2      0E000  b         0 -> 342
-.   340  010004FA4      00048  <LineNo: 72>
+.   328  000005210  0F8DF0050  ldr.w     r0,[pc,#80] -> 412
+.   332  000005214      06800  ldr       r0,[r0]
+.   334  000005216  0F7FFFF2F  bl.w      Ext Proc #3
+.   338  00000521A      0E000  b         0 -> 342
+.   340  00000521C      00048  <LineNo: 72>
       INC(cnt);
-.   342  010004FA6      09802  ldr       r0,[sp,#8]
-.   344  010004FA8      03001  adds      r0,#1
-.   346  010004FAA      09002  str       r0,[sp,#8]
+.   342  00000521E      09802  ldr       r0,[sp,#8]
+.   344  000005220      03001  adds      r0,#1
+.   346  000005222      09002  str       r0,[sp,#8]
       Out.String(" <== sig "); Out.Int(cnt, 0); Out.Ln;
-.   348  010004FAC      0A000  adr       r0,pc,#0 -> 352
-.   350  010004FAE      0E005  b         10 -> 364
-.   352  010004FB0  03D3D3C20  <String: " <==">
-.   356  010004FB4  067697320  <String: " sig">
-.   360  010004FB8  000000020  <String: " ...">
-.   364  010004FBC      0210A  movs      r1,#10
-.   366  010004FBE  0F7FEFFF5  bl.w      Ext Proc #4
-.   370  010004FC2      0E000  b         0 -> 374
-.   372  010004FC4      0004A  <LineNo: 74>
-.   374  010004FC6      09802  ldr       r0,[sp,#8]
-.   376  010004FC8      02100  movs      r1,#0
-.   378  010004FCA  0F7FFF825  bl.w      Ext Proc #6
-.   382  010004FCE      0E000  b         0 -> 386
-.   384  010004FD0      0004A  <LineNo: 74>
-.   386  010004FD2  0F7FFF807  bl.w      Ext Proc #5
-.   390  010004FD6      0E000  b         0 -> 394
-.   392  010004FD8      0004A  <LineNo: 74>
+.   348  000005224      0A000  adr       r0,pc,#0 -> 352
+.   350  000005226      0E005  b         10 -> 364
+.   352  000005228  03D3D3C20  <String: " <==">
+.   356  00000522C  067697320  <String: " sig">
+.   360  000005230  000000020  <String: " ...">
+.   364  000005234      0210A  movs      r1,#10
+.   366  000005236  0F7FEFFED  bl.w      Ext Proc #4
+.   370  00000523A      0E000  b         0 -> 374
+.   372  00000523C      0004A  <LineNo: 74>
+.   374  00000523E      09802  ldr       r0,[sp,#8]
+.   376  000005240      02100  movs      r1,#0
+.   378  000005242  0F7FFF81D  bl.w      Ext Proc #6
+.   382  000005246      0E000  b         0 -> 386
+.   384  000005248      0004A  <LineNo: 74>
+.   386  00000524A  0F7FEFFFF  bl.w      Ext Proc #5
+.   390  00000524E      0E000  b         0 -> 394
+.   392  000005250      0004A  <LineNo: 74>
       Kernel.Next
     UNTIL FALSE
-.   394  010004FDA  0F7FFFB19  bl.w      Ext Proc #7
-.   398  010004FDE      0E000  b         0 -> 402
-.   400  010004FE0      0004B  <LineNo: 75>
+.   394  000005252  0F7FFFB19  bl.w      Ext Proc #7
+.   398  000005256      0E000  b         0 -> 402
+.   400  000005258      0004B  <LineNo: 75>
   END t3c;
-.   402  010004FE2      04280  cmp       r0,r0
-.   404  010004FE4  0F43FAFD2  beq.w     -92 -> 316
-.   408  010004FE8      0B003  add       sp,#12
-.   410  010004FEA      0BD00  pop       { pc }
-.   412  010004FEC  02001FE5C  <Global: SignalSync data>
+.   402  00000525A      04280  cmp       r0,r0
+.   404  00000525C  0F43FAFD2  beq.w     -92 -> 316
+.   408  000005260      0B003  add       sp,#12
+.   410  000005262      0BD00  pop       { pc }
+.   412  000005264  020027E5C  <Global: SignalSync data>
 
 
   PROCEDURE run;
     VAR res: INTEGER;
   BEGIN
-.   416  010004FF0      0B500  push      { lr }
-.   418  010004FF2      0B081  sub       sp,#4
+.   416  000005268      0B500  push      { lr }
+.   418  00000526A      0B081  sub       sp,#4
     NEW(sig); ASSERT(sig # NIL, Errors.HeapOverflow);
-.   420  010004FF4  0F8DF0134  ldr.w     r0,[pc,#308] -> 732
-.   424  010004FF8  0F8DF112C  ldr.w     r1,[pc,#300] -> 728
-.   428  010004FFC  0F7FBFB3E  bl.w      Ext Proc #1
-.   432  010005000      0E000  b         0 -> 436
-.   434  010005002      00053  <LineNo: 83>
-.   436  010005004  0F8DF0124  ldr.w     r0,[pc,#292] -> 732
-.   440  010005008      06800  ldr       r0,[r0]
-.   442  01000500A      02800  cmp       r0,#0
-.   444  01000500C      0D101  bne.n     2 -> 450
-.   446  01000500E      0DF29  svc       41
-.   448  010005010      00053  <LineNo: 83>
+.   420  00000526C  0F8DF0134  ldr.w     r0,[pc,#308] -> 732
+.   424  000005270  0F8DF112C  ldr.w     r1,[pc,#300] -> 728
+.   428  000005274  0F7FBFA08  bl.w      Ext Proc #1
+.   432  000005278      0E000  b         0 -> 436
+.   434  00000527A      00053  <LineNo: 83>
+.   436  00000527C  0F8DF0124  ldr.w     r0,[pc,#292] -> 732
+.   440  000005280      06800  ldr       r0,[r0]
+.   442  000005282      02800  cmp       r0,#0
+.   444  000005284      0D101  bne.n     2 -> 450
+.   446  000005286      0DF29  svc       41
+.   448  000005288      00053  <LineNo: 83>
     Signals.Init(sig);
-.   450  010005012  0F8DF0118  ldr.w     r0,[pc,#280] -> 732
-.   454  010005016      06800  ldr       r0,[r0]
-.   456  010005018  0F7FFFF12  bl.w      Ext Proc #5
-.   460  01000501C      0E000  b         0 -> 464
-.   462  01000501E      00054  <LineNo: 84>
+.   450  00000528A  0F8DF0118  ldr.w     r0,[pc,#280] -> 732
+.   454  00000528E      06800  ldr       r0,[r0]
+.   456  000005290  0F7FFFF12  bl.w      Ext Proc #5
+.   460  000005294      0E000  b         0 -> 464
+.   462  000005296      00054  <LineNo: 84>
     Kernel.Install(MicrosecondsPerTick);
-.   464  010005020  0F2427010  movw      r0,#10000
-.   468  010005024  0F7FFFD9C  bl.w      Ext Proc #22
-.   472  010005028      0E000  b         0 -> 476
-.   474  01000502A      00055  <LineNo: 85>
+.   464  000005298  0F2427010  movw      r0,#10000
+.   468  00000529C  0F7FFFD9C  bl.w      Ext Proc #22
+.   472  0000052A0      0E000  b         0 -> 476
+.   474  0000052A2      00055  <LineNo: 85>
     (* heartbeat blinker *)
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.ProgError);
-.   476  01000502C  0F2AF1094  adr.w     r0,pc,#-404 -> 76
-.   480  010005030  0F2404100  movw      r1,#1024
-.   484  010005034  0F8DF20F8  ldr.w     r2,[pc,#248] -> 736
-.   488  010005038  0F8DF30F8  ldr.w     r3,[pc,#248] -> 740
-.   492  01000503C      0466C  mov       r4,sp
-.   494  01000503E  0F7FFFA51  bl.w      Ext Proc #4
-.   498  010005042      0E000  b         0 -> 502
-.   500  010005044      00057  <LineNo: 87>
-.   502  010005046      09800  ldr       r0,[sp]
-.   504  010005048      02800  cmp       r0,#0
-.   506  01000504A      0D001  beq.n     2 -> 512
-.   508  01000504C      0DF25  svc       37
-.   510  01000504E      00057  <LineNo: 87>
+.   476  0000052A4  0F2AF1094  adr.w     r0,pc,#-404 -> 76
+.   480  0000052A8  0F2404100  movw      r1,#1024
+.   484  0000052AC  0F8DF20F8  ldr.w     r2,[pc,#248] -> 736
+.   488  0000052B0  0F8DF30F8  ldr.w     r3,[pc,#248] -> 740
+.   492  0000052B4      0466C  mov       r4,sp
+.   494  0000052B6  0F7FFFA51  bl.w      Ext Proc #4
+.   498  0000052BA      0E000  b         0 -> 502
+.   500  0000052BC      00057  <LineNo: 87>
+.   502  0000052BE      09800  ldr       r0,[sp]
+.   504  0000052C0      02800  cmp       r0,#0
+.   506  0000052C2      0D001  beq.n     2 -> 512
+.   508  0000052C4      0DF25  svc       37
+.   510  0000052C6      00057  <LineNo: 87>
     Kernel.Enable(t0);
-.   512  010005050  0F8DF00DC  ldr.w     r0,[pc,#220] -> 736
-.   516  010005054      06800  ldr       r0,[r0]
-.   518  010005056  0F7FFFAD3  bl.w      Ext Proc #6
-.   522  01000505A      0E000  b         0 -> 526
-.   524  01000505C      00058  <LineNo: 88>
+.   512  0000052C8  0F8DF00DC  ldr.w     r0,[pc,#220] -> 736
+.   516  0000052CC      06800  ldr       r0,[r0]
+.   518  0000052CE  0F7FFFAD3  bl.w      Ext Proc #6
+.   522  0000052D2      0E000  b         0 -> 526
+.   524  0000052D4      00058  <LineNo: 88>
     (* two receivers, running the same code *)
     Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.OK, Errors.ProgError);
-.   526  01000505E      0BF00  nop       
-.   528  010005060  0F2AF1090  adr.w     r0,pc,#-400 -> 132
-.   532  010005064  0F2404100  movw      r1,#1024
-.   536  010005068  0F8DF20CC  ldr.w     r2,[pc,#204] -> 744
-.   540  01000506C  0F8DF30CC  ldr.w     r3,[pc,#204] -> 748
-.   544  010005070      0466C  mov       r4,sp
-.   546  010005072  0F7FFFA37  bl.w      Ext Proc #4
-.   550  010005076      0E000  b         0 -> 554
-.   552  010005078      0005A  <LineNo: 90>
-.   554  01000507A      09800  ldr       r0,[sp]
-.   556  01000507C      02800  cmp       r0,#0
-.   558  01000507E      0D001  beq.n     2 -> 564
-.   560  010005080      0DF25  svc       37
-.   562  010005082      0005A  <LineNo: 90>
+.   526  0000052D6      0BF00  nop       
+.   528  0000052D8  0F2AF1090  adr.w     r0,pc,#-400 -> 132
+.   532  0000052DC  0F2404100  movw      r1,#1024
+.   536  0000052E0  0F8DF20CC  ldr.w     r2,[pc,#204] -> 744
+.   540  0000052E4  0F8DF30CC  ldr.w     r3,[pc,#204] -> 748
+.   544  0000052E8      0466C  mov       r4,sp
+.   546  0000052EA  0F7FFFA37  bl.w      Ext Proc #4
+.   550  0000052EE      0E000  b         0 -> 554
+.   552  0000052F0      0005A  <LineNo: 90>
+.   554  0000052F2      09800  ldr       r0,[sp]
+.   556  0000052F4      02800  cmp       r0,#0
+.   558  0000052F6      0D001  beq.n     2 -> 564
+.   560  0000052F8      0DF25  svc       37
+.   562  0000052FA      0005A  <LineNo: 90>
     Kernel.Enable(t1);
-.   564  010005084  0F8DF00B0  ldr.w     r0,[pc,#176] -> 744
-.   568  010005088      06800  ldr       r0,[r0]
-.   570  01000508A  0F7FFFAB9  bl.w      Ext Proc #6
-.   574  01000508E      0E000  b         0 -> 578
-.   576  010005090      0005B  <LineNo: 91>
+.   564  0000052FC  0F8DF00B0  ldr.w     r0,[pc,#176] -> 744
+.   568  000005300      06800  ldr       r0,[r0]
+.   570  000005302  0F7FFFAB9  bl.w      Ext Proc #6
+.   574  000005306      0E000  b         0 -> 578
+.   576  000005308      0005B  <LineNo: 91>
     Kernel.Allocate(t1c, ThreadStackSize, t2, tid2, res); ASSERT(res = Kernel.OK, Errors.ProgError);
-.   578  010005092      0BF00  nop       
-.   580  010005094  0F2AF10C4  adr.w     r0,pc,#-452 -> 132
-.   584  010005098  0F2404100  movw      r1,#1024
-.   588  01000509C  0F8DF20A0  ldr.w     r2,[pc,#160] -> 752
-.   592  0100050A0  0F8DF30A0  ldr.w     r3,[pc,#160] -> 756
-.   596  0100050A4      0466C  mov       r4,sp
-.   598  0100050A6  0F7FFFA1D  bl.w      Ext Proc #4
-.   602  0100050AA      0E000  b         0 -> 606
-.   604  0100050AC      0005C  <LineNo: 92>
-.   606  0100050AE      09800  ldr       r0,[sp]
-.   608  0100050B0      02800  cmp       r0,#0
-.   610  0100050B2      0D001  beq.n     2 -> 616
-.   612  0100050B4      0DF25  svc       37
-.   614  0100050B6      0005C  <LineNo: 92>
+.   578  00000530A      0BF00  nop       
+.   580  00000530C  0F2AF10C4  adr.w     r0,pc,#-452 -> 132
+.   584  000005310  0F2404100  movw      r1,#1024
+.   588  000005314  0F8DF20A0  ldr.w     r2,[pc,#160] -> 752
+.   592  000005318  0F8DF30A0  ldr.w     r3,[pc,#160] -> 756
+.   596  00000531C      0466C  mov       r4,sp
+.   598  00000531E  0F7FFFA1D  bl.w      Ext Proc #4
+.   602  000005322      0E000  b         0 -> 606
+.   604  000005324      0005C  <LineNo: 92>
+.   606  000005326      09800  ldr       r0,[sp]
+.   608  000005328      02800  cmp       r0,#0
+.   610  00000532A      0D001  beq.n     2 -> 616
+.   612  00000532C      0DF25  svc       37
+.   614  00000532E      0005C  <LineNo: 92>
     Kernel.Enable(t2);
-.   616  0100050B8  0F8DF0084  ldr.w     r0,[pc,#132] -> 752
-.   620  0100050BC      06800  ldr       r0,[r0]
-.   622  0100050BE  0F7FFFA9F  bl.w      Ext Proc #6
-.   626  0100050C2      0E000  b         0 -> 630
-.   628  0100050C4      0005D  <LineNo: 93>
+.   616  000005330  0F8DF0084  ldr.w     r0,[pc,#132] -> 752
+.   620  000005334      06800  ldr       r0,[r0]
+.   622  000005336  0F7FFFA9F  bl.w      Ext Proc #6
+.   626  00000533A      0E000  b         0 -> 630
+.   628  00000533C      0005D  <LineNo: 93>
     (* one sender *)
     Kernel.Allocate(t3c, ThreadStackSize, t3, tid3, res); ASSERT(res = Kernel.OK, Errors.ProgError);
-.   630  0100050C6      0BF00  nop       
-.   632  0100050C8  0F2AF1068  adr.w     r0,pc,#-360 -> 276
-.   636  0100050CC  0F2404100  movw      r1,#1024
-.   640  0100050D0  0F8DF2074  ldr.w     r2,[pc,#116] -> 760
-.   644  0100050D4  0F8DF3074  ldr.w     r3,[pc,#116] -> 764
-.   648  0100050D8      0466C  mov       r4,sp
-.   650  0100050DA  0F7FFFA03  bl.w      Ext Proc #4
-.   654  0100050DE      0E000  b         0 -> 658
-.   656  0100050E0      0005F  <LineNo: 95>
-.   658  0100050E2      09800  ldr       r0,[sp]
-.   660  0100050E4      02800  cmp       r0,#0
-.   662  0100050E6      0D001  beq.n     2 -> 668
-.   664  0100050E8      0DF25  svc       37
-.   666  0100050EA      0005F  <LineNo: 95>
+.   630  00000533E      0BF00  nop       
+.   632  000005340  0F2AF1068  adr.w     r0,pc,#-360 -> 276
+.   636  000005344  0F2404100  movw      r1,#1024
+.   640  000005348  0F8DF2074  ldr.w     r2,[pc,#116] -> 760
+.   644  00000534C  0F8DF3074  ldr.w     r3,[pc,#116] -> 764
+.   648  000005350      0466C  mov       r4,sp
+.   650  000005352  0F7FFFA03  bl.w      Ext Proc #4
+.   654  000005356      0E000  b         0 -> 658
+.   656  000005358      0005F  <LineNo: 95>
+.   658  00000535A      09800  ldr       r0,[sp]
+.   660  00000535C      02800  cmp       r0,#0
+.   662  00000535E      0D001  beq.n     2 -> 668
+.   664  000005360      0DF25  svc       37
+.   666  000005362      0005F  <LineNo: 95>
     Kernel.Enable(t3);
-.   668  0100050EC  0F8DF0058  ldr.w     r0,[pc,#88] -> 760
-.   672  0100050F0      06800  ldr       r0,[r0]
-.   674  0100050F2  0F7FFFA85  bl.w      Ext Proc #6
-.   678  0100050F6      0E000  b         0 -> 682
-.   680  0100050F8      00060  <LineNo: 96>
+.   668  000005364  0F8DF0058  ldr.w     r0,[pc,#88] -> 760
+.   672  000005368      06800  ldr       r0,[r0]
+.   674  00000536A  0F7FFFA85  bl.w      Ext Proc #6
+.   678  00000536E      0E000  b         0 -> 682
+.   680  000005370      00060  <LineNo: 96>
     Out.String("start"); Out.Ln;
-.   682  0100050FA      0BF00  nop       
-.   684  0100050FC      0A000  adr       r0,pc,#0 -> 688
-.   686  0100050FE      0E003  b         6 -> 696
-.   688  010005100  072617473  <String: "star">
-.   692  010005104  000000074  <String: "t...">
-.   696  010005108      02106  movs      r1,#6
-.   698  01000510A  0F7FEFF4F  bl.w      Ext Proc #4
-.   702  01000510E      0E000  b         0 -> 706
-.   704  010005110      00061  <LineNo: 97>
-.   706  010005112  0F7FEFF67  bl.w      Ext Proc #5
-.   710  010005116      0E000  b         0 -> 714
-.   712  010005118      00061  <LineNo: 97>
+.   682  000005372      0BF00  nop       
+.   684  000005374      0A000  adr       r0,pc,#0 -> 688
+.   686  000005376      0E003  b         6 -> 696
+.   688  000005378  072617473  <String: "star">
+.   692  00000537C  000000074  <String: "t...">
+.   696  000005380      02106  movs      r1,#6
+.   698  000005382  0F7FEFF47  bl.w      Ext Proc #4
+.   702  000005386      0E000  b         0 -> 706
+.   704  000005388      00061  <LineNo: 97>
+.   706  00000538A  0F7FEFF5F  bl.w      Ext Proc #5
+.   710  00000538E      0E000  b         0 -> 714
+.   712  000005390      00061  <LineNo: 97>
     Kernel.Run
     (* we'll not return here *)
   END run;
-.   714  01000511A  0F7FFFCEB  bl.w      Ext Proc #21
-.   718  01000511E      0E000  b         0 -> 722
-.   720  010005120      00062  <LineNo: 98>
-.   722  010005122      0B001  add       sp,#4
-.   724  010005124      0BD00  pop       { pc }
-.   726  010005126      0BF00  nop       
-.   728  010005128  010004D7C  <Global: Signals code>
-.   732  01000512C  02001FE5C  <Global: SignalSync data>
-.   736  010005130  02001FE7C  <Global: SignalSync data>
-.   740  010005134  02001FE6C  <Global: SignalSync data>
-.   744  010005138  02001FE78  <Global: SignalSync data>
-.   748  01000513C  02001FE68  <Global: SignalSync data>
-.   752  010005140  02001FE74  <Global: SignalSync data>
-.   756  010005144  02001FE64  <Global: SignalSync data>
-.   760  010005148  02001FE70  <Global: SignalSync data>
-.   764  01000514C  02001FE60  <Global: SignalSync data>
+.   714  000005392  0F7FFFCEB  bl.w      Ext Proc #21
+.   718  000005396      0E000  b         0 -> 722
+.   720  000005398      00062  <LineNo: 98>
+.   722  00000539A      0B001  add       sp,#4
+.   724  00000539C      0BD00  pop       { pc }
+.   726  00000539E      0BF00  nop       
+.   728  0000053A0      04FF4  <Global: Signals code>
+.   732  0000053A4  020027E5C  <Global: SignalSync data>
+.   736  0000053A8  020027E7C  <Global: SignalSync data>
+.   740  0000053AC  020027E6C  <Global: SignalSync data>
+.   744  0000053B0  020027E78  <Global: SignalSync data>
+.   748  0000053B4  020027E68  <Global: SignalSync data>
+.   752  0000053B8  020027E74  <Global: SignalSync data>
+.   756  0000053BC  020027E64  <Global: SignalSync data>
+.   760  0000053C0  020027E70  <Global: SignalSync data>
+.   764  0000053C4  020027E60  <Global: SignalSync data>
 
 BEGIN
-.   768  010005150      0B500  push      { lr }
+.   768  0000053C8      0B500  push      { lr }
   run
 END SignalSync.
-.   770  010005152  0F7FFFF4D  bl.w      -358 -> 416
-.   774  010005156      0E000  b         0 -> 778
-.   776  010005158      00067  <LineNo: 103>
-.   778  01000515A      0BD00  pop       { pc }
+.   770  0000053CA  0F7FFFF4D  bl.w      -358 -> 416
+.   774  0000053CE      0E000  b         0 -> 778
+.   776  0000053D0      00067  <LineNo: 103>
+.   778  0000053D2      0BD00  pop       { pc }
  
