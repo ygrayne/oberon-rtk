@@ -22,23 +22,37 @@ MODULE MCU2;
 
 
 (* === base addresses === *)
-    (* non-secure *)
-    FLASH_NS_BASE*  = 008000000H;
-    SRAM1_NS_BASE*  = 020000000H;
-    SRAM2_NS_BASE*  = 020030000H;
-    SRAM3_NS_BASE*  = 020040000H;
-    (* non contiguous *)
-    SRAM4_NS_BASE*  = 028000000H;
+  (* non-secure *)
+    (* non-secure: C bus/code *)
+    FLASH_Cb_NS_BASE*  = 008000000H;
+    SRAM1_Cb_NS_BASE*  = 00A000000H;
+    SRAM2_Cb_NS_BASE*  = 00A030000H;
+    SRAM3_Cb_NS_BASE*  = 00A040000H;
 
-    (* secure/non-secure callable *)
-    FLASH_S_Offset* = 04000000H;
-    SRAM_S_Offset*  = 010000000H;
-    FLASH_S_BASE*   = FLASH_NS_BASE + FLASH_S_Offset;
-    SRAM1_S_BASE*   = SRAM1_NS_BASE + SRAM_S_Offset;
-    SRAM2_S_BASE*   = SRAM2_NS_BASE + SRAM_S_Offset;
-    SRAM3_S_BASE*   = SRAM3_NS_BASE + SRAM_S_Offset;
+    (* non-secure: S bus/data *)
+    SRAM1_Sb_NS_BASE*  = 020000000H;
+    SRAM2_Sb_NS_BASE*  = 020030000H;
+    SRAM3_Sb_NS_BASE*  = 020040000H;
     (* non contiguous *)
-    SRAM4_S_BASE*   = SRAM4_NS_BASE + SRAM_S_Offset;
+    SRAM4_Sb_NS_BASE*  = 028000000H;
+
+  (* secure/non-secure callable *)
+    FLASH_Cb_S_Offset* = 004000000H;
+    SRAM_Cb_S_Offset*  = 004000000H;
+    SRAM_Sb_S_Offset*  = 010000000H;
+
+    (* secure: C bus/code *)
+    FLASH_Cb_S_BASE*  = FLASH_Cb_NS_BASE + FLASH_Cb_S_Offset;
+    SRAM1_Cb_S_BASE*  = SRAM1_Cb_NS_BASE + SRAM_Cb_S_Offset;
+    SRAM2_Cb_S_BASE*  = SRAM2_Cb_NS_BASE + SRAM_Cb_S_Offset;
+    SRAM3_Cb_S_BASE*  = SRAM3_Cb_NS_BASE + SRAM_Cb_S_Offset;
+
+    (* secure: S bus/data *)
+    SRAM1_Sb_S_BASE*   = SRAM1_Sb_NS_BASE + SRAM_Sb_S_Offset;
+    SRAM2_Sb_S_BASE*   = SRAM2_Sb_NS_BASE + SRAM_Sb_S_Offset;
+    SRAM3_Sb_S_BASE*   = SRAM3_Sb_NS_BASE + SRAM_Sb_S_Offset;
+    (* non contiguous *)
+    SRAM4_Sb_S_BASE*   = SRAM4_Sb_NS_BASE + SRAM_Sb_S_Offset;
 
     (* sizes *)
     FLASH_Size* = 0200000H; (* 2M *)
@@ -48,7 +62,7 @@ MODULE MCU2;
     SRAM4_Size* = 0004000H; (* 16k *)
 
     (* peripheral devices *)
-    PERI_S_Offset*  = 10000000H;
+    PERI_S_Offset*  = 010000000H;
 
     (* APB1 *)
     TIM2_BASE*          = 040000000H;
@@ -534,43 +548,43 @@ MODULE MCU2;
     (* note the address gap between AHB and ABP registers *)
 
     (* RCC_APB1ENR1, RCC_APB1RSTR1, RCC_APB1SMENR1 *)
-    DEV_TIM2*     = 128 + 0;
-    DEV_TIM3*     = 128 + 1;
-    DEV_TIM4*     = 128 + 2;
-    DEV_TIM5*     = 128 + 3;
-    DEV_TIM6*     = 128 + 4;
-    DEV_TIM7*     = 128 + 5;
-    DEV_SPI2*     = 128 + 14;
-    DEV_USART2*   = 128 + 17;
-    DEV_USART3*   = 128 + 18;
-    DEV_UART4*    = 128 + 19;
-    DEV_UART5*    = 128 + 20;
-    DEV_I2C1*     = 128 + 21;
-    DEV_I2C2*     = 128 + 22;
+    DEV_TIM2*     = 160 + 0;
+    DEV_TIM3*     = 160 + 1;
+    DEV_TIM4*     = 160 + 2;
+    DEV_TIM5*     = 160 + 3;
+    DEV_TIM6*     = 160 + 4;
+    DEV_TIM7*     = 160 + 5;
+    DEV_SPI2*     = 160 + 14;
+    DEV_USART2*   = 160 + 17;
+    DEV_USART3*   = 160 + 18;
+    DEV_UART4*    = 160 + 19;
+    DEV_UART5*    = 160 + 20;
+    DEV_I2C1*     = 160 + 21;
+    DEV_I2C2*     = 160 + 22;
 
     (* RCC_APB1ENR2, RCC_APB1RSTR2, RCC_APB1SMENR2 *)
-    DEV_I2C4*     = 160 + 1;
-    DEV_LPTIM2*   = 160 + 5;
+    DEV_I2C4*     = 192 + 1;
+    DEV_LPTIM2*   = 192 + 5;
 
     (* RCC_APB2ENR, RCC_APB2RSTR, RCC_APB2SMENR *)
-    DEV_TIM1*     = 192 + 11;
-    DEV_SPI1*     = 192 + 12;
-    DEV_TIM8*     = 192 + 13;
-    DEV_USART1*   = 192 + 14;
-    DEV_TIM15*    = 192 + 16;
-    DEV_TIM16*    = 192 + 17;
-    DEV_TIM17*    = 192 + 18;
+    DEV_TIM1*     = 224 + 11;
+    DEV_SPI1*     = 224 + 12;
+    DEV_TIM8*     = 224 + 13;
+    DEV_USART1*   = 224 + 14;
+    DEV_TIM15*    = 224 + 16;
+    DEV_TIM16*    = 224 + 17;
+    DEV_TIM17*    = 224 + 18;
 
     (* RCC_APB3ENR, RCC_APB3RSTR, RCC_APB3SMENR *)
-    DEV_SYSCFG*   = 224 + 1;
-    DEV_SPI3*     = 224 + 5;
-    DEV_LPUART1*  = 224 + 6;
-    DEV_I2C3*     = 224 + 7;
-    DEV_LPTIM1*   = 224 + 11;
-    DEV_LPTIM3*   = 224 + 12;
-    DEV_LPTIM4*   = 224 + 13;
-    DEV_OPAMP*    = 224 + 14;
-    DEV_COMP*     = 224 + 15;
+    DEV_SYSCFG*   = 256 + 1;
+    DEV_SPI3*     = 256 + 5;
+    DEV_LPUART1*  = 256 + 6;
+    DEV_I2C3*     = 256 + 7;
+    DEV_LPTIM1*   = 256 + 11;
+    DEV_LPTIM3*   = 256 + 12;
+    DEV_LPTIM4*   = 256 + 13;
+    DEV_OPAMP*    = 256 + 14;
+    DEV_COMP*     = 256 + 15;
 
 (* == PPB: private peripheral bus == *)
 

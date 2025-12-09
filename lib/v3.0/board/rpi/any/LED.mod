@@ -33,17 +33,17 @@ MODULE LED;
     LCLR* = MCU.SIO_GPIO_OUT_CLR;
     LXOR* = MCU.SIO_GPIO_OUT_XOR;
 
-  PROCEDURE Set*(leds: SET);
+  PROCEDURE* Set*(leds: SET);
   BEGIN
     SYSTEM.PUT(LSET, leds)
   END Set;
 
-  PROCEDURE Clear*(leds: SET);
+  PROCEDURE* Clear*(leds: SET);
   BEGIN
     SYSTEM.PUT(LCLR, leds)
   END Clear;
 
-  PROCEDURE Toggle*(leds: SET);
+  PROCEDURE* Toggle*(leds: SET);
   BEGIN
     SYSTEM.PUT(LXOR, leds)
   END Toggle;

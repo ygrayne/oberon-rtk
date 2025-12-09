@@ -106,8 +106,8 @@ MODULE Config;
     ModMem.start := StackMem[Core0].start + 04H;
     ModMem.end := DataMem[Core0].end;
 
-    ExtMem[Core0].start := MCU.SRAM2_NS_BASE;;
-    ExtMem[Core0].end := MCU.SRAM2_NS_BASE + MCU.SRAM2_Size;
+    ExtMem[Core0].start := MCU.SRAM2_Cb_NS_BASE;
+    ExtMem[Core0].end := MCU.SRAM2_Cb_NS_BASE + MCU.SRAM2_Size;
 
     (* VTOR and initial simple error/fault handlers *)
     (* UsageFault and friends are not enabled yet and escalate to HardFault *)

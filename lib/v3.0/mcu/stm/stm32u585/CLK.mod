@@ -233,7 +233,6 @@ MODULE CLK;
   BEGIN
     reg := device DIV 32;
     reg := MCU.RCC_AHB1ENR + (reg * 4);
-    IF reg > MCU.RCC_AHB3ENR THEN INC(reg, 4) END;
     devNo := device MOD 32;
     SYSTEM.GET(reg, val);
     INCL(val, devNo);

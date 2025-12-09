@@ -40,19 +40,19 @@ MODULE LED;
     LCLR* = MCU.GPIOH_BASE + MCU.GPIO_BSRR_Offset;
 
 
-  PROCEDURE Set*(leds: SET);
+  PROCEDURE* Set*(leds: SET);
   BEGIN
     leds := leds * LEDx;
     SYSTEM.PUT(LSET, leds)
   END Set;
 
-  PROCEDURE Clear*(leds: SET);
+  PROCEDURE* Clear*(leds: SET);
   BEGIN
     leds := leds * LEDx;
     SYSTEM.PUT(LCLR, leds)
   END Clear;
 
-  PROCEDURE Toggle*(leds: SET);
+  PROCEDURE* Toggle*(leds: SET);
     VAR val, rst, set: SET;
   BEGIN
     SYSTEM.GET(MCU.GPIOH_BASE + MCU.GPIO_ODR_Offset, val);

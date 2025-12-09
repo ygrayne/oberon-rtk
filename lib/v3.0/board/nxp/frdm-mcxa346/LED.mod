@@ -44,17 +44,17 @@ MODULE LED;
     LXOR* = MCU.GPIO3_BASE + MCU.GPIO_PTOR_Offset;
 
 
-  PROCEDURE Set*(leds: SET);
+  PROCEDURE* Set*(leds: SET);
   BEGIN
     SYSTEM.PUT(LSET, leds)
   END Set;
 
-  PROCEDURE Clear*(leds: SET);
+  PROCEDURE* Clear*(leds: SET);
   BEGIN
     SYSTEM.PUT(LCLR, leds)
   END Clear;
 
-  PROCEDURE Toggle*(leds: SET);
+  PROCEDURE* Toggle*(leds: SET);
   BEGIN
     SYSTEM.PUT(LXOR, leds)
   END Toggle;
