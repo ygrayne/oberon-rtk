@@ -7,7 +7,7 @@ MODULE Kernel;
   Interrupt-driven asynchronous tasks and synchronous background tasks.
   General ticker service.
   --
-  MCU: STM32U585AI
+  MCU: STM32U585AI, STM32H573II
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

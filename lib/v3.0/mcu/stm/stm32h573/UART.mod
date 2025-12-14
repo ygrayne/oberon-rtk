@@ -10,7 +10,7 @@ MODULE UART;
   --
   The GPIO pins and pads used must be configured by the client module or program.
   --
-  MCU: STM32U585AI
+  MCU: STM32H573II
   --
   Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -22,18 +22,29 @@ MODULE UART;
     USART1* = 0;
     USART2* = 1;
     USART3* = 2;
-    UART4* = 3; (* basic *)
-    UART5* = 4; (* basic *)
-    UARTs = {USART1 .. UART5};
+    UART4* = 3;
+    UART5* = 4;
+    USART6* = 5;
+    UART7* = 6;
+    UART8* = 7;
+    UART9* = 8;
+    USART10* = 9;
+    USART11* = 10;
+    UART12* = 11;
+
+    UARTs = {USART1 .. UART12};
     NumUART* = MCU.NumUART;
 
-    (* functionsl/kernel clock values *)
-    CLK_PCLK* = 0;
-    CLK_SYSCLK* = 1;
-    CLK_HSI16* = 2;
-    CLK_LSE* = 3;
+    (* functional/kernel clock values *)
+    CLK_PCLK* = 0; (* reset *)
+    CLK_PLL2Q* = 1;
+    CLK_PLL3Q* = 2;
+    CLK_HSI* = 3;
+    CLK_CSI* = 4;
+    CLK_LSE* = 5;
 
-    Presc_1* = 0;
+    (* prescaler for functional/kernel clock *)
+    Presc_1* = 0; (* reset *)
     Presc_2* = 1;
     Presc_4* = 2;
     Presc_6* = 3;
@@ -46,26 +57,23 @@ MODULE UART;
     Presc_128* = 10;
     Presc_256* = 11;
 
-    (* clock selection, could be/become part of DeviceCfg *)
-    ClkSel = CLK_SYSCLK;
-    ClkPrescSetting = 7; (* divide by 16 *)
-    ClkPrescValue = 16;
-
     Disabled* = 0;
     Enabled* = 1;
 
     FifoSize* = 8;
 
     (* ISR bits and values *)
-    ISR_TXFNF*  = 7;
-    ISR_RXFNE*  = 5;
+    ISR_TXFNF*  = 7; (* corresponds to TXE without FIFO *)
+    ISR_RXFNE*  = 5; (* corresponds to RXNE without FIFO *)
 
 
   TYPE
     Device* = POINTER TO DeviceDesc;
     DeviceDesc* = RECORD(TextIO.DeviceDesc)
       uartId*: INTEGER;
-      devNo*, clkSelReg: INTEGER;
+      devNo: INTEGER;     (* MCU.DEV_* *)
+      clkSelReg: INTEGER; (* functional/kernel clock: MCU.RCC_CCIPR1 or MCU.RCC_CCIPR2 *)
+      clkSelPos: INTEGER; (* bit position in RCC_CCIPRx *)
       CR1, CR2, CR3: INTEGER;
       BRR, PRESC: INTEGER;
       RDR*, TDR*, ISR*: INTEGER;
@@ -73,8 +81,11 @@ MODULE UART;
 
     (* 8 bits, 1 stop but, no parity *)
     DeviceCfg* = RECORD
-      fifoEn*: INTEGER;
-      over8En*: INTEGER
+      fifoEn*: INTEGER;   (* reset: off *)
+      over8En*: INTEGER;  (* reset: off, ie. 16x oversampling *)
+      clkSel*: INTEGER;   (* CLK_* above, reset: CLK_PCLK *)
+      presc*: INTEGER;    (* Presc_* above, reset: Presc_1 *)
+      clkFreq*: INTEGER;  (* usually look up in module clocks *)
     END;
 
     VAR
@@ -84,17 +95,30 @@ MODULE UART;
     PROCEDURE* Init*(dev: Device; uartId: INTEGER);
       VAR base: INTEGER;
     BEGIN
-      ASSERT(dev # NIL, Errors.PreCond);
-      ASSERT(uartId IN UARTs, Errors.PreCond);
+      ASSERT(dev # NIL, Errors.ProgError);
+      ASSERT(uartId IN UARTs, Errors.ProgError);
       dev.uartId := uartId;
-      IF uartId = USART1 THEN
-        base := MCU.USART1_BASE;
-        dev.devNo := MCU.DEV_USART1
-      ELSE
-        base := MCU.USART2_BASE + (uartId * MCU.UART_Offset);
-        dev.devNo := MCU.DEV_USART2 + uartId
+      CASE uartId OF
+        USART1: base := MCU.USART1_BASE; dev.devNo := MCU.DEV_USART1
+      | USART2: base := MCU.USART2_BASE; dev.devNo := MCU.DEV_USART2
+      | USART3: base := MCU.USART3_BASE; dev.devNo := MCU.DEV_USART3
+      | UART4:  base := MCU.UART4_BASE; dev.devNo := MCU.DEV_UART4
+      | UART5:  base := MCU.UART5_BASE; dev.devNo := MCU.DEV_UART5
+      | USART6: base := MCU.USART6_BASE; dev.devNo := MCU.DEV_USART6
+      | UART7:  base := MCU.UART7_BASE; dev.devNo := MCU.DEV_UART7
+      | UART8:  base := MCU.UART8_BASE; dev.devNo := MCU.DEV_UART8
+      | UART9:  base := MCU.UART9_BASE; dev.devNo := MCU.DEV_UART9
+      | USART10: base := MCU.USART10_BASE; dev.devNo := MCU.DEV_USART10
+      | USART11: base := MCU.USART11_BASE; dev.devNo := MCU.DEV_USART11
+      | UART12:  base := MCU.UART12_BASE; dev.devNo := MCU.DEV_UART12
       END;
-      dev.clkSelReg := MCU.RCC_CCIPR1;
+      IF uartId < USART11 THEN
+        dev.clkSelPos := uartId * 3;
+        dev.clkSelReg := MCU.RCC_CCIPR1;
+      ELSE
+        dev.clkSelPos := (uartId - USART11) * 4;
+        dev.clkSelReg := MCU.RCC_CCIPR2;
+      END;
       dev.CR1 := base + MCU.UART_CR1_Offset;
       dev.CR2 := base + MCU.UART_CR2_Offset;
       dev.CR3 := base + MCU.UART_CR3_Offset;
@@ -102,18 +126,18 @@ MODULE UART;
       dev.PRESC := base + MCU.UART_PRESC_Offset;
       dev.RDR := base + MCU.UART_RDR_Offset;
       dev.TDR := base + MCU.UART_TDR_Offset;
-      dev.ISR := base + MCU.UART_ISR_Offset;
+      dev.ISR := base + MCU.UART_ISR_Offset
     END Init;
 
 
     PROCEDURE Configure*(dev: Device; cfg: DeviceCfg; baudrate: INTEGER);
-      CONST TwoBits = 2;
+      CONST ThreeBits = 3;
       VAR div, brr: INTEGER; cr1: SET;
     BEGIN
-      ASSERT(dev # NIL, Errors.PreCond);
+      ASSERT(dev # NIL, Errors.ProgError);
 
       (* set functional/kernel clock, start bus clock *)
-      CLK.ConfigDevClock(dev.clkSelReg, ClkSel, dev.uartId, TwoBits);
+      CLK.ConfigDevClock(dev.clkSelReg, cfg.clkSel, dev.clkSelPos, ThreeBits);
       CLK.EnableBusClock(dev.devNo);
 
       (* stop/reset *)
@@ -121,7 +145,9 @@ MODULE UART;
       cr1 := {};
 
       (* baudrate *)
-      div := (Clocks.SYSCLK_FRQ DIV ClkPrescValue) DIV baudrate;
+      div := (cfg.clkFreq DIV presc[cfg.presc]) DIV baudrate;
+      (*div := (Clocks.PCLK1_FRQ DIV ClkPrescValue) DIV baudrate;*)
+      (*div := (80000000 DIV ClkPrescValue) DIV baudrate;*)
       ASSERT(div >= 16, Errors.ProgError);
       IF cfg.over8En = Disabled THEN
         SYSTEM.PUT(dev.BRR, div)
@@ -133,7 +159,7 @@ MODULE UART;
         SYSTEM.PUT(dev.BRR, brr);
         cr1 := cr1 + {15}
       END;
-      SYSTEM.PUT(dev.PRESC, ClkPrescSetting);
+      SYSTEM.PUT(dev.PRESC, cfg.presc);
 
       (* enable fifos *)
       IF cfg.fifoEn = Enabled THEN
@@ -153,7 +179,7 @@ MODULE UART;
     PROCEDURE* Enable*(dev: Device);
       VAR val: SET;
     BEGIN
-      ASSERT(dev # NIL, Errors.PreCond);
+      ASSERT(dev # NIL, Errors.ProgError);
       SYSTEM.GET(dev.CR1, val);
       SYSTEM.PUT(dev.CR1, val + {0, 2, 3})
     END Enable;

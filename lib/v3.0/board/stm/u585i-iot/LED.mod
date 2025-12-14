@@ -46,11 +46,13 @@ MODULE LED;
     SYSTEM.PUT(LSET, leds)
   END Set;
 
+
   PROCEDURE* Clear*(leds: SET);
   BEGIN
     leds := leds * LEDx;
     SYSTEM.PUT(LCLR, leds)
   END Clear;
+
 
   PROCEDURE* Toggle*(leds: SET);
     VAR val, rst, set: SET;
@@ -68,11 +70,11 @@ MODULE LED;
   PROCEDURE init;
     VAR cfg: GPIO.PadCfg;
   BEGIN
-    CLK.EnableClock(MCU.DEV_GPIOH);
     cfg.mode := GPIO.ModeOut;
     cfg.type := GPIO.TypePushPull;
     cfg.speed := GPIO.SpeedLow;
     cfg.pulls := GPIO.PullNone;
+    CLK.EnableBusClock(MCU.DEV_GPIOH);
     GPIO.ConfigurePad(MCU.PORTH, LEDredPinNo, cfg);
     GPIO.ConfigurePad(MCU.PORTH, LEDgreenPinNo, cfg);
     Clear(LEDx)

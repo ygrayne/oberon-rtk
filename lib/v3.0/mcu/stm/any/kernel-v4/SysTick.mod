@@ -3,12 +3,11 @@ MODULE SysTick;
   Oberon RTK Framework
   Version: v3.0
   --
-  Kernel-v4
-  System tick
+  System tick for kernel-v4
   Enable interrupt and install an interrupt handler
   so we can use WFE/WFI in kernel loop.
   --
-  MCU: STM32U585AI
+  MCU: STM32U585AI, STM32H573II
   --
   Note the 24 bit limitation on the reload and counter registers. If SysTick is running off
   HCLK/8 with HCLK at 160 MHz, this limits the maximum achievable SysTick interval to
@@ -47,13 +46,13 @@ MODULE SysTick;
 
 
   PROCEDURE Config*(usPerTick, prio: INTEGER; handler: PROCEDURE);
-    CONST PosSel = 22; TwoBits = 2;
+    CONST TwoBits = 2;
     VAR cntPerMicrosec, cntRld: INTEGER;
   BEGIN
     IF handler = NIL THEN handler := tickHandler END;
     Exceptions.InstallSysExcHandler(MCU.EXC_SysTick, handler);
     Exceptions.SetSysExcPrio(MCU.EXC_SysTick, prio);
-    CLK.ConfigDevClock(MCU.RCC_CCIPR1, Src_HCLK, PosSel, TwoBits);
+    CLK.ConfigDevClock(CLK.CLK_SYST_REG, Src_HCLK, CLK.CLK_SYST_POS, TwoBits);
     cntPerMicrosec := (Clocks.HCLK_FRQ DIV 8) DIV 1000000;
     cntRld := (usPerTick * cntPerMicrosec) - 1;
     ASSERT(cntRld <= 0FFFFFFH, Errors.ProgError);

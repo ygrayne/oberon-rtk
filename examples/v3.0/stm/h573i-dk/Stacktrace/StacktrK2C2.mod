@@ -5,8 +5,8 @@ MODULE StacktrK2C2;
   Example/test program
   https://oberon-rtk.org/docs/examples/v2/stacktrace
   --
-  MCU: STM32U585AI
-  Board: B-U585I-IOT02A
+  MCU: STM32H573II
+  Board: STM32H573I-DK
   --
   Kernel-v1
   --
@@ -18,8 +18,8 @@ MODULE StacktrK2C2;
     SYSTEM, MCU := MCU2, Main, Kernel, Errors, Exceptions;
 
   CONST
-    IntNo0 = MCU.IRQ_SPI3;
-    IntNo1 = MCU.IRQ_LPTIM4;
+    IntNo0 = MCU.IRQ_SPI5;
+    IntNo1 = MCU.IRQ_SPI6;
 
     ThreadStackSize = 1024;
     MicrosecsPerTick = 10000;

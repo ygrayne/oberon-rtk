@@ -7,11 +7,13 @@ MODULE TIM;
   TIM1, TIM8: advanced
   TIM2, TIM3, TIM4, TIM5: general purpose, 32 bits
   TIM6, TIM7: basic
+  TIM12: general purpose
+  TIM13, TIM4: general purpose
   TIM15: general purpose
   TIM16, TIM17: general purpose
   Advanced functionality for more capable timers is not yet implemented.
   --
-  MCU: STM32U585AI
+  MCU: STM32H573II
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -28,9 +30,12 @@ MODULE TIM;
     TIM6* = 5;
     TIM7* = 6;
     TIM8* = 7;
-    TIM15* = 8;
-    TIM16* = 9;
-    TIM17* = 10;
+    TIM12* = 8;
+    TIM13* = 9;
+    TIM14* = 10;
+    TIM15* = 11;
+    TIM16* = 12;
+    TIM17* = 13;
     TIMs* = {TIM1 .. TIM17};
 
     CR1_CEN = 0;
@@ -40,11 +45,11 @@ MODULE TIM;
   TYPE
     Device* = POINTER TO DeviceDesc;
     DeviceDesc* = RECORD
-      timId: INTEGER;
+      timId*: INTEGER;
       devNo: INTEGER;
       CR1, CR2: INTEGER;
       DIER, SR, EGR: INTEGER;
-      CNT, PSC, ARR: INTEGER
+      CNT*, PSC, ARR: INTEGER
     END;
 
     DeviceCfg* = RECORD
@@ -56,21 +61,24 @@ MODULE TIM;
   PROCEDURE* Init*(dev: Device; timId: INTEGER);
     VAR base: INTEGER;
   BEGIN
-    ASSERT(dev # NIL, Errors.HeapOverflow);
+    ASSERT(dev # NIL, Errors.ProgError);
     ASSERT(timId IN TIMs, Errors.ProgError);
     dev.timId := timId;
-    IF timId = TIM1 THEN
-      base := MCU.TIM1_BASE;
-      dev.devNo := MCU.DEV_TIM1
-    ELSIF timId = TIM8 THEN
-      base := MCU.TIM8_BASE;
-      dev.devNo := MCU.DEV_TIM8
-    ELSIF timId IN {TIM15, TIM16, TIM17} THEN
-      base := MCU.TIM15_BASE + ((timId - TIM15) * MCU.TIM_Offset);
-      dev.devNo := MCU.DEV_TIM15 + (timId - TIM15)
-    ELSE
-      base := MCU.TIM2_BASE + ((timId - TIM2) * MCU.TIM_Offset);
-      dev.devNo := MCU.DEV_TIM2 + (timId - TIM2)
+    CASE timId OF
+      TIM1: base := MCU.TIM1_BASE; dev.devNo := MCU.DEV_TIM1
+    | TIM2: base := MCU.TIM2_BASE; dev.devNo := MCU.DEV_TIM2
+    | TIM3: base := MCU.TIM3_BASE; dev.devNo := MCU.DEV_TIM3
+    | TIM4: base := MCU.TIM4_BASE; dev.devNo := MCU.DEV_TIM4
+    | TIM5: base := MCU.TIM5_BASE; dev.devNo := MCU.DEV_TIM5
+    | TIM6: base := MCU.TIM6_BASE; dev.devNo := MCU.DEV_TIM6
+    | TIM7: base := MCU.TIM7_BASE; dev.devNo := MCU.DEV_TIM7
+    | TIM8: base := MCU.TIM8_BASE; dev.devNo := MCU.DEV_TIM8
+    | TIM12: base := MCU.TIM12_BASE; dev.devNo := MCU.DEV_TIM12
+    | TIM13: base := MCU.TIM12_BASE; dev.devNo := MCU.DEV_TIM13
+    | TIM14: base := MCU.TIM14_BASE; dev.devNo := MCU.DEV_TIM14
+    | TIM15: base := MCU.TIM15_BASE; dev.devNo := MCU.DEV_TIM15
+    | TIM16: base := MCU.TIM16_BASE; dev.devNo := MCU.DEV_TIM16
+    | TIM17: base := MCU.TIM17_BASE; dev.devNo := MCU.DEV_TIM17
     END;
     dev.CR1 := base + MCU.TIM_CR1_Offset;
     dev.CR2 := base + MCU.TIM_CR2_Offset;
@@ -85,6 +93,7 @@ MODULE TIM;
 
   PROCEDURE Configure*(dev: Device; cfg: DeviceCfg);
   BEGIN
+    ASSERT(dev # NIL, Errors.ProgError);
     CLK.EnableBusClock(dev.devNo);
     SYSTEM.PUT(dev.PSC, cfg.presc);
     SYSTEM.PUT(dev.ARR, cfg.reload);
@@ -97,6 +106,7 @@ MODULE TIM;
   PROCEDURE* Enable*(dev: Device);
     VAR val: SET;
   BEGIN
+    ASSERT(dev # NIL, Errors.ProgError);
     SYSTEM.GET(dev.CR1, val);
     SYSTEM.PUT(dev.CR1, val + {CR1_CEN})
   END Enable;

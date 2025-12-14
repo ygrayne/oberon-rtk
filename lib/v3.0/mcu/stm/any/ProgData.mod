@@ -6,7 +6,7 @@ MODULE ProgData;
   Get data about the program from the '.ref' resource data block
   at the end of the program.
   --
-  MCU: STM32U585AI
+  MCU: STM32U585AI, STM32H573II
   --
   Copyright (c) 2024-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/

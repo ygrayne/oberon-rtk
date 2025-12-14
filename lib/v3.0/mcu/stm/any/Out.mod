@@ -5,7 +5,7 @@ MODULE Out;
   --
   Output via two TextIO.Writer.
   --
-  MCU: STM32U585AI
+  MCU: STM32U585AI, STM32H573II
   --
   Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

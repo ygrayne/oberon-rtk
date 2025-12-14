@@ -5,20 +5,20 @@ MODULE MCU2;
   --
   MCU register and memory addresses, bits, values, assembly instructions
   --
-  MCU: STM32U585AI
+  MCU: STM32H573II
   --
   Copyright (c) 2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
   CONST
     NumCores*         = 1;
-    NumUART*          = 5;
+    NumUART*          = 12;
     NumSPI*           = 3;
     NumI2C*           = 4;
-    NumTimers*        = 11;
+    NumTimers*        = 14;
     NumPorts*         = 9; (* 16 bits *)
     NumGPIO*          = NumPorts * 16; (* not all functional/connected *)
-    NumInterrupts*    = 141; (* not all used/connected *)
+    NumInterrupts*    = 131;
 
 
 (* === base addresses === *)
@@ -33,8 +33,7 @@ MODULE MCU2;
     SRAM1_Sb_NS_BASE*  = 020000000H;
     SRAM2_Sb_NS_BASE*  = 020030000H;
     SRAM3_Sb_NS_BASE*  = 020040000H;
-    (* non contiguous *)
-    SRAM4_Sb_NS_BASE*  = 028000000H;
+
 
   (* secure/non-secure callable *)
     FLASH_Cb_S_Offset* = 004000000H;
@@ -51,15 +50,13 @@ MODULE MCU2;
     SRAM1_Sb_S_BASE*   = SRAM1_Sb_NS_BASE + SRAM_Sb_S_Offset;
     SRAM2_Sb_S_BASE*   = SRAM2_Sb_NS_BASE + SRAM_Sb_S_Offset;
     SRAM3_Sb_S_BASE*   = SRAM3_Sb_NS_BASE + SRAM_Sb_S_Offset;
-    (* non contiguous *)
-    SRAM4_Sb_S_BASE*   = SRAM4_Sb_NS_BASE + SRAM_Sb_S_Offset;
+
 
     (* sizes *)
     FLASH_Size* = 0200000H; (* 2M *)
-    SRAM1_Size* = 0030000H; (* 196k *)
+    SRAM1_Size* = 0040000H; (* 256k *)
     SRAM2_Size* = 0010000H; (* 64k *)
-    SRAM3_Size* = 0080000H; (* 512k *)
-    SRAM4_Size* = 0004000H; (* 16k *)
+    SRAM3_Size* = 0050000H; (* 320k *)
 
     (* peripheral devices *)
     PERI_S_Offset*  = 010000000H;
@@ -71,20 +68,34 @@ MODULE MCU2;
     TIM5_BASE*          = 040000C00H;
     TIM6_BASE*          = 040001000H;
     TIM7_BASE*          = 040001400H;
+    TIM12_BASE*         = 040001800H;
+    TIM13_BASE*         = 040001C00H;
+    TIM14_BASE*         = 040002000H;
     WWDG_BASE*          = 040002C00H;
     IWDG_BASE*          = 040003000H;
     SPI2_BASE*          = 040003800H;
+    SPI3_BASE*          = 040003C00H;
     USART2_BASE*        = 040004400H;
     USART3_BASE*        = 040004800H;
     UART4_BASE*         = 040004C00H;
     UART5_BASE*         = 040005000H;
     I2C1_BASE*          = 040005400H;
     I2C2_BASE*          = 040005800H;
+    I3C1_BASE*          = 040005C00H;
     CRS_BASE*           = 040006000H;
-    I2C4_BASE*          = 040008400H;
+    USART6_BASE*        = 040006400H;
+    USART10_BASE*       = 040006800H;
+    USART11_BASE*       = 040006C00H;
+    HDMI_CEC_BASE*      = 040007000H;
+    UART7_BASE*         = 040007800H;
+    UART8_BASE*         = 040007C00H;
+    UART9_BASE*         = 040008000H;
+    UART12_BASE*        = 040008400H;
+    DTS_BASE*           = 040008C00H;
     LPTIM2_BASE*        = 040009400H;
     FDCAN1_BASE*        = 04000A400H;
-    FDCAN1_RAM*         = 04000AC00H;
+    FDCAN2_BASE*        = 04000A800H;
+    FDCAN_RAM*          = 04000AC00H;
     UCPD1_BASE*         = 04000DC00H;
 
     (* APB2 *)
@@ -95,29 +106,28 @@ MODULE MCU2;
     TIM15_BASE*         = 040014000H;
     TIM16_BASE*         = 040014400H;
     TIM17_BASE*         = 040014800H;
+    SPI4_BASE*          = 040014C00H;
+    SPI6_BASE*          = 040015000H;
     SAI1_BASE*          = 040015400H;
     SAI2_BASE*          = 040015800H;
+    USB_FS_BASE*        = 040016000H;
+    USB_FS_RAM*         = 040016400H;
 
     (* AHB1 *)
     GPDMA1_BASE*        = 040020000H;
-    CORDIC_BASE*        = 040021000H;
-    FMAC_BASE*          = 040021400H;
+    GPDMA2_BASE*        = 040021000H;
     FLASH_BASE*         = 040022000H;
     CRC_BASE*           = 040023000H;
-    TSC_BASE*           = 040024000H;
-    MDF_BASE*           = 040025000H;
+    CORDIC_BASE*        = 040023800H;
+    FMAC_BASE*          = 040023C00H;
     RAMCFG_BASE*        = 040026000H;
-    DMA2D_BASE*         = 04002B000H;
+    ETH_MAC_BASE*       = 040028000H;
     ICACHE_BASE*        = 040030400H;
-    DCACHE1_BASE*       = 040031400H;
-    GTZC1_TZSC_BASE*    = 040032400H;
-    GTZC1_TZIC_BASE*    = 040032800H;
-    GTZC1_MPCBB1_BASE*  = 040032C00H;
-    GTZC1_MPCBB2_BASE*  = 040033000H;
-    GTZC1_MPCBB3_BASE*  = 040034300H;
-    BKPSRAM_BASE*       = 040036400H;
+    DCACHE_BASE*        = 040031400H;
+    GTZ1_BASE*          = 040032400H;
+    GTZ1_TZSC_BASE*     = 040036400H;
 
-    (* AHB2 *)
+    (* AHB 2 *)
     GPIOA_BASE*         = 042020000H;
     GPIOB_BASE*         = 042020400H;
     GPIOC_BASE*         = 042020800H;
@@ -128,53 +138,46 @@ MODULE MCU2;
     GPIOH_BASE*         = 042021C00H;
     GPIOI_BASE*         = 042022000H;
     ADC12_BASE*         = 042028000H;
+    DAC1_BASE*          = 042028400H;
     DCMI_BASE*          = 04202C000H;
     PSSI_BASE*          = 04202C400H;
-    OTG_FS_BASE*        = 042040000H;
     AES_BASE*           = 0420C0000H;
     HASH_BASE*          = 0420C0400H;
     RNG_BASE*           = 0420C0800H;
     SAES_BASE*          = 0420C0C00H;
     PKA_BASE*           = 0420C2000H;
-    OCTOSPIM_BASE*      = 0420C4000H;
-    OTFDEC1_BASE*       = 0420C5000H;
-    OTFDEC2_BASE*       = 0420C5400H;
-    SDMMC1_BASE*        = 0420C8000H;
-    DLYBSD1_BASE*       = 0420C8400H;
-    DLYBSD2_BASE*       = 0420C8800H;
-    SDMMC2_BASE*        = 0420C8C00H;
-    DLYBOS1_BASE*       = 0420CF000H;
-    DLYBOS2_BASE*       = 0420CF400H;
-    FMC_BASE*           = 0420D0400H;
-    OCTOSPI1_BASE*      = 0420D1400H;
-    OCTOSPI2_BASE*      = 0420D2400H;
 
     (* APB3 *)
-    SYSCFG_BASE*        = 046000400H;
-    SPI3_BASE*          = 046002000H;
-    LPUART1_BASE*       = 046002400H;
-    I2C3_BASE*          = 046003000H;
-    LPTIM1_BASE*        = 046004400H;
-    LPTIM3_BASE*        = 046004800H;
-    LPTIM4_BASE*        = 046004C00H;
-    OPAMP_BASE*         = 046005000H;
-    COMP_BASE*          = 046005400H;
-    VREFBUF_BASE*       = 046007400H;
-    RTC_BASE*           = 046007800H;
-    TAMP_BASE*          = 046007C00H;
+    SBS_BASE*           = 044000400H;
+    SPI5_BASE*          = 044002000H;
+    LPUART1_BASE*       = 044002400H;
+    I2C3_BASE*          = 044002800H;
+    I2C4_BASE*          = 044002C00H;
+    LPTIM1_BASE*        = 044004400H;
+    LPTIM3_BASE*        = 044004800H;
+    LPTIM4_BASE*        = 044004C00H;
+    LPTIM5_BASE*        = 044005000H;
+    LPTIM6_BASE*        = 044005400H;
+    VREFBUF_BASE*       = 044007400H;
+    RTC_BASE*           = 044007800H;
+    TAMP_BASE*          = 044007C00H;
 
     (* AHB3 *)
-    LPGPIO1_BASE*       = 046020000H;
-    PWR_BASE*           = 046020800H;
-    RCC_BASE*           = 046020C00H;
-    ADC4_BASE*          = 046021000H;
-    DAC1_BASE*          = 046021800H;
-    EXTI_BASE*          = 046022000H;
-    GTZC2_TZSC_BASE*    = 046023000H;
-    GTZC2_TZIC_BASE*    = 046023400H;
-    GTZC2_MPCBB4_BASE*  = 046023800H;
-    ADF1_BASE*          = 046024000H;
-    LPDMA1_BASE*        = 046025000H;
+    PWR_BASE*           = 044020800H;
+    RCC_BASE*           = 044020C00H;
+    EXTI_BASE*          = 044022000H;
+    DEBUG_BASE*         = 044024000H;
+
+    (* AHB4 *)
+    OTFDEC1_BASE*       = 046005000H;
+    SDMMC1_BASE*        = 046008000H;
+    DLYBSD1_BASE*       = 046008400H;
+    DLYBSD2_BASE*       = 046008800H;
+    SDMMC2_BASE*        = 046008C00H;
+    DLYBOS1_BASE*       = 04600F000H;
+    FMC_BASE*           = 047000400H;
+    OCTOSPI1_BASE*      = 047001400H;
+
 
     (* PPB *)
     PPB_BASE*           = 0E0000000H;
@@ -209,111 +212,6 @@ MODULE MCU2;
     TIM_AF2_Offset*    = 0064H; (* TIM1, TIM2, TIM3, TIM4, TIM5, TIM8, TIM15, TIM16, TIM17 *)
     TIM_DCR_Offset*    = 03DCH; (* TIM1, TIM2, TIM3, TIM4, TIM5, TIM8, TIM15, TIM16, TIM17 *)
     TIM_DMAR_Offset*   = 03E0H; (* TIM1, TIM2, TIM3, TIM4, TIM5, TIM8, TIM15, TIM16, TIM17 *)
-
-    (* -- TIM2, TIM3, TIM4, TIM5 -- *)
-    TIM2_CR1_Offset*    = 0000H;
-    TIM2_CR2_Offset*    = 0004H;
-    TIM2_SMCR_Offset*   = 0008H;
-    TIM2_DIER_Offset*   = 000CH;
-    TIM2_SR_Offset*     = 0010H;
-    TIM2_EGR_Offset*    = 0014H;
-    TIM2_CCMR1_Offset*  = 0018H;
-    TIM2_CCMR2_Offset*  = 001CH;
-    TIM2_CCER_Offset*   = 0020H;
-    TIM2_CNT_Offset*    = 0024H;
-    TIM2_PSC_Offset*    = 0028H;
-    TIM2_ARR_Offset*    = 002CH;
-    (* 0030H *)
-    TIM2_CCR1_Offset*   = 0034H;
-    TIM2_CCR2_Offset*   = 0038H;
-    TIM2_CCR3_Offset*   = 003CH;
-    TIM2_CCR4_Offset*   = 0040H;
-    (* 0044H *)
-    (* 0048H *)
-    (* 004CH *)
-    (* 0050H *)
-    (* 0054H *)
-    TIM2_ECR_Offset*    = 0058H;
-    TIM2_TISEL_Offset*  = 005CH;
-    TIM2_AF1_Offset*    = 0060H;
-    TIM2_AF2_Offset*    = 0064H;
-    TIM2_DCR_Offset*    = 03DCH;
-    TIM2_DMAR_Offset*   = 03E0H;
-
-
-    (* -- TIM6, TIM7 -- *)
-    TIM6_CR1_Offset*   = 000H;
-    TIM6_CR2_Offset*   = 004H;
-    (* 0008H*)
-    TIM6_DIER_Offset*  = 00CH;
-    TIM6_SR_Offset*    = 010H;
-    TIM6_EGR_Offset*   = 014H;
-    (* 0018 *)
-    (* 001C *)
-    (* 0020 *)
-    TIM6_CNT_Offset*   = 024H;
-    TIM6_PSC_Offset*   = 028H;
-    TIM6_ARR_Offset*   = 02CH;
-
-    (* -- TIM15 -- *)
-    TIM15_CR1_Offset*   = 0000H;
-    TIM15_CR2_Offset*   = 0004H;
-    TIM15_SMCR_Offset*  = 0008H;
-    TIM15_DIER_Offset*  = 000CH;
-    TIM15_SR_Offset*    = 0010H;
-    TIM15_EGR_Offset*   = 0014H;
-    TIM15_CCMR1_Offset* = 0018H;
-    (* 001C *)
-    TIM15_CCER_Offset*  = 0020H;
-    TIM15_CNT_Offset*   = 0024H;
-    TIM15_PSC_Offset*   = 0028H;
-    TIM15_ARR_Offset*   = 002CH;
-    TIM15_RCR_Offset*   = 0030H;
-    TIM15_CCR1_Offset*  = 0034H;
-    TIM15_CCR2_Offset*  = 0038H;
-    (* 003CH *)
-    (* 0040H *)
-    TIM15_BDTR_Offset*   = 0044H;
-    (* 0048H *)
-    (* 004CH *)
-    (* 0050H *)
-    TIM15_DTR2_Offset*   = 0054H;
-    (* 0058H *)
-    TIM15_TISEL_Offset*   = 005CH;
-    TIM15_AF1_Offset*   = 0060H;
-    TIM15_AF2_Offset*   = 0064H;
-    TIM15_DCR_Offset*   = 03DCH;
-    TIM15_DMAR_Offset*   = 03E0H;
-
-    (* -- TIM16, TIM17 -- *)
-    TIM16_CR1_Offset*   = 0000H;
-    TIM16_CR2_Offset*   = 0004H;
-    (* 0008H *)
-    TIM16_DIER_Offset*  = 000CH;
-    TIM16_SR_Offset*    = 0010H;
-    TIM16_EGR_Offset*   = 0014H;
-    TIM16_CCMR1_Offset*   = 0018H;
-    (* 001CH *)
-    TIM16_CCER_Offset*   = 0020H;
-    TIM16_CNT_Offset*   = 0024H;
-    TIM16_PSC_Offset*   = 0028H;
-    TIM16_ARR_Offset*   = 002CH;
-    TIM16_RCR_Offset*   = 0030H;
-    TIM16_CCR1_Offset*   = 0034H;
-    (* 0038H *)
-    (* 003CH *)
-    (* 0040H *)
-    TIM16_BDTR_Offset*   = 0044H;
-    (* 0048H *)
-    (* 004CH *)
-    (* 0050H *)
-    TIM16_DTR2_Offset*   = 0054H;
-    (* 0058H *)
-    TIM16_TISEL_Offset*   = 005CH;
-    TIM16_AF1_Offset*   = 0060H;
-    TIM16_AF2_Offset*   = 0064H;
-    TIM16_DCR_Offset*   = 03DCH;
-    TIM16_DMAR_Offset*   = 03E0H;
 
 
     (* -- UART -- *)
@@ -350,6 +248,7 @@ MODULE MCU2;
     RAMCFG_M2ICR*       = RAMCFG_BASE + 0054H;
     RAMCFG_M2WPR1*      = RAMCFG_BASE + 0058H;
     RAMCFG_M2WPR2*      = RAMCFG_BASE + 005CH;
+    RAMCFG_M2WPR3*      = RAMCFG_BASE + 0060H;
     RAMCFG_M2ECCKEYR*   = RAMCFG_BASE + 0064H;
     RAMCFG_M2ERKEYR*    = RAMCFG_BASE + 0068H;
 
@@ -362,11 +261,6 @@ MODULE MCU2;
     RAMCFG_M3ICR*       = RAMCFG_BASE + 0094H;
     RAMCFG_M3ECCKEYR*   = RAMCFG_BASE + 00A4H;
     RAMCFG_M3ERKEYR*    = RAMCFG_BASE + 00A8H;
-
-    (* SRAM4 *)
-    RAMCFG_M4CR*        = RAMCFG_BASE + 00C0H;
-    RAMCFG_M4ISR*       = RAMCFG_BASE + 00C8H;
-    RAMCFG_M4ERKEYR*    = RAMCFG_BASE + 00E8H;
 
     (* BKPSRAM *)
     RAMCFG_M5CR*        = RAMCFG_BASE + 0100H;
@@ -430,40 +324,34 @@ MODULE MCU2;
 
 
     (* -- PWR: power control -- *)
-    PWR_CR1*      = PWR_BASE + 000H;
-    PWR_CR2*      = PWR_BASE + 004H;
-    PWR_CR3*      = PWR_BASE + 008H;
-    PWR_VOSR*     = PWR_BASE + 00CH;
-    PWR_SVMCR*    = PWR_BASE + 010H;
-    PWR_WUCR1*    = PWR_BASE + 014H;
-    PWR_WUCR2*    = PWR_BASE + 018H;
-    PWR_WUCR3*    = PWR_BASE + 01CH;
-    PWR_BDCR1*    = PWR_BASE + 020H;
-    PWR_BDCR2*    = PWR_BASE + 024H;
-    PWR_DBPR*     = PWR_BASE + 028H;
-    PWR_UCPDR*    = PWR_BASE + 02CH;
-    PWR_SECCFGR*  = PWR_BASE + 030H;
-    PWR_PRIVCFGR* = PWR_BASE + 034H;
-    PWR_SR*       = PWR_BASE + 038H;
-    PWR_SVMSR*    = PWR_BASE + 03CH;
-    PWR_BDSR*     = PWR_BASE + 040H;
-    PWR_WUSR*     = PWR_BASE + 044H;
-    PWR_WUSCR*    = PWR_BASE + 048H;
-    PWR_APCR*     = PWR_BASE + 04CH;
-
+    PWR_PMCR*     = PWR_BASE + 0000H;
+    PWR_PMSR*     = PWR_BASE + 0004H;
+    PWR_VOSCR*    = PWR_BASE + 0010H;
+    PWR_VOSSR*    = PWR_BASE + 0014H;
+    PWR_BDCR*     = PWR_BASE + 0020H;
+    PWR_DBPCR*    = PWR_BASE + 0024H;
+    PWR_BDSR*     = PWR_BASE + 0028H;
+    PWR_UCPDR*    = PWR_BASE + 002CH;
+    PWR_SCCR*     = PWR_BASE + 0030H;
+    PWR_VMCR*     = PWR_BASE + 0034H;
+    PWR_USBSCR*   = PWR_BASE + 0038H;
+    PWR_VMSR*     = PWR_BASE + 003CH;
+    PWR_WUSCR*    = PWR_BASE + 0040H;
+    PWR_WUSR*     = PWR_BASE + 0044H;
+    PWR_WUCR*     = PWR_BASE + 0048H;
+    PWR_IORETR*   = PWR_BASE + 0050H;
+    PWR_SECCFGR*  = PWR_BASE + 0100H;
+    PWR_PRIVCFGR* = PWR_BASE + 0104H;
 
 
     (* -- RCC: reset and clock control -- *)
     (* ref manual ch11, p604 *)
     RCC_CR*             = RCC_BASE + 0000H;
-    RCC_ICSCR1*         = RCC_BASE + 0008H;
-    RCC_ICSCR2*         = RCC_BASE + 000CH;
-    RCC_ICSCR3*         = RCC_BASE + 0010H;
+    RCC_HSICFGR*        = RCC_BASE + 0010H;
     RCC_CRRCR*          = RCC_BASE + 0014H;
+    RCC_CSICFGR*        = RCC_BASE + 0018H;
     RCC_CFGR1*          = RCC_BASE + 001CH;
     RCC_CFGR2*          = RCC_BASE + 0020H;
-    RCC_CFGR3*          = RCC_BASE + 0024H;
-
     RCC_PLL1CFGR*       = RCC_BASE + 0028H;
     RCC_PLL2CFGR*       = RCC_BASE + 002CH;
     RCC_PLL3CFGR*       = RCC_BASE + 0030H;
@@ -473,58 +361,56 @@ MODULE MCU2;
     RCC_PLL2FRACR*      = RCC_BASE + 0040H;
     RCC_PLL3DIVR*       = RCC_BASE + 0044H;
     RCC_PLL3FRACR*      = RCC_BASE + 0048H;
-
     RCC_CIER*           = RCC_BASE + 0050H;
     RCC_CIFR*           = RCC_BASE + 0054H;
     RCC_CICR*           = RCC_BASE + 0058H;
 
     RCC_AHB1RSTR*       = RCC_BASE + 0060H;
-    RCC_AHB2RSTR1*      = RCC_BASE + 0064H;
-    RCC_AHB2RSTR2*      = RCC_BASE + 0068H;
-    RCC_AHB3RSTR*       = RCC_BASE + 006CH;
-    RCC_APB1RSTR1*      = RCC_BASE + 0074H;
-    RCC_APB1RSTR2*      = RCC_BASE + 0078H;
+    RCC_AHB2RSTR*       = RCC_BASE + 0064H;
+    RCC_AHB4RSTR*       = RCC_BASE + 006CH;
+    RCC_APB1LRSTR*      = RCC_BASE + 0074H;
+    RCC_APB1HRSTR*      = RCC_BASE + 0078H;
     RCC_APB2RSTR*       = RCC_BASE + 007CH;
     RCC_APB3RSTR*       = RCC_BASE + 0080H;
 
     RCC_AHB1ENR*        = RCC_BASE + 0088H;
-    RCC_AHB2ENR1*       = RCC_BASE + 008CH;
-    RCC_AHB2ENR2*       = RCC_BASE + 0090H;
-    RCC_AHB3ENR*        = RCC_BASE + 0094H;
-    RCC_APB1ENR1*       = RCC_BASE + 009CH;
-    RCC_APB1ENR2*       = RCC_BASE + 00A0H;
+    RCC_AHB2ENR*        = RCC_BASE + 008CH;
+    RCC_AHB4ENR*        = RCC_BASE + 0094H;
+    RCC_APB1LENR*       = RCC_BASE + 009CH;
+    RCC_APB1HENR*       = RCC_BASE + 00A0H;
     RCC_APB2ENR*        = RCC_BASE + 00A4H;
     RCC_APB3ENR*        = RCC_BASE + 00A8H;
-    RCC_AHB1SMENR*      = RCC_BASE + 00B0H;
-    RCC_AHB2SMENR1*     = RCC_BASE + 00B4H;
-    RCC_AHB2SMENR2*     = RCC_BASE + 00B8H;
-    RCC_AHB3SMENR*      = RCC_BASE + 00BCH;
-    RCC_APB1SMENR1*     = RCC_BASE + 00C4H;
-    RCC_APB1SMENR2*     = RCC_BASE + 00C8H;
-    RCC_APB2SMENR*      = RCC_BASE + 00CCH;
-    RCC_APB3SMENR*      = RCC_BASE + 00D0H;
 
-    RCC_SRDAMR*         = RCC_BASE + 00D8H;
-    RCC_CCIPR1*         = RCC_BASE + 00E0H;
-    RCC_CCIPR2*         = RCC_BASE + 00E4H;
-    RCC_CCIPR3*         = RCC_BASE + 00E8H;
+    RCC_AHB1LPENR*      = RCC_BASE + 00B0H;
+    RCC_AHB2LPENR*      = RCC_BASE + 00B4H;
+    RCC_AHB4LPENR*      = RCC_BASE + 00BCH;
+    RCC_APB1LLPENR*     = RCC_BASE + 00C4H;
+    RCC_APB1HLPENR*     = RCC_BASE + 00C8H;
+    RCC_APB2LPENR*      = RCC_BASE + 00CCH;
+    RCC_APB3LPENR*      = RCC_BASE + 00D0H;
+    RCC_CCIPR1*         = RCC_BASE + 00D8H;
+    RCC_CCIPR2*         = RCC_BASE + 00DCH;
+    RCC_CCIPR3*         = RCC_BASE + 00E0H;
+    RCC_CCIPR4*         = RCC_BASE + 00E4H;
+    RCC_CCIPR5*         = RCC_BASE + 00E8H;
     RCC_BBCR*           = RCC_BASE + 00F0H;
-    RCC_CSR*            = RCC_BASE + 00F4H;
-
+    RCC_RSR*            = RCC_BASE + 00F4H;
     RCC_SECCFGR*        = RCC_BASE + 0110H;
     RCC_PRIVCFGR*       = RCC_BASE + 0114H;
 
-    (* RCC_AHB1ENR, RCC_AHB1RSTR, RCC_AHB1SMENR *)
-    DEV_GPDMA*    = 0;
-    DEV_CORDIC*   = 1;
-    DEV_FMAC*     = 2;
+
+    (* RCC_AHB1ENR, RCC_AHB1LPENR, RCC_AHB1RSTR *)
+    DEV_GPDMA1*   = 0;
+    DEV_GPDMA2*   = 1;
     DEV_FLASH*    = 8;  (* no reset *)
+    DEV_FMAC*     = 15;
     DEV_RAMCFG*   = 17;
     DEV_BKPSRAM*  = 28; (* no reset *)
-    DEV_DCACHE1*  = 30; (* no reset *)
+    DEV_ICACHE*   = 29; (* no non-lp en, no reset *)
+    DEV_DCACHE*   = 30; (* no reset *)
     DEV_SRAM1*    = 31; (* no reset *)
 
-    (* RCC_AHB2ENR1, RCC_AHB2RSTR1, RCC_AHB2SMENR1 *)
+    (* RCC_AHB2ENR, RCC_AHB2LPENR, RCC_AHB2RSTR *)
     DEV_GPIOA*    = 32 + 0;
     DEV_GPIOB*    = 32 + 1;
     DEV_GPIOC*    = 32 + 2;
@@ -537,36 +423,43 @@ MODULE MCU2;
     DEV_SRAM2*    = 32 + 30; (* no reset *)
     DEV_SRAM3*    = 32 + 31; (* no reset *)
 
-    (* RCC_AHB2ENR2, RCC_AHB2RSTR2, RCC_AHB2SMENR2 *)
-    DEV_OCTOSPI1* = 64 + 4;
+    (* note the address gap here *)
 
-    (* RCC_AHB3ENR, RCC_AHB3RSTR, RCC_AHB3SMENR *)
-    DEV_LPGPIO1*  = 96 + 0;
-    DEV_PWR*      = 96 + 2;   (* no reset *)
-    DEV_SRAM4*    = 96 + 31;  (* no reset *)
+    (* RCC_AHB4ENR, RCC_AHB4LPENR, RCC_AHB4RSTR *)
+    DEV_FMC*      = 96 + 16;
 
     (* note the address gap here *)
 
-    (* RCC_APB1ENR1, RCC_APB1RSTR1, RCC_APB1SMENR1 *)
+    (* RCC_APB1LENR, RCC_APB1LLPENR, RCC_APB1LRSTR *)
     DEV_TIM2*     = 160 + 0;
     DEV_TIM3*     = 160 + 1;
     DEV_TIM4*     = 160 + 2;
     DEV_TIM5*     = 160 + 3;
     DEV_TIM6*     = 160 + 4;
     DEV_TIM7*     = 160 + 5;
+    DEV_TIM12*    = 160 + 6;
+    DEV_TIM13*    = 160 + 7;
+    DEV_TIM14*    = 160 + 8;
     DEV_SPI2*     = 160 + 14;
+    DEV_SPI3*     = 160 + 15;
     DEV_USART2*   = 160 + 17;
     DEV_USART3*   = 160 + 18;
     DEV_UART4*    = 160 + 19;
     DEV_UART5*    = 160 + 20;
     DEV_I2C1*     = 160 + 21;
     DEV_I2C2*     = 160 + 22;
+    DEV_I3C1*     = 160 + 23;
+    DEV_USART6*   = 160 + 25;
+    DEV_USART10*  = 160 + 26;
+    DEV_USART11*  = 160 + 27;
+    DEV_UART7*    = 160 + 30;
+    DEV_UART8*    = 160 + 31;
 
-    (* RCC_APB1ENR2, RCC_APB1RSTR2, RCC_APB1SMENR2 *)
-    DEV_I2C4*     = 192 + 1;
-    DEV_LPTIM2*   = 192 + 5;
+    (* RCC_APB1HENR, RCC_APB1HLPENR, RCC_APB1HRSTR *)
+    DEV_UART9*    = 192 + 0;
+    DEV_UART12*   = 192 + 1;
 
-    (* RCC_APB2ENR, RCC_APB2RSTR, RCC_APB2SMENR *)
+    (* RCC_APB2ENR, RCC_APB2LPENR, RCC_APB2RSTR *)
     DEV_TIM1*     = 224 + 11;
     DEV_SPI1*     = 224 + 12;
     DEV_TIM8*     = 224 + 13;
@@ -574,17 +467,22 @@ MODULE MCU2;
     DEV_TIM15*    = 224 + 16;
     DEV_TIM16*    = 224 + 17;
     DEV_TIM17*    = 224 + 18;
+    DEV_SPI4*     = 224 + 19;
+    DEV_SPI6*     = 224 + 20;
 
-    (* RCC_APB3ENR, RCC_APB3RSTR, RCC_APB3SMENR *)
-    DEV_SYSCFG*   = 256 + 1;
-    DEV_SPI3*     = 256 + 5;
+    (* RCC_APB3ENR, RCC_APB3LPENR, RCC_APB3RSTR *)
+    DEV_SBS*      = 256 + 1;
+    DEV_SPI5*     = 256 + 5;
     DEV_LPUART1*  = 256 + 6;
     DEV_I2C3*     = 256 + 7;
+    DEV_I2C4*     = 256 + 8;
+    DEV_I3C2*     = 256 + 9;
     DEV_LPTIM1*   = 256 + 11;
     DEV_LPTIM3*   = 256 + 12;
     DEV_LPTIM4*   = 256 + 13;
-    DEV_OPAMP*    = 256 + 14;
-    DEV_COMP*     = 256 + 15;
+    DEV_LPTIM5*   = 256 + 14;
+    DEV_LPTIM6*   = 256 + 15;
+
 
 (* == PPB: private peripheral bus == *)
 
@@ -613,7 +511,7 @@ MODULE MCU2;
     (* -- IRQ numbers -- *)
     IRQ_BASE*           = 16; (* exc no = IRQ_BASE + IRQ number *)
     IRQ_WWDG*           = 0;
-    IRQ_PVD_PVM*        = 1;
+    IRQ_PVD_AVD*        = 1;
     IRQ_RTC*            = 2;
     IRQ_RTC_S*          = 3;
     IRQ_TAMP*           = 4;
@@ -639,17 +537,17 @@ MODULE MCU2;
     IRQ_EXTI13*         = 24;
     IRQ_EXTI14*         = 25;
     IRQ_EXTI15*         = 26;
-    IRQ_IWDG*           = 27;
-    IRQ_SAES*           = 28;
-    IRQ_GPDMA1_CH0*     = 29;
-    IRQ_GPDMA1_CH1*     = 30;
-    IRQ_GPDMA1_CH2*     = 31;
-    IRQ_GPDMA1_CH3*     = 32;
-    IRQ_GPDMA1_CH4*     = 33;
-    IRQ_GPDMA1_CH5*     = 34;
-    IRQ_GPDMA1_CH6*     = 35;
-    IRQ_GPDMA1_CH7*     = 36;
-    IRQ_ADC12*          = 37;
+    IRQ_GPDMA1_CH0*     = 27;
+    IRQ_GPDMA1_CH1*     = 28;
+    IRQ_GPDMA1_CH2*     = 29;
+    IRQ_GPDMA1_CH3*     = 30;
+    IRQ_GPDMA1_CH4*     = 31;
+    IRQ_GPDMA1_CH5*     = 32;
+    IRQ_GPDMA1_CH6*     = 33;
+    IRQ_GPDMA1_CH7*     = 34;
+    IRQ_IWDG*           = 35;
+    IRQ_SAES*           = 36;
+    IRQ_ADC1*           = 37;
     IRQ_DAC1*           = 38;
     IRQ_FDCAN1_0*       = 39;
     IRQ_FDCAN1_1*       = 40;
@@ -663,98 +561,86 @@ MODULE MCU2;
     IRQ_TIM5*           = 48;
     IRQ_TIM6*           = 49;
     IRQ_TIM7*           = 50;
-    IRQ_TIM8_0*         = 51; (* TIM8_BRK, TIM8_TERR, TIM8_IERR *)
-    IRQ_TIM8_UP*        = 52;
-    IRQ_TIM8_1*         = 53; (* TIM8_TRG_COM, TIM8_DIR, TIM8_IDX *)
-    IRQ_TIM8_CC*        = 54;
-    IRQ_I2C1_EV*        = 55;
-    IRQ_I2C1_ER*        = 56;
-    IRQ_I2C2_EV*        = 57;
-    IRQ_I2C2_ER*        = 58;
-    IRQ_SPI1*           = 59;
-    IRQ_SPI2*           = 60;
-    IRQ_USART1*         = 61;
-    IRQ_USART2*         = 62;
-    IRQ_USART3*         = 63;
-    IRQ_UART4*          = 64;
-    IRQ_UART5*          = 65;
-    IRQ_LPUART1*        = 66;
-    IRQ_LPTIM1*         = 67;
-    IRQ_LPTIM2*         = 68;
-    IRQ_TIM15*          = 69;
-    IRQ_TIM16*          = 70;
-    IRQ_TIM17*          = 71;
-    IRQ_COMP*           = 72;
-    IRQ_USB*            = 73;
-    IRQ_CRS*            = 74;
-    IRQ_FMC*            = 75;
-    IRQ_OCTOSPI1*       = 76;
-    IRQ_PWR_S3WU*       = 77;
-    IRQ_SDMMC1*         = 78;
-    IRQ_SDMMC2*         = 79;
-    IRQ_GPDMA1_CH8*     = 80;
-    IRQ_GPDMA1_CH9*     = 81;
-    IRQ_GPDMA1_CH10*    = 82;
-    IRQ_GPDMA1_CH11*    = 83;
-    IRQ_GPDMA1_CH12*    = 84;
-    IRQ_GPDMA1_CH13*    = 85;
-    IRQ_GPDMA1_CH14*    = 86;
-    IRQ_GPDMA1_CH15*    = 87;
-    IRQ_I2C3_EV*        = 88;
-    IRQ_I2C3_ER*        = 89;
-    IRQ_SAI1*           = 90;
-    IRQ_SAI2*           = 91;
-    IRQ_TSC*            = 92;
-    IRQ_AES*            = 93;
-    IRQ_RNG*            = 94;
-    IRQ_FPU*            = 95;
-    IRQ_HASH*           = 96;
-    IRQ_PKA*            = 97;
-    IRQ_LPTIM3*         = 98;
-    IRQ_SPI3*           = 99;
-    IRQ_I2C4_EV*        = 100;
-    IRQ_I2C4_ER*        = 101;
-    IRQ_MDF1_FLT0*      = 102;
-    IRQ_MDF1_FLT1*      = 103;
-    IRQ_MDF1_FLT2*      = 104;
-    IRQ_MDF1_FLT3*      = 105;
-    IRQ_UCPD1*          = 106;
-    IRQ_ICACHE*         = 107;
-    IRQ_OTFDEC1*        = 108;
-    IRQ_OTFDEC2*        = 109;
-    IRQ_LPTIM4*         = 110;
-    IRQ_DCACHE1*        = 111;
-    IRQ_ADF1_FLT0*      = 112;
-    IRQ_ADC4*           = 113;
-    IRQ_LPDMA1_CH0*     = 114;
-    IRQ_LPDMA1_CH1*     = 115;
-    IRQ_LPDMA1_CH2*     = 116;
-    IRQ_LPDMA1_CH3*     = 117;
-    IRQ_DMA2D*          = 118;
-    IRQ_DCMI_PSSI*      = 119;
-    IRQ_OCTOSPI2*       = 120;
-    IRQ_MDF1_FLT4*      = 121;
-    IRQ_MDF1_FLT5*      = 122;
-    IRQ_CORDIC*         = 123;
-    IRQ_FMAC*           = 124;
-    IRQ_LSECSS*         = 125;
-    (* the reserved IRQs are not wired and available via NVIC regs *)
-    (* that is, they cannot be used for SW *)
-    IRQ_Reserved_126*   = 126;  (* USART6 *)
-    IRQ_Reserved_127*   = 127;  (* I2C5_ER *)
-    IRQ_Reserved_128*   = 128;  (* I2C5_EV *)
-    IRQ_Reserved_129*   = 129;  (* I2C6_ER *)
-    IRQ_Reserved_130*   = 130;  (* I2C6_EV *)
-    IRQ_Reserved_131*   = 131;  (* HSPI1 *)
-    IRQ_Reserved_132*   = 132;  (* GPU2D *)
-    IRQ_Reserved_133*   = 133;  (* GPU2D_SYS *)
-    IRQ_Reserved_134*   = 134;  (* GFXMMU *)
-    IRQ_Reserved_135*   = 135;  (* LCDC *)
-    IRQ_Reserved_136*   = 136;  (* LCDC_ERR *)
-    IRQ_Reserved_137*   = 137;  (* DSIHOST *)
-    IRQ_Reserved_138*   = 138;  (* DCACHE2 *)
-    IRQ_Reserved_139*   = 139;  (* GFXTIM *)
-    IRQ_Reserved_140*   = 140;  (* JPEG *)
+    IRQ_I2C1_EV*        = 51;
+    IRQ_I2C1_ER*        = 52;
+    IRQ_I2C2_EV*        = 53;
+    IRQ_I2C2_ER*        = 54;
+    IRQ_SPI1*           = 55;
+    IRQ_SPI2*           = 56;
+    IRQ_SPI3*           = 57;
+    IRQ_USART1*         = 58;
+    IRQ_USART2*         = 59;
+    IRQ_USART3*         = 60;
+    IRQ_UART4*          = 61;
+    IRQ_UART5*          = 62;
+    IRQ_LPUART1*        = 63;
+    IRQ_LPTIM1*         = 64;
+    IRQ_TIM8_0*         = 65; (* TIM8_BRK, TIM8_TERR, TIM8_IERR *)
+    IRQ_TIM8_UP*        = 66;
+    IRQ_TIM8_1*         = 67; (* TIM8_TRG_COM, TIM8_DIR, TIM8_IDX *)
+    IRQ_TIM8_CC*        = 68;
+    IRQ_ADC2*           = 69;
+    IRQ_LPTIM2*         = 70;
+    IRQ_TIM15*          = 71;
+    IRQ_TIM16*          = 72;
+    IRQ_TIM17*          = 73;
+    IRQ_USB*            = 74;
+    IRQ_CRS*            = 75;
+    IRQ_UCPD1*          = 76;
+    IRQ_FMC*            = 77;
+    IRQ_OCTOSPI1*       = 78;
+    IRQ_SDMMC1*         = 79;
+    IRQ_I2C3_EV*        = 80;
+    IRQ_I2C3_ER*        = 81;
+    IRQ_SPI4*           = 82;
+    IRQ_SPI5*           = 83;
+    IRQ_SPI6*           = 84;
+    IRQ_USART6*         = 85;
+    IRQ_USART10*        = 86;
+    IRQ_USART11*        = 87;
+    IRQ_SAI1*           = 88;
+    IRQ_SAI2*           = 89;
+    IRQ_GPDMA2_CH0*     = 90;
+    IRQ_GPDMA2_CH1*     = 91;
+    IRQ_GPDMA2_CH2*     = 92;
+    IRQ_GPDMA2_CH3*     = 93;
+    IRQ_GPDMA2_CH4*     = 94;
+    IRQ_GPDMA2_CH5*     = 95;
+    IRQ_GPDMA2_CH6*     = 96;
+    IRQ_GPDMA2_CH7*     = 97;
+    IRQ_UART7*          = 98;
+    IRQ_UART8*          = 99;
+    IRQ_UART9*          = 100;
+    IRQ_UART12*         = 101;
+    IRQ_SDMMC2*         = 102;
+    IRQ_FPU*            = 103;
+    IRQ_ICACHE*         = 104;
+    IRQ_DCACHE*         = 105;
+    IRQ_ETH*            = 106;
+    IRQ_ETH_WKUP*       = 107;
+    IRQ_DCMI_PSSI*      = 108;
+    IRQ_FDCAN2_0*       = 109;
+    IRQ_FDCAN2_1*       = 110;
+    IRQ_CORDIC*         = 111;
+    IRQ_FMAC*           = 112;
+    IRQ_DTS*            = 113;
+    IRQ_RNG*            = 114;
+    IRQ_OTFDEC1*        = 115;
+    IRQ_AES*            = 116;
+    IRQ_HASH*           = 117;
+    IRQ_PKA*            = 118;
+    IRQ_CEC*            = 119;
+    IRQ_TIM12*          = 120;
+    IRQ_TIM13*          = 121;
+    IRQ_TIM14*          = 122;
+    IRQ_I3C1_EV*        = 123;
+    IRQ_I3C1_ER*        = 124;
+    IRQ_I3C2_EV*        = 125;
+    IRQ_I3C2_ER*        = 126;
+    IRQ_LPTIM3*         = 127;
+    IRQ_LPTIM4*         = 128;
+    IRQ_LPTIM5*         = 129;
+    IRQ_LPTIM6*         = 130;
 
     (* IRQ for SW use *)
     (* no general definitions *)
@@ -777,15 +663,6 @@ MODULE MCU2;
     SysExc*  = {3, 4, 5, 6, 11, 14, 15};
 
     (* -- exception priorities, 4 bits *)
-    ExcPrio0*   = 000H; (* 0000 0000 *)
-    ExcPrio1*   = 020H; (* 0010 0000 *)
-    ExcPrio2*   = 040H; (* 0100 0000 *)
-    ExcPrio3*   = 060H; (* 0110 0000 *)
-    ExcPrio4*   = 080H; (* 1000 0000 *)
-    ExcPrio5*   = 0A0H; (* 1010 0000 *)
-    ExcPrio6*   = 0C0H; (* 1100 0000 *)
-    ExcPrio7*   = 0E0H; (* 1110 0000 *)
-
     ExcPrio00*  = 000H; (* 0000 0000 *)
     ExcPrio10*  = 010H; (* 0001 0000 *)
     ExcPrio20*  = 020H; (* 0010 0000 *)
@@ -811,7 +688,7 @@ MODULE MCU2;
     ExcPrioLow*    = ExcPrioF0;
 
     (* -- vector table -- *)
-    VectorTableSize*        = 628; (* bytes: 16 sys exceptions + 141 interrupts, one word each *)
+    VectorTableSize*        = 548; (* bytes: 16 sys exceptions + 121 interrupts, one word each *)
     EXC_Reset_Offset*       = 004H;
     EXC_NMI_Offset*         = 008H;
     EXC_HardFault_Offset*   = 00CH;

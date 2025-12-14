@@ -9,7 +9,7 @@ MODULE Terminals;
   See module Out for a use case
   Each terminal can only be opened once.
   --
-  MCU: STM32U585AI
+  MCU: STM32U585AI, STM32H573II
   --
   Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

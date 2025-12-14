@@ -6,7 +6,7 @@ MODULE Memory;
   * heap memory allocation
   * stacks allocation
   --
-  MCU: STM32U585AI
+  MCU: STM32U585AI, STM32H573II
   --
   Copyright (c) 2023-2025 Gray, gray@grayraven.org
   Portions copyright (c) 2012-2021 CFB Software, https://www.astrobe.com

@@ -1,12 +1,12 @@
-MODULE StacktrK2C2;
+MODULE StacktrK2C1;
 (**
   Oberon RTK Framework v3.0
   --
   Example/test program
   https://oberon-rtk.org/docs/examples/v2/stacktrace
   --
-  MCU: STM32U585AI
-  Board: B-U585I-IOT02A
+  MCU: STM32H573II
+  Board: STM32H573I-DK
   --
   Kernel-v1
   --
@@ -18,37 +18,87 @@ MODULE StacktrK2C2;
     SYSTEM, MCU := MCU2, Main, Kernel, Errors, Exceptions;
 
   CONST
-    IntNo0 = MCU.IRQ_SPI3;
-    IntNo1 = MCU.IRQ_LPTIM4;
+    IntNo0 = MCU.IRQ_SPI5;
+    IntNo1 = MCU.IRQ_SPI6;
 
     ThreadStackSize = 1024;
     MicrosecsPerTick = 10000;
 
+    CaseError = 0;
+    CaseFault = 1;
+    Case = CaseError;
+
   VAR
     p: PROCEDURE;
 
+  PROCEDURE* fault;
+  (* trigger MCU fault *)
+    VAR x: INTEGER;
+  BEGIN
+    x := MCU.PPB_NVIC_ISER0 + 1;
+    SYSTEM.PUT(x, x)
+  END fault;
 
-  PROCEDURE* i0[0];
+  PROCEDURE* error;
+  (* trigger runtime error *)
     VAR x: INTEGER;
   BEGIN
     x := 0; x := x DIV x
+  END error;
+
+  PROCEDURE i2;
+  BEGIN
+    IF Case = 0 THEN
+      error
+    ELSE
+      fault
+    END
+  END i2;
+
+  PROCEDURE i1;
+  BEGIN
+    i2
+  END i1;
+
+  PROCEDURE i0[0];
+  BEGIN
+    i1
   END i0;
 
-  PROCEDURE* h0[0];
-    VAR x: INTEGER;
+  PROCEDURE h2;
   BEGIN
-    x := 13;
     (* set int for i0 pending *)
     SYSTEM.PUT(MCU.PPB_NVIC_ISPR0 + ((IntNo1 DIV 32) * 4), {IntNo1 MOD 32});
     SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
-    (*x := 17*)
+  END h2;
+
+  PROCEDURE h1;
+  (* FPU operation to test correct stack trace on RP2350 *)
+  (* on core 0 only: FPU on core 1 not enabled *)
+    VAR r: REAL;
+  BEGIN
+    r := 1.0;
+    r := r / r;
+    h2
+  END h1;
+
+  PROCEDURE h0[0];
+  BEGIN
+    h1
   END h0;
 
-  PROCEDURE* p1;
+  PROCEDURE p1a;
+    VAR x: INTEGER;
+  BEGIN
+    x := 42
+  END p1a;
+
+  PROCEDURE p1;
   BEGIN
     (* set int for h0 pending *)
     SYSTEM.PUT(MCU.PPB_NVIC_ISPR0 + ((IntNo0 DIV 32) * 4), {IntNo0 MOD 32});
-    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB);
+    p1a
   END p1;
 
   PROCEDURE p0;
@@ -75,7 +125,7 @@ MODULE StacktrK2C2;
   PROCEDURE run0;
     VAR
       t0: Kernel.Thread;
-      x, tid0: INTEGER;
+      res, tid0: INTEGER;
   BEGIN
     (* in main stack *)
     Exceptions.InstallIntHandler(IntNo0, h0);
@@ -85,14 +135,14 @@ MODULE StacktrK2C2;
     Exceptions.SetIntPrio(IntNo1, MCU.ExcPrio40);
     Exceptions.EnableInt(IntNo1);
     Kernel.Install(MicrosecsPerTick);
-    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, x); ASSERT(x = Kernel.OK, Errors.ProgError);
+    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.ProgError);
     Kernel.Enable(t0);
-    (* threads will use their stacks, exceptions will use main stack *)
-    Kernel.Run (* will reset MSP to top *)
+    (* threads will use in their stacks, exceptions will use main stack *)
+    Kernel.Run (* resets MSP to top *)
     (* we'll not return here *)
   END run0;
 
 BEGIN
   p := p0;
   run0
-END StacktrK2C2.
+END StacktrK2C1.
