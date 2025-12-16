@@ -20,7 +20,7 @@ MODULE StacktrK2C0;
 
   CONST
     ThreadStackSize = 1024;
-    MicrosecsPerTick = 10000;
+    MillisecsPerTick = 10;
 
     CaseError = 0;
     CaseFault = 1;
@@ -85,7 +85,7 @@ MODULE StacktrK2C0;
       x, tid0: INTEGER;
   BEGIN
     (* in main stack *)
-    Kernel.Install(MicrosecsPerTick);
+    Kernel.Install(MillisecsPerTick);
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, x); ASSERT(x = Kernel.OK, Errors.ProgError);
     Kernel.Enable(t0);
     (* threads will use in their stacks, exceptions will use main stack *)

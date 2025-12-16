@@ -3,8 +3,10 @@ MODULE RAM;
   Oberon RTK Framework
   Version: v3.0
   --
-  Embedded SRAM management
+  Embedded SRAM configuration controller driver
   Wait state values: ref manual 6.3.4
+  --
+  Type: MCU
   --
   MCU: STM32U585AI
   --
@@ -15,20 +17,20 @@ MODULE RAM;
   IMPORT SYSTEM, MCU := MCU2, Errors;
 
   CONST
-    SRAM1* = 1;
-    SRAM2* = 2;
-    SRAM3* = 3;
-    SRAM4* = 4;
-    BKPSRAM* = 5;
-    SRAM* = {1 .. 5};
-    ECCSRAM* = {2, 3, 5};
+    SRAM1* = 0;
+    SRAM2* = 1;
+    SRAM3* = 2;
+    SRAM4* = 3;
+    BKPSRAM* = 4;
+    SRAM* = {SRAM1 .. BKPSRAM};
+    ECCSRAM* = {SRAM2, SRAM3, BKPSRAM};
 
 
   PROCEDURE* SetWaitStates*(sram, ws: INTEGER);
     VAR addr, val: INTEGER;
   BEGIN
     ASSERT(sram IN SRAM, Errors.PreCond);
-    addr := MCU.RAMCFG_M1CR + (MCU.RAMCFG_Offset * (sram - 1));
+    addr := MCU.RAMCFG_M1CR + (MCU.RAMCFG_Offset * sram);
     SYSTEM.GET(addr, val);
     BFI(val, 18, 16, ws);
     SYSTEM.PUT(addr, val)

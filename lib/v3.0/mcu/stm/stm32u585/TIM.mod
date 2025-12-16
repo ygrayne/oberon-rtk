@@ -9,7 +9,10 @@ MODULE TIM;
   TIM6, TIM7: basic
   TIM15: general purpose
   TIM16, TIM17: general purpose
-  Advanced functionality for more capable timers is not yet implemented.
+  --
+  Note: advanced functionality for more capable timers is not yet implemented.
+  --
+  Type: MCU
   --
   MCU: STM32U585AI
   --

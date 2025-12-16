@@ -3,7 +3,10 @@ MODULE RST;
   Oberon RTK Framework
   Version: v3.0
   --
-  Resets
+  Resets via RCC
+  Always clocked
+  --
+  Type: MCU
   --
   MCU: STM32H573II
   --

@@ -21,7 +21,7 @@ MODULE K4base;
     RunPrio = MCU.ExcPrio4;
     RunIntNo = MCU.IRQ_SPI3;
     SysTickPrio = MCU.ExcPrio2;
-    MicrosecsPerTick = 500000; (* 500 ms *)
+    MillisecsPerTick = 500; (* 500 ms *)
 
   TYPE
     A0 = POINTER TO A0desc;
@@ -110,7 +110,7 @@ MODULE K4base;
     TIM.Configure(tim, cfg);
     TIM.Enable(tim);
 
-    Kernel.Install(MicrosecsPerTick, SysTickPrio);
+    Kernel.Install(MillisecsPerTick, SysTickPrio);
     Kernel.NewRdyQ(rdyQ, 0, 0);
     Kernel.InstallRdyQ(rdyQ, rdyRun, RunIntNo, RunPrio);
 

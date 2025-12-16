@@ -5,6 +5,8 @@ MODULE Exceptions;
   --
   Exception management
   --
+  Type: Cortex-M33
+  --
   MCU: STM32U585AI, STM32H573II
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
@@ -43,7 +45,7 @@ MODULE Exceptions;
   PROCEDURE* iget(intNo, ireg: INTEGER; VAR value: BOOLEAN);
     VAR x: SET;
   BEGIN
-    (*ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);*)
+    ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);
     SYSTEM.GET(ireg + ((intNo DIV IntPerRegSet) * RegOffset), x);
     value := (intNo MOD IntPerRegSet) IN x
   END iget;

@@ -5,6 +5,8 @@ MODULE GPIO;
   --
   General Purpose IO (GPIO)
   --
+  Type: MCU
+  --
   MCU: STM32H573II
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org
@@ -128,6 +130,5 @@ MODULE GPIO;
     val := set + rst;
     SYSTEM.PUT(gpio + MCU.GPIO_BSRR_Offset, val)
   END Toggle;
-
 
 END GPIO.

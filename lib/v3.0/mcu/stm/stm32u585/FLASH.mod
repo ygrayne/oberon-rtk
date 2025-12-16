@@ -3,8 +3,10 @@ MODULE FLASH;
   Oberon RTK Framework
   Version: v3.0
   --
-  Embedded flash memory
+  Embedded flash memory controller
   Bus clock is enabled after reset
+  --
+  Type: MCU
   --
   Wait state values: ref manual 7.3.3
   --

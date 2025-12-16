@@ -483,7 +483,7 @@ MODULE Kernel;
   END Run;
 
 
-  PROCEDURE Install*(microsecsPerTick, tickPrio: INTEGER);
+  PROCEDURE Install*(msPerTick, tickPrio: INTEGER);
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
     Cores.GetCoreId(cid);
@@ -494,7 +494,7 @@ MODULE Kernel;
     NewRdyQ(ctx.loopRdyQ, cid, 0);
     (* tick *)
     NewActQ(ctx.tickActQ);
-    SysTick.Config(microsecsPerTick, tickPrio, tickHandler)
+    SysTick.Config(msPerTick, tickHandler, tickPrio)
   END Install;
 
 BEGIN

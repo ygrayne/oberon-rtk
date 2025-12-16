@@ -17,7 +17,7 @@ MODULE SignalSync;
   IMPORT Main, Kernel, Out, Cores, Signals, Errors, LED;
 
   CONST
-    MicrosecondsPerTick  = 10000; (* 10 ms *)
+    MillisecsPerTick  = 10;
     ThreadStackSize = 1024;
 
     T0period = 50;
@@ -84,7 +84,7 @@ MODULE SignalSync;
   BEGIN
     NEW(sig); ASSERT(sig # NIL, Errors.HeapOverflow);
     Signals.Init(sig);
-    Kernel.Install(MicrosecondsPerTick);
+    Kernel.Install(MillisecsPerTick);
     (* heartbeat blinker *)
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.ProgError);
     Kernel.Enable(t0);

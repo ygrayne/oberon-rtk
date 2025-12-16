@@ -27,5 +27,6 @@ More info: [https://oberon-rtk.org/docs/examples/](https://oberon-rtk.org/docs/e
     + frdm-mcxa346: FRDM-MCXA346 board
     + frdm-mcxn947: FRDM-MCXN947 board
   + stm
-    + b-u585i-iot: B-U585I-IOT02A board
+    + h573-dk: STM32H573I-DK board
+    + u585i-iot: B-U585I-IOT02A board
 ```

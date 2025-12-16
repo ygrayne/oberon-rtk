@@ -22,7 +22,7 @@ MODULE StacktrK2C1;
     IntNo1 = MCU.IRQ_SPI6;
 
     ThreadStackSize = 1024;
-    MicrosecsPerTick = 10000;
+    MillisecsPerTick = 10;
 
     CaseError = 0;
     CaseFault = 1;
@@ -134,7 +134,7 @@ MODULE StacktrK2C1;
     Exceptions.InstallIntHandler(IntNo1, i0);
     Exceptions.SetIntPrio(IntNo1, MCU.ExcPrio40);
     Exceptions.EnableInt(IntNo1);
-    Kernel.Install(MicrosecsPerTick);
+    Kernel.Install(MillisecsPerTick);
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.ProgError);
     Kernel.Enable(t0);
     (* threads will use in their stacks, exceptions will use main stack *)

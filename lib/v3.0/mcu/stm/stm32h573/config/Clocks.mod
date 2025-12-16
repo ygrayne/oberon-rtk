@@ -22,14 +22,25 @@ MODULE Clocks;
     PLL1P_FREQ* = 240 * 1000000;
     PLL1Q_FREQ* = 160 * 1000000;
     PLL2Q_FREQ* =  48 * 1000000;
+    LSI_FREQ*   = 32000;
 
 
   PROCEDURE Configure*;
-    VAR pllCfg: CLK.PLLcfg; prescCfg: CLK.BusPrescCfg; clkEn: SET;
+    CONST Enabled = 1; Disabled = 0;
+    VAR pllCfg: CLK.PLLcfg; prescCfg: CLK.BusPrescCfg; oscCfg: CLK.OscCfg; lsOscCfg: CLK.LsOscCfg;
   BEGIN
     (* base oscillators *)
-    clkEn := {CLK.HSIen};
-    CLK.EnableOsc(clkEn);
+    (* enable as needed, and implemented on the board. eg. crystals *)
+    oscCfg.hsiEn := Enabled;
+    oscCfg.csiEn := Enabled;
+    oscCfg.hsi48En := Enabled;
+    oscCfg.hseEn := Disabled;
+    CLK.ConfigOsc(oscCfg);
+
+    lsOscCfg.lsiEn := Enabled;
+    lsOscCfg.lseEn := Disabled;
+    CLK.ConfigLsOsc(lsOscCfg);
+
 
     (* PLL for SYSCLK *)
     (* 240 MHz from 32 MHz HSI clock *)

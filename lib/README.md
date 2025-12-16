@@ -48,11 +48,12 @@ Versions lib/v1.0, lib/v2.0, lib/2.1, lib/v3.0
         + pico2: Pico2/RP2350
       + tvi: tiny vision
         + pico2-ice
-      + nxp
+      + nxp: nxp semi
         + frdm-mcxa436
         + frdm-mcxn947
-      + stm
-        + b-u585i-iot
+      + stm: st micro
+        + h573-dk
+        + u585i-iot
     + mcu: MCU-specific
       + rpi: raspberry pi
         + any
@@ -64,7 +65,8 @@ Versions lib/v1.0, lib/v2.0, lib/2.1, lib/v3.0
         + mcxn947: MCXN947
       + stm: st micro
         + any
-        + stm32u585: STMU585
+        + stm32h573: STM32H573
+        + stm32u585: STM32U585
 ```
 
 [https://oberon-rtk.org/docs/lib/](https://oberon-rtk.org/docs/lib/)

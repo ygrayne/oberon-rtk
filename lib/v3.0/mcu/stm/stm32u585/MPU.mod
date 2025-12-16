@@ -3,6 +3,10 @@ MODULE MPU;
   Oberon RTK Framework
   Version: v3.0
   --
+  Memory protection unit
+  --
+  Type: Cortex-M33
+  --
   MCU: STM32U585AI
   --
   Copyright (c) 2025 Gray gray@grayraven.org

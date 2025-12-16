@@ -210,111 +210,6 @@ MODULE MCU2;
     TIM_DCR_Offset*    = 03DCH; (* TIM1, TIM2, TIM3, TIM4, TIM5, TIM8, TIM15, TIM16, TIM17 *)
     TIM_DMAR_Offset*   = 03E0H; (* TIM1, TIM2, TIM3, TIM4, TIM5, TIM8, TIM15, TIM16, TIM17 *)
 
-    (* -- TIM2, TIM3, TIM4, TIM5 -- *)
-    TIM2_CR1_Offset*    = 0000H;
-    TIM2_CR2_Offset*    = 0004H;
-    TIM2_SMCR_Offset*   = 0008H;
-    TIM2_DIER_Offset*   = 000CH;
-    TIM2_SR_Offset*     = 0010H;
-    TIM2_EGR_Offset*    = 0014H;
-    TIM2_CCMR1_Offset*  = 0018H;
-    TIM2_CCMR2_Offset*  = 001CH;
-    TIM2_CCER_Offset*   = 0020H;
-    TIM2_CNT_Offset*    = 0024H;
-    TIM2_PSC_Offset*    = 0028H;
-    TIM2_ARR_Offset*    = 002CH;
-    (* 0030H *)
-    TIM2_CCR1_Offset*   = 0034H;
-    TIM2_CCR2_Offset*   = 0038H;
-    TIM2_CCR3_Offset*   = 003CH;
-    TIM2_CCR4_Offset*   = 0040H;
-    (* 0044H *)
-    (* 0048H *)
-    (* 004CH *)
-    (* 0050H *)
-    (* 0054H *)
-    TIM2_ECR_Offset*    = 0058H;
-    TIM2_TISEL_Offset*  = 005CH;
-    TIM2_AF1_Offset*    = 0060H;
-    TIM2_AF2_Offset*    = 0064H;
-    TIM2_DCR_Offset*    = 03DCH;
-    TIM2_DMAR_Offset*   = 03E0H;
-
-
-    (* -- TIM6, TIM7 -- *)
-    TIM6_CR1_Offset*   = 000H;
-    TIM6_CR2_Offset*   = 004H;
-    (* 0008H*)
-    TIM6_DIER_Offset*  = 00CH;
-    TIM6_SR_Offset*    = 010H;
-    TIM6_EGR_Offset*   = 014H;
-    (* 0018 *)
-    (* 001C *)
-    (* 0020 *)
-    TIM6_CNT_Offset*   = 024H;
-    TIM6_PSC_Offset*   = 028H;
-    TIM6_ARR_Offset*   = 02CH;
-
-    (* -- TIM15 -- *)
-    TIM15_CR1_Offset*   = 0000H;
-    TIM15_CR2_Offset*   = 0004H;
-    TIM15_SMCR_Offset*  = 0008H;
-    TIM15_DIER_Offset*  = 000CH;
-    TIM15_SR_Offset*    = 0010H;
-    TIM15_EGR_Offset*   = 0014H;
-    TIM15_CCMR1_Offset* = 0018H;
-    (* 001C *)
-    TIM15_CCER_Offset*  = 0020H;
-    TIM15_CNT_Offset*   = 0024H;
-    TIM15_PSC_Offset*   = 0028H;
-    TIM15_ARR_Offset*   = 002CH;
-    TIM15_RCR_Offset*   = 0030H;
-    TIM15_CCR1_Offset*  = 0034H;
-    TIM15_CCR2_Offset*  = 0038H;
-    (* 003CH *)
-    (* 0040H *)
-    TIM15_BDTR_Offset*   = 0044H;
-    (* 0048H *)
-    (* 004CH *)
-    (* 0050H *)
-    TIM15_DTR2_Offset*   = 0054H;
-    (* 0058H *)
-    TIM15_TISEL_Offset*   = 005CH;
-    TIM15_AF1_Offset*   = 0060H;
-    TIM15_AF2_Offset*   = 0064H;
-    TIM15_DCR_Offset*   = 03DCH;
-    TIM15_DMAR_Offset*   = 03E0H;
-
-    (* -- TIM16, TIM17 -- *)
-    TIM16_CR1_Offset*   = 0000H;
-    TIM16_CR2_Offset*   = 0004H;
-    (* 0008H *)
-    TIM16_DIER_Offset*  = 000CH;
-    TIM16_SR_Offset*    = 0010H;
-    TIM16_EGR_Offset*   = 0014H;
-    TIM16_CCMR1_Offset*   = 0018H;
-    (* 001CH *)
-    TIM16_CCER_Offset*   = 0020H;
-    TIM16_CNT_Offset*   = 0024H;
-    TIM16_PSC_Offset*   = 0028H;
-    TIM16_ARR_Offset*   = 002CH;
-    TIM16_RCR_Offset*   = 0030H;
-    TIM16_CCR1_Offset*   = 0034H;
-    (* 0038H *)
-    (* 003CH *)
-    (* 0040H *)
-    TIM16_BDTR_Offset*   = 0044H;
-    (* 0048H *)
-    (* 004CH *)
-    (* 0050H *)
-    TIM16_DTR2_Offset*   = 0054H;
-    (* 0058H *)
-    TIM16_TISEL_Offset*   = 005CH;
-    TIM16_AF1_Offset*   = 0060H;
-    TIM16_AF2_Offset*   = 0064H;
-    TIM16_DCR_Offset*   = 03DCH;
-    TIM16_DMAR_Offset*   = 03E0H;
-
 
     (* -- UART -- *)
     UART_Offset* = USART3_BASE - USART2_BASE; (* USART2 to UART5 *)
@@ -508,7 +403,7 @@ MODULE MCU2;
     RCC_CCIPR1*         = RCC_BASE + 00E0H;
     RCC_CCIPR2*         = RCC_BASE + 00E4H;
     RCC_CCIPR3*         = RCC_BASE + 00E8H;
-    RCC_BBCR*           = RCC_BASE + 00F0H;
+    RCC_BDCR*           = RCC_BASE + 00F0H;
     RCC_CSR*            = RCC_BASE + 00F4H;
 
     RCC_SECCFGR*        = RCC_BASE + 0110H;

@@ -11,7 +11,10 @@ MODULE TIM;
   TIM13, TIM4: general purpose
   TIM15: general purpose
   TIM16, TIM17: general purpose
-  Advanced functionality for more capable timers is not yet implemented.
+  --
+  Note: Advanced functionality for more capable timers is not yet implemented.
+  --
+  Type: MCU
   --
   MCU: STM32H573II
   --

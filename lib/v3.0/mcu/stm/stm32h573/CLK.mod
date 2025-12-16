@@ -4,6 +4,9 @@ MODULE CLK;
   Version: v3.0
   --
   RCC clocks device driver.
+  Always clocked.
+  --
+  Type: MCU
   --
   MCU: STM32H573II
   --
@@ -57,12 +60,6 @@ MODULE CLK;
     ABPpresc_8* = 6;
     ABPpresc_16* = 7; (* divide by 16 *)
 
-    (* for EnableOsc *)
-    HSIen* = 0;
-    CSIen* = 8;
-    HSI48en* = 12;
-    HSEen* = 16;
-
     (* MCO clock out *)
     (* for 'SetClkOut' *)
     MCO1sel_HSI* = 0;
@@ -82,11 +79,6 @@ MODULE CLK;
     MCOpre_1* = 1; (* divide by 1 *)
     (* actual prescale values *)
     MCOpre_15* = 15;
-
-    (* oscillators, if enabled *)
-    CSI_FREQ* = 4 * 1000000;
-    HSI48_FREQ* = 48 * 1000000;
-    HSI_FREQ* = 32 * 1000000; (* with HSIDIV = 2, default *)
 
     (* functional/kernel clock parameters *)
     (* for 'ConfigDevClock' *)
@@ -109,6 +101,16 @@ MODULE CLK;
       apb1Presc*: INTEGER;
       apb2Presc*: INTEGER;
       apb3Presc*: INTEGER
+    END;
+
+    OscCfg* = RECORD
+      hsiEn*, csiEn*: INTEGER;
+      hsi48En*: INTEGER;
+      hseEn*: INTEGER
+    END;
+
+    LsOscCfg* = RECORD
+      lsiEn*, lseEn*: INTEGER
     END;
 
 
@@ -205,23 +207,49 @@ MODULE CLK;
   END GetBusPresc;
 
 
-  PROCEDURE* EnableOsc*(oscMask: SET);
+  PROCEDURE* ConfigOsc*(cfg: OscCfg);
     CONST
       MaskEn = {0, 8, 12, 16}; MaskRdy = {1, 9, 13, 17};
-    VAR val, rdyMask: SET;
+    VAR oscMask: INTEGER; val, rdyMask: SET;
   BEGIN
-    oscMask := oscMask * MaskEn;
+    oscMask := 0;
+    BFI(oscMask, 0, cfg.hsiEn);
+    BFI(oscMask, 8, cfg.csiEn);
+    BFI(oscMask, 12, cfg.hsi48En);
+    BFI(oscMask, 16, cfg.hseEn);
     SYSTEM.GET(MCU.RCC_CR, val);
-    SYSTEM.PUT(MCU.RCC_CR, val - MaskEn + oscMask);
-    (* create the ready check mask *)
-    rdyMask := BITS(LSL(ORD(oscMask), 1));
+    SYSTEM.PUT(MCU.RCC_CR, val - MaskEn + BITS(oscMask));
+    rdyMask := BITS(LSL(oscMask, 1));
     REPEAT
       SYSTEM.GET(MCU.RCC_CR, val)
     UNTIL val * MaskRdy = rdyMask
-  END EnableOsc;
+  END ConfigOsc;
+
+
+  PROCEDURE* ConfigLsOsc*(cfg: LsOscCfg);
+  (* requires PWR to be clocked *)
+    CONST
+      LsMaskEn = {0, 26}; LsMaskRdy = {1, 27};
+    VAR oscMask: INTEGER; val, rdyMask: SET;
+  BEGIN
+    oscMask := 0;
+    BFI(oscMask, 0, cfg.lseEn);
+    BFI(oscMask, 26, cfg.lsiEn);
+    IF oscMask # 0 THEN
+      SYSTEM.PUT(MCU.PWR_DBPCR, {0}); (* write enable RCC_BDCR *)
+      SYSTEM.GET(MCU.RCC_BDCR, val);
+      SYSTEM.PUT(MCU.RCC_BDCR, val - LsMaskEn + BITS(oscMask));
+      SYSTEM.PUT(MCU.PWR_DBPCR, {}); (* write disable RCC_BDCR *)
+      rdyMask := BITS(LSL(oscMask, 1));
+      REPEAT
+        SYSTEM.GET(MCU.RCC_BDCR, val)
+      UNTIL val * LsMaskRdy = rdyMask
+    END
+  END ConfigLsOsc;
 
 
   PROCEDURE* SetClkOut*(mcoId, mcoSel, mcoPre: INTEGER);
+  (* modify only after reset, before enabling external oscillators and PLLs *)
     VAR val: INTEGER;
   BEGIN
     ASSERT(mcoId IN MCO);

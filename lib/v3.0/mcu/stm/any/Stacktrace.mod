@@ -6,7 +6,7 @@ MODULE Stacktrace;
   Create stack trace amd read stack registers based on error data
   collected by run-time error handling RuntimeErrors.
   --
-  MCU: STM32U585AI
+  MCU: STM32H573II
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   Portions copyright (c) 2008-2024 CFB Software, https://www.astrobe.com
@@ -81,7 +81,7 @@ MODULE Stacktrace;
   BEGIN
     SYSTEM.GET(addr + 1, b1);
     SYSTEM.GET(addr, b2);
-    value := LSL(b1, 8) + b2;
+    value := LSL(b1, 8) + b2
   END getHalfWord;
 
   PROCEDURE isBL(codeAddr: INTEGER): BOOLEAN;
@@ -125,7 +125,7 @@ MODULE Stacktrace;
     SYSTEM.GET(stackAddr, lr);
     (* must be Thumb mode *)
     IF ODD(lr) THEN
-      DEC(lr, 1);
+      DEC(lr);
       IF (lr >= Config.CodeMem.start + 100H) & (lr < Config.CodeMem.end) THEN
         IF isBL(lr - 4) OR isBLX(lr - 2) THEN
           getHalfWord(lr, nextInstr);
@@ -186,7 +186,7 @@ MODULE Stacktrace;
           isStackFrame := BITS(stackVal) * BITS(ExcRetMask) = BITS(ExcRetVal)
         END
       END
-    END;
+    END
 
   END getAddr;
 
@@ -243,7 +243,7 @@ MODULE Stacktrace;
           trace.more := TRUE
         END
       END;
-      SYSTEM.GET(stackAddr, stackVal);
+      SYSTEM.GET(stackAddr, stackVal)
     END
   END stacktrace;
 

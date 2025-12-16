@@ -8,6 +8,8 @@ MODULE UART;
   * configure UART hardware
   * enable physical UART device
   --
+  Type: MCU
+  --
   The GPIO pins and pads used must be configured by the client module or program.
   --
   MCU: STM32H573II
@@ -16,7 +18,7 @@ MODULE UART;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Errors, MCU := MCU2, CLK, Clocks, TextIO;
+  IMPORT SYSTEM, Errors, MCU := MCU2, CLK, TextIO;
 
   CONST
     USART1* = 0;
@@ -32,7 +34,7 @@ MODULE UART;
     USART11* = 10;
     UART12* = 11;
 
-    UARTs = {USART1 .. UART12};
+    UART = {USART1 .. UART12};
     NumUART* = MCU.NumUART;
 
     (* functional/kernel clock values *)
@@ -85,7 +87,7 @@ MODULE UART;
       over8En*: INTEGER;  (* reset: off, ie. 16x oversampling *)
       clkSel*: INTEGER;   (* CLK_* above, reset: CLK_PCLK *)
       presc*: INTEGER;    (* Presc_* above, reset: Presc_1 *)
-      clkFreq*: INTEGER;  (* usually look up in module clocks *)
+      clkFreq*: INTEGER;  (* usually look up in module Clocks *)
     END;
 
     VAR
@@ -96,7 +98,7 @@ MODULE UART;
       VAR base: INTEGER;
     BEGIN
       ASSERT(dev # NIL, Errors.ProgError);
-      ASSERT(uartId IN UARTs, Errors.ProgError);
+      ASSERT(uartId IN UART, Errors.ProgError);
       dev.uartId := uartId;
       CASE uartId OF
         USART1: base := MCU.USART1_BASE; dev.devNo := MCU.DEV_USART1
@@ -146,8 +148,6 @@ MODULE UART;
 
       (* baudrate *)
       div := (cfg.clkFreq DIV presc[cfg.presc]) DIV baudrate;
-      (*div := (Clocks.PCLK1_FRQ DIV ClkPrescValue) DIV baudrate;*)
-      (*div := (80000000 DIV ClkPrescValue) DIV baudrate;*)
       ASSERT(div >= 16, Errors.ProgError);
       IF cfg.over8En = Disabled THEN
         SYSTEM.PUT(dev.BRR, div)

@@ -11,38 +11,23 @@ MODULE SysTick;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, CLK, Clocks, Errors;
-
-  CONST
-    (* clock source *)
-    Src_HCLK = 0;
-
-    (* CSR bits *)
-    SYST_CSR_COUNTFLAG = 16;
-    SYST_CSR_ENABLE = 0;
+  IMPORT SYST, Clocks;
 
 
-  PROCEDURE* Tick*(): BOOLEAN;
-    RETURN SYSTEM.BIT(MCU.PPB_SYST_CSR, SYST_CSR_COUNTFLAG)
+  PROCEDURE Config*(msPerTick: INTEGER);
+  BEGIN
+    SYST.Configure(SYST.CLK_HCLK, Clocks.HCLK_FRQ DIV 8, msPerTick)
+  END Config;
+
+
+  PROCEDURE Tick*(): BOOLEAN;
+    RETURN SYST.Tick()
   END Tick;
 
 
-  PROCEDURE* Enable*;
+  PROCEDURE Enable*;
   BEGIN
-    SYSTEM.PUT(MCU.PPB_SYST_CSR, {SYST_CSR_ENABLE})
+    SYST.Enable
   END Enable;
-
-
-  PROCEDURE Config*(usPerTick: INTEGER);
-    CONST TwoBits = 2;
-    VAR cntPerMicrosec, cntRld: INTEGER;
-  BEGIN
-    CLK.ConfigDevClock(CLK.CLK_SYST_REG, Src_HCLK, CLK.CLK_SYST_POS, TwoBits);
-    cntPerMicrosec := (Clocks.HCLK_FRQ DIV 8) DIV 1000000;
-    cntRld := (usPerTick * cntPerMicrosec) - 1;
-    ASSERT(cntRld <= 0FFFFFFH, Errors.ProgError);
-    SYSTEM.PUT(MCU.PPB_SYST_RVR, cntRld);
-    SYSTEM.PUT(MCU.PPB_SYST_CVR, 0) (* clear counter *)
-  END Config;
 
 END SysTick.

@@ -51,13 +51,16 @@ MODULE Main;
     (* init vector table *)
     RuntimeErrors.Init;
 
-    (* config pins and pads *)
+    (* config UART pins and pads *)
     cfgPins(UARTt0_TxPinNo, UARTt0_RxPinNo);
 
     (* define UART cfg *)
     UART.GetBaseCfg(uartCfg);
     uartCfg.fifoEn := UART.Enabled;
     uartCfg.over8En := UART.Disabled;
+    uartCfg.clkSel := UART.CLK_SYSCLK;
+    uartCfg.presc := UART.Presc_16;
+    uartCfg.clkFreq := Clocks.SYSCLK_FRQ;
 
     (* open text IO to/from serial terminal *)
     Terminals.InitUART(UARTt0, uartCfg, Baudrate0, uartDev);
@@ -81,11 +84,7 @@ MODULE Main;
     SYSTEM.GET(MCU.ICACHE_BASE, val);
     SYSTEM.PUT(MCU.ICACHE_BASE, val + {0, 16, 17})
     *)
-    Out.Int(Clocks.SYSCLK_FRQ, 10); Out.Ln;
-    Out.Int(Clocks.HCLK_FRQ, 10); Out.Ln;
-    Out.Int(Clocks.PCLK1_FRQ, 10); Out.Ln;
-    Out.Int(Clocks.PCLK2_FRQ, 10); Out.Ln;
-    Out.Int(Clocks.PCLK3_FRQ, 10); Out.Ln;
+
   END init;
 
 BEGIN

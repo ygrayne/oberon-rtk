@@ -393,7 +393,7 @@ MODULE MCU2;
     RCC_CCIPR3*         = RCC_BASE + 00E0H;
     RCC_CCIPR4*         = RCC_BASE + 00E4H;
     RCC_CCIPR5*         = RCC_BASE + 00E8H;
-    RCC_BBCR*           = RCC_BASE + 00F0H;
+    RCC_BDCR*           = RCC_BASE + 00F0H;
     RCC_RSR*            = RCC_BASE + 00F4H;
     RCC_SECCFGR*        = RCC_BASE + 0110H;
     RCC_PRIVCFGR*       = RCC_BASE + 0114H;

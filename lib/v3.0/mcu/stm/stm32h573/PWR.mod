@@ -5,6 +5,8 @@ MODULE PWR;
   --
   Power management
   --
+  Type: MCU
+  --
   MCU: STM32H573II
   --
   Copyright (c) 2025 Gray gray@grayraven.org
@@ -32,6 +34,5 @@ MODULE PWR;
     SYSTEM.PUT(MCU.PWR_VOSCR, val);
     REPEAT UNTIL SYSTEM.BIT(MCU.PWR_VOSSR, PWR_VOSSR_ACTVOSRDY)
   END SetVoltageRange;
-
 
 END PWR.

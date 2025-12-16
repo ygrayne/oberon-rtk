@@ -5,6 +5,8 @@ MODULE PWR;
   --
   Power management
   --
+  Type: MCU
+  --
   MCU: STM32U585AI
   --
   Copyright (c) 2025 Gray gray@grayraven.org
@@ -41,8 +43,7 @@ MODULE PWR;
     ELSE
       BFI(val, PWR_VOSR_BOOSTEN, 0);
       SYSTEM.PUT(MCU.PWR_VOSR, val)
-    END;
-
+    END
   END SetVoltageRange;
 
 

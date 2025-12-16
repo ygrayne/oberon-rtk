@@ -13,40 +13,32 @@ MODULE Clocks;
 
   IMPORT CLK, PWR, FLASH, RAM;
 
-  VAR
-    SYSCLK_FRQ*: INTEGER;
-    HCLK_FRQ*: INTEGER;     (* AHB bus, CPU core, memory, DMA *)
-    PCLK1_FRQ*, PCLK2_FRQ*, PCLK3_FRQ*: INTEGER; (* APB1, APB2, APB3 bus, peripherals *)
-    AHBpresc: ARRAY 9 OF INTEGER;
-    APBpresc: ARRAY 5 OF INTEGER;
-
-
-  PROCEDURE updateFreq(pllSrcFreq: INTEGER);
-    VAR
-      pllCfg: CLK.PLLcfg; prescCfg: CLK.BusPrescCfg;
-      ahbDiv, apb1Div, apb2Div, apb3Div: INTEGER;
-  BEGIN
-    CLK.GetPLLcfg(CLK.PLL1, pllCfg);
-    CLK.GetBusPresc(prescCfg);
-    SYSCLK_FRQ := pllSrcFreq DIV (pllCfg.mdiv + 1) * (pllCfg.ndiv + 1) DIV (pllCfg.rdiv + 1);
-    ahbDiv := AHBpresc[prescCfg.ahbPresc - 7];
-    apb1Div := APBpresc[prescCfg.apb1Presc - 3];
-    apb2Div := APBpresc[prescCfg.apb2Presc - 3];
-    apb3Div := APBpresc[prescCfg.apb3Presc - 3];
-    HCLK_FRQ := SYSCLK_FRQ DIV ahbDiv;
-    PCLK1_FRQ := HCLK_FRQ DIV apb1Div;
-    PCLK2_FRQ := HCLK_FRQ DIV apb2Div;
-    PCLK3_FRQ := HCLK_FRQ DIV apb3Div
-  END updateFreq;
+  CONST
+    SYSCLK_FRQ* = 160 * 1000000;  (* PLL1P *)
+    HCLK_FRQ*   = 160 * 1000000;  (* AHB prescaler *)
+    PCLK1_FRQ*  = 160 * 1000000;  (* APB1 prescaler *)
+    PCLK2_FRQ*  =  80 * 1000000;  (* APB2 prescaler *)
+    PCLK3_FRQ*  =  80 * 1000000;  (* APB3 prescaler *)
+    PLL1R_FREQ* = 160 * 1000000;
+    PLL2Q_FREQ* =  48 * 1000000;
+    LSI_FREQ*   = 32000;
 
 
   PROCEDURE Configure*;
   (* SYSCLK/HCLK: 160 MHz, PCLK1: 160 MHz, PCLK2/PCLK3: 80 MHz *)
-    VAR pllCfg: CLK.PLLcfg; prescCfg: CLK.BusPrescCfg; clkEn: SET;
+    CONST Enabled = 1; Disabled = 0;
+    VAR pllCfg: CLK.PLLcfg; prescCfg: CLK.BusPrescCfg; oscCfg: CLK.OscCfg; lsOscCfg: CLK.LsOscCfg;
   BEGIN
     (* base oscillators *)
-    clkEn := {CLK.MSISen, CLK.MSIKen, CLK.HSI48en, CLK.HSIen};
-    CLK.EnableOsc(clkEn);
+    oscCfg.msisEn := Enabled;
+    oscCfg.msikEn := Enabled;
+    oscCfg.hsiEn := Enabled;
+    oscCfg.hsi48En := Enabled;
+    oscCfg.hseEn := Disabled;
+    CLK.ConfigOsc(oscCfg);
+    lsOscCfg.lsiEn := Enabled;
+    lsOscCfg.lseEn := Disabled;
+    CLK.ConfigLsOsc(lsOscCfg);
 
     (* PLL for SYSCLK *)
     pllCfg.src := CLK.PLLsrc_HSI16;
@@ -75,31 +67,8 @@ MODULE Clocks;
     CLK.SetBusPresc(prescCfg);
 
     CLK.StartPLL(CLK.PLL1);
-    CLK.SetSysClk(CLK.SysClk_PLL);
-
-    updateFreq(CLK.HSI16_FREQ)
+    CLK.SetSysClk(CLK.SysClk_PLL)
   END Configure;
 
-  PROCEDURE* init;
-  BEGIN
-    APBpresc[0] := 1;
-    APBpresc[1] := 2;
-    APBpresc[2] := 4;
-    APBpresc[3] := 8;
-    APBpresc[4] := 16;
-
-    AHBpresc[0] := 1;
-    AHBpresc[1] := 2;
-    AHBpresc[2] := 4;
-    AHBpresc[3] := 8;
-    AHBpresc[4] := 16;
-    AHBpresc[5] := 64;
-    AHBpresc[6] := 128;
-    AHBpresc[7] := 256;
-    AHBpresc[8] := 512
-  END init;
-
-BEGIN
-  init
 END Clocks.
 
