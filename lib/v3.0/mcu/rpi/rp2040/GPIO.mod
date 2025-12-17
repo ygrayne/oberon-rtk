@@ -5,13 +5,15 @@ MODULE GPIO;
   --
   General Purpose IO (GPIO)
   --
+  Type: MCU
+  --
   MCU: RP2040
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, StartUp, Errors;
+  IMPORT SYSTEM, MCU := MCU2, RST, Errors;
 
   CONST
     (* generic values *)
@@ -336,7 +338,7 @@ MODULE GPIO;
   PROCEDURE init;
     VAR i: INTEGER;
   BEGIN
-    StartUp.ReleaseResets({MCU.RESETS_IO_BANK0, MCU.RESETS_PADS_BANK0});
+    RST.ReleaseResets({MCU.RESETS_IO_BANK0, MCU.RESETS_PADS_BANK0});
     (* for RP2350 compatibility *)
     i := 0;
     WHILE i < MCU.NumGPIO DO

@@ -17,7 +17,7 @@ MODULE RecoveryC0;
 **)
 
   IMPORT
-    SYSTEM, MCU := MCU2, Main, Kernel, Recovery, Watchdog, StartUp, Cores,
+    SYSTEM, MCU := MCU2, Main, Kernel, Recovery, Watchdog, RST, Cores,
     GPIO, Out, LEDext, InitCoreOne, Core1 := RecoveryC1;
 
   CONST
@@ -287,8 +287,8 @@ MODULE RecoveryC0;
     Kernel.Allocate(t6c, ThreadStackSize, t6, tid6, res); ASSERT(res = Kernel.OK);
     Kernel.Enable(t6);
 
-    StartUp.SetResetWatchdogResets(MCU.RESETS_ALL);
-    StartUp.SetPowerOnWatchdogResets(MCU.PSM_ALL);
+    RST.SetResetWatchdogResets(MCU.RESETS_ALL);
+    RST.SetPowerOnWatchdogResets(MCU.PSM_ALL);
     Watchdog.SetLoadTime(2000); (* heartbeat does reload *)
     Watchdog.Enable;
 

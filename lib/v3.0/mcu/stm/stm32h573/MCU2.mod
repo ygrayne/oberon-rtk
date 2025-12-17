@@ -5,6 +5,8 @@ MODULE MCU2;
   --
   MCU register and memory addresses, bits, values, assembly instructions
   --
+  Type: MCU
+  --
   MCU: STM32H573II
   --
   Copyright (c) 2025 Gray gray@grayraven.org
@@ -21,7 +23,6 @@ MODULE MCU2;
     NumInterrupts*    = 131;
 
 
-(* === base addresses === *)
   (* non-secure *)
     (* non-secure: C bus/code *)
     FLASH_Cb_NS_BASE*  = 008000000H;
@@ -484,8 +485,6 @@ MODULE MCU2;
     DEV_LPTIM6*   = 256 + 15;
 
 
-(* == PPB: private peripheral bus == *)
-
     (* begin of SCS: System Control Space *)
 
     (* -- implementation control block -- *)
@@ -737,15 +736,17 @@ MODULE MCU2;
     PPB_MPU_MAIR1*    = PPB_BASE + 0EDC4H;
 
 
-    (* -- sw interrupt generation -- *)
+    (* -- SW interrupt generation -- *)
     PPB_STIR*         = PPB_BASE + 0EF00H;
 
-(* ===== CPU registers ===== *)
+    (* end of system control space *)
+
+    (* -- CPU registers -- *)
     (* CONTROL special register *)
     CONTROL_SPSEL* = 1; (* enable PSP *)
 
 
-(* ===== assembly instructions ===== *)
+    (* -- assembly instructions -- *)
 
     NOP* = 046C0H;
 

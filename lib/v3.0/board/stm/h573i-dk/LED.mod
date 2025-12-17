@@ -5,6 +5,8 @@ MODULE LED;
   --
   Red, blue, orange and green user LEDs
   --
+  Type: Board
+  --
   MCU: STM32H573II
   Board: STM32H573I-DK
   --

@@ -18,7 +18,7 @@ MODULE Main;
   IMPORT
     (* LinkOptions is the first import of Config *)
     Config, Clocks, Memory, RuntimeErrors,
-    RuntimeErrorsOut, Terminals, Out, In, GPIO, UARTdev, UARTstr, MCU := MCU2;
+    RuntimeErrorsOut, Terminals, Out, In, GPIO, UART, UARTstr;
 
   CONST
     Baudrate0 = 38400; (* terminal 0 *)
@@ -27,15 +27,15 @@ MODULE Main;
     Core1 = 1;
     TERM0 = Terminals.TERM0;
     TERM1 = Terminals.TERM1;
-    UART0 = UARTdev.UART0;
-    UART1 = UARTdev.UART1;
+    UART0 = UART.UART0;
+    UART1 = UART.UART1;
     UART0_TxPinNo = 0;
     UART0_RxPinNo = 1;
     UART1_TxPinNo = 4;
     UART1_RxPinNo = 5;
 
 
-  PROCEDURE configPins(txPinNo, rxPinNo: INTEGER);
+  PROCEDURE cfgPins(txPinNo, rxPinNo: INTEGER);
     VAR padCfg: GPIO.PadCfg;
   BEGIN
     GPIO.GetPadBaseCfg(padCfg);
@@ -46,23 +46,24 @@ MODULE Main;
     GPIO.SetFunction(txPinNo, GPIO.Fuart);
     GPIO.SetFunction(rxPinNo, GPIO.Fuart);
     GPIO.ConnectInput(rxPinNo)
-  END configPins;
+  END cfgPins;
 
 
   PROCEDURE init;
     VAR
-      uartDev0, uartDev1: UARTdev.Device;
-      uartCfg: UARTdev.DeviceCfg;
+      uartDev0, uartDev1: UART.Device;
+      uartCfg: UART.DeviceCfg;
   BEGIN
     RuntimeErrors.Init;
+    Clocks.Configure;
 
     (* define UART cfg *)
-    UARTdev.GetBaseCfg(uartCfg);
-    uartCfg.fifoEn := UARTdev.Enabled;
+    UART.GetBaseCfg(uartCfg);
+    uartCfg.fifoEn := UART.Enabled;
 
     (* configure the pins and pads *)
-    configPins(UART0_TxPinNo, UART0_RxPinNo);
-    configPins(UART1_TxPinNo, UART1_RxPinNo);
+    cfgPins(UART0_TxPinNo, UART0_RxPinNo);
+    cfgPins(UART1_TxPinNo, UART1_RxPinNo);
 
     (* open text IO to/from two serial terminals *)
     Terminals.InitUART(UART0, uartCfg, Baudrate0, uartDev0);

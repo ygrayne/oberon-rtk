@@ -15,13 +15,15 @@ MODULE SysTick;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYST, Exceptions, Clocks;
+  IMPORT SYST, CLK, Clocks;
 
 
   PROCEDURE Config*(msPerTick: INTEGER; handler: PROCEDURE; prio: INTEGER);
+    CONST TwoBits = 2;
   BEGIN
+    CLK.ConfigDevClock(SYST.CLK_HCLK, CLK.CLK_SYST_REG, CLK.CLK_SYST_POS, TwoBits);
     SYST.InstallExcHandler(handler, prio);
-    SYST.Configure(SYST.CLK_HCLK, Clocks.HCLK_FRQ DIV 8, msPerTick)
+    SYST.Configure(Clocks.HCLK_FRQ DIV 8, msPerTick)
   END Config;
 
 

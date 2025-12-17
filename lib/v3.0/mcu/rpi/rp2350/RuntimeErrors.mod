@@ -46,8 +46,8 @@ MODULE RuntimeErrors;
     (*EXC_RET_S     = 6;*)  (* = 1: secure stack frame, faulty code was running in secure domain *)
     (*EXC_RET_DCRS  = 5;*)  (* = 0: all CPU regs stacked by hardware, extended state context *)
     (*EXC_RET_FType = 4;*)  (* = 0: all FPU regs stacked by hardware, extended FPU context *)
-    EXC_RET_Mode  = 3;  (* = 1: thread mode, faulty code was running in thread mode *)
-    EXC_RET_SPSEL = 2;  (* = 1: PSP used for stacking *)
+    EXC_RET_Mode  = 3;      (* = 1: thread mode, faulty code was running in thread mode *)
+    EXC_RET_SPSEL = 2;      (* = 1: PSP used for stacking *)
     (*EXC_RET_ES    = 0;*)  (* = 1: exception running in secure domain *)
 
     (* MCU.PPB_ICSR bits *)

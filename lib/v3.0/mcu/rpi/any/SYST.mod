@@ -7,22 +7,15 @@ MODULE SYST;
   --
   Type: Cortex-M33
   --
-  MCU: STM32U585AI, STM32H573II
+  MCU: RP2040, RP2350
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, CLK, Exceptions, Errors;
+  IMPORT SYSTEM, MCU := MCU2, Exceptions, Errors;
 
   CONST
-    (* clock source *)
-    (* parameter 'clkSel' in 'Configure' *)
-    CLK_HCLK* = 0;
-    CLK_LSI* = 1;
-    CLK_LSE* = 2;
-    CLK_None* = 3; (* off *)
-
     (* CSR bits *)
     SYST_CSR_COUNTFLAG = 16;
     SYST_CSR_TICKINT = 1;
@@ -53,7 +46,7 @@ MODULE SYST;
   END InstallExcHandler;
 
 
-  PROCEDURE Configure*(clkFreq, msPerTick: INTEGER);
+  PROCEDURE* Configure*(clkFreq, msPerTick: INTEGER);
     VAR cntPerMillisec, cntRld: INTEGER;
   BEGIN
     cntPerMillisec := clkFreq DIV 1000;

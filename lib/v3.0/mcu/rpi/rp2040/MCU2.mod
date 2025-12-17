@@ -5,6 +5,8 @@ MODULE MCU2;
   --
   MCU register and memory addresses, bits, values, assembly instructions
   --
+  Type: MCU
+  --
   MCU: RP2040
   Board: Pico
   --
@@ -35,22 +37,21 @@ MODULE MCU2;
     ASET* = 02000H; (* atomic bitmask set on write *)
     ACLR* = 03000H; (* atomic bitmask clear on write *)
 
-  (* == base addresses == *)
-    (* -- AHB -- *)
+    (* AHB *)
     ROM_BASE*           = 000000000H;
     FLASH_BASE*         = 010000000H;
     SRAM_BASE*          = 020000000H;
 
-    (* -- SRAM -- *)
     SRAM0_BASE*           = 020000000H;
-    SRAM0_Size*           = 040000H;    (* 256k *)
     SRAM4_BASE*           = 020040000H;
-    SRAM4_Size*           = 01000H;     (* 4k *)
     SRAM5_BASE*           = 020041000H;
+
+    SRAM0_Size*           = 040000H;    (* 256k *)
+    SRAM4_Size*           = 01000H;     (* 4k *)
     SRAM5_Size*           = 01000H;     (* 4k *)
 
 
-    (* -- APB base addresses -- *)
+    (* APB *)
     SYSINFO_BASE*     = 040000000H;
     SYSCFG_BASE*      = 040004000H;
     CLOCKS_BASE*      = 040008000H;
@@ -79,7 +80,7 @@ MODULE MCU2;
     VREG_AND_CHIP_RESET_BASE* = 040064000H;
     TBMAN_BASE*       = 04006C000H;
 
-    (* -- AHB-lite base addresses -- *)
+    (* AHB-lite *)
     DMA_BASE*             = 050000000H;
     USBCTRL_BASE*         = 050100000H;
     USBCTRL_DPRAM_BASE*   = 050100000H;
@@ -88,13 +89,13 @@ MODULE MCU2;
     PIO1_BASE*            = 050300000H;
     XIP_AUX_BASE*         = 050400000H;
 
-    (* -- core-local base address -- *)
+    (* core-local *)
     SIO_BASE*             = 0D0000000H;
 
-    (* -- PPB base address -- *)
+    (* PPB base address *)
     PPB_BASE*             = 0E0000000H;
 
-    (* -- XIP -- *)
+    (* XIP *)
     XIP_NOCACHE_NOALLOC_BASE* = 013000000H;
     XIP_CTRL_BASE*            = 014000000H;
     XIP_CTRL*                 = XIP_CTRL_BASE;
@@ -104,15 +105,13 @@ MODULE MCU2;
     XIP_CTR_ACC*              = XIP_CTRL_BASE + 010H;
 
 
-  (* ====== APB: Advanced Peripheral Bus ====== *)
-
-    (* == SYSINFO == *)
+    (* -- SYSINFO -- *)
     (* datasheet 2.20.2, p303 *)
     SYSINFO_CHIP_ID*      = SYSINFO_BASE;
     SYSINFO_PLATFORM*     = SYSINFO_BASE + 004H;
     SYSINFO_GITREF*       = SYSINFO_BASE + 008H;
 
-    (* == SYSCFG == *)
+    (* -- SYSCFG -- *)
     (* datasheet 2.21.2, p304 *)
     SYSCFG_PROC0_NMI_MASK*          = SYSCFG_BASE;
     SYSCFG_PROC1_NMI_MASK*          = SYSCFG_BASE + 004H;
@@ -122,7 +121,7 @@ MODULE MCU2;
     SYSCFG_DBGFORCE*                = SYSCFG_BASE + 014H;
     SYSCFG_MEMPOWERDOWN*            = SYSCFG_BASE + 018H;
 
-    (* == CLOCKS == *)
+    (* -- CLOCKS -- *)
     (* datasheet 2.15.7, p195 *)
     (* clk_gpout0 .. 3 *)
     CLK_GPOUT0_CTRL*      = CLOCKS_BASE;
@@ -257,7 +256,7 @@ MODULE MCU2;
     CLK_SYS_SRAM5*      = 1;
     CLK_SYS_SRAM4*      = 0;
 
-    (* == PSM: power-on state machine == *)
+    (* -- PSM: power-on state machine -- *)
     (* datasheet 2.13.5, p171 *)
     PSM_FRCE_ON*        = PSM_BASE;
     PSM_FRCE_OFF*       = PSM_BASE + 004H;
@@ -286,7 +285,7 @@ MODULE MCU2;
     PSM_ALL*        = {0 .. 16};
     PSM_RESET*      = PSM_ALL - {PSM_ROSC, PSM_XOSC};
 
-    (* == RESETS: sub-system resets == *)
+    (* -- RESETS: sub-system resets -- *)
     (* datasheet 2.14.3, p177 *)
     RESETS_RESET*       = RESETS_BASE;
     RESETS_WDSEL*       = RESETS_BASE + 004H;
@@ -321,7 +320,7 @@ MODULE MCU2;
 
     RESETS_ALL*         = {0 .. 24};
 
-    (* == IO_BANK0 == *)
+    (* -- IO_BANK0 -- *)
     (* datasheet 2.19.6.1, p243 *)
     IO_BANK0_GPIO0_STATUS*   = IO_BANK0_BASE;
     IO_BANK0_GPIO0_CTRL*     = IO_BANK0_BASE + 004H;
@@ -386,7 +385,7 @@ MODULE MCU2;
     IO_BANK0_DORMANT_WAKE_INTS0*  = IO_BANK0_BASE + 0180H;
       IO_BANK0_DOR_WAKE_INTS_Offset* = 4;
 
-    (* == IO_QSPI == *)
+    (* -- IO_QSPI -- *)
     (* datasheet 2.19.6.2, p287 *)
     IO_QSPI_SCLK_STATUS*  = IO_QSPI_BASE;
     IO_QSPI_SCLK_CTRL*    = IO_QSPI_BASE + 004H;
@@ -401,7 +400,7 @@ MODULE MCU2;
     IO_QSPI_SD3_STATUS*   = IO_QSPI_BASE + 028H;
     IO_QSPI_SD3_CTRL*     = IO_QSPI_BASE + 02CH;
 
-    (* == PADS_BANK0 == *)
+    (* -- PADS_BANK0 -- *)
     (* datasheet 2.19.6.3, p298 *)
     PADS_BANK0_VOLTAGE_SELECT*  = PADS_BANK0_BASE;
 
@@ -413,7 +412,7 @@ MODULE MCU2;
     PADS_BANK0_SWCLK*           = PADS_BANK0_BASE + 07CH;
     PADS_BANK0_SWD*             = PADS_BANK0_BASE + 080H;
 
-    (* == PADS_QSPI == *)
+    (* -- PADS_QSPI -- *)
     (* datasheet 2.19.6.4 *)
     PADS_QSPI_VOLTAGE_SELECT* = PADS_QSPI_BASE;
     PADS_QSPI_SCKL*           = PADS_QSPI_BASE + 004H;
@@ -423,7 +422,7 @@ MODULE MCU2;
     PADS_QSPI_SD3*            = PADS_QSPI_BASE + 014H;
     PADS_QSPI_CS*             = PADS_QSPI_BASE + 018H;
 
-    (* == XOSC == *)
+    (* -- XOSC -- *)
     (* datasheet 2.16.7, p219 *)
     XOSC_CTRL*    = XOSC_BASE;
     XOSC_STATUS*  = XOSC_BASE + 004H;
@@ -431,21 +430,16 @@ MODULE MCU2;
     XOSC_STARTUP* = XOSC_BASE + 00CH;
     XOSC_COUNT*   = XOSC_BASE + 01CH;
 
-    (* == PLL_SYS == *)
+    (* -- PLL -- *)
     (* datasheet 2.18.4, p233 *)
-    PLL_SYS_CS*         = PLL_SYS_BASE;
-    PLL_SYS_PWR*        = PLL_SYS_BASE + 004H;
-    PLL_SYS_FBDIV_INT*  = PLL_SYS_BASE + 008H;
-    PLL_SYS_PRIM*       = PLL_SYS_BASE + 00CH;
+    PLL_Offset* = PLL_USB_BASE - PLL_SYS_BASE;
+    PLL_CS_Offset*         = 000H;
+    PLL_PWR_Offset*        = 004H;
+    PLL_FBDIV_INT_Offset*  = 008H;
+    PLL_PRIM_Offset*       = 00CH;
 
-    (* == PLL_USB == *)
-    (* datasheet 2.18.4, p233 *)
-    PLL_USB_CS*         = PLL_USB_BASE;
-    PLL_USB_PWR*        = PLL_USB_BASE + 004H;
-    PLL_USB_FBDIV_INT*  = PLL_USB_BASE + 008H;
-    PLL_USB_PRIM*       = PLL_USB_BASE + 00CH;
 
-    (* == BUSCTRL == *)
+    (* -- BUSCTRL -- *)
     (* datasheet 2.1.5, p19 *)
     BUSCTRL_BUS_PRIORITY*     = BUSCTRL_BASE;
     BUSCTRL_BUS_PRIORITY_ACK* = BUSCTRL_BASE + 004H;
@@ -485,7 +479,7 @@ MODULE MCU2;
     PERFSEL_SRAM_EXT1_ACC*      = PERFSEL_SRAM5_ACC;
     PERFSEL_SRAM_EXT0_ACC*      = PERFSEL_SRAM4_ACC;
 
-    (* == UART0, UART1 == *)
+    (* -- UART0, UART1 -- *)
     (* datasheet 4.2.8, p427 *)
     (* offsets from UART0_BASE, UART1_BASE *)
     UART_Offset*        = UART1_BASE - UART0_BASE;
@@ -504,7 +498,7 @@ MODULE MCU2;
     UART_ICR_Offset*    = 0044H;
     UART_DMACR_Offset*  = 0048H;
 
-    (* == SPI0, SPI1 == *)
+    (* -- SPI0, SPI1 -- *)
     (* datasheet 4.4.4, p516 *)
     (* offsets from SPI0_BASE, SPI1_BASE *)
     SPI_Offset*       = SPI1_BASE - SPI0_BASE;
@@ -519,7 +513,7 @@ MODULE MCU2;
     SPI_ICR_Offset*   = 0020H;
     SPI_DMACR_Offset* = 0024H;
 
-    (* == I2C0, I2C1 == *)
+    (* -- I2C0, I2C1 -- *)
     (* datasheet 4.3.17, p464 *)
     (* offsets from I2C0_BASE, I2C1_BASE *)
     I2C_CON_Offset*                 = 0000H;
@@ -565,7 +559,7 @@ MODULE MCU2;
     I2C_COMP_VERSION_Offset*        = 00F8H;
     I2C_COMP_TYPE_Offset*           = 00FCH;
 
-    (* == ADC == *)
+    (* -- ADC -- *)
     (* datasheet 4.9.6, p566 *)
     ADC_CS*     = ADC_BASE;
     ADC_RESULT* = ADC_BASE + 004H;
@@ -577,7 +571,7 @@ MODULE MCU2;
     ADC_INTF*   = ADC_BASE + 01CH;
     ADC_INTS*   = ADC_BASE + 020H;
 
-    (* == PWM == *)
+    (* -- PWM -- *)
     (* datasheet 4.5.3, p531 *)
     PWM_CH0_CSR*  = PWM_BASE;
     PWM_CH0_DIV*  = PWM_BASE + 004H;
@@ -600,7 +594,7 @@ MODULE MCU2;
     PWM_IRQ0_INTF*  = PWM_BASE + 00ACH;
     PWM_IRQ0_INTS*  = PWM_BASE + 00B0H;
 
-    (* == TIMER == *)
+    (* -- TIMER -- *)
     (* datasheet 4.6.5, p541 *)
     (* offsets from TIMER0_BASE *)
     TIMER_Offset*           = 0;
@@ -622,7 +616,7 @@ MODULE MCU2;
     TIMER_INTF_Offset*      = 03CH;
     TIMER_INTS_Offset*      = 040H;
 
-    (* == WATCHDOG == *)
+    (* -- WATCHDOG -- *)
     WATCHDOG_CTRL*      = WATCHDOG_BASE;
     WATCHDOG_LOAD*      = WATCHDOG_BASE + 004H;
     WATCHDOG_REASON*    = WATCHDOG_BASE + 008H;
@@ -646,7 +640,7 @@ MODULE MCU2;
     WATCHDOG_REASON_TIMER* = 1;
 
 
-    (* == RTC == *)
+    (* -- RTC -- *)
     (* datasheet 4.8.6, p555 *)
     RTC_CLKDIV_M1*   = RTC_BASE;
     RTC_SETUP_0*     = RTC_BASE + 004H;
@@ -661,7 +655,7 @@ MODULE MCU2;
     RTC_INTF*        = RTC_BASE + 028H;
     RTC_INTS*        = RTC_BASE + 02CH;
 
-    (* == ROSC == *)
+    (* -- ROSC -- *)
     (* datasheet 2.17.8, p223 *)
     ROSC_CTRL*      = ROSC_BASE;
     ROSC_FREQA*     = ROSC_BASE + 004H;
@@ -673,21 +667,19 @@ MODULE MCU2;
     ROSC_RANDOMBIT* = ROSC_BASE + 01CH;
     ROSC_COUNT*     = ROSC_BASE + 020H;
 
-    (* == VREG_AND_CHIP_RESET == *)
+    (* -- VREG_AND_CHIP_RESET -- *)
     VREG_AND_CHIP_RESET_VREG*       = VREG_AND_CHIP_RESET_BASE;
     VREG_AND_CHIP_RESET_BOD*        = VREG_AND_CHIP_RESET_BASE + 04H;
     VREG_AND_CHIP_RESET_CHIP_RESET* = VREG_AND_CHIP_RESET_BASE + 08H;
 
     CHIP_RESET* = VREG_AND_CHIP_RESET_CHIP_RESET;
 
-    (* == TBMAN == *)
+    (* -- TBMAN -- *)
     (* datasheet 2.22.1, p307 *)
     TBMAN_PLATFORM* = TBMAN_BASE;
 
 
-  (* ===== AHB-Lite: Advanced High-performance Bus lite ====== *)
-
-    (* == DMA == *)
+    (* -- DMA -- *)
     (* datasheet 2.5.7, p102 *)
     DMA_CH0_READ_ADDR*              = DMA_BASE;
     DMA_CH0_WRITE_ADDR*             = DMA_BASE + 0004H;
@@ -757,11 +749,11 @@ MODULE MCU2;
     (* DREQ *)
     (* .. *)
 
-    (* == USBCTRL == *)
-    (* == USBCTRL_DPRAM == *)
-    (* == USB_CTRL_REGS == *)
+    (* -- USBCTRL -- *)
+    (* -- USBCTRL_DPRAM -- *)
+    (* -- USB_CTRL_REGS -- *)
 
-    (* == PIO0, PIO1 == *)
+    (* -- PIO0, PIO1 -- *)
     (* datasheet 3.7, p366 *)
     (* offsets from PIO0_BASE, PIO1_BASE *)
     PIO_Offset*                   = PIO1_BASE - PIO0_BASE;
@@ -815,11 +807,9 @@ MODULE MCU2;
     PIO_IRQ1_INTF_Offset*       = 013CH;
     PIO_IRQ1_INTS_Offset*       = 0140H;
 
-    (* == XIP_AUX == *)
+    (* -- XIP_AUX -- *)
 
-  (* ===== core local ====== *)
-
-    (* == SIO == *)
+    (* -- SIO -- *)
     SIO_CPUID*            = SIO_BASE;
 
     SIO_GPIO_IN*          = SIO_BASE + 004H;
@@ -914,9 +904,7 @@ MODULE MCU2;
       SIO_SPINLOCK_Offset* = 4;
 
 
-  (* == PPB: private peripheral bus == *)
-
-    (* *** begin of SCS: System Control Space *** *)
+    (* begin of SCS: System Control Space *)
 
     (* datasheet 2.4.8, p77 *)
     (* -- SysTick -- *)
@@ -1046,14 +1034,14 @@ MODULE MCU2;
     PPB_MPU_RBAR*     = PPB_BASE + 0ED9CH;
     PPB_MPU_RASR*     = PPB_BASE + 0EDA0H;
 
-  (* *** end of SCS *** *)
+    (* end of system control space *)
 
-  (* ===== CPU registers ===== *)
+    (* -- CPU registers -- *)
     (* CONTROL special register *)
     CONTROL_SPSEL* = 1; (* enable PSP *)
 
 
-  (* ===== assembly instructions ===== *)
+    (* -- assembly instructions -- *)
     NOP* = 046C0H;
 
     (* read specical regs MRS *)
@@ -1110,6 +1098,5 @@ MODULE MCU2;
     (* SVC *)
     (* SVCinstr = 'SVC' + SVCvalue *)
     SVC* = 0DF00H;
-
 
 END MCU2.

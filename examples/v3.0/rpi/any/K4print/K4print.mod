@@ -20,9 +20,9 @@ MODULE K4print;
   CONST
     RunIntLowNo = MCU.IRQ_SW_2;
     RunIntHighNo = MCU.IRQ_SW_3;
-    RunPrioLow = MCU.ExcPrio4;
-    RunPrioHigh = MCU.ExcPrio1;
-    SysTickPrio = MCU.ExcPrio2;
+    RunPrioLow = MCU.ExcPrioLow;
+    RunPrioHigh = MCU.ExcPrioHigh;
+    SysTickPrio = MCU.ExcPrioMedium;
 
     TimerNo = Alarms.T0;
     AlarmNo = Alarms.A0;

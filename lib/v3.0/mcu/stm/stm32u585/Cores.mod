@@ -5,6 +5,8 @@ MODULE Cores;
   --
   Core handling
   --
+  Type: MCU
+  --
   MCU: STM32U585AI
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org

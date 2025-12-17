@@ -40,13 +40,15 @@ MODULE SPIdev;
    1    0    high     data sampled on the falling edge and shifted out on the rising edge
    1    1    high     data sampled on the rising edge and shifted out on the falling edge
   --
+  Type: MCU
+  --
   MCU: RP2040, RP2350
   --
   Copyright (c) 2024-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Errors, MCU := MCU2, StartUp, Clocks;
+  IMPORT SYSTEM, Errors, MCU := MCU2, RST, Clocks;
 
   CONST
     SPI0* = 0;
@@ -151,14 +153,14 @@ MODULE SPIdev;
     ASSERT(cfg.cpol IN {0, 1}, Errors.PreCond);
 
     (* release reset on SPI device *)
-    StartUp.ReleaseResets({dev.devNo});
+    RST.ReleaseResets({dev.devNo});
 
     (* disable, set master mode *)
     SYSTEM.PUT(dev.CR1, {});
 
     (* find/set serial clock rate *)
     (* preScale is an even integer between 2 and 254, inclusive *)
-    x := (Clocks.PeriClkFreq * 8) DIV sclkRate;
+    x := (Clocks.PERICLK_FREQ * 8) DIV sclkRate;
     preScale := 2;
     WHILE (preScale < 255) & (preScale * 2048 <= x) DO
       INC(preScale, 2)
@@ -187,7 +189,7 @@ MODULE SPIdev;
     dev.txShift := cfg.txShift;
 
     (* record possible sclkRate band *)
-    dev.sclkRateMax := Clocks.PeriClkFreq DIV preScale;
+    dev.sclkRateMax := Clocks.PERICLK_FREQ DIV preScale;
     dev.sclkRateMin := dev.sclkRateMax DIV 256;
   END Configure;
 
@@ -225,7 +227,7 @@ MODULE SPIdev;
     VAR cpsr, scr, x: INTEGER;
   BEGIN
     SYSTEM.GET(dev.CPSR, cpsr);
-    x := (Clocks.PeriClkFreq * 8) DIV sclkRate;
+    x := (Clocks.PERICLK_FREQ * 8) DIV sclkRate;
     x := (x DIV (cpsr * 8)) - 1;
     scr := 255;
     WHILE (scr >= 0) & (scr > x) DO

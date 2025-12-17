@@ -130,10 +130,10 @@ MODULE StacktrK2C1;
   BEGIN
     (* in main stack *)
     Exceptions.InstallIntHandler(IntNo0, h0);
-    Exceptions.SetIntPrio(IntNo0, MCU.ExcPrio4);
+    Exceptions.SetIntPrio(IntNo0, MCU.ExcPrio80);
     Exceptions.EnableInt(IntNo0);
     Exceptions.InstallIntHandler(IntNo1, i0);
-    Exceptions.SetIntPrio(IntNo1, MCU.ExcPrio2);
+    Exceptions.SetIntPrio(IntNo1, MCU.ExcPrio40);
     Exceptions.EnableInt(IntNo1);
     Kernel.Install(MillisecsPerTick);
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.ProgError);

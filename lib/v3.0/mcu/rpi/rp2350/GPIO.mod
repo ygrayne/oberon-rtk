@@ -5,6 +5,8 @@ MODULE GPIO;
   --
   General Purpose IO (GPIO)
   --
+  Type: MCU
+  --
   MCU:
     RP2350A (30 GPIO: 0 .. 29)
     RP2350B (48 GPIO: 0 .. 47)
@@ -13,7 +15,7 @@ MODULE GPIO;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, StartUp, Errors;
+  IMPORT SYSTEM, MCU := MCU2, RST, Errors;
 
   CONST
     (* generic values *)
@@ -483,7 +485,7 @@ MODULE GPIO;
 
   PROCEDURE init;
   BEGIN
-    StartUp.ReleaseResets({MCU.RESETS_IO_BANK0, MCU.RESETS_PADS_BANK0})
+    RST.ReleaseResets({MCU.RESETS_IO_BANK0, MCU.RESETS_PADS_BANK0})
   END init;
 
 BEGIN

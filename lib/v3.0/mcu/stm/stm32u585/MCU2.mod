@@ -5,6 +5,8 @@ MODULE MCU2;
   --
   MCU register and memory addresses, bits, values, assembly instructions
   --
+  Type: MCU
+  --
   MCU: STM32U585AI
   --
   Copyright (c) 2025 Gray gray@grayraven.org
@@ -21,7 +23,6 @@ MODULE MCU2;
     NumInterrupts*    = 141; (* not all used/connected *)
 
 
-(* === base addresses === *)
   (* non-secure *)
     (* non-secure: C bus/code *)
     FLASH_Cb_NS_BASE*  = 008000000H;
@@ -347,7 +348,6 @@ MODULE MCU2;
     PWR_APCR*     = PWR_BASE + 04CH;
 
 
-
     (* -- RCC: reset and clock control -- *)
     (* ref manual ch11, p604 *)
     RCC_CR*             = RCC_BASE + 0000H;
@@ -480,8 +480,6 @@ MODULE MCU2;
     DEV_LPTIM4*   = 256 + 13;
     DEV_OPAMP*    = 256 + 14;
     DEV_COMP*     = 256 + 15;
-
-(* == PPB: private peripheral bus == *)
 
     (* begin of SCS: System Control Space *)
 
@@ -758,13 +756,14 @@ MODULE MCU2;
     (* -- sw interrupt generation -- *)
     PPB_STIR*         = PPB_BASE + 0EF00H;
 
-(* ===== CPU registers ===== *)
+    (* end of system control space *)
+
+    (* -- CPU registers -- *)
     (* CONTROL special register *)
     CONTROL_SPSEL* = 1; (* enable PSP *)
 
 
-(* ===== assembly instructions ===== *)
-
+    (* -- assembly instructions -- *)
     NOP* = 046C0H;
 
     (* read specical regs MRS *)

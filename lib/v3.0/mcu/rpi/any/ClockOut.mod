@@ -5,6 +5,10 @@ MODULE ClockOut;
   --
   Clock out via GPIO.
   --
+  Type: MCU
+  --
+  The GPIO pin and pad used must be configured by the client module or program.
+  --
   MCU: RP2040, RP2350A, RP2350B
   --
   Copyright (c) 2025 Gray gray@grayraven.org

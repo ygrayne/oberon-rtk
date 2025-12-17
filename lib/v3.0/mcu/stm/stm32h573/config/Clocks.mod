@@ -3,7 +3,7 @@ MODULE Clocks;
   Oberon RTK Framework
   Version: v3.0
   --
-  Program-specific clock configuration.
+  Program-specific clocks configuration and initialisation at start-up.
   --
   MCU: STM32H573II
   --

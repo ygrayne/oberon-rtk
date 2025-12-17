@@ -45,10 +45,6 @@ MODULE Kernel;
     LoopStackSize = 256; (* bytes *)
     LoopCorId = -1;
 
-    (* scheduler slow motion factor (debugging) *)
-    SloMo = 1;
-
-
   TYPE
     (* one thread *)
     PROC* = PROCEDURE; (* Modula-2 vibes *)
@@ -407,7 +403,7 @@ MODULE Kernel;
       INC(i)
     END;
     (* configure sys tick *)
-    SysTick.Init(millisecsPerTick * SloMo)
+    SysTick.Config(millisecsPerTick)
   END Install;
 
 BEGIN

@@ -5,6 +5,8 @@ MODULE Cores;
   --
   Multi-core handling
   --
+  Type: MCU
+  --
   MCU: RP2040, RP2350
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org

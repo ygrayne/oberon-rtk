@@ -5,6 +5,8 @@ MODULE LED;
   --
   Green, red and blue LEDs
   --
+  Type: Board
+  --
   MCU: STM32U585AI
   Board: B-U585I-IOT02A
   --

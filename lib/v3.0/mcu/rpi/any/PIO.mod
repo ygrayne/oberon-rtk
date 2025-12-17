@@ -7,6 +7,8 @@ MODULE PIO;
   First-cut implementation, to get the example program running.
   See https://oberon-rtk.org/examples/v2/piosquare/
   --
+  Type: MCU
+  --
   MCU: RP2040, RP2350
   --
   Copyright (c) 2024-2025 Gray gray@grayraven.org

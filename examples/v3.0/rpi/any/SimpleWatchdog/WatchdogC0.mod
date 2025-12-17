@@ -19,7 +19,7 @@ MODULE WatchdogC0;
 **)
 
   IMPORT
-    SYSTEM, Main, Kernel, Out, Cores, InitCoreOne, StartUp, Errors,
+    SYSTEM, Main, Kernel, Out, Cores, InitCoreOne, RST, Errors,
     GPIO, LED, Watchdog, MCU := MCU2, CoreOne := WatchdogC1;
 
   CONST
@@ -142,7 +142,7 @@ MODULE WatchdogC0;
     Kernel.Enable(t2);
 
     Watchdog.SetLoadTime(100);
-    StartUp.SetPowerOnWatchdogResets(MCU.PSM_RESET);
+    RST.SetPowerOnWatchdogResets(MCU.PSM_RESET);
     Watchdog.Enable;
 
     Kernel.Run

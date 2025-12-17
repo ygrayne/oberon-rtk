@@ -3,8 +3,7 @@ MODULE SysTick;
   Oberon RTK Framework
   Version: v3.0
   --
-  System tick
-  For Kernel v1: poll sys tick count flag
+  System tick for kernel-v1
   --
   MCU: RP2040, RP2350
   --
@@ -12,33 +11,23 @@ MODULE SysTick;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Clocks;
-
-  CONST
-    (* bits *)
-    SYST_CSR_COUNTFLAG = 16;
-    SYST_CSR_ENABLE = 0;
-
-    CountPerMillisecond = Clocks.SysTickFreq DIV 1000;
+  IMPORT SYST, Clocks;
 
 
-  PROCEDURE* Tick*(): BOOLEAN;
-    RETURN SYSTEM.BIT(MCU.PPB_SYST_CSR, SYST_CSR_COUNTFLAG)
+  PROCEDURE Config*(msPerTick: INTEGER);
+  BEGIN
+    SYST.Configure(Clocks.SYSTICK_FREQ, msPerTick)
+  END Config;
+
+
+  PROCEDURE Tick*(): BOOLEAN;
+    RETURN SYST.Tick()
   END Tick;
 
 
-  PROCEDURE* Enable*;
+  PROCEDURE Enable*;
   BEGIN
-    SYSTEM.PUT(MCU.PPB_SYST_CSR, {SYST_CSR_ENABLE})
+    SYST.Enable
   END Enable;
-
-
-  PROCEDURE* Init*(millisecondsPerTick: INTEGER);
-    VAR cntReload: INTEGER;
-  BEGIN
-    cntReload := millisecondsPerTick * CountPerMillisecond - 1;
-    SYSTEM.PUT(MCU.PPB_SYST_RVR, cntReload);
-    SYSTEM.PUT(MCU.PPB_SYST_CVR, 0) (* clear counter *)
-  END Init;
 
 END SysTick.

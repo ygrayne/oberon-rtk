@@ -3,7 +3,7 @@ MODULE Config;
   Oberon RTK Framework
   Version: v3.0
   --
-  * Memory configuration data
+  * Program-specific memory configuration data
   * Set VTOR, install initial simple error/fault handlers
   --
   MCU: RP2350

@@ -15,7 +15,7 @@ MODULE Terminals;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT TextIO, UARTdev, Errors;
+  IMPORT TextIO, UART, Errors;
 
   CONST
     TERM0* = 0;
@@ -31,13 +31,13 @@ MODULE Terminals;
     R*: Rs;
 
 
-  PROCEDURE InitUART*(uartNo: INTEGER; uartCfg: UARTdev.DeviceCfg; baudrate: INTEGER; VAR dev: UARTdev.Device);
+  PROCEDURE InitUART*(uartNo: INTEGER; uartCfg: UART.DeviceCfg; baudrate: INTEGER; VAR dev: UART.Device);
   (* utility procedure *)
   BEGIN
     NEW(dev); ASSERT(dev # NIL, Errors.HeapOverflow);
-    UARTdev.Init(dev, uartNo);
-    UARTdev.Configure(dev, uartCfg, baudrate);
-    UARTdev.Enable(dev)
+    UART.Init(dev, uartNo);
+    UART.Configure(dev, uartCfg, baudrate);
+    UART.Enable(dev)
   END InitUART;
 
 

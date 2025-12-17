@@ -5,6 +5,8 @@ MODULE Watchdog;
   --
   Watchdog controller
   --
+  Type: MCU
+  --
   MCU: RP2040, RP2350
   --
   Counting tick is set and initialised in module Clocks to 1 MHz.
@@ -59,6 +61,9 @@ MODULE Watchdog;
   IMPORT SYSTEM, MCU := MCU2;
 
   CONST
+    BootMagic0 = 0B007C0D3H;
+    BootMagic1 = 04FF83F2DH;
+
     (* WATCHDOG_CTRL bits *)
     CTRL_TRIGGER    = 31;
     CTRL_ENABLE     = 30;
@@ -142,6 +147,16 @@ MODULE Watchdog;
     addr := MCU.WATCHDOG_SCRATCH0 + (regNo * MCU.WATCHDOG_SCRATCH_Offset);
     SYSTEM.GET(addr, value)
   END GetScratchReg;
+
+
+  PROCEDURE* SetWatchdogBootVector*(stackPointer, entryPoint: INTEGER);
+  BEGIN
+    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH4, BootMagic0);
+    INCL(SYSTEM.VAL(SET, entryPoint), 0); (* thumb code *)
+    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH5, BITS(entryPoint) / BITS(BootMagic1));
+    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH6, stackPointer);
+    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH7, entryPoint)
+  END SetWatchdogBootVector;
 
 
   PROCEDURE* init;

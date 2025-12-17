@@ -1,4 +1,4 @@
-MODULE UARTdev;
+MODULE UART;
 (**
   Oberon RTK Framework
   Version: v3.0
@@ -9,6 +9,8 @@ MODULE UARTdev;
   * enable physical UART device
   * configure and enable interrupts
   --
+  Type: MCU
+  --
   The GPIO pins and pads used must be configured by the client module or program.
   --
   MCU: RP2040, RP2350
@@ -17,7 +19,7 @@ MODULE UARTdev;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Errors, MCU := MCU2, StartUp, Clocks, TextIO;
+  IMPORT SYSTEM, Errors, MCU := MCU2, RST, Clocks, TextIO;
 
   CONST
     UART0* = 0;
@@ -174,13 +176,13 @@ MODULE UARTdev;
     ASSERT(cfg.sendBreak IN {Disabled, Enabled}, Errors.PreCond);
 
     (* release reset on UART device *)
-    StartUp.ReleaseReset(dev.devNo);
+    RST.ReleaseReset(dev.devNo);
 
     (* disable *)
     SYSTEM.PUT(dev.CR, {});
 
     (* baudrate *)
-    x := (Clocks.PeriClkFreq * 8) DIV baudrate;
+    x := (Clocks.PERICLK_FREQ * 8) DIV baudrate;
     intDiv := LSR(x, 7);
     IF intDiv = 0 THEN
       intDiv := 1; fracDiv := 0
@@ -301,4 +303,4 @@ MODULE UARTdev;
     SYSTEM.PUT(dev.ICR + MCU.ASET, intMask)
   END ClearInt;
 
-END UARTdev.
+END UART.

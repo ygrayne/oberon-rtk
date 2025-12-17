@@ -46,10 +46,8 @@ MODULE Main;
       uartDev: UART.Device;
       uartCfg: UART.DeviceCfg;
   BEGIN
-    Clocks.Configure;
-
-    (* init vector table *)
     RuntimeErrors.Init;
+    Clocks.Configure;
 
     (* config UART pins and pads *)
     cfgPins(UARTt0_TxPinNo, UARTt0_RxPinNo);

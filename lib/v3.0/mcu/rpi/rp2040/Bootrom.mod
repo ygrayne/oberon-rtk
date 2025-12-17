@@ -5,6 +5,8 @@ MODULE Bootrom;
   --
   Access to the functions ond data in bootrom.
   --
+  Type: MCU
+  --
   MCU: RP2040
   --
   Calling bootrom functions from Oberon:

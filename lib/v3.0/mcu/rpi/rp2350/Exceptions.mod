@@ -5,6 +5,8 @@ MODULE Exceptions;
   --
   Exception management
   --
+  Type: Cortex-M33
+  --
   Note: these procedures must be used on the core whose SCS registers
   and vector table shall be addressed.
   --

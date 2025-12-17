@@ -498,7 +498,7 @@ MODULE Kernel;
     NewRdyQ(ctx.loopRdyQ, cid, 0);
     (* tick *)
     NewActQ(ctx.tickActQ);
-    SysTick.Init(millisecsPerTick, tickPrio, tickHandler)
+    SysTick.Config(millisecsPerTick, tickHandler, tickPrio)
   END Install;
 
 BEGIN

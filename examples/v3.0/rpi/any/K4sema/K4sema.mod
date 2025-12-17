@@ -21,7 +21,7 @@ MODULE K4sema;
     MillisecsPerTick = 1000;
     RunPrio = MCU.ExcPrio4;
     RunIntNo = MCU.IRQ_SW_0;
-    SysTickPrio = MCU.ExcPrio2;
+    SysTickPrio = MCU.ExcPrioHigh;
 
     StateClaim = 0;
     StatePrint0 = 1;

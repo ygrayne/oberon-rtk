@@ -6,6 +6,8 @@ MODULE Alarms;
   * schedule handler procedures for the timers' alarms
   * see: https://oberon-rtk.org/examples/v2/alarmtest/
   --
+  Type: MCU
+  --
   MCU: RP2040, RP2350
   --
   Copyright (c) 2024-2025 Gray, gray@grayraven.org

@@ -298,7 +298,7 @@ MODULE CLK;
   END DisableBusClock;
 
 
-  PROCEDURE* ConfigDevClock*(clkSelReg, clkSelVal, posSel, numBits: INTEGER);
+  PROCEDURE* ConfigDevClock*(clkSelVal, clkSelReg, posSel, numBits: INTEGER);
   (* set functional/kernel clock *)
   (* use with clock disabled *)
     VAR mask, val, sel: SET;

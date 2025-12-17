@@ -15,7 +15,7 @@ MODULE UARTstrKint;
 **)
 
   IMPORT
-    SYSTEM, MCU := MCU2, Kernel, UARTdev, TextIO, Exceptions, Errors;
+    SYSTEM, MCU := MCU2, Kernel, UART, TextIO, Exceptions, Errors;
 
   CONST
     MsgStrLen = 24;
@@ -23,8 +23,8 @@ MODULE UARTstrKint;
     StateWriteUART = 0;
     StateAwaitDevInt = 1;
 
-    TxFifoLvl = UARTdev.TXIFLSEL_val_18;  (* 1/8 = 4 entries *)
-    RxFifoLvl = UARTdev.RXIFLSEL_val_48;  (* unused, no rx implemented yet *)
+    TxFifoLvl = UART.TXIFLSEL_val_18;  (* 1/8 = 4 entries *)
+    RxFifoLvl = UART.RXIFLSEL_val_48;  (* unused, no rx implemented yet *)
 
     (* test GPIO pins are set up in main program module *)
     Pin2 = 17;
@@ -46,7 +46,7 @@ MODULE UARTstrKint;
 
     UARTctx = POINTER TO UARTctxDesc;
     UARTctxDesc = RECORD
-      dev: UARTdev.Device;
+      dev: UART.Device;
       rdyQ: Kernel.ReadyQ;
       printEvQ: Kernel.EventQ;
       printMsgP: Kernel.MessagePool;
@@ -58,13 +58,13 @@ MODULE UARTstrKint;
     END;
 
   VAR
-    uartCon: ARRAY UARTdev.NumUART OF UARTctx;
+    uartCon: ARRAY UART.NumUART OF UARTctx;
 
 
   PROCEDURE PutString*(dev: TextIO.Device; s: ARRAY OF CHAR; numChar: INTEGER);
-    VAR dev0: UARTdev.Device; i, nc: INTEGER; m: Kernel.Message; msg: PrintMsg; ux: UARTctx;
+    VAR dev0: UART.Device; i, nc: INTEGER; m: Kernel.Message; msg: PrintMsg; ux: UARTctx;
   BEGIN
-    dev0 := dev(UARTdev.Device);
+    dev0 := dev(UART.Device);
     IF numChar > LEN(s) THEN numChar := LEN(s) END;
     IF numChar > 0 THEN
       ux := uartCon[dev0.uartNo];
@@ -149,12 +149,12 @@ MODULE UARTstrKint;
     uartNo := excNo - UART0excNo;
     ux := uartCon[uartNo];
     SYSTEM.GET(ux.dev.MIS, mis); (* get status *)
-    IF UARTdev.MIS_TXMIS IN mis THEN
+    IF UART.MIS_TXMIS IN mis THEN
       IF ux.ix < ux.msg.numChar THEN
         SYSTEM.PUT(ux.dev.TDR, ux.msg.str[ux.ix]);
         INC(ux.ix)
       ELSE
-        SYSTEM.PUT(ux.dev.ICR + MCU.ASET, {UARTdev.ICR_TXIC}); (* clear/deassert int *)
+        SYSTEM.PUT(ux.dev.ICR + MCU.ASET, {UART.ICR_TXIC}); (* clear/deassert int *)
         Kernel.PutMsgAwaited(ux.devEvQ, ux.devMsg);
       END
     END;
@@ -167,12 +167,12 @@ MODULE UARTstrKint;
   BEGIN
     SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {Pin2});
     SYSTEM.GET(ux.dev.MIS, mis); (* get status *)
-    IF UARTdev.MIS_TXMIS IN mis THEN
+    IF UART.MIS_TXMIS IN mis THEN
       IF ux.ix < ux.msg.numChar THEN
         SYSTEM.PUT(ux.dev.TDR, ux.msg.str[ux.ix]);
         INC(ux.ix)
       ELSE
-        SYSTEM.PUT(ux.dev.ICR + MCU.ASET, {UARTdev.ICR_TXIC}); (* clear/deassert int *)
+        SYSTEM.PUT(ux.dev.ICR + MCU.ASET, {UART.ICR_TXIC}); (* clear/deassert int *)
         Kernel.PutMsgAwaited(ux.devEvQ, ux.devMsg);
       END
     END;
@@ -204,10 +204,10 @@ MODULE UARTstrKint;
 
 
   PROCEDURE DeviceStatus*(dev: TextIO.Device): SET;
-    VAR dev0: UARTdev.Device;
+    VAR dev0: UART.Device;
   BEGIN
-    dev0 := dev(UARTdev.Device);
-    RETURN UARTdev.Flags(dev0)
+    dev0 := dev(UART.Device);
+    RETURN UART.Flags(dev0)
   END DeviceStatus;
 
 
@@ -219,7 +219,7 @@ MODULE UARTstrKint;
   END makePrintMsg;
 
 
-  PROCEDURE Install*(dev: UARTdev.Device; rdyQintNo, intPrio, numMsg: INTEGER);
+  PROCEDURE Install*(dev: UART.Device; rdyQintNo, intPrio, numMsg: INTEGER);
     VAR ux: UARTctx;
   BEGIN
     NEW(uartCon[dev.uartNo]); ASSERT(uartCon[dev.uartNo] # NIL, Errors.HeapOverflow);
@@ -253,8 +253,8 @@ MODULE UARTstrKint;
     Exceptions.SetIntPrio(dev.intNo, intPrio);
     Exceptions.ClearPendingInt(dev.intNo);
     Exceptions.EnableInt(dev.intNo);
-    UARTdev.SetFifoLvl(dev, TxFifoLvl, RxFifoLvl);
-    UARTdev.EnableInt(dev, {UARTdev.IMSC_TXIM});
+    UART.SetFifoLvl(dev, TxFifoLvl, RxFifoLvl);
+    UART.EnableInt(dev, {UART.IMSC_TXIM});
     (* get started *)
     Kernel.RunAct(ux.act, ux.rdyQ)
   END Install;

@@ -114,7 +114,7 @@ MODULE UART;
       ASSERT(dev # NIL, Errors.PreCond);
 
       (* set functional/kernel clock, start bus clock *)
-      CLK.ConfigDevClock(dev.clkSelReg, cfg.clkSel, dev.clkSelPos, TwoBits);
+      CLK.ConfigDevClock(cfg.clkSel, dev.clkSelReg, dev.clkSelPos, TwoBits);
       CLK.EnableBusClock(dev.devNo);
 
       (* stop/reset *)

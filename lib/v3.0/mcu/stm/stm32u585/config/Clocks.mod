@@ -3,7 +3,7 @@ MODULE Clocks;
   Oberon RTK Framework
   Version: v3.0
   --
-  Program-specific clock configuration.
+  Program-specific clocks configuration and initialisation at start-up.
   --
   MCU: STM32U585AI
   --
@@ -14,7 +14,7 @@ MODULE Clocks;
   IMPORT CLK, PWR, FLASH, RAM;
 
   CONST
-    SYSCLK_FRQ* = 160 * 1000000;  (* PLL1P *)
+    SYSCLK_FRQ* = 160 * 1000000;  (* PLL1R *)
     HCLK_FRQ*   = 160 * 1000000;  (* AHB prescaler *)
     PCLK1_FRQ*  = 160 * 1000000;  (* APB1 prescaler *)
     PCLK2_FRQ*  =  80 * 1000000;  (* APB2 prescaler *)
@@ -25,11 +25,11 @@ MODULE Clocks;
 
 
   PROCEDURE Configure*;
-  (* SYSCLK/HCLK: 160 MHz, PCLK1: 160 MHz, PCLK2/PCLK3: 80 MHz *)
     CONST Enabled = 1; Disabled = 0;
     VAR pllCfg: CLK.PLLcfg; prescCfg: CLK.BusPrescCfg; oscCfg: CLK.OscCfg; lsOscCfg: CLK.LsOscCfg;
   BEGIN
     (* base oscillators *)
+    (* enable as needed, and implemented on the board. eg. crystals *)
     oscCfg.msisEn := Enabled;
     oscCfg.msikEn := Enabled;
     oscCfg.hsiEn := Enabled;
