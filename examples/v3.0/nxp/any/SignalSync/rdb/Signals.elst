@@ -1,7 +1,7 @@
 . <tool: Astrobe for RP2350>
 . <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
 
-.     0  000004FF0              <Pad: 0>
+.     0  0100050CC              <Pad: 0>
 MODULE Signals;
 (**
   Oberon RTK Framework
@@ -22,141 +22,141 @@ MODULE Signals;
     SignalDesc* = RECORD
       queue: Kernel.Thread
     END;
-.     4  000004FF4      04FF4      00004  <Type:   4>
-.     8  000004FF8      04FF8      00000  <Type:   0>
-.    12  000004FFC      04FFC      00000  <Type:   0>
-.    16  000005000      05000      00000  <Type:   0>
-.    20  000005004      05004      00000  <Type:   0>
+.     4  0100050D0  0100050D0      00004  <Type:   4>
+.     8  0100050D4  0100050D4      00000  <Type:   0>
+.    12  0100050D8  0100050D8      00000  <Type:   0>
+.    16  0100050DC  0100050DC      00000  <Type:   0>
+.    20  0100050E0  0100050E0      00000  <Type:   0>
 
 
   PROCEDURE queue(s: Signal);
     VAR t: Kernel.Thread;
   BEGIN
-.    24  000005008      0B501  push      { r0, lr }
-.    26  00000500A      0B081  sub       sp,#4
+.    24  0100050E4      0B501  push      { r0, lr }
+.    26  0100050E6      0B081  sub       sp,#4
     IF s.queue = NIL THEN
-.    28  00000500C      09801  ldr       r0,[sp,#4]
-.    30  00000500E      06800  ldr       r0,[r0]
-.    32  000005010      02800  cmp       r0,#0
-.    34  000005012  0F040800C  bne.w     24 -> 62
+.    28  0100050E8      09801  ldr       r0,[sp,#4]
+.    30  0100050EA      06800  ldr       r0,[r0]
+.    32  0100050EC      02800  cmp       r0,#0
+.    34  0100050EE  0F040800C  bne.w     24 -> 62
       s.queue := Kernel.Ct();
-.    38  000005016  0F7FFFD63  bl.w      Ext Proc #17
-.    42  00000501A      0E000  b         0 -> 46
-.    44  00000501C      0001B  <LineNo: 27>
-.    46  00000501E      09901  ldr       r1,[sp,#4]
-.    48  000005020      06008  str       r0,[r1]
+.    38  0100050F2  0F7FFFD63  bl.w      Ext Proc #17
+.    42  0100050F6      0E000  b         0 -> 46
+.    44  0100050F8      0001B  <LineNo: 27>
+.    46  0100050FA      09901  ldr       r1,[sp,#4]
+.    48  0100050FC      06008  str       r0,[r1]
       s.queue.next := NIL
-.    50  000005022      09801  ldr       r0,[sp,#4]
-.    52  000005024      06800  ldr       r0,[r0]
+.    50  0100050FE      09801  ldr       r0,[sp,#4]
+.    52  010005100      06800  ldr       r0,[r0]
     ELSE
-.    54  000005026      02100  movs      r1,#0
-.    56  000005028      062C1  str       r1,[r0,#44]
+.    54  010005102      02100  movs      r1,#0
+.    56  010005104      062C1  str       r1,[r0,#44]
       t := s.queue;
-.    58  00000502A  0F000B817  b.w       46 -> 108
-.    62  00000502E      09801  ldr       r0,[sp,#4]
-.    64  000005030      06800  ldr       r0,[r0]
-.    66  000005032      09000  str       r0,[sp]
+.    58  010005106  0F000B817  b.w       46 -> 108
+.    62  01000510A      09801  ldr       r0,[sp,#4]
+.    64  01000510C      06800  ldr       r0,[r0]
+.    66  01000510E      09000  str       r0,[sp]
       WHILE t.next # NIL DO
-.    68  000005034      09800  ldr       r0,[sp]
-.    70  000005036      06AC0  ldr       r0,[r0,#44]
-.    72  000005038      02800  cmp       r0,#0
-.    74  00000503A  0F0008005  beq.w     10 -> 88
+.    68  010005110      09800  ldr       r0,[sp]
+.    70  010005112      06AC0  ldr       r0,[r0,#44]
+.    72  010005114      02800  cmp       r0,#0
+.    74  010005116  0F0008005  beq.w     10 -> 88
         t := t.next
       END;
-.    78  00000503E      09800  ldr       r0,[sp]
-.    80  000005040      06AC0  ldr       r0,[r0,#44]
-.    82  000005042      09000  str       r0,[sp]
-.    84  000005044  0F7FFBFF6  b.w       -20 -> 68
+.    78  01000511A      09800  ldr       r0,[sp]
+.    80  01000511C      06AC0  ldr       r0,[r0,#44]
+.    82  01000511E      09000  str       r0,[sp]
+.    84  010005120  0F7FFBFF6  b.w       -20 -> 68
       t.next := Kernel.Ct();
-.    88  000005048  0F7FFFD4A  bl.w      Ext Proc #17
-.    92  00000504C      0E000  b         0 -> 96
-.    94  00000504E      00022  <LineNo: 34>
-.    96  000005050      09900  ldr       r1,[sp]
-.    98  000005052      062C8  str       r0,[r1,#44]
+.    88  010005124  0F7FFFD4A  bl.w      Ext Proc #17
+.    92  010005128      0E000  b         0 -> 96
+.    94  01000512A      00022  <LineNo: 34>
+.    96  01000512C      09900  ldr       r1,[sp]
+.    98  01000512E      062C8  str       r0,[r1,#44]
       t.next.next := NIL
-.   100  000005054      09800  ldr       r0,[sp]
-.   102  000005056      06AC0  ldr       r0,[r0,#44]
+.   100  010005130      09800  ldr       r0,[sp]
+.   102  010005132      06AC0  ldr       r0,[r0,#44]
     END
-.   104  000005058      02100  movs      r1,#0
-.   106  00000505A      062C1  str       r1,[r0,#44]
+.   104  010005134      02100  movs      r1,#0
+.   106  010005136      062C1  str       r1,[r0,#44]
   END queue;
-.   108  00000505C      0B002  add       sp,#8
-.   110  00000505E      0BD00  pop       { pc }
+.   108  010005138      0B002  add       sp,#8
+.   110  01000513A      0BD00  pop       { pc }
 
 
   PROCEDURE Await*(s: Signal);
   BEGIN
-.   112  000005060      0B501  push      { r0, lr }
+.   112  01000513C      0B501  push      { r0, lr }
     queue(s);
-.   114  000005062      09800  ldr       r0,[sp]
-.   116  000005064  0F7FFFFD0  bl.w      -96 -> 24
-.   120  000005068      0E000  b         0 -> 124
-.   122  00000506A      0002A  <LineNo: 42>
+.   114  01000513E      09800  ldr       r0,[sp]
+.   116  010005140  0F7FFFFD0  bl.w      -96 -> 24
+.   120  010005144      0E000  b         0 -> 124
+.   122  010005146      0002A  <LineNo: 42>
     Kernel.SuspendMe
   END Await;
-.   124  00000506C  0F7FFFC44  bl.w      Ext Proc #9
-.   128  000005070      0E000  b         0 -> 132
-.   130  000005072      0002B  <LineNo: 43>
-.   132  000005074      0B001  add       sp,#4
-.   134  000005076      0BD00  pop       { pc }
+.   124  010005148  0F7FFFC44  bl.w      Ext Proc #9
+.   128  01000514C      0E000  b         0 -> 132
+.   130  01000514E      0002B  <LineNo: 43>
+.   132  010005150      0B001  add       sp,#4
+.   134  010005152      0BD00  pop       { pc }
 
 
   PROCEDURE Send*(s: Signal);
     VAR t: Kernel.Thread;
   BEGIN
-.   136  000005078      0B501  push      { r0, lr }
-.   138  00000507A      0B081  sub       sp,#4
+.   136  010005154      0B501  push      { r0, lr }
+.   138  010005156      0B081  sub       sp,#4
     IF s.queue # NIL THEN
-.   140  00000507C      09801  ldr       r0,[sp,#4]
-.   142  00000507E      06800  ldr       r0,[r0]
-.   144  000005080      02800  cmp       r0,#0
-.   146  000005082  0F000800C  beq.w     24 -> 174
+.   140  010005158      09801  ldr       r0,[sp,#4]
+.   142  01000515A      06800  ldr       r0,[r0]
+.   144  01000515C      02800  cmp       r0,#0
+.   146  01000515E  0F000800C  beq.w     24 -> 174
       t := s.queue;
-.   150  000005086      09801  ldr       r0,[sp,#4]
-.   152  000005088      06800  ldr       r0,[r0]
-.   154  00000508A      09000  str       r0,[sp]
+.   150  010005162      09801  ldr       r0,[sp,#4]
+.   152  010005164      06800  ldr       r0,[r0]
+.   154  010005166      09000  str       r0,[sp]
       s.queue := t.next;
-.   156  00000508C      09800  ldr       r0,[sp]
-.   158  00000508E      06AC0  ldr       r0,[r0,#44]
-.   160  000005090      09901  ldr       r1,[sp,#4]
-.   162  000005092      06008  str       r0,[r1]
+.   156  010005168      09800  ldr       r0,[sp]
+.   158  01000516A      06AC0  ldr       r0,[r0,#44]
+.   160  01000516C      09901  ldr       r1,[sp,#4]
+.   162  01000516E      06008  str       r0,[r1]
       Kernel.Enable(t)
-.   164  000005094      09800  ldr       r0,[sp]
+.   164  010005170      09800  ldr       r0,[sp]
     END
-.   166  000005096  0F7FFFBEF  bl.w      Ext Proc #6
-.   170  00000509A      0E000  b         0 -> 174
-.   172  00000509C      00035  <LineNo: 53>
+.   166  010005172  0F7FFFBEF  bl.w      Ext Proc #6
+.   170  010005176      0E000  b         0 -> 174
+.   172  010005178      00035  <LineNo: 53>
   END Send;
-.   174  00000509E      0B002  add       sp,#8
-.   176  0000050A0      0BD00  pop       { pc }
-.   178  0000050A2      0BF00  nop       
+.   174  01000517A      0B002  add       sp,#8
+.   176  01000517C      0BD00  pop       { pc }
+.   178  01000517E      0BF00  nop       
 
 
   PROCEDURE* Awaited*(s: Signal): BOOLEAN;
     RETURN s.queue # NIL
-.   180  0000050A4      0B500  push      { lr }
+.   180  010005180      0B500  push      { lr }
   END Awaited;
-.   182  0000050A6      06801  ldr       r1,[r0]
-.   184  0000050A8      02900  cmp       r1,#0
-.   186  0000050AA      0BF14  ite       ne
-.   188  0000050AC  0F04F0101  movne.w   r1,#1
-.   192  0000050B0  0F04F0100  moveq.w   r1,#0
-.   196  0000050B4      04608  mov       r0,r1
-.   198  0000050B6      0BD00  pop       { pc }
+.   182  010005182      06801  ldr       r1,[r0]
+.   184  010005184      02900  cmp       r1,#0
+.   186  010005186      0BF14  ite       ne
+.   188  010005188  0F04F0101  movne.w   r1,#1
+.   192  01000518C  0F04F0100  moveq.w   r1,#0
+.   196  010005190      04608  mov       r0,r1
+.   198  010005192      0BD00  pop       { pc }
 
 
   PROCEDURE Init*(s: Signal);
   BEGIN
-.   200  0000050B8      0B501  push      { r0, lr }
+.   200  010005194      0B501  push      { r0, lr }
     s.queue := NIL
   END Init;
-.   202  0000050BA      02000  movs      r0,#0
-.   204  0000050BC      09900  ldr       r1,[sp]
-.   206  0000050BE      06008  str       r0,[r1]
-.   208  0000050C0      0B001  add       sp,#4
-.   210  0000050C2      0BD00  pop       { pc }
+.   202  010005196      02000  movs      r0,#0
+.   204  010005198      09900  ldr       r1,[sp]
+.   206  01000519A      06008  str       r0,[r1]
+.   208  01000519C      0B001  add       sp,#4
+.   210  01000519E      0BD00  pop       { pc }
 
 END Signals.
-.   212  0000050C4      0B500  push      { lr }
-.   214  0000050C6      0BD00  pop       { pc }
+.   212  0100051A0      0B500  push      { lr }
+.   214  0100051A2      0BD00  pop       { pc }
  

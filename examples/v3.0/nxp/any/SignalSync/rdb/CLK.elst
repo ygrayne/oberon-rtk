@@ -1,0 +1,461 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
+
+.     0  01000033C              <Pad: 0>
+MODULE CLK;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  SCG system clock generator device driver.
+  --
+  Type: MCU
+  --
+  MCU: MCXN947
+  --
+  Copyright (c) 2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2; (*, TextIO, Texts, Main;*)
+
+  CONST
+    Enabled* = 1;
+    Disabled* = 0;
+
+    (* for 'SetSysClk' *)
+    SysClk_SOSC* = 1;
+    SysClk_SIRC* = 2;
+    SysClk_FIRC* = 3;
+    SysClk_ROSC* = 4;
+    SysClk_APLL* = 5;
+    SysClk_SPLL* = 6;
+    SysClk_UPLL* = 7;
+
+    (* for FIRCcfg.freq *)
+    FIRC_frq_48*  = 0;
+    FIRC_frq_144* = 1;
+
+    (* for ConfigClkOut *)
+    CLKOUT_MAIN*    = 0;
+    CLKOUT_APLL*    = 1;
+    CLKOUT_CLKIN*   = 2;
+    CLKOUT_FRO_HF*  = 3;
+    CLKOUT_CLK12M*  = 4;
+    CLKOUT_SPLL*    = 5;
+    CLKOUT_CLK16K*  = 6;
+    CLKOUT_UPLL*    = 7;
+
+    (* for DivCfg.pllSel *)
+    PLLdiv_APLL* = 0;
+    PLLdiv_SPLL* = 1;
+    PLLdiv_NONE* = 2;
+
+
+  TYPE
+    FIRCcfg* = RECORD
+      freq*: INTEGER;       (* FIRC_Frq_* above *)
+      periFastEn*: INTEGER; (* MCU.SCG_FIRC_CSR.FIRC_FCLK_PERIPH_EN *)
+      periSlowEn*: INTEGER  (* MCU.SCG_FIRC_CSR.FIRC_SCLK_PERIPH_EN *)
+    END;
+.     4  010000340  010000340      0000C  <Type:   12>
+.     8  010000344  010000344      00000  <Type:   0>
+.    12  010000348  010000348      00000  <Type:   0>
+.    16  01000034C  01000034C      00000  <Type:   0>
+.    20  010000350  010000350      00000  <Type:   0>
+
+    SIRCcfg* = RECORD
+      periEn*: INTEGER  (* MCU.SCG_SIRC_CSR.SIRC_CLK_PERIPH_EN *)
+    END;
+.    24  010000354  010000354      00004  <Type:   4>
+.    28  010000358  010000358      00000  <Type:   0>
+.    32  01000035C  01000035C      00000  <Type:   0>
+.    36  010000360  010000360      00000  <Type:   0>
+.    40  010000364  010000364      00000  <Type:   0>
+
+    PLLcfg* = RECORD
+      (* ... *)
+    END;
+.    44  010000368  010000368      00000  <Type:   0>
+.    48  01000036C  01000036C      00000  <Type:   0>
+.    52  010000370  010000370      00000  <Type:   0>
+.    56  010000374  010000374      00000  <Type:   0>
+.    60  010000378  010000378      00000  <Type:   0>
+
+    DivCfg* = RECORD
+      sysClkDiv*: INTEGER;  (* mainclk to sysclk divider MCU.SYSCON_AHBCLK_DIV *)
+      froHFhalt*, froHFdiv*: INTEGER;   (* FIRC divider MCU.SYSCON_FROHF_DIV *)
+      spllHalt0*, spllDiv0*: INTEGER;   (* SPLL divider MCU.SYSCON_PLL1CLK0_DIV *)
+      spllHalt1*, spllDiv1*: INTEGER;   (* SPLL divider MCU.SYSCON_PLL1CLK1_DIV *)
+      pllHalt*, pllDiv*: INTEGER;       (* SPLL/APLL divider MCU.SYSCON_PLLCLK_DIV *)
+      pllSel*: INTEGER                  (* select input for MCU.SYSCON_PLLCLK_DIV *)
+    END;
+.    64  01000037C  01000037C      00028  <Type:   40>
+.    68  010000380  010000380      00000  <Type:   0>
+.    72  010000384  010000384      00000  <Type:   0>
+.    76  010000388  010000388      00000  <Type:   0>
+.    80  01000038C  01000038C      00000  <Type:   0>
+
+
+  PROCEDURE* SetSysClk*(sysClk: INTEGER);
+    VAR set, val: INTEGER;
+  BEGIN
+.    84  010000390      0B500  push      { lr }
+    set := 0;
+.    86  010000392      02300  movs      r3,#0
+.    88  010000394      04619  mov       r1,r3
+    BFI(set, 27, 24, sysClk);
+.    90  010000396      0460B  mov       r3,r1
+.    92  010000398  0F360611B  bfi       r1,r0,24,4
+    SYSTEM.PUT(MCU.SCG_RCCR, set);
+.    96  01000039C  0F8DF3010  ldr.w     r3,[pc,#16] -> 116
+.   100  0100003A0      06019  str       r1,[r3]
+    REPEAT
+      SYSTEM.GET(MCU.SCG_CSR, val)
+    UNTIL val = set
+.   102  0100003A2  0F8DF3010  ldr.w     r3,[pc,#16] -> 120
+.   106  0100003A6      0681A  ldr       r2,[r3]
+  END SetSysClk;
+.   108  0100003A8      0428A  cmp       r2,r1
+.   110  0100003AA  0F47FAFFA  bne.w     -12 -> 102
+.   114  0100003AE      0BD00  pop       { pc }
+.   116  0100003B0  040044014  <Const:  1074020372>
+.   120  0100003B4  040044010  <Const:  1074020368>
+
+
+  PROCEDURE* ConfigFIRC*(cfg: FIRCcfg);
+    CONST SCLK_PERIPH_EN = 4; FCLK_PERIPH_EN = 5;
+    VAR val: INTEGER;
+  BEGIN
+.   124  0100003B8      0B500  push      { lr }
+    SYSTEM.PUT(MCU.SCG_FIRC_CSR, 0);
+.   126  0100003BA  0F8DF3028  ldr.w     r3,[pc,#40] -> 168
+.   130  0100003BE      02400  movs      r4,#0
+.   132  0100003C0      0601C  str       r4,[r3]
+    SYSTEM.PUT(MCU.SCG_FIRC_CFG, LSL(cfg.freq, 1));
+.   134  0100003C2      06803  ldr       r3,[r0]
+.   136  0100003C4      0005B  lsls      r3,r3,#1
+.   138  0100003C6  0F8DF4020  ldr.w     r4,[pc,#32] -> 172
+.   142  0100003CA      06023  str       r3,[r4]
+    BFI(val, SCLK_PERIPH_EN, cfg.periSlowEn);
+.   144  0100003CC      04613  mov       r3,r2
+.   146  0100003CE      06884  ldr       r4,[r0,#8]
+.   148  0100003D0  0F3641204  bfi       r2,r4,4,1
+    BFI(val, FCLK_PERIPH_EN, cfg.periFastEn);
+.   152  0100003D4      04613  mov       r3,r2
+.   154  0100003D6      06844  ldr       r4,[r0,#4]
+.   156  0100003D8  0F3641245  bfi       r2,r4,5,1
+    SYSTEM.PUT(MCU.SCG_FIRC_CSR, val)
+  END ConfigFIRC;
+.   160  0100003DC  0F8DF3004  ldr.w     r3,[pc,#4] -> 168
+.   164  0100003E0      0601A  str       r2,[r3]
+.   166  0100003E2      0BD00  pop       { pc }
+.   168  0100003E4  040044300  <Const:  1074021120>
+.   172  0100003E8  040044308  <Const:  1074021128>
+
+
+  PROCEDURE* EnableFIRC*;
+    CONST FIRC_EN = 0; FIRC_VLD = 24;
+    VAR val: INTEGER;
+  BEGIN
+.   176  0100003EC      0B500  push      { lr }
+    SYSTEM.GET(MCU.SCG_FIRC_CSR, val);
+.   178  0100003EE  0F8DF1020  ldr.w     r1,[pc,#32] -> 212
+.   182  0100003F2      06808  ldr       r0,[r1]
+    BFI(val, FIRC_EN, 1);
+.   184  0100003F4      04601  mov       r1,r0
+.   186  0100003F6      02201  movs      r2,#1
+.   188  0100003F8  0F3620000  bfi       r0,r2,0,1
+    SYSTEM.PUT(MCU.SCG_FIRC_CSR, val);
+.   192  0100003FC  0F8DF1010  ldr.w     r1,[pc,#16] -> 212
+.   196  010000400      06008  str       r0,[r1]
+    REPEAT UNTIL SYSTEM.BIT(MCU.SCG_FIRC_CSR, FIRC_VLD)
+  END EnableFIRC;
+.   198  010000402  0F8DF100C  ldr.w     r1,[pc,#12] -> 212
+.   202  010000406      0680A  ldr       r2,[r1]
+.   204  010000408      001D2  lsls      r2,r2,#7
+.   206  01000040A  0F57FAFFA  bpl.w     -12 -> 198
+.   210  01000040E      0BD00  pop       { pc }
+.   212  010000410  040044300  <Const:  1074021120>
+
+
+  PROCEDURE* ConfigSIRC*(cfg: SIRCcfg);
+    CONST SIRC_PERIPH_EN = 5;
+    VAR val: INTEGER;
+  BEGIN
+.   216  010000414      0B500  push      { lr }
+    SYSTEM.PUT(MCU.SCG_SIRC_CSR, 0);
+.   218  010000416  0F8DF3018  ldr.w     r3,[pc,#24] -> 244
+.   222  01000041A      02400  movs      r4,#0
+.   224  01000041C      0601C  str       r4,[r3]
+    BFI(val, SIRC_PERIPH_EN, cfg.periEn);
+.   226  01000041E      04613  mov       r3,r2
+.   228  010000420      06804  ldr       r4,[r0]
+.   230  010000422  0F3641245  bfi       r2,r4,5,1
+    SYSTEM.PUT(MCU.SCG_SIRC_CSR, val)
+  END ConfigSIRC;
+.   234  010000426  0F8DF3008  ldr.w     r3,[pc,#8] -> 244
+.   238  01000042A      0601A  str       r2,[r3]
+.   240  01000042C      0BD00  pop       { pc }
+.   242  01000042E      0BF00  nop       
+.   244  010000430  040044200  <Const:  1074020864>
+
+
+  PROCEDURE* EnableCLK1M*;
+    CONST CLK1M_EN = 6;
+    VAR val: SET;
+  BEGIN
+.   248  010000434      0B500  push      { lr }
+    SYSTEM.GET(MCU.SYSCON_CLK_CTRL, val);
+.   250  010000436  0F8DF1014  ldr.w     r1,[pc,#20] -> 272
+.   254  01000043A      06808  ldr       r0,[r1]
+    val := val + {CLK1M_EN};
+.   256  01000043C  0F0500140  orrs.w    r1,r0,#64
+.   260  010000440      04608  mov       r0,r1
+    SYSTEM.PUT(MCU.SYSCON_CLK_CTRL, val)
+  END EnableCLK1M;
+.   262  010000442  0F8DF1008  ldr.w     r1,[pc,#8] -> 272
+.   266  010000446      06008  str       r0,[r1]
+.   268  010000448      0BD00  pop       { pc }
+.   270  01000044A      0BF00  nop       
+.   272  01000044C  040000A18  <Const:  1073744408>
+
+
+  PROCEDURE* ConfigDividers*(cfg: DivCfg);
+    CONST UNSTABLE = 31;
+    VAR val: INTEGER;
+  BEGIN
+.   276  010000450      0B500  push      { lr }
+    val := 0;
+.   278  010000452      02300  movs      r3,#0
+.   280  010000454      0461A  mov       r2,r3
+    BFI(val, 7, 0, cfg.sysClkDiv);
+.   282  010000456      04613  mov       r3,r2
+.   284  010000458      06804  ldr       r4,[r0]
+.   286  01000045A  0F3640207  bfi       r2,r4,0,8
+    SYSTEM.PUT(MCU.SYSCON_AHBCLK_DIV, val);
+.   290  01000045E  0F8DF30E8  ldr.w     r3,[pc,#232] -> 524
+.   294  010000462      0601A  str       r2,[r3]
+    REPEAT UNTIL ~SYSTEM.BIT(MCU.SYSCON_AHBCLK_DIV, UNSTABLE);
+.   296  010000464  0F8DF30E0  ldr.w     r3,[pc,#224] -> 524
+.   300  010000468      0681C  ldr       r4,[r3]
+.   302  01000046A      00024  movs      r4,r4
+.   304  01000046C  0F53FAFFA  bmi.w     -12 -> 296
+    REPEAT UNTIL ~SYSTEM.BIT(MCU.SYSCON_SLOWCLK_DIV, UNSTABLE);
+.   308  010000470  0F8DF30D8  ldr.w     r3,[pc,#216] -> 528
+.   312  010000474      0681C  ldr       r4,[r3]
+.   314  010000476      00024  movs      r4,r4
+.   316  010000478  0F53FAFFA  bmi.w     -12 -> 308
+    IF cfg.froHFhalt = Disabled THEN
+.   320  01000047C      06843  ldr       r3,[r0,#4]
+.   322  01000047E      02B00  cmp       r3,#0
+.   324  010000480  0F0408013  bne.w     38 -> 366
+      val := 0;
+.   328  010000484      02300  movs      r3,#0
+.   330  010000486      0461A  mov       r2,r3
+      BFI(val, 7, 0, cfg.froHFdiv);
+.   332  010000488      04613  mov       r3,r2
+.   334  01000048A      06884  ldr       r4,[r0,#8]
+.   336  01000048C  0F3640207  bfi       r2,r4,0,8
+      BFI(val, 30, cfg.froHFhalt);
+.   340  010000490      04613  mov       r3,r2
+.   342  010000492      06844  ldr       r4,[r0,#4]
+.   344  010000494  0F364729E  bfi       r2,r4,30,1
+      SYSTEM.PUT(MCU.SYSCON_FROHF_DIV, val);
+.   348  010000498  0F8DF30B4  ldr.w     r3,[pc,#180] -> 532
+.   352  01000049C      0601A  str       r2,[r3]
+      REPEAT UNTIL ~SYSTEM.BIT(MCU.SYSCON_FROHF_DIV, UNSTABLE)
+    END;
+.   354  01000049E  0F8DF30B0  ldr.w     r3,[pc,#176] -> 532
+.   358  0100004A2      0681C  ldr       r4,[r3]
+.   360  0100004A4      00024  movs      r4,r4
+.   362  0100004A6  0F53FAFFA  bmi.w     -12 -> 354
+    IF cfg.spllHalt0 = Disabled THEN
+.   366  0100004AA      068C3  ldr       r3,[r0,#12]
+.   368  0100004AC      02B00  cmp       r3,#0
+.   370  0100004AE  0F0408013  bne.w     38 -> 412
+      val := 0;
+.   374  0100004B2      02300  movs      r3,#0
+.   376  0100004B4      0461A  mov       r2,r3
+      BFI(val, 7, 0, cfg.spllDiv0);
+.   378  0100004B6      04613  mov       r3,r2
+.   380  0100004B8      06904  ldr       r4,[r0,#16]
+.   382  0100004BA  0F3640207  bfi       r2,r4,0,8
+      BFI(val, 30, cfg.spllHalt0);
+.   386  0100004BE      04613  mov       r3,r2
+.   388  0100004C0      068C4  ldr       r4,[r0,#12]
+.   390  0100004C2  0F364729E  bfi       r2,r4,30,1
+      SYSTEM.PUT(MCU.SYSCON_PLL1CLK0_DIV, val);
+.   394  0100004C6  0F8DF308C  ldr.w     r3,[pc,#140] -> 536
+.   398  0100004CA      0601A  str       r2,[r3]
+      REPEAT UNTIL ~SYSTEM.BIT(MCU.SYSCON_PLL1CLK0_DIV, UNSTABLE)
+    END;
+.   400  0100004CC  0F8DF3084  ldr.w     r3,[pc,#132] -> 536
+.   404  0100004D0      0681C  ldr       r4,[r3]
+.   406  0100004D2      00024  movs      r4,r4
+.   408  0100004D4  0F53FAFFA  bmi.w     -12 -> 400
+    IF cfg.spllHalt1 = Disabled THEN
+.   412  0100004D8      06943  ldr       r3,[r0,#20]
+.   414  0100004DA      02B00  cmp       r3,#0
+.   416  0100004DC  0F0408013  bne.w     38 -> 458
+      val := 0;
+.   420  0100004E0      02300  movs      r3,#0
+.   422  0100004E2      0461A  mov       r2,r3
+      BFI(val, 7, 0, cfg.spllDiv1);
+.   424  0100004E4      04613  mov       r3,r2
+.   426  0100004E6      06984  ldr       r4,[r0,#24]
+.   428  0100004E8  0F3640207  bfi       r2,r4,0,8
+      BFI(val, 30, cfg.spllHalt1);
+.   432  0100004EC      04613  mov       r3,r2
+.   434  0100004EE      06944  ldr       r4,[r0,#20]
+.   436  0100004F0  0F364729E  bfi       r2,r4,30,1
+      SYSTEM.PUT(MCU.SYSCON_PLL1CLK1_DIV, val);
+.   440  0100004F4  0F8DF3060  ldr.w     r3,[pc,#96] -> 540
+.   444  0100004F8      0601A  str       r2,[r3]
+      REPEAT UNTIL ~SYSTEM.BIT(MCU.SYSCON_PLL1CLK1_DIV, UNSTABLE)
+    END;
+.   446  0100004FA  0F8DF305C  ldr.w     r3,[pc,#92] -> 540
+.   450  0100004FE      0681C  ldr       r4,[r3]
+.   452  010000500      00024  movs      r4,r4
+.   454  010000502  0F53FAFFA  bmi.w     -12 -> 446
+    IF cfg.pllHalt = Disabled THEN
+.   458  010000506      069C3  ldr       r3,[r0,#28]
+.   460  010000508      02B00  cmp       r3,#0
+.   462  01000050A  0F0408013  bne.w     38 -> 504
+      val := 0;
+.   466  01000050E      02300  movs      r3,#0
+.   468  010000510      0461A  mov       r2,r3
+      BFI(val, 7, 0, cfg.pllDiv);
+.   470  010000512      04613  mov       r3,r2
+.   472  010000514      06A04  ldr       r4,[r0,#32]
+.   474  010000516  0F3640207  bfi       r2,r4,0,8
+      BFI(val, 30, cfg.pllHalt);
+.   478  01000051A      04613  mov       r3,r2
+.   480  01000051C      069C4  ldr       r4,[r0,#28]
+.   482  01000051E  0F364729E  bfi       r2,r4,30,1
+      SYSTEM.PUT(MCU.SYSCON_PLLCLK_DIV, val);
+.   486  010000522  0F8DF3038  ldr.w     r3,[pc,#56] -> 544
+.   490  010000526      0601A  str       r2,[r3]
+      REPEAT UNTIL ~SYSTEM.BIT(MCU.SYSCON_PLLCLK_DIV, UNSTABLE)
+    END;
+.   492  010000528  0F8DF3030  ldr.w     r3,[pc,#48] -> 544
+.   496  01000052C      0681C  ldr       r4,[r3]
+.   498  01000052E      00024  movs      r4,r4
+.   500  010000530  0F53FAFFA  bmi.w     -12 -> 492
+    val := 0;
+.   504  010000534      02300  movs      r3,#0
+.   506  010000536      0461A  mov       r2,r3
+    BFI(val, 2, 0, cfg.pllSel);
+.   508  010000538      04613  mov       r3,r2
+.   510  01000053A      06A44  ldr       r4,[r0,#36]
+.   512  01000053C  0F3640202  bfi       r2,r4,0,3
+    SYSTEM.PUT(MCU.SYSCON_PLLCLKDIV_SEL, val)
+  END ConfigDividers;
+.   516  010000540  0F8DF301C  ldr.w     r3,[pc,#28] -> 548
+.   520  010000544      0601A  str       r2,[r3]
+.   522  010000546      0BD00  pop       { pc }
+.   524  010000548  040000380  <Const:  1073742720>
+.   528  01000054C  040000378  <Const:  1073742712>
+.   532  010000550  040000388  <Const:  1073742728>
+.   536  010000554  0400003E4  <Const:  1073742820>
+.   540  010000558  0400003E8  <Const:  1073742824>
+.   544  01000055C  0400003C4  <Const:  1073742788>
+.   548  010000560  04000052C  <Const:  1073743148>
+
+
+  PROCEDURE* EnableBusClock*(device: INTEGER);
+  (* MCU.DEV_* devices *)
+    VAR reg, devNo: INTEGER;
+  BEGIN
+.   552  010000564      0B500  push      { lr }
+    reg := device DIV 32;
+.   554  010000566      01143  asrs      r3,r0,#5
+.   556  010000568      04619  mov       r1,r3
+    reg := MCU.SYSCON_AHBCLK_CTRL0_SET + (reg * MCU.SYSCON_AHBCLK_Offset);
+.   558  01000056A      0008B  lsls      r3,r1,#2
+.   560  01000056C  0F8DF4014  ldr.w     r4,[pc,#20] -> 584
+.   564  010000570      04423  add       r3,r4
+.   566  010000572      04619  mov       r1,r3
+    devNo := device MOD 32;
+.   568  010000574  0F000031F  and.w     r3,r0,#31
+.   572  010000578      0461A  mov       r2,r3
+    SYSTEM.PUT(reg, {devNo})
+.   574  01000057A      02401  movs      r4,#1
+.   576  01000057C  0FA14F302  lsls.w    r3,r4,r2
+  END EnableBusClock;
+.   580  010000580      0600B  str       r3,[r1]
+.   582  010000582      0BD00  pop       { pc }
+.   584  010000584  040000220  <Const:  1073742368>
+
+
+  PROCEDURE* DisableBusClock*(device: INTEGER);
+  (* MCU.DEV_* devices *)
+    VAR reg, devNo: INTEGER;
+  BEGIN
+.   588  010000588      0B500  push      { lr }
+    reg := device DIV 32;
+.   590  01000058A      01143  asrs      r3,r0,#5
+.   592  01000058C      04619  mov       r1,r3
+    reg := MCU.SYSCON_AHBCLK_CTRL0_CLR + (reg * MCU.SYSCON_AHBCLK_Offset);
+.   594  01000058E      0008B  lsls      r3,r1,#2
+.   596  010000590  0F8DF4014  ldr.w     r4,[pc,#20] -> 620
+.   600  010000594      04423  add       r3,r4
+.   602  010000596      04619  mov       r1,r3
+    devNo := device MOD 32;
+.   604  010000598  0F000031F  and.w     r3,r0,#31
+.   608  01000059C      0461A  mov       r2,r3
+    SYSTEM.PUT(reg, {devNo})
+.   610  01000059E      02401  movs      r4,#1
+.   612  0100005A0  0FA14F302  lsls.w    r3,r4,r2
+  END DisableBusClock;
+.   616  0100005A4      0600B  str       r3,[r1]
+.   618  0100005A6      0BD00  pop       { pc }
+.   620  0100005A8  040000240  <Const:  1073742400>
+
+
+  PROCEDURE* ConfigDevClock*(clkSel, clkDiv, clkSelReg, clkDivReg: INTEGER);
+  (* set functional clock *)
+  (* use with clock disabled *)
+    CONST CLKDIV_UNSTABLE = 31;
+  BEGIN
+.   624  0100005AC      0B500  push      { lr }
+    clkSel := clkSel MOD 8H;
+.   626  0100005AE  0F0000407  and.w     r4,r0,#7
+.   630  0100005B2      04620  mov       r0,r4
+    clkDiv := clkDiv MOD 10H;
+.   632  0100005B4  0F001040F  and.w     r4,r1,#15
+.   636  0100005B8      04621  mov       r1,r4
+    SYSTEM.PUT(clkSelReg, clkSel);
+.   638  0100005BA      06010  str       r0,[r2]
+    SYSTEM.PUT(clkDivReg, clkDiv);
+.   640  0100005BC      06019  str       r1,[r3]
+    REPEAT UNTIL ~SYSTEM.BIT(clkDivReg, CLKDIV_UNSTABLE)
+  END ConfigDevClock;
+.   642  0100005BE      0681C  ldr       r4,[r3]
+.   644  0100005C0      00024  movs      r4,r4
+.   646  0100005C2  0F53FAFFC  bmi.w     -8 -> 642
+.   650  0100005C6      0BD00  pop       { pc }
+
+
+  PROCEDURE ConfigClkOut*(clkSel, clkDiv: INTEGER);
+  BEGIN
+.   652  0100005C8      0B503  push      { r0, r1, lr }
+    ConfigDevClock(clkSel, clkDiv, MCU.CLKSEL_CLKOUT, MCU.CLKDIV_CLKOUT)
+.   654  0100005CA      09800  ldr       r0,[sp]
+.   656  0100005CC      09901  ldr       r1,[sp,#4]
+.   658  0100005CE  0F8DF2014  ldr.w     r2,[pc,#20] -> 680
+.   662  0100005D2  0F8DF3014  ldr.w     r3,[pc,#20] -> 684
+  END ConfigClkOut;
+.   666  0100005D6  0F7FFFFE9  bl.w      -46 -> 624
+.   670  0100005DA      0E000  b         0 -> 674
+.   672  0100005DC      000D3  <LineNo: 211>
+.   674  0100005DE      0B002  add       sp,#8
+.   676  0100005E0      0BD00  pop       { pc }
+.   678  0100005E2      0BF00  nop       
+.   680  0100005E4  040000288  <Const:  1073742472>
+.   684  0100005E8  040000384  <Const:  1073742724>
+
+END CLK.
+.   688  0100005EC      0B500  push      { lr }
+.   690  0100005EE      0BD00  pop       { pc }
+ 

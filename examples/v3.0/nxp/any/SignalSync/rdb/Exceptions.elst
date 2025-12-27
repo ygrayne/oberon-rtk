@@ -1,0 +1,421 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
+
+.     0  010004424              <Pad: 0>
+MODULE Exceptions;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  Exception management
+  --
+  MCU: MCXA346, MCXN947
+  --
+  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2, Errors;
+
+  CONST
+    IRQ0_VectOffset = 040H;
+    IntPerRegSet = 32;  (* interrupts per control register for enable/disable *)
+    IntPerRegPrio = 4;  (* interrupts per control register for prio *)
+    ExcPerRegPrio = 4;  (* sys exceptions per control register for prio *)
+    RegOffset = 4;      (* control register offset *)
+    PrioBits = 8;       (* width of prio field *)
+    PrioMask = 0FFH;    (* mask corresponding to prio field width *)
+
+  (* IPSR *)
+
+  PROCEDURE* GetExcNo*(VAR excNo: INTEGER);
+    CONST R = 3;
+  BEGIN
+.     4  010004428      0B500  push      { lr }
+    SYSTEM.EMIT(MCU.MRS_R03_IPSR);
+.     6  01000442A  0F3EF8305  .word     0x8305F3EF /* EMIT */
+    excNo := SYSTEM.REG(R)
+  END GetExcNo;
+.    10  01000442E      04619  mov       r1,r3
+.    12  010004430      06001  str       r1,[r0]
+.    14  010004432      0BD00  pop       { pc }
+
+  (* interrupts (IRQs) *)
+
+  PROCEDURE* iset(intNo, ireg: INTEGER);
+  BEGIN
+.    16  010004434      0B500  push      { lr }
+    ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);
+.    18  010004436      0289C  cmp       r0,#156
+.    20  010004438      0DB01  blt.n     2 -> 26
+.    22  01000443A      0DF22  svc       34
+.    24  01000443C      00026  <LineNo: 38>
+    SYSTEM.PUT(ireg + ((intNo DIV IntPerRegSet) * RegOffset), {intNo MOD IntPerRegSet});
+.    26  01000443E      01142  asrs      r2,r0,#5
+.    28  010004440      00092  lsls      r2,r2,#2
+.    30  010004442  0EB010202  add.w     r2,r1,r2
+.    34  010004446  0F000031F  and.w     r3,r0,#31
+.    38  01000444A      02401  movs      r4,#1
+.    40  01000444C  0FA14F303  lsls.w    r3,r4,r3
+.    44  010004450      06013  str       r3,[r2]
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
+.    46  010004452  0F3BF8F4F  dsb       
+  END iset;
+.    50  010004456  0F3BF8F6F  isb       
+.    54  01000445A      0BD00  pop       { pc }
+
+  PROCEDURE* iget(intNo, ireg: INTEGER; VAR value: BOOLEAN);
+    VAR x: SET;
+  BEGIN
+.    56  01000445C      0B500  push      { lr }
+    ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);
+.    58  01000445E      0289C  cmp       r0,#156
+.    60  010004460      0DB01  blt.n     2 -> 66
+.    62  010004462      0DF22  svc       34
+.    64  010004464      0002E  <LineNo: 46>
+    SYSTEM.GET(ireg + ((intNo DIV IntPerRegSet) * RegOffset), x);
+.    66  010004466      01144  asrs      r4,r0,#5
+.    68  010004468      000A4  lsls      r4,r4,#2
+.    70  01000446A  0EB010404  add.w     r4,r1,r4
+.    74  01000446E      06823  ldr       r3,[r4]
+    value := (intNo MOD IntPerRegSet) IN x
+.    76  010004470  0F000041F  and.w     r4,r0,#31
+  END iget;
+.    80  010004474      02501  movs      r5,#1
+.    82  010004476      040A5  lsls      r5,r4
+.    84  010004478  0EA130F05  tst.w     r3,r5
+.    88  01000447C      0BF14  ite       ne
+.    90  01000447E  0F04F0401  movne.w   r4,#1
+.    94  010004482  0F04F0400  moveq.w   r4,#0
+.    98  010004486      07014  strb      r4,[r2]
+.   100  010004488      0BD00  pop       { pc }
+.   102  01000448A      0BF00  nop       
+
+
+  PROCEDURE EnableInt*(intNo: INTEGER);
+  BEGIN
+.   104  01000448C      0B501  push      { r0, lr }
+    iset(intNo, MCU.PPB_NVIC_ISER0)
+.   106  01000448E      09800  ldr       r0,[sp]
+.   108  010004490  0F8DF100C  ldr.w     r1,[pc,#12] -> 124
+  END EnableInt;
+.   112  010004494  0F7FFFFCE  bl.w      -100 -> 16
+.   116  010004498      0E000  b         0 -> 120
+.   118  01000449A      00036  <LineNo: 54>
+.   120  01000449C      0B001  add       sp,#4
+.   122  01000449E      0BD00  pop       { pc }
+.   124  0100044A0  0E000E100  <Const:  -536813312>
+
+
+  PROCEDURE GetEnabledInt*(intNo: INTEGER; VAR en: BOOLEAN);
+  BEGIN
+.   128  0100044A4      0B503  push      { r0, r1, lr }
+    iget(intNo, MCU.PPB_NVIC_ISER0, en)
+.   130  0100044A6      09800  ldr       r0,[sp]
+.   132  0100044A8  0F8DF1010  ldr.w     r1,[pc,#16] -> 152
+.   136  0100044AC      09A01  ldr       r2,[sp,#4]
+  END GetEnabledInt;
+.   138  0100044AE  0F7FFFFD5  bl.w      -86 -> 56
+.   142  0100044B2      0E000  b         0 -> 146
+.   144  0100044B4      0003C  <LineNo: 60>
+.   146  0100044B6      0B002  add       sp,#8
+.   148  0100044B8      0BD00  pop       { pc }
+.   150  0100044BA      0BF00  nop       
+.   152  0100044BC  0E000E100  <Const:  -536813312>
+
+
+  PROCEDURE DisableInt*(intNo: INTEGER);
+  BEGIN
+.   156  0100044C0      0B501  push      { r0, lr }
+    iset(intNo, MCU.PPB_NVIC_ICER0)
+.   158  0100044C2      09800  ldr       r0,[sp]
+.   160  0100044C4  0F8DF100C  ldr.w     r1,[pc,#12] -> 176
+  END DisableInt;
+.   164  0100044C8  0F7FFFFB4  bl.w      -152 -> 16
+.   168  0100044CC      0E000  b         0 -> 172
+.   170  0100044CE      00042  <LineNo: 66>
+.   172  0100044D0      0B001  add       sp,#4
+.   174  0100044D2      0BD00  pop       { pc }
+.   176  0100044D4  0E000E180  <Const:  -536813184>
+
+
+  PROCEDURE SetPendingInt*(intNo: INTEGER);
+  BEGIN
+.   180  0100044D8      0B501  push      { r0, lr }
+    iset(intNo, MCU.PPB_NVIC_ISPR0)
+.   182  0100044DA      09800  ldr       r0,[sp]
+.   184  0100044DC  0F8DF100C  ldr.w     r1,[pc,#12] -> 200
+  END SetPendingInt;
+.   188  0100044E0  0F7FFFFA8  bl.w      -176 -> 16
+.   192  0100044E4      0E000  b         0 -> 196
+.   194  0100044E6      00048  <LineNo: 72>
+.   196  0100044E8      0B001  add       sp,#4
+.   198  0100044EA      0BD00  pop       { pc }
+.   200  0100044EC  0E000E200  <Const:  -536813056>
+
+
+  PROCEDURE GetPendingInt*(intNo: INTEGER; VAR pend: BOOLEAN);
+  BEGIN
+.   204  0100044F0      0B503  push      { r0, r1, lr }
+    iget(intNo, MCU.PPB_NVIC_ISPR0, pend)
+.   206  0100044F2      09800  ldr       r0,[sp]
+.   208  0100044F4  0F8DF1010  ldr.w     r1,[pc,#16] -> 228
+.   212  0100044F8      09A01  ldr       r2,[sp,#4]
+  END GetPendingInt;
+.   214  0100044FA  0F7FFFFAF  bl.w      -162 -> 56
+.   218  0100044FE      0E000  b         0 -> 222
+.   220  010004500      0004E  <LineNo: 78>
+.   222  010004502      0B002  add       sp,#8
+.   224  010004504      0BD00  pop       { pc }
+.   226  010004506      0BF00  nop       
+.   228  010004508  0E000E200  <Const:  -536813056>
+
+
+  PROCEDURE ClearPendingInt*(intNo: INTEGER);
+  BEGIN
+.   232  01000450C      0B501  push      { r0, lr }
+    iset(intNo, MCU.PPB_NVIC_ICPR0)
+.   234  01000450E      09800  ldr       r0,[sp]
+.   236  010004510  0F8DF100C  ldr.w     r1,[pc,#12] -> 252
+  END ClearPendingInt;
+.   240  010004514  0F7FFFF8E  bl.w      -228 -> 16
+.   244  010004518      0E000  b         0 -> 248
+.   246  01000451A      00054  <LineNo: 84>
+.   248  01000451C      0B001  add       sp,#4
+.   250  01000451E      0BD00  pop       { pc }
+.   252  010004520  0E000E280  <Const:  -536812928>
+
+
+  PROCEDURE* SetIntPrio*(intNo, prio: INTEGER);
+  (* 0 <= prio <= 0FFH *)
+  (* prio's three most significant bits (of eight) used => eight levels *)
+    VAR addr, val, shift: INTEGER; clrMask: SET;
+  BEGIN
+.   256  010004524      0B500  push      { lr }
+    ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);
+.   258  010004526      0289C  cmp       r0,#156
+.   260  010004528      0DB01  blt.n     2 -> 266
+.   262  01000452A      0DF22  svc       34
+.   264  01000452C      0005D  <LineNo: 93>
+    prio := ORD(BITS(prio) * BITS(PrioMask));
+.   266  01000452E  0F01106FF  ands.w    r6,r1,#255
+.   270  010004532      04631  mov       r1,r6
+    addr := MCU.PPB_NVIC_IPR0 + ((intNo DIV IntPerRegPrio) * RegOffset);
+.   272  010004534      01086  asrs      r6,r0,#2
+.   274  010004536      000B6  lsls      r6,r6,#2
+.   276  010004538  0F8DF7030  ldr.w     r7,[pc,#48] -> 328
+.   280  01000453C      0443E  add       r6,r7
+.   282  01000453E      04632  mov       r2,r6
+    shift := (intNo MOD IntPerRegPrio) * PrioBits;
+.   284  010004540  0F0000603  and.w     r6,r0,#3
+.   288  010004544      000F4  lsls      r4,r6,#3
+    clrMask := -BITS(LSL(PrioMask, shift));
+.   290  010004546      026FF  movs      r6,#255
+.   292  010004548      040A6  lsls      r6,r4
+.   294  01000454A  0EA6F0506  mvn.w     r5,r6
+    SYSTEM.GET(addr, val);
+.   298  01000454E      06813  ldr       r3,[r2]
+    val := ORD(BITS(val) * clrMask);  (* clear existing setting *)
+.   300  010004550  0EA130605  ands.w    r6,r3,r5
+.   304  010004554      04633  mov       r3,r6
+    val := val + LSL(prio, shift);    (* add new setting *)
+.   306  010004556  0FA11F604  lsls.w    r6,r1,r4
+.   310  01000455A  0EB030306  add.w     r3,r3,r6
+    SYSTEM.PUT(addr, val);
+.   314  01000455E      06013  str       r3,[r2]
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
+.   316  010004560  0F3BF8F4F  dsb       
+  END SetIntPrio;
+.   320  010004564  0F3BF8F6F  isb       
+.   324  010004568      0BD00  pop       { pc }
+.   326  01000456A      0BF00  nop       
+.   328  01000456C  0E000E400  <Const:  -536812544>
+
+
+  PROCEDURE* GetIntPrio*(intNo: INTEGER; VAR prio: INTEGER);
+    VAR addr: INTEGER;
+  BEGIN
+.   332  010004570      0B500  push      { lr }
+    ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);
+.   334  010004572      0289C  cmp       r0,#156
+.   336  010004574      0DB01  blt.n     2 -> 342
+.   338  010004576      0DF22  svc       34
+.   340  010004578      0006D  <LineNo: 109>
+    addr := MCU.PPB_NVIC_IPR0 + ((intNo DIV IntPerRegPrio) * RegOffset);
+.   342  01000457A      01083  asrs      r3,r0,#2
+.   344  01000457C      0009B  lsls      r3,r3,#2
+.   346  01000457E  0F8DF4024  ldr.w     r4,[pc,#36] -> 384
+.   350  010004582      04423  add       r3,r4
+.   352  010004584      0461A  mov       r2,r3
+    SYSTEM.GET(addr, prio);
+.   354  010004586      06813  ldr       r3,[r2]
+.   356  010004588      0600B  str       r3,[r1]
+    prio := LSR(prio, (intNo MOD IntPerRegPrio) * PrioBits);
+.   358  01000458A  0F0000303  and.w     r3,r0,#3
+.   362  01000458E      000DB  lsls      r3,r3,#3
+.   364  010004590      0680C  ldr       r4,[r1]
+.   366  010004592  0FA34F303  lsrs.w    r3,r4,r3
+.   370  010004596      0600B  str       r3,[r1]
+    prio := ORD(BITS(prio) * BITS(PrioMask));
+.   372  010004598      0680B  ldr       r3,[r1]
+.   374  01000459A  0F01303FF  ands.w    r3,r3,#255
+.   378  01000459E      0600B  str       r3,[r1]
+  END GetIntPrio;
+.   380  0100045A0      0BD00  pop       { pc }
+.   382  0100045A2      0BF00  nop       
+.   384  0100045A4  0E000E400  <Const:  -536812544>
+
+
+  PROCEDURE* InstallIntHandler*(intNo: INTEGER; handler: PROCEDURE);
+    VAR vectAddr, vtor: INTEGER;
+  BEGIN
+.   388  0100045A8      0B500  push      { lr }
+    ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);
+.   390  0100045AA      0289C  cmp       r0,#156
+.   392  0100045AC      0DB01  blt.n     2 -> 398
+.   394  0100045AE      0DF22  svc       34
+.   396  0100045B0      00078  <LineNo: 120>
+    ASSERT(handler # NIL, Errors.PreCond);
+.   398  0100045B2      02900  cmp       r1,#0
+.   400  0100045B4      0D101  bne.n     2 -> 406
+.   402  0100045B6      0DF22  svc       34
+.   404  0100045B8      00079  <LineNo: 121>
+    SYSTEM.GET(MCU.PPB_VTOR, vtor);
+.   406  0100045BA  0F8DF4018  ldr.w     r4,[pc,#24] -> 432
+.   410  0100045BE      06823  ldr       r3,[r4]
+    vectAddr := vtor + IRQ0_VectOffset + (intNo * 4);
+.   412  0100045C0  0F1030440  add.w     r4,r3,#64
+.   416  0100045C4      00085  lsls      r5,r0,#2
+.   418  0100045C6      0442C  add       r4,r5
+.   420  0100045C8      04622  mov       r2,r4
+    INCL(SYSTEM.VAL(SET, handler), 0); (* thumb code *)
+.   422  0100045CA  0F0510101  orrs.w    r1,r1,#1
+    SYSTEM.PUT(vectAddr, handler)
+  END InstallIntHandler;
+.   426  0100045CE      06011  str       r1,[r2]
+.   428  0100045D0      0BD00  pop       { pc }
+.   430  0100045D2      0BF00  nop       
+.   432  0100045D4  0E000ED08  <Const:  -536810232>
+
+
+  (* system exceptions *)
+
+  PROCEDURE* SetSysExcPrio*(excNo, prio: INTEGER);
+    CONST SHPR0 = MCU.PPB_SHPR1 - 04H;
+    VAR addr, val, shift: INTEGER; clrMask: SET;
+  BEGIN
+.   436  0100045D8      0B500  push      { lr }
+    ASSERT(excNo IN MCU.SysExc, Errors.PreCond);
+.   438  0100045DA  0F64D06F8  movw      r6,#000D8F8H
+.   442  0100045DE      02701  movs      r7,#1
+.   444  0100045E0      04087  lsls      r7,r0
+.   446  0100045E2  0EA160F07  tst.w     r6,r7
+.   450  0100045E6      0D101  bne.n     2 -> 456
+.   452  0100045E8      0DF22  svc       34
+.   454  0100045EA      00087  <LineNo: 135>
+    prio := ORD(BITS(prio) * BITS(PrioMask));
+.   456  0100045EC  0F01106FF  ands.w    r6,r1,#255
+.   460  0100045F0      04631  mov       r1,r6
+    addr := SHPR0 + ((excNo DIV ExcPerRegPrio) * RegOffset);
+.   462  0100045F2      01086  asrs      r6,r0,#2
+.   464  0100045F4      000B6  lsls      r6,r6,#2
+.   466  0100045F6  0F8DF7030  ldr.w     r7,[pc,#48] -> 516
+.   470  0100045FA      0443E  add       r6,r7
+.   472  0100045FC      04632  mov       r2,r6
+    shift := (excNo MOD ExcPerRegPrio) * PrioBits;
+.   474  0100045FE  0F0000603  and.w     r6,r0,#3
+.   478  010004602      000F4  lsls      r4,r6,#3
+    clrMask := -BITS(LSL(PrioMask, shift));
+.   480  010004604      026FF  movs      r6,#255
+.   482  010004606      040A6  lsls      r6,r4
+.   484  010004608  0EA6F0506  mvn.w     r5,r6
+    SYSTEM.GET(addr, val);
+.   488  01000460C      06813  ldr       r3,[r2]
+    val := ORD(BITS(val) * clrMask);
+.   490  01000460E  0EA130605  ands.w    r6,r3,r5
+.   494  010004612      04633  mov       r3,r6
+    val := val + LSL(prio, shift);
+.   496  010004614  0FA11F604  lsls.w    r6,r1,r4
+.   500  010004618  0EB030306  add.w     r3,r3,r6
+    SYSTEM.PUT(addr, val);
+.   504  01000461C      06013  str       r3,[r2]
+    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
+.   506  01000461E  0F3BF8F4F  dsb       
+  END SetSysExcPrio;
+.   510  010004622  0F3BF8F6F  isb       
+.   514  010004626      0BD00  pop       { pc }
+.   516  010004628  0E000ED14  <Const:  -536810220>
+
+
+  PROCEDURE* GetSysExcPrio*(excNo: INTEGER; VAR prio: INTEGER);
+    CONST SHPR0 = MCU.PPB_SHPR1 - 04H;
+    VAR addr: INTEGER;
+  BEGIN
+.   520  01000462C      0B500  push      { lr }
+    ASSERT(excNo IN MCU.SysExc, Errors.PreCond);
+.   522  01000462E  0F64D03F8  movw      r3,#000D8F8H
+.   526  010004632      02401  movs      r4,#1
+.   528  010004634      04084  lsls      r4,r0
+.   530  010004636  0EA130F04  tst.w     r3,r4
+.   534  01000463A      0D101  bne.n     2 -> 540
+.   536  01000463C      0DF22  svc       34
+.   538  01000463E      00098  <LineNo: 152>
+    addr := SHPR0 + (excNo DIV ExcPerRegPrio) * RegOffset;
+.   540  010004640      01083  asrs      r3,r0,#2
+.   542  010004642      0009B  lsls      r3,r3,#2
+.   544  010004644  0F8DF4020  ldr.w     r4,[pc,#32] -> 580
+.   548  010004648      04423  add       r3,r4
+.   550  01000464A      0461A  mov       r2,r3
+    SYSTEM.GET(addr, prio);
+.   552  01000464C      06813  ldr       r3,[r2]
+.   554  01000464E      0600B  str       r3,[r1]
+    prio := LSR(prio, (excNo MOD ExcPerRegPrio) * PrioBits);
+.   556  010004650  0F0000303  and.w     r3,r0,#3
+.   560  010004654      000DB  lsls      r3,r3,#3
+.   562  010004656      0680C  ldr       r4,[r1]
+.   564  010004658  0FA34F303  lsrs.w    r3,r4,r3
+.   568  01000465C      0600B  str       r3,[r1]
+    prio := ORD(BITS(prio) * BITS(PrioMask))
+.   570  01000465E      0680B  ldr       r3,[r1]
+.   572  010004660  0F01303FF  ands.w    r3,r3,#255
+  END GetSysExcPrio;
+.   576  010004664      0600B  str       r3,[r1]
+.   578  010004666      0BD00  pop       { pc }
+.   580  010004668  0E000ED14  <Const:  -536810220>
+
+
+  PROCEDURE* InstallSysExcHandler*(excNo: INTEGER; handler: PROCEDURE);
+    VAR vtor, vectAddr: INTEGER;
+  BEGIN
+.   584  01000466C      0B500  push      { lr }
+    ASSERT(excNo IN MCU.SysExc, Errors.PreCond);
+.   586  01000466E  0F64D04F8  movw      r4,#000D8F8H
+.   590  010004672      02501  movs      r5,#1
+.   592  010004674      04085  lsls      r5,r0
+.   594  010004676  0EA140F05  tst.w     r4,r5
+.   598  01000467A      0D101  bne.n     2 -> 604
+.   600  01000467C      0DF22  svc       34
+.   602  01000467E      000A3  <LineNo: 163>
+    ASSERT(handler # NIL, Errors.PreCond);
+.   604  010004680      02900  cmp       r1,#0
+.   606  010004682      0D101  bne.n     2 -> 612
+.   608  010004684      0DF22  svc       34
+.   610  010004686      000A4  <LineNo: 164>
+    SYSTEM.GET(MCU.PPB_VTOR, vtor);
+.   612  010004688  0F8DF4010  ldr.w     r4,[pc,#16] -> 632
+.   616  01000468C      06822  ldr       r2,[r4]
+    vectAddr := vtor + (excNo * 4);
+.   618  01000468E      00084  lsls      r4,r0,#2
+.   620  010004690  0EB020304  add.w     r3,r2,r4
+    INCL(SYSTEM.VAL(SET, handler), 0); (* thumb code *)
+.   624  010004694  0F0510101  orrs.w    r1,r1,#1
+    SYSTEM.PUT(vectAddr, handler)
+  END InstallSysExcHandler;
+.   628  010004698      06019  str       r1,[r3]
+.   630  01000469A      0BD00  pop       { pc }
+.   632  01000469C  0E000ED08  <Const:  -536810232>
+
+END Exceptions.
+.   636  0100046A0      0B500  push      { lr }
+.   638  0100046A2      0BD00  pop       { pc }
+ 

@@ -1,0 +1,107 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
+
+.     0  01000387C              <Pad: 0>
+MODULE PWR;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  SPC system power controller driver
+  --
+  Type: MCU
+  --
+  MCU: MCXN947
+  --
+  Copyright (c) 2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2;
+
+
+  CONST
+    (* 'voltSel' *)
+    Volt_MD* = 1; (* 1.0 V core & SRAM *)
+    Volt_SD* = 2; (* 1.1 V core & SRAM *)
+    Volt_OD* = 3; (* 1.2 V, core only *)
+
+
+  PROCEDURE* SetActiveLDOvoltage*(voltSel: INTEGER);
+    VAR val: INTEGER;
+  BEGIN
+.     4  010003880      0B500  push      { lr }
+    SYSTEM.GET(MCU.SPC_ACTIVE_CFG, val);
+.     6  010003882  0F8DF2024  ldr.w     r2,[pc,#36] -> 44
+.    10  010003886      06811  ldr       r1,[r2]
+    BFI(val, 3, 2, voltSel);
+.    12  010003888      0460A  mov       r2,r1
+.    14  01000388A  0F3600183  bfi       r1,r0,2,2
+    BFI(val, 11, 10, voltSel);
+.    18  01000388E      0460A  mov       r2,r1
+.    20  010003890  0F360218B  bfi       r1,r0,10,2
+    SYSTEM.PUT(MCU.SPC_ACTIVE_CFG, val);
+.    24  010003894  0F8DF2010  ldr.w     r2,[pc,#16] -> 44
+.    28  010003898      06011  str       r1,[r2]
+    REPEAT UNTIL ~SYSTEM.BIT(MCU.SPC_SC, 0)
+  END SetActiveLDOvoltage;
+.    30  01000389A  0F8DF2010  ldr.w     r2,[pc,#16] -> 48
+.    34  01000389E      06813  ldr       r3,[r2]
+.    36  0100038A0      007DB  lsls      r3,r3,#31
+.    38  0100038A2  0F53FAFFA  bmi.w     -12 -> 30
+.    42  0100038A6      0BD00  pop       { pc }
+.    44  0100038A8  040045100  <Const:  1074024704>
+.    48  0100038AC  040045010  <Const:  1074024464>
+
+
+  PROCEDURE* SetSRAMvoltage*(voltSel: INTEGER);
+    VAR val: INTEGER;
+  BEGIN
+.    52  0100038B0      0B500  push      { lr }
+    (* set voltage *)
+    SYSTEM.GET(MCU.SPC_SRAMCTL, val);
+.    54  0100038B2  0F8DF2044  ldr.w     r2,[pc,#68] -> 124
+.    58  0100038B6      06811  ldr       r1,[r2]
+    BFI(val, 1, 0, voltSel);
+.    60  0100038B8      0460A  mov       r2,r1
+.    62  0100038BA  0F3600101  bfi       r1,r0,0,2
+    SYSTEM.PUT(MCU.SPC_SRAMCTL, val);
+.    66  0100038BE  0F8DF2038  ldr.w     r2,[pc,#56] -> 124
+.    70  0100038C2      06011  str       r1,[r2]
+
+    (* request and await change *)
+    SYSTEM.GET(MCU.SPC_SRAMCTL, val);
+.    72  0100038C4  0F8DF2030  ldr.w     r2,[pc,#48] -> 124
+.    76  0100038C8      06811  ldr       r1,[r2]
+    BFI(val, 30, 1);
+.    78  0100038CA      0460A  mov       r2,r1
+.    80  0100038CC      02301  movs      r3,#1
+.    82  0100038CE  0F363719E  bfi       r1,r3,30,1
+    SYSTEM.PUT(MCU.SPC_SRAMCTL, val);
+.    86  0100038D2  0F8DF2024  ldr.w     r2,[pc,#36] -> 124
+.    90  0100038D6      06011  str       r1,[r2]
+    REPEAT
+      SYSTEM.GET(MCU.SPC_SRAMCTL, val)
+    UNTIL 31 IN BITS(val);
+.    92  0100038D8  0F8DF201C  ldr.w     r2,[pc,#28] -> 124
+.    96  0100038DC      06811  ldr       r1,[r2]
+.    98  0100038DE  0F0114F00  tst.w     r1,#080000000H
+.   102  0100038E2  0F43FAFF9  beq.w     -14 -> 92
+
+    (* remove request *)
+    BFI(val, 30, 0);
+.   106  0100038E6      0460A  mov       r2,r1
+.   108  0100038E8      02300  movs      r3,#0
+.   110  0100038EA  0F363719E  bfi       r1,r3,30,1
+    SYSTEM.PUT(MCU.SPC_SRAMCTL, val)
+  END SetSRAMvoltage;
+.   114  0100038EE  0F8DF2008  ldr.w     r2,[pc,#8] -> 124
+.   118  0100038F2      06011  str       r1,[r2]
+.   120  0100038F4      0BD00  pop       { pc }
+.   122  0100038F6      0BF00  nop       
+.   124  0100038F8  040045040  <Const:  1074024512>
+
+END PWR.
+.   128  0100038FC      0B500  push      { lr }
+.   130  0100038FE      0BD00  pop       { pc }
+ 

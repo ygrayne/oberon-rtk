@@ -1,7 +1,7 @@
 . <tool: Astrobe for RP2350>
 . <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
 
-.     0  0000041BC              <Pad: 0>
+.     0  010003F6C              <Pad: 0>
 MODULE Out;
 (**
   Oberon RTK Framework
@@ -26,244 +26,244 @@ MODULE Out;
 
   PROCEDURE* Open*(W0, W1: TextIO.Writer);
   BEGIN
-.     4  0000041C0      0B500  push      { lr }
+.     4  010003F70      0B500  push      { lr }
     ASSERT(W0 # NIL, Errors.PreCond);
-.     6  0000041C2      02800  cmp       r0,#0
-.     8  0000041C4      0D101  bne.n     2 -> 14
-.    10  0000041C6      0DF22  svc       34
-.    12  0000041C8      00019  <LineNo: 25>
+.     6  010003F72      02800  cmp       r0,#0
+.     8  010003F74      0D101  bne.n     2 -> 14
+.    10  010003F76      0DF22  svc       34
+.    12  010003F78      00019  <LineNo: 25>
     W[0] := W0;
-.    14  0000041CA  0F8DF200C  ldr.w     r2,[pc,#12] -> 28
-.    18  0000041CE      06010  str       r0,[r2]
+.    14  010003F7A  0F8DF200C  ldr.w     r2,[pc,#12] -> 28
+.    18  010003F7E      06010  str       r0,[r2]
     W[1] := W1
-.    20  0000041D0  0F8DF2004  ldr.w     r2,[pc,#4] -> 28
+.    20  010003F80  0F8DF2004  ldr.w     r2,[pc,#4] -> 28
   END Open;
-.    24  0000041D4      06051  str       r1,[r2,#4]
-.    26  0000041D6      0BD00  pop       { pc }
-.    28  0000041D8  020027E94  <Global: Out data>
+.    24  010003F84      06051  str       r1,[r2,#4]
+.    26  010003F86      0BD00  pop       { pc }
+.    28  010003F88  02001FE9C  <Global: Out data>
 
 
   PROCEDURE Char*(ch: CHAR);
     VAR cid: INTEGER;
   BEGIN
-.    32  0000041DC      0B501  push      { r0, lr }
-.    34  0000041DE      0B081  sub       sp,#4
+.    32  010003F8C      0B501  push      { r0, lr }
+.    34  010003F8E      0B081  sub       sp,#4
     Cores.GetCoreId(cid);
-.    36  0000041E0      04668  mov       r0,sp
-.    38  0000041E2  0F7FCFB19  bl.w      Ext Proc #2
-.    42  0000041E6      0E000  b         0 -> 46
-.    44  0000041E8      00022  <LineNo: 34>
+.    36  010003F90      04668  mov       r0,sp
+.    38  010003F92  0F7FCFD5D  bl.w      Ext Proc #2
+.    42  010003F96      0E000  b         0 -> 46
+.    44  010003F98      00022  <LineNo: 34>
     Texts.Write(W[cid], ch)
-.    46  0000041EA      09800  ldr       r0,[sp]
-.    48  0000041EC      02802  cmp       r0,#2
-.    50  0000041EE      0D301  bcc.n     2 -> 56
-.    52  0000041F0      0DF01  svc       1
-.    54  0000041F2      00023  <LineNo: 35>
-.    56  0000041F4  0F8DF1018  ldr.w     r1,[pc,#24] -> 84
-.    60  0000041F8      00082  lsls      r2,r0,#2
-.    62  0000041FA  0EB020001  add.w     r0,r2,r1
-.    66  0000041FE      06800  ldr       r0,[r0]
-.    68  000004200  0F89D1004  ldrb.w    r1,[sp,#4]
+.    46  010003F9A      09800  ldr       r0,[sp]
+.    48  010003F9C      02802  cmp       r0,#2
+.    50  010003F9E      0D301  bcc.n     2 -> 56
+.    52  010003FA0      0DF01  svc       1
+.    54  010003FA2      00023  <LineNo: 35>
+.    56  010003FA4  0F8DF1018  ldr.w     r1,[pc,#24] -> 84
+.    60  010003FA8      00082  lsls      r2,r0,#2
+.    62  010003FAA  0EB020001  add.w     r0,r2,r1
+.    66  010003FAE      06800  ldr       r0,[r0]
+.    68  010003FB0  0F89D1004  ldrb.w    r1,[sp,#4]
   END Char;
-.    72  000004204  0F7FEF9E8  bl.w      Ext Proc #4
-.    76  000004208      0E000  b         0 -> 80
-.    78  00000420A      00023  <LineNo: 35>
-.    80  00000420C      0B002  add       sp,#8
-.    82  00000420E      0BD00  pop       { pc }
-.    84  000004210  020027E94  <Global: Out data>
+.    72  010003FB4  0F7FEFC48  bl.w      Ext Proc #4
+.    76  010003FB8      0E000  b         0 -> 80
+.    78  010003FBA      00023  <LineNo: 35>
+.    80  010003FBC      0B002  add       sp,#8
+.    82  010003FBE      0BD00  pop       { pc }
+.    84  010003FC0  02001FE9C  <Global: Out data>
 
 
   PROCEDURE String*(s: ARRAY OF CHAR);
     VAR cid: INTEGER;
   BEGIN
-.    88  000004214      0B503  push      { r0, r1, lr }
-.    90  000004216      0B081  sub       sp,#4
+.    88  010003FC4      0B503  push      { r0, r1, lr }
+.    90  010003FC6      0B081  sub       sp,#4
     Cores.GetCoreId(cid);
-.    92  000004218      04668  mov       r0,sp
-.    94  00000421A  0F7FCFAFD  bl.w      Ext Proc #2
-.    98  00000421E      0E000  b         0 -> 102
-.   100  000004220      0002A  <LineNo: 42>
+.    92  010003FC8      04668  mov       r0,sp
+.    94  010003FCA  0F7FCFD41  bl.w      Ext Proc #2
+.    98  010003FCE      0E000  b         0 -> 102
+.   100  010003FD0      0002A  <LineNo: 42>
     Texts.WriteString(W[cid], s)
-.   102  000004222      09800  ldr       r0,[sp]
-.   104  000004224      02802  cmp       r0,#2
-.   106  000004226      0D301  bcc.n     2 -> 112
-.   108  000004228      0DF01  svc       1
-.   110  00000422A      0002B  <LineNo: 43>
-.   112  00000422C  0F8DF1018  ldr.w     r1,[pc,#24] -> 140
-.   116  000004230      00082  lsls      r2,r0,#2
-.   118  000004232  0EB020001  add.w     r0,r2,r1
-.   122  000004236      06800  ldr       r0,[r0]
-.   124  000004238      09901  ldr       r1,[sp,#4]
-.   126  00000423A      09A02  ldr       r2,[sp,#8]
+.   102  010003FD2      09800  ldr       r0,[sp]
+.   104  010003FD4      02802  cmp       r0,#2
+.   106  010003FD6      0D301  bcc.n     2 -> 112
+.   108  010003FD8      0DF01  svc       1
+.   110  010003FDA      0002B  <LineNo: 43>
+.   112  010003FDC  0F8DF1018  ldr.w     r1,[pc,#24] -> 140
+.   116  010003FE0      00082  lsls      r2,r0,#2
+.   118  010003FE2  0EB020001  add.w     r0,r2,r1
+.   122  010003FE6      06800  ldr       r0,[r0]
+.   124  010003FE8      09901  ldr       r1,[sp,#4]
+.   126  010003FEA      09A02  ldr       r2,[sp,#8]
   END String;
-.   128  00000423C  0F7FEF9E4  bl.w      Ext Proc #5
-.   132  000004240      0E000  b         0 -> 136
-.   134  000004242      0002B  <LineNo: 43>
-.   136  000004244      0B003  add       sp,#12
-.   138  000004246      0BD00  pop       { pc }
-.   140  000004248  020027E94  <Global: Out data>
+.   128  010003FEC  0F7FEFC44  bl.w      Ext Proc #5
+.   132  010003FF0      0E000  b         0 -> 136
+.   134  010003FF2      0002B  <LineNo: 43>
+.   136  010003FF4      0B003  add       sp,#12
+.   138  010003FF6      0BD00  pop       { pc }
+.   140  010003FF8  02001FE9C  <Global: Out data>
 
 
   PROCEDURE Ln*;
     VAR cid: INTEGER;
   BEGIN
-.   144  00000424C      0B500  push      { lr }
-.   146  00000424E      0B081  sub       sp,#4
+.   144  010003FFC      0B500  push      { lr }
+.   146  010003FFE      0B081  sub       sp,#4
     Cores.GetCoreId(cid);
-.   148  000004250      04668  mov       r0,sp
-.   150  000004252  0F7FCFAE1  bl.w      Ext Proc #2
-.   154  000004256      0E000  b         0 -> 158
-.   156  000004258      00032  <LineNo: 50>
+.   148  010004000      04668  mov       r0,sp
+.   150  010004002  0F7FCFD25  bl.w      Ext Proc #2
+.   154  010004006      0E000  b         0 -> 158
+.   156  010004008      00032  <LineNo: 50>
     Texts.WriteLn(W[cid])
-.   158  00000425A      09800  ldr       r0,[sp]
-.   160  00000425C      02802  cmp       r0,#2
-.   162  00000425E      0D301  bcc.n     2 -> 168
-.   164  000004260      0DF01  svc       1
-.   166  000004262      00033  <LineNo: 51>
-.   168  000004264  0F8DF1014  ldr.w     r1,[pc,#20] -> 192
-.   172  000004268      00082  lsls      r2,r0,#2
-.   174  00000426A  0EB020001  add.w     r0,r2,r1
-.   178  00000426E      06800  ldr       r0,[r0]
+.   158  01000400A      09800  ldr       r0,[sp]
+.   160  01000400C      02802  cmp       r0,#2
+.   162  01000400E      0D301  bcc.n     2 -> 168
+.   164  010004010      0DF01  svc       1
+.   166  010004012      00033  <LineNo: 51>
+.   168  010004014  0F8DF1014  ldr.w     r1,[pc,#20] -> 192
+.   172  010004018      00082  lsls      r2,r0,#2
+.   174  01000401A  0EB020001  add.w     r0,r2,r1
+.   178  01000401E      06800  ldr       r0,[r0]
   END Ln;
-.   180  000004270  0F7FEF9F8  bl.w      Ext Proc #6
-.   184  000004274      0E000  b         0 -> 188
-.   186  000004276      00033  <LineNo: 51>
-.   188  000004278      0B001  add       sp,#4
-.   190  00000427A      0BD00  pop       { pc }
-.   192  00000427C  020027E94  <Global: Out data>
+.   180  010004020  0F7FEFC58  bl.w      Ext Proc #6
+.   184  010004024      0E000  b         0 -> 188
+.   186  010004026      00033  <LineNo: 51>
+.   188  010004028      0B001  add       sp,#4
+.   190  01000402A      0BD00  pop       { pc }
+.   192  01000402C  02001FE9C  <Global: Out data>
 
 
   PROCEDURE Int*(n, width: INTEGER);
     VAR cid: INTEGER;
   BEGIN
-.   196  000004280      0B503  push      { r0, r1, lr }
-.   198  000004282      0B081  sub       sp,#4
+.   196  010004030      0B503  push      { r0, r1, lr }
+.   198  010004032      0B081  sub       sp,#4
     Cores.GetCoreId(cid);
-.   200  000004284      04668  mov       r0,sp
-.   202  000004286  0F7FCFAC7  bl.w      Ext Proc #2
-.   206  00000428A      0E000  b         0 -> 210
-.   208  00000428C      0003A  <LineNo: 58>
+.   200  010004034      04668  mov       r0,sp
+.   202  010004036  0F7FCFD0B  bl.w      Ext Proc #2
+.   206  01000403A      0E000  b         0 -> 210
+.   208  01000403C      0003A  <LineNo: 58>
     Texts.WriteInt(W[cid], n, width)
-.   210  00000428E      09800  ldr       r0,[sp]
-.   212  000004290      02802  cmp       r0,#2
-.   214  000004292      0D301  bcc.n     2 -> 220
-.   216  000004294      0DF01  svc       1
-.   218  000004296      0003B  <LineNo: 59>
-.   220  000004298  0F8DF1018  ldr.w     r1,[pc,#24] -> 248
-.   224  00000429C      00082  lsls      r2,r0,#2
-.   226  00000429E  0EB020001  add.w     r0,r2,r1
-.   230  0000042A2      06800  ldr       r0,[r0]
-.   232  0000042A4      09901  ldr       r1,[sp,#4]
-.   234  0000042A6      09A02  ldr       r2,[sp,#8]
+.   210  01000403E      09800  ldr       r0,[sp]
+.   212  010004040      02802  cmp       r0,#2
+.   214  010004042      0D301  bcc.n     2 -> 220
+.   216  010004044      0DF01  svc       1
+.   218  010004046      0003B  <LineNo: 59>
+.   220  010004048  0F8DF1018  ldr.w     r1,[pc,#24] -> 248
+.   224  01000404C      00082  lsls      r2,r0,#2
+.   226  01000404E  0EB020001  add.w     r0,r2,r1
+.   230  010004052      06800  ldr       r0,[r0]
+.   232  010004054      09901  ldr       r1,[sp,#4]
+.   234  010004056      09A02  ldr       r2,[sp,#8]
   END Int;
-.   236  0000042A8  0F7FEFA22  bl.w      Ext Proc #7
-.   240  0000042AC      0E000  b         0 -> 244
-.   242  0000042AE      0003B  <LineNo: 59>
-.   244  0000042B0      0B003  add       sp,#12
-.   246  0000042B2      0BD00  pop       { pc }
-.   248  0000042B4  020027E94  <Global: Out data>
+.   236  010004058  0F7FEFC82  bl.w      Ext Proc #7
+.   240  01000405C      0E000  b         0 -> 244
+.   242  01000405E      0003B  <LineNo: 59>
+.   244  010004060      0B003  add       sp,#12
+.   246  010004062      0BD00  pop       { pc }
+.   248  010004064  02001FE9C  <Global: Out data>
 
 
   PROCEDURE Hex*(n, width: INTEGER);
    VAR cid: INTEGER;
   BEGIN
-.   252  0000042B8      0B503  push      { r0, r1, lr }
-.   254  0000042BA      0B081  sub       sp,#4
+.   252  010004068      0B503  push      { r0, r1, lr }
+.   254  01000406A      0B081  sub       sp,#4
     Cores.GetCoreId(cid);
-.   256  0000042BC      04668  mov       r0,sp
-.   258  0000042BE  0F7FCFAAB  bl.w      Ext Proc #2
-.   262  0000042C2      0E000  b         0 -> 266
-.   264  0000042C4      00042  <LineNo: 66>
+.   256  01000406C      04668  mov       r0,sp
+.   258  01000406E  0F7FCFCEF  bl.w      Ext Proc #2
+.   262  010004072      0E000  b         0 -> 266
+.   264  010004074      00042  <LineNo: 66>
     Texts.WriteHex(W[cid], n, width)
-.   266  0000042C6      09800  ldr       r0,[sp]
-.   268  0000042C8      02802  cmp       r0,#2
-.   270  0000042CA      0D301  bcc.n     2 -> 276
-.   272  0000042CC      0DF01  svc       1
-.   274  0000042CE      00043  <LineNo: 67>
-.   276  0000042D0  0F8DF1018  ldr.w     r1,[pc,#24] -> 304
-.   280  0000042D4      00082  lsls      r2,r0,#2
-.   282  0000042D6  0EB020001  add.w     r0,r2,r1
-.   286  0000042DA      06800  ldr       r0,[r0]
-.   288  0000042DC      09901  ldr       r1,[sp,#4]
-.   290  0000042DE      09A02  ldr       r2,[sp,#8]
+.   266  010004076      09800  ldr       r0,[sp]
+.   268  010004078      02802  cmp       r0,#2
+.   270  01000407A      0D301  bcc.n     2 -> 276
+.   272  01000407C      0DF01  svc       1
+.   274  01000407E      00043  <LineNo: 67>
+.   276  010004080  0F8DF1018  ldr.w     r1,[pc,#24] -> 304
+.   280  010004084      00082  lsls      r2,r0,#2
+.   282  010004086  0EB020001  add.w     r0,r2,r1
+.   286  01000408A      06800  ldr       r0,[r0]
+.   288  01000408C      09901  ldr       r1,[sp,#4]
+.   290  01000408E      09A02  ldr       r2,[sp,#8]
   END Hex;
-.   292  0000042E0  0F7FEFA20  bl.w      Ext Proc #8
-.   296  0000042E4      0E000  b         0 -> 300
-.   298  0000042E6      00043  <LineNo: 67>
-.   300  0000042E8      0B003  add       sp,#12
-.   302  0000042EA      0BD00  pop       { pc }
-.   304  0000042EC  020027E94  <Global: Out data>
+.   292  010004090  0F7FEFC80  bl.w      Ext Proc #8
+.   296  010004094      0E000  b         0 -> 300
+.   298  010004096      00043  <LineNo: 67>
+.   300  010004098      0B003  add       sp,#12
+.   302  01000409A      0BD00  pop       { pc }
+.   304  01000409C  02001FE9C  <Global: Out data>
 
 
   PROCEDURE Bin*(n, width: INTEGER);
     VAR cid: INTEGER;
   BEGIN
-.   308  0000042F0      0B503  push      { r0, r1, lr }
-.   310  0000042F2      0B081  sub       sp,#4
+.   308  0100040A0      0B503  push      { r0, r1, lr }
+.   310  0100040A2      0B081  sub       sp,#4
     Cores.GetCoreId(cid);
-.   312  0000042F4      04668  mov       r0,sp
-.   314  0000042F6  0F7FCFA8F  bl.w      Ext Proc #2
-.   318  0000042FA      0E000  b         0 -> 322
-.   320  0000042FC      0004A  <LineNo: 74>
+.   312  0100040A4      04668  mov       r0,sp
+.   314  0100040A6  0F7FCFCD3  bl.w      Ext Proc #2
+.   318  0100040AA      0E000  b         0 -> 322
+.   320  0100040AC      0004A  <LineNo: 74>
     Texts.WriteBin(W[cid], n, width)
-.   322  0000042FE      09800  ldr       r0,[sp]
-.   324  000004300      02802  cmp       r0,#2
-.   326  000004302      0D301  bcc.n     2 -> 332
-.   328  000004304      0DF01  svc       1
-.   330  000004306      0004B  <LineNo: 75>
-.   332  000004308  0F8DF1018  ldr.w     r1,[pc,#24] -> 360
-.   336  00000430C      00082  lsls      r2,r0,#2
-.   338  00000430E  0EB020001  add.w     r0,r2,r1
-.   342  000004312      06800  ldr       r0,[r0]
-.   344  000004314      09901  ldr       r1,[sp,#4]
-.   346  000004316      09A02  ldr       r2,[sp,#8]
+.   322  0100040AE      09800  ldr       r0,[sp]
+.   324  0100040B0      02802  cmp       r0,#2
+.   326  0100040B2      0D301  bcc.n     2 -> 332
+.   328  0100040B4      0DF01  svc       1
+.   330  0100040B6      0004B  <LineNo: 75>
+.   332  0100040B8  0F8DF1018  ldr.w     r1,[pc,#24] -> 360
+.   336  0100040BC      00082  lsls      r2,r0,#2
+.   338  0100040BE  0EB020001  add.w     r0,r2,r1
+.   342  0100040C2      06800  ldr       r0,[r0]
+.   344  0100040C4      09901  ldr       r1,[sp,#4]
+.   346  0100040C6      09A02  ldr       r2,[sp,#8]
   END Bin;
-.   348  000004318  0F7FEFA1E  bl.w      Ext Proc #9
-.   352  00000431C      0E000  b         0 -> 356
-.   354  00000431E      0004B  <LineNo: 75>
-.   356  000004320      0B003  add       sp,#12
-.   358  000004322      0BD00  pop       { pc }
-.   360  000004324  020027E94  <Global: Out data>
+.   348  0100040C8  0F7FEFC7E  bl.w      Ext Proc #9
+.   352  0100040CC      0E000  b         0 -> 356
+.   354  0100040CE      0004B  <LineNo: 75>
+.   356  0100040D0      0B003  add       sp,#12
+.   358  0100040D2      0BD00  pop       { pc }
+.   360  0100040D4  02001FE9C  <Global: Out data>
 
 
   PROCEDURE Flush*;
     VAR cid: INTEGER;
   BEGIN
-.   364  000004328      0B500  push      { lr }
-.   366  00000432A      0B081  sub       sp,#4
+.   364  0100040D8      0B500  push      { lr }
+.   366  0100040DA      0B081  sub       sp,#4
     Cores.GetCoreId(cid);
-.   368  00000432C      04668  mov       r0,sp
-.   370  00000432E  0F7FCFA73  bl.w      Ext Proc #2
-.   374  000004332      0E000  b         0 -> 378
-.   376  000004334      00052  <LineNo: 82>
+.   368  0100040DC      04668  mov       r0,sp
+.   370  0100040DE  0F7FCFCB7  bl.w      Ext Proc #2
+.   374  0100040E2      0E000  b         0 -> 378
+.   376  0100040E4      00052  <LineNo: 82>
     Texts.FlushOut(W[cid])
-.   378  000004336      09800  ldr       r0,[sp]
-.   380  000004338      02802  cmp       r0,#2
-.   382  00000433A      0D301  bcc.n     2 -> 388
-.   384  00000433C      0DF01  svc       1
-.   386  00000433E      00053  <LineNo: 83>
-.   388  000004340  0F8DF1014  ldr.w     r1,[pc,#20] -> 412
-.   392  000004344      00082  lsls      r2,r0,#2
-.   394  000004346  0EB020001  add.w     r0,r2,r1
-.   398  00000434A      06800  ldr       r0,[r0]
+.   378  0100040E6      09800  ldr       r0,[sp]
+.   380  0100040E8      02802  cmp       r0,#2
+.   382  0100040EA      0D301  bcc.n     2 -> 388
+.   384  0100040EC      0DF01  svc       1
+.   386  0100040EE      00053  <LineNo: 83>
+.   388  0100040F0  0F8DF1014  ldr.w     r1,[pc,#20] -> 412
+.   392  0100040F4      00082  lsls      r2,r0,#2
+.   394  0100040F6  0EB020001  add.w     r0,r2,r1
+.   398  0100040FA      06800  ldr       r0,[r0]
   END Flush;
-.   400  00000434C  0F7FEFB84  bl.w      Ext Proc #13
-.   404  000004350      0E000  b         0 -> 408
-.   406  000004352      00053  <LineNo: 83>
-.   408  000004354      0B001  add       sp,#4
-.   410  000004356      0BD00  pop       { pc }
-.   412  000004358  020027E94  <Global: Out data>
+.   400  0100040FC  0F7FEFDE4  bl.w      Ext Proc #13
+.   404  010004100      0E000  b         0 -> 408
+.   406  010004102      00053  <LineNo: 83>
+.   408  010004104      0B001  add       sp,#4
+.   410  010004106      0BD00  pop       { pc }
+.   412  010004108  02001FE9C  <Global: Out data>
 
 BEGIN
-.   416  00000435C      0B500  push      { lr }
+.   416  01000410C      0B500  push      { lr }
   W[0] := NIL; W[1] := NIL
-.   418  00000435E  0F8DF0010  ldr.w     r0,[pc,#16] -> 436
-.   422  000004362      02100  movs      r1,#0
-.   424  000004364      06001  str       r1,[r0]
-.   426  000004366  0F8DF0008  ldr.w     r0,[pc,#8] -> 436
+.   418  01000410E  0F8DF0010  ldr.w     r0,[pc,#16] -> 436
+.   422  010004112      02100  movs      r1,#0
+.   424  010004114      06001  str       r1,[r0]
+.   426  010004116  0F8DF0008  ldr.w     r0,[pc,#8] -> 436
 END Out.
-.   430  00000436A      02100  movs      r1,#0
-.   432  00000436C      06041  str       r1,[r0,#4]
-.   434  00000436E      0BD00  pop       { pc }
-.   436  000004370  020027E94  <Global: Out data>
+.   430  01000411A      02100  movs      r1,#0
+.   432  01000411C      06041  str       r1,[r0,#4]
+.   434  01000411E      0BD00  pop       { pc }
+.   436  010004120  02001FE9C  <Global: Out data>
  

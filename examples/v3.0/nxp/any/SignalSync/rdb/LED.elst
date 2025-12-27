@@ -1,7 +1,7 @@
 . <tool: Astrobe for RP2350>
 . <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
 
-.     0  000001070              <Pad: 0>
+.     0  010001238              <Pad: 0>
 MODULE LED;
 (**
   Oberon RTK Framework
@@ -9,8 +9,8 @@ MODULE LED;
   --
   Green, red and blue LEDs
   --
-  MCU: MCXA346
-  Board: FRDM-MCXA346
+  MCU: MCXN947
+  Board: FRDM-MCXN947
   --
   * LEDs are active low.
   * LEDs are parts of an RGB LED, so colours get visually mixed.
@@ -18,23 +18,23 @@ MODULE LED;
   Usage:
   * Via procedures:
     LED.Set({LED.Green})
-    LED.Clear({LED.Green})
-    LED.Toggle({LED.Green})
+    LED.Clear({LED.Red})
+    LED.Toggle({LED.Blue})
   * Direct, avoiding procedure calls, eg. for leaf procedures:
-    SYSTEM.PUT(LED.LSET, {LED.Green})
-    SYSTEM.PUT(LED.LCLR, {LED.Red})
-    SYSTEM.PUT(LED.LXOR, {LED.Blue})
+    SYSTEM.PUT(LED.LSET0, {LED.Green})
+    SYSTEM.PUT(LED.LCLR0, {LED.Red})
+    SYSTEM.PUT(LED.LXOR1, {LED.Blue})
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, StartUp, GPIO;
+  IMPORT SYSTEM, MCU := MCU2, CLK, GPIO;
 
   CONST
-    LEDgreenPinNo = 19; (* all on port 3 *)
-    LEDredPinNo = 18;
-    LEDbluePinNo = 21;
+    LEDgreenPinNo = 27; (* port 0 *)
+    LEDredPinNo = 10;   (* port 0 *)
+    LEDbluePinNo = 2;   (* port 1 *)
 
     Pico* = LEDgreenPinNo;
     Green* = LEDgreenPinNo;
@@ -42,96 +42,153 @@ MODULE LED;
     Blue* = LEDbluePinNo;
 
     LEDx = {LEDredPinNo, LEDgreenPinNo, LEDbluePinNo};
+    LED0 = {LEDredPinNo, LEDgreenPinNo};
+    LED1 = {LEDbluePinNo};
 
-    LSET* = MCU.GPIO3_BASE + MCU.GPIO_PCOR_Offset; (* clear pin for LED = on *)
-    LCLR* = MCU.GPIO3_BASE + MCU.GPIO_PSOR_Offset;
-    LXOR* = MCU.GPIO3_BASE + MCU.GPIO_PTOR_Offset;
+    (* red and green *)
+    LSET0* = MCU.GPIO0_BASE + MCU.GPIO_PCOR_Offset; (* clear pin for LED = on *)
+    LCLR0* = MCU.GPIO0_BASE + MCU.GPIO_PSOR_Offset;
+    LXOR0* = MCU.GPIO0_BASE + MCU.GPIO_PTOR_Offset;
+
+    (* blue *)
+    LSET1* = MCU.GPIO1_BASE + MCU.GPIO_PCOR_Offset; (* clear pin for LED = on *)
+    LCLR1* = MCU.GPIO1_BASE + MCU.GPIO_PSOR_Offset;
+    LXOR1* = MCU.GPIO1_BASE + MCU.GPIO_PTOR_Offset;
 
 
-  PROCEDURE Set*(leds: SET);
+  PROCEDURE* Set*(leds: SET);
   BEGIN
-.     4  000001074      0B501  push      { r0, lr }
-    SYSTEM.PUT(LSET, leds)
+.     4  01000123C      0B500  push      { lr }
+    IF ~(Blue IN leds) THEN
+.     6  01000123E  0F0100F04  tst.w     r0,#4
+.    10  010001242  0F0408005  bne.w     10 -> 24
+      SYSTEM.PUT(LSET0, leds)
+    ELSE
+.    14  010001246  0F8DF101C  ldr.w     r1,[pc,#28] -> 44
+.    18  01000124A      06008  str       r0,[r1]
+      EXCL(leds, Blue);
+.    20  01000124C  0F000B809  b.w       18 -> 42
+.    24  010001250  0F0300004  bics.w    r0,r0,#4
+      SYSTEM.PUT(LSET0, leds);
+.    28  010001254  0F8DF100C  ldr.w     r1,[pc,#12] -> 44
+.    32  010001258      06008  str       r0,[r1]
+      SYSTEM.PUT(LSET1, {Blue})
+    END
+.    34  01000125A  0F8DF100C  ldr.w     r1,[pc,#12] -> 48
+.    38  01000125E      02204  movs      r2,#4
+.    40  010001260      0600A  str       r2,[r1]
   END Set;
-.     6  000001076  0F8DF000C  ldr.w     r0,[pc,#12] -> 20
-.    10  00000107A      09900  ldr       r1,[sp]
-.    12  00000107C      06001  str       r1,[r0]
-.    14  00000107E      0B001  add       sp,#4
-.    16  000001080      0BD00  pop       { pc }
-.    18  000001082      0BF00  nop       
-.    20  000001084  040105048  <Const:  1074810952>
+.    42  010001262      0BD00  pop       { pc }
+.    44  010001264  040096048  <Const:  1074356296>
+.    48  010001268  040098048  <Const:  1074364488>
 
-  PROCEDURE Clear*(leds: SET);
+  PROCEDURE* Clear*(leds: SET);
   BEGIN
-.    24  000001088      0B501  push      { r0, lr }
-    SYSTEM.PUT(LCLR, leds)
+.    52  01000126C      0B500  push      { lr }
+    IF ~(Blue IN leds) THEN
+.    54  01000126E  0F0100F04  tst.w     r0,#4
+.    58  010001272  0F0408005  bne.w     10 -> 72
+      SYSTEM.PUT(LCLR0, leds)
+    ELSE
+.    62  010001276  0F8DF101C  ldr.w     r1,[pc,#28] -> 92
+.    66  01000127A      06008  str       r0,[r1]
+      EXCL(leds, Blue);
+.    68  01000127C  0F000B809  b.w       18 -> 90
+.    72  010001280  0F0300004  bics.w    r0,r0,#4
+      SYSTEM.PUT(LCLR0, leds);
+.    76  010001284  0F8DF100C  ldr.w     r1,[pc,#12] -> 92
+.    80  010001288      06008  str       r0,[r1]
+      SYSTEM.PUT(LCLR1, {Blue})
+    END
+.    82  01000128A  0F8DF100C  ldr.w     r1,[pc,#12] -> 96
+.    86  01000128E      02204  movs      r2,#4
+.    88  010001290      0600A  str       r2,[r1]
   END Clear;
-.    26  00000108A  0F8DF000C  ldr.w     r0,[pc,#12] -> 40
-.    30  00000108E      09900  ldr       r1,[sp]
-.    32  000001090      06001  str       r1,[r0]
-.    34  000001092      0B001  add       sp,#4
-.    36  000001094      0BD00  pop       { pc }
-.    38  000001096      0BF00  nop       
-.    40  000001098  040105044  <Const:  1074810948>
+.    90  010001292      0BD00  pop       { pc }
+.    92  010001294  040096044  <Const:  1074356292>
+.    96  010001298  040098044  <Const:  1074364484>
 
-  PROCEDURE Toggle*(leds: SET);
+  PROCEDURE* Toggle*(leds: SET);
   BEGIN
-.    44  00000109C      0B501  push      { r0, lr }
-    SYSTEM.PUT(LXOR, leds)
+.   100  01000129C      0B500  push      { lr }
+    IF ~(Blue IN leds) THEN
+.   102  01000129E  0F0100F04  tst.w     r0,#4
+.   106  0100012A2  0F0408005  bne.w     10 -> 120
+      SYSTEM.PUT(LXOR0, leds)
+    ELSE
+.   110  0100012A6  0F8DF101C  ldr.w     r1,[pc,#28] -> 140
+.   114  0100012AA      06008  str       r0,[r1]
+      EXCL(leds, Blue);
+.   116  0100012AC  0F000B809  b.w       18 -> 138
+.   120  0100012B0  0F0300004  bics.w    r0,r0,#4
+      SYSTEM.PUT(LXOR0, leds);
+.   124  0100012B4  0F8DF100C  ldr.w     r1,[pc,#12] -> 140
+.   128  0100012B8      06008  str       r0,[r1]
+      SYSTEM.PUT(LXOR1, {Blue})
+    END
+.   130  0100012BA  0F8DF100C  ldr.w     r1,[pc,#12] -> 144
+.   134  0100012BE      02204  movs      r2,#4
+.   136  0100012C0      0600A  str       r2,[r1]
   END Toggle;
-.    46  00000109E  0F8DF000C  ldr.w     r0,[pc,#12] -> 60
-.    50  0000010A2      09900  ldr       r1,[sp]
-.    52  0000010A4      06001  str       r1,[r0]
-.    54  0000010A6      0B001  add       sp,#4
-.    56  0000010A8      0BD00  pop       { pc }
-.    58  0000010AA      0BF00  nop       
-.    60  0000010AC  04010504C  <Const:  1074810956>
+.   138  0100012C2      0BD00  pop       { pc }
+.   140  0100012C4  04009604C  <Const:  1074356300>
+.   144  0100012C8  04009804C  <Const:  1074364492>
 
 
   PROCEDURE init;
   BEGIN
-.    64  0000010B0      0B500  push      { lr }
-    StartUp.ReleaseReset(MCU.DEV_PORT3);
-.    66  0000010B2      0202F  movs      r0,#47
-.    68  0000010B4  0F7FFF944  bl.w      Ext Proc #1
-.    72  0000010B8      0E000  b         0 -> 76
-.    74  0000010BA      00041  <LineNo: 65>
-    StartUp.ReleaseReset(MCU.DEV_GPIO3);
-.    76  0000010BC      02047  movs      r0,#71
-.    78  0000010BE  0F7FFF93F  bl.w      Ext Proc #1
-.    82  0000010C2      0E000  b         0 -> 86
-.    84  0000010C4      00042  <LineNo: 66>
-    StartUp.EnableClock(MCU.DEV_PORT3);
-.    86  0000010C6      0202F  movs      r0,#47
-.    88  0000010C8  0F7FFF95E  bl.w      Ext Proc #3
-.    92  0000010CC      0E000  b         0 -> 96
-.    94  0000010CE      00043  <LineNo: 67>
-    StartUp.EnableClock(MCU.DEV_GPIO3);
-.    96  0000010D0      02047  movs      r0,#71
-.    98  0000010D2  0F7FFF959  bl.w      Ext Proc #3
-.   102  0000010D6      0E000  b         0 -> 106
-.   104  0000010D8      00044  <LineNo: 68>
-    GPIO.EnableOutput(MCU.GPIO3, LEDx);
-.   106  0000010DA  0F8DF001C  ldr.w     r0,[pc,#28] -> 136
-.   110  0000010DE  0F44F1130  mov.w     r1,#02C0000H
-.   114  0000010E2  0F7FFFFB9  bl.w      Ext Proc #11
-.   118  0000010E6      0E000  b         0 -> 122
-.   120  0000010E8      00045  <LineNo: 69>
+.   148  0100012CC      0B500  push      { lr }
+    CLK.EnableBusClock(MCU.DEV_PORT0);
+.   150  0100012CE      0200D  movs      r0,#13
+.   152  0100012D0  0F7FFF948  bl.w      Ext Proc #11
+.   156  0100012D4      0E000  b         0 -> 160
+.   158  0100012D6      0005B  <LineNo: 91>
+    CLK.EnableBusClock(MCU.DEV_GPIO0);
+.   160  0100012D8      02013  movs      r0,#19
+.   162  0100012DA  0F7FFF943  bl.w      Ext Proc #11
+.   166  0100012DE      0E000  b         0 -> 170
+.   168  0100012E0      0005C  <LineNo: 92>
+    GPIO.EnableOutput(MCU.GPIO0, LED0);
+.   170  0100012E2  0F8DF0040  ldr.w     r0,[pc,#64] -> 236
+.   174  0100012E6  0F8DF1040  ldr.w     r1,[pc,#64] -> 240
+.   178  0100012EA  0F7FFFF99  bl.w      Ext Proc #9
+.   182  0100012EE      0E000  b         0 -> 186
+.   184  0100012F0      0005D  <LineNo: 93>
+    CLK.EnableBusClock(MCU.DEV_PORT1);
+.   186  0100012F2      0200E  movs      r0,#14
+.   188  0100012F4  0F7FFF936  bl.w      Ext Proc #11
+.   192  0100012F8      0E000  b         0 -> 196
+.   194  0100012FA      0005E  <LineNo: 94>
+    CLK.EnableBusClock(MCU.DEV_GPIO1);
+.   196  0100012FC      02014  movs      r0,#20
+.   198  0100012FE  0F7FFF931  bl.w      Ext Proc #11
+.   202  010001302      0E000  b         0 -> 206
+.   204  010001304      0005F  <LineNo: 95>
+    GPIO.EnableOutput(MCU.GPIO1, LED1);
+.   206  010001306  0F8DF0024  ldr.w     r0,[pc,#36] -> 244
+.   210  01000130A      02104  movs      r1,#4
+.   212  01000130C  0F7FFFF88  bl.w      Ext Proc #9
+.   216  010001310      0E000  b         0 -> 220
+.   218  010001312      00060  <LineNo: 96>
     Clear(LEDx)
-.   122  0000010EA  0F44F1030  mov.w     r0,#02C0000H
+.   220  010001314  0F8DF0018  ldr.w     r0,[pc,#24] -> 248
   END init;
-.   126  0000010EE  0F7FFFFCB  bl.w      -106 -> 24
-.   130  0000010F2      0E000  b         0 -> 134
-.   132  0000010F4      00046  <LineNo: 70>
-.   134  0000010F6      0BD00  pop       { pc }
-.   136  0000010F8  040105000  <Const:  1074810880>
+.   224  010001318  0F7FFFFA8  bl.w      -176 -> 52
+.   228  01000131C      0E000  b         0 -> 232
+.   230  01000131E      00061  <LineNo: 97>
+.   232  010001320      0BD00  pop       { pc }
+.   234  010001322      0BF00  nop       
+.   236  010001324  040096000  <Const:  1074356224>
+.   240  010001328  008000400  <Const:  134218752>
+.   244  01000132C  040098000  <Const:  1074364416>
+.   248  010001330  008000404  <Const:  134218756>
 
 BEGIN
-.   140  0000010FC      0B500  push      { lr }
+.   252  010001334      0B500  push      { lr }
   init
 END LED.
-.   142  0000010FE  0F7FFFFD7  bl.w      -82 -> 64
-.   146  000001102      0E000  b         0 -> 150
-.   148  000001104      0004A  <LineNo: 74>
-.   150  000001106      0BD00  pop       { pc }
+.   254  010001336  0F7FFFFC9  bl.w      -110 -> 148
+.   258  01000133A      0E000  b         0 -> 262
+.   260  01000133C      00065  <LineNo: 101>
+.   262  01000133E      0BD00  pop       { pc }
  

@@ -1,0 +1,133 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
+
+.     0  0100046A4              <Pad: 0>
+MODULE SYST;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  System tick driver
+  --
+  Type: Cortex-M33
+  --
+  MCU: MCXA346
+  --
+  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2, Exceptions, Errors;
+
+  CONST
+    (* clock source *)
+    (* parameter 'clkSel' in 'Configure' *)
+    CLK_SYSCLK* = 0;  (* MCXA346, CPU_CLK, divider after selector mux *)
+    CLK_DIVCLK* = 0;  (* MCXN947, MAINCLK divided, divider before selector mux *)
+    CLK_CLK1M* = 1;   (* MCXA346: divided; MCXN947: no divider *)
+    CLK_CLK16K* = 2;  (* MCXA346: divided; MCXN947: no divider *)
+    CLK_NONE* = 3;
+
+    (* CSR bits *)
+    SYST_CSR_COUNTFLAG = 16;
+    SYST_CSR_TICKINT = 1;
+    SYST_CSR_ENABLE = 0;
+
+
+  PROCEDURE* Tick*(): BOOLEAN;
+    RETURN SYSTEM.BIT(MCU.PPB_SYST_CSR, SYST_CSR_COUNTFLAG)
+.     4  0100046A8      0B500  push      { lr }
+  END Tick;
+.     6  0100046AA  0F8DF0014  ldr.w     r0,[pc,#20] -> 28
+.    10  0100046AE      06801  ldr       r1,[r0]
+.    12  0100046B0      003C9  lsls      r1,r1,#15
+.    14  0100046B2      0BF4C  ite       mi
+.    16  0100046B4  0F04F0001  movmi.w   r0,#1
+.    20  0100046B8  0F04F0000  movpl.w   r0,#0
+.    24  0100046BC      0BD00  pop       { pc }
+.    26  0100046BE      0BF00  nop       
+.    28  0100046C0  0E000E010  <Const:  -536813552>
+
+
+  PROCEDURE* Enable*;
+  BEGIN
+.    32  0100046C4      0B500  push      { lr }
+    SYSTEM.PUT(MCU.PPB_SYST_CSR, {SYST_CSR_ENABLE})
+  END Enable;
+.    34  0100046C6  0F8DF0008  ldr.w     r0,[pc,#8] -> 44
+.    38  0100046CA      02101  movs      r1,#1
+.    40  0100046CC      06001  str       r1,[r0]
+.    42  0100046CE      0BD00  pop       { pc }
+.    44  0100046D0  0E000E010  <Const:  -536813552>
+
+
+  PROCEDURE* EnableExc*;
+  BEGIN
+.    48  0100046D4      0B500  push      { lr }
+    SYSTEM.PUT(MCU.PPB_SYST_CSR, {SYST_CSR_TICKINT, SYST_CSR_ENABLE})
+  END EnableExc;
+.    50  0100046D6  0F8DF0008  ldr.w     r0,[pc,#8] -> 60
+.    54  0100046DA      02103  movs      r1,#3
+.    56  0100046DC      06001  str       r1,[r0]
+.    58  0100046DE      0BD00  pop       { pc }
+.    60  0100046E0  0E000E010  <Const:  -536813552>
+
+
+  PROCEDURE InstallExcHandler*(handler: PROCEDURE; prio: INTEGER);
+  BEGIN
+.    64  0100046E4      0B503  push      { r0, r1, lr }
+    Exceptions.InstallSysExcHandler(MCU.EXC_SysTick, handler);
+.    66  0100046E6      0200F  movs      r0,#15
+.    68  0100046E8      09900  ldr       r1,[sp]
+.    70  0100046EA  0F7FFFFBF  bl.w      Ext Proc #13
+.    74  0100046EE      0E000  b         0 -> 78
+.    76  0100046F0      00034  <LineNo: 52>
+    Exceptions.SetSysExcPrio(MCU.EXC_SysTick, prio)
+.    78  0100046F2      0200F  movs      r0,#15
+.    80  0100046F4      09901  ldr       r1,[sp,#4]
+  END InstallExcHandler;
+.    82  0100046F6  0F7FFFF6F  bl.w      Ext Proc #11
+.    86  0100046FA      0E000  b         0 -> 90
+.    88  0100046FC      00035  <LineNo: 53>
+.    90  0100046FE      0B002  add       sp,#8
+.    92  010004700      0BD00  pop       { pc }
+.    94  010004702      0BF00  nop       
+
+
+  PROCEDURE* Configure*(clkFreq, msPerTick: INTEGER);
+    VAR cntPerMillisec, cntRld: INTEGER;
+  BEGIN
+.    96  010004704      0B500  push      { lr }
+    cntPerMillisec := clkFreq DIV 1000;
+.    98  010004706  0F24034E8  movw      r4,#1000
+.   102  01000470A  0FB90F5F4  sdiv.w    r5,r0,r4
+.   106  01000470E  0FB050414  mls.w     r4,r5,r4,r0
+.   110  010004712  0EBA572D4  sub.w     r2,r5,r4,lsr 31
+    cntRld := (msPerTick * cntPerMillisec) - 1;
+.   114  010004716  0FB01F402  mul.w     r4,r1,r2
+.   118  01000471A      03C01  subs      r4,#1
+.   120  01000471C      04623  mov       r3,r4
+    ASSERT(cntRld <= 0FFFFFFH, Errors.ProgError); (* 24 bits *)
+.   122  01000471E  0F8DF501C  ldr.w     r5,[pc,#28] -> 152
+.   126  010004722      042AB  cmp       r3,r5
+.   128  010004724      0DD01  ble.n     2 -> 134
+.   130  010004726      0DF25  svc       37
+.   132  010004728      0003E  <LineNo: 62>
+    SYSTEM.PUT(MCU.PPB_SYST_RVR, cntRld);
+.   134  01000472A  0F8DF4014  ldr.w     r4,[pc,#20] -> 156
+.   138  01000472E      06023  str       r3,[r4]
+    SYSTEM.PUT(MCU.PPB_SYST_CVR, 0) (* clear counter *)
+  END Configure;
+.   140  010004730  0F8DF4010  ldr.w     r4,[pc,#16] -> 160
+.   144  010004734      02500  movs      r5,#0
+.   146  010004736      06025  str       r5,[r4]
+.   148  010004738      0BD00  pop       { pc }
+.   150  01000473A      0BF00  nop       
+.   152  01000473C  000FFFFFF  <Const:  16777215>
+.   156  010004740  0E000E014  <Const:  -536813548>
+.   160  010004744  0E000E018  <Const:  -536813544>
+
+END SYST.
+.   164  010004748      0B500  push      { lr }
+.   166  01000474A      0BD00  pop       { pc }
+ 

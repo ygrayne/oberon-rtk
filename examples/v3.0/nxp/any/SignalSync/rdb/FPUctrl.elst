@@ -1,7 +1,7 @@
 . <tool: Astrobe for RP2350>
 . <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
 
-.     0  000004190              <Pad: 0>
+.     0  010003F40              <Pad: 0>
 MODULE FPUctrl;
 (**
   Oberon RTK Framework
@@ -13,7 +13,7 @@ MODULE FPUctrl;
     * 'Init' needs to called from the core whose FPU shall be initialised/enabled.
     * See modules InitCoreOne and Cores.
   --
-  MCU: MCXA346
+  MCU: MCXN947
   --
   Copyright (c) 2024-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -34,25 +34,25 @@ MODULE FPUctrl;
   PROCEDURE* Init*;
      VAR val: INTEGER;
   BEGIN
-.     4  000004194      0B500  push      { lr }
+.     4  010003F44      0B500  push      { lr }
     SYSTEM.GET(MCU.PPB_CPACR, val);
-.     6  000004196  0F8DF101C  ldr.w     r1,[pc,#28] -> 36
-.    10  00000419A      06808  ldr       r0,[r1]
+.     6  010003F46  0F8DF101C  ldr.w     r1,[pc,#28] -> 36
+.    10  010003F4A      06808  ldr       r0,[r1]
     BFI(val, CPACR_FPU_1, CPACR_FPU_0, FPU_AllAccess);
-.    12  00000419C      04601  mov       r1,r0
-.    14  00000419E      0220F  movs      r2,#15
-.    16  0000041A0  0F3625017  bfi       r0,r2,20,4
+.    12  010003F4C      04601  mov       r1,r0
+.    14  010003F4E      0220F  movs      r2,#15
+.    16  010003F50  0F3625017  bfi       r0,r2,20,4
     SYSTEM.PUT(MCU.PPB_CPACR, val);
-.    20  0000041A4  0F8DF100C  ldr.w     r1,[pc,#12] -> 36
-.    24  0000041A8      06008  str       r0,[r1]
+.    20  010003F54  0F8DF100C  ldr.w     r1,[pc,#12] -> 36
+.    24  010003F58      06008  str       r0,[r1]
     SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
-.    26  0000041AA  0F3BF8F4F  dsb       
+.    26  010003F5A  0F3BF8F4F  dsb       
   END Init;
-.    30  0000041AE  0F3BF8F6F  isb       
-.    34  0000041B2      0BD00  pop       { pc }
-.    36  0000041B4  0E000ED88  <Const:  -536810104>
+.    30  010003F5E  0F3BF8F6F  isb       
+.    34  010003F62      0BD00  pop       { pc }
+.    36  010003F64  0E000ED88  <Const:  -536810104>
 
 END FPUctrl.
-.    40  0000041B8      0B500  push      { lr }
-.    42  0000041BA      0BD00  pop       { pc }
+.    40  010003F68      0B500  push      { lr }
+.    42  010003F6A      0BD00  pop       { pc }
  

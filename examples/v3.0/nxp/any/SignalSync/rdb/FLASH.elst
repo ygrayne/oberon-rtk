@@ -1,0 +1,58 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
+
+.     0  010003900              <Pad: 0>
+MODULE FLASH;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  Embedded flash memory controller driver
+  --
+  Type: MCU
+  --
+  MCU: MCXN947
+  --
+  Copyright (c) 2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, MCU := MCU2;
+
+  CONST
+    (* wait states at freq WS_* *)
+    WS_OD_150*  = 3; (* reset value *)
+    WS_OD_100*  = 2;
+    WS_OD_64*   = 1;
+    WS_OD_36*   = 0;
+
+    WS_SD_100*  = WS_OD_100;
+    WS_SD_64*   = WS_OD_64;
+    WS_SD_36*   = WS_OD_36;
+
+    WS_MD_50*   = WS_OD_64;
+    WS_MD_24*   = WS_OD_36;
+
+
+  PROCEDURE* SetWaitStates*(ws: INTEGER);
+    VAR val: INTEGER;
+  BEGIN
+.     4  010003904      0B500  push      { lr }
+    SYSTEM.GET(MCU.FMU_FCTRL, val);
+.     6  010003906  0F8DF2014  ldr.w     r2,[pc,#20] -> 28
+.    10  01000390A      06811  ldr       r1,[r2]
+    BFI(val, 3, 0, ws);
+.    12  01000390C      0460A  mov       r2,r1
+.    14  01000390E  0F3600103  bfi       r1,r0,0,4
+    SYSTEM.PUT(MCU.FMU_FCTRL, val)
+  END SetWaitStates;
+.    18  010003912  0F8DF2008  ldr.w     r2,[pc,#8] -> 28
+.    22  010003916      06011  str       r1,[r2]
+.    24  010003918      0BD00  pop       { pc }
+.    26  01000391A      0BF00  nop       
+.    28  01000391C  040043008  <Const:  1074016264>
+
+END FLASH.
+.    32  010003920      0B500  push      { lr }
+.    34  010003922      0BD00  pop       { pc }
+ 

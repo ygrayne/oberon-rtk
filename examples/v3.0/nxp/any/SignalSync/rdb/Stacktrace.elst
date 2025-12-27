@@ -1,7 +1,7 @@
 . <tool: Astrobe for RP2350>
 . <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
 
-.     0  0000013FC              <Pad: 0>
+.     0  01000166C              <Pad: 0>
 MODULE Stacktrace;
 (**
   Oberon RTK Framework
@@ -10,7 +10,7 @@ MODULE Stacktrace;
   Create stack trace amd read stack registers based on error data
   collected by run-time error handling RuntimeErrors.
   --
-  MCU: MCXA346
+  MCU: MCXN947
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   Portions copyright (c) 2008-2024 CFB Software, https://www.astrobe.com
@@ -23,8 +23,8 @@ MODULE Stacktrace;
   CONST
     TraceDepth = 16;
 
-    ExcRetMask = 0FFFFFFE3H;
-    ExcRetVal = 0FFFFFFA0H;
+    ExcRetMask = 0FFFFFF82H;
+    ExcRetVal = 0FFFFFF80H;
 
     AnnNone* = 0;
     AnnStackframe* = -1;
@@ -63,32 +63,32 @@ MODULE Stacktrace;
       stackAddr*: INTEGER;
       annotation*: INTEGER
     END;
-.     4  000001400      01400      00010  <Type:   16>
-.     8  000001404      01404      00000  <Type:   0>
-.    12  000001408      01408      00000  <Type:   0>
-.    16  00000140C      0140C      00000  <Type:   0>
-.    20  000001410      01410      00000  <Type:   0>
+.     4  010001670  010001670      00010  <Type:   16>
+.     8  010001674  010001674      00000  <Type:   0>
+.    12  010001678  010001678      00000  <Type:   0>
+.    16  01000167C  01000167C      00000  <Type:   0>
+.    20  010001680  010001680      00000  <Type:   0>
 
     Trace* = RECORD
       tp*: ARRAY TraceDepth OF TracePoint;
       count*: INTEGER;
       more*: BOOLEAN
     END;
-.    24  000001414      01414      00108  <Type:   264>
-.    28  000001418      01418      00000  <Type:   0>
-.    32  00000141C      0141C      00000  <Type:   0>
-.    36  000001420      01420      00000  <Type:   0>
-.    40  000001424      01424      00000  <Type:   0>
+.    24  010001684  010001684      00108  <Type:   264>
+.    28  010001688  010001688      00000  <Type:   0>
+.    32  01000168C  01000168C      00000  <Type:   0>
+.    36  010001690  010001690      00000  <Type:   0>
+.    40  010001694  010001694      00000  <Type:   0>
 
     StackedRegs* = RECORD
       r0*, r1*, r2*, r3*, r12*: INTEGER;
       lr*, pc*, xpsr*, sp*: INTEGER
     END;
-.    44  000001428      01428      00024  <Type:   36>
-.    48  00000142C      0142C      00000  <Type:   0>
-.    52  000001430      01430      00000  <Type:   0>
-.    56  000001434      01434      00000  <Type:   0>
-.    60  000001438      01438      00000  <Type:   0>
+.    44  010001698  010001698      00024  <Type:   36>
+.    48  01000169C  01000169C      00000  <Type:   0>
+.    52  0100016A0  0100016A0      00000  <Type:   0>
+.    56  0100016A4  0100016A4      00000  <Type:   0>
+.    60  0100016A8  0100016A8      00000  <Type:   0>
 
 
   (* --- Astrobe code begin --- *)
@@ -98,18 +98,18 @@ MODULE Stacktrace;
   (* get 16-bit data from an address that is possibly not word-aligned *)
     VAR b1, b2: BYTE;
   BEGIN
-.    64  00000143C      0B500  push      { lr }
+.    64  0100016AC      0B500  push      { lr }
     SYSTEM.GET(addr + 1, b1);
-.    66  00000143E      01C44  adds      r4,r0,#1
-.    68  000001440      07822  ldrb      r2,[r4]
+.    66  0100016AE      01C44  adds      r4,r0,#1
+.    68  0100016B0      07822  ldrb      r2,[r4]
     SYSTEM.GET(addr, b2);
-.    70  000001442      07803  ldrb      r3,[r0]
-    value := LSL(b1, 8) + b2;
-.    72  000001444      00214  lsls      r4,r2,#8
-.    74  000001446      0441C  add       r4,r3
-.    76  000001448      0600C  str       r4,[r1]
+.    70  0100016B2      07803  ldrb      r3,[r0]
+    value := LSL(b1, 8) + b2
+.    72  0100016B4      00214  lsls      r4,r2,#8
   END getHalfWord;
-.    78  00000144A      0BD00  pop       { pc }
+.    74  0100016B6      0441C  add       r4,r3
+.    76  0100016B8      0600C  str       r4,[r1]
+.    78  0100016BA      0BD00  pop       { pc }
 
   PROCEDURE isBL(codeAddr: INTEGER): BOOLEAN;
   (* from Astrobe library *)
@@ -124,25 +124,25 @@ MODULE Stacktrace;
   *)
     VAR instr: INTEGER;
   BEGIN
-.    80  00000144C      0B501  push      { r0, lr }
-.    82  00000144E      0B081  sub       sp,#4
+.    80  0100016BC      0B501  push      { r0, lr }
+.    82  0100016BE      0B081  sub       sp,#4
     getHalfWord(codeAddr, instr);
-.    84  000001450      09801  ldr       r0,[sp,#4]
-.    86  000001452      04669  mov       r1,sp
-.    88  000001454  0F7FFFFF2  bl.w      -28 -> 64
-.    92  000001458      0E000  b         0 -> 96
-.    94  00000145A      00064  <LineNo: 100>
+.    84  0100016C0      09801  ldr       r0,[sp,#4]
+.    86  0100016C2      04669  mov       r1,sp
+.    88  0100016C4  0F7FFFFF2  bl.w      -28 -> 64
+.    92  0100016C8      0E000  b         0 -> 96
+.    94  0100016CA      00064  <LineNo: 100>
     RETURN BFX(instr, 15, 11) = 01EH
-.    96  00000145C      09800  ldr       r0,[sp]
-.    98  00000145E  0F3C020C4  ubfx      r0,r0,11,5
+.    96  0100016CC      09800  ldr       r0,[sp]
+.    98  0100016CE  0F3C020C4  ubfx      r0,r0,11,5
   END isBL;
-.   102  000001462      0281E  cmp       r0,#30
-.   104  000001464      0BF0C  ite       eq
-.   106  000001466  0F04F0001  moveq.w   r0,#1
-.   110  00000146A  0F04F0000  movne.w   r0,#0
-.   114  00000146E      0B002  add       sp,#8
-.   116  000001470      0BD00  pop       { pc }
-.   118  000001472      0BF00  nop       
+.   102  0100016D2      0281E  cmp       r0,#30
+.   104  0100016D4      0BF0C  ite       eq
+.   106  0100016D6  0F04F0001  moveq.w   r0,#1
+.   110  0100016DA  0F04F0000  movne.w   r0,#0
+.   114  0100016DE      0B002  add       sp,#8
+.   116  0100016E0      0BD00  pop       { pc }
+.   118  0100016E2      0BF00  nop       
 
   PROCEDURE isBLX(codeAddr: INTEGER): BOOLEAN;
   (* from Astrobe library, modified *)
@@ -152,28 +152,28 @@ MODULE Stacktrace;
       BLXval  = 04780H; (* 0100 0111 1000 0000 *)
     VAR instr: INTEGER;
   BEGIN
-.   120  000001474      0B501  push      { r0, lr }
-.   122  000001476      0B081  sub       sp,#4
+.   120  0100016E4      0B501  push      { r0, lr }
+.   122  0100016E6      0B081  sub       sp,#4
     getHalfWord(codeAddr, instr);
-.   124  000001478      09801  ldr       r0,[sp,#4]
-.   126  00000147A      04669  mov       r1,sp
-.   128  00000147C  0F7FFFFDE  bl.w      -68 -> 64
-.   132  000001480      0E000  b         0 -> 136
-.   134  000001482      00070  <LineNo: 112>
+.   124  0100016E8      09801  ldr       r0,[sp,#4]
+.   126  0100016EA      04669  mov       r1,sp
+.   128  0100016EC  0F7FFFFDE  bl.w      -68 -> 64
+.   132  0100016F0      0E000  b         0 -> 136
+.   134  0100016F2      00070  <LineNo: 112>
     RETURN BITS(instr) * BITS(BLXmask) = BITS(BLXval)
-.   136  000001484      09800  ldr       r0,[sp]
-.   138  000001486  0F64F7187  movw      r1,#000FF87H
-.   142  00000148A      04008  ands      r0,r1
+.   136  0100016F4      09800  ldr       r0,[sp]
+.   138  0100016F6  0F64F7187  movw      r1,#000FF87H
+.   142  0100016FA      04008  ands      r0,r1
     (*RETURN (BFX(instr, 15, 7) = 08FH) & (BFX(instr, 2, 0) = 0)*)
   END isBLX;
-.   144  00000148C  0F2447180  movw      r1,#18304
-.   148  000001490  0EA900F01  teq.w     r0,r1
-.   152  000001494      0BF0C  ite       eq
-.   154  000001496  0F04F0001  moveq.w   r0,#1
-.   158  00000149A  0F04F0000  movne.w   r0,#0
-.   162  00000149E      0B002  add       sp,#8
-.   164  0000014A0      0BD00  pop       { pc }
-.   166  0000014A2      0BF00  nop       
+.   144  0100016FC  0F2447180  movw      r1,#18304
+.   148  010001700  0EA900F01  teq.w     r0,r1
+.   152  010001704      0BF0C  ite       eq
+.   154  010001706  0F04F0001  moveq.w   r0,#1
+.   158  01000170A  0F04F0000  movne.w   r0,#0
+.   162  01000170E      0B002  add       sp,#8
+.   164  010001710      0BD00  pop       { pc }
+.   166  010001712      0BF00  nop       
 
   PROCEDURE getLR(stackAddr: INTEGER; VAR lr, res: INTEGER);
   (* from Astrobe library, modified *)
@@ -182,91 +182,91 @@ MODULE Stacktrace;
   is preceded by a BL or BLX instruction. *)
     VAR nextInstr: INTEGER;
   BEGIN
-.   168  0000014A4      0B507  push      { r0, r1, r2, lr }
-.   170  0000014A6      0B081  sub       sp,#4
+.   168  010001714      0B507  push      { r0, r1, r2, lr }
+.   170  010001716      0B081  sub       sp,#4
     res := StackTraceNotLR;
-.   172  0000014A8      02000  movs      r0,#0
-.   174  0000014AA      09903  ldr       r1,[sp,#12]
-.   176  0000014AC      06008  str       r0,[r1]
+.   172  010001718      02000  movs      r0,#0
+.   174  01000171A      09903  ldr       r1,[sp,#12]
+.   176  01000171C      06008  str       r0,[r1]
     SYSTEM.GET(stackAddr, lr);
-.   178  0000014AE      09801  ldr       r0,[sp,#4]
-.   180  0000014B0      06801  ldr       r1,[r0]
-.   182  0000014B2      09A02  ldr       r2,[sp,#8]
-.   184  0000014B4      06011  str       r1,[r2]
+.   178  01000171E      09801  ldr       r0,[sp,#4]
+.   180  010001720      06801  ldr       r1,[r0]
+.   182  010001722      09A02  ldr       r2,[sp,#8]
+.   184  010001724      06011  str       r1,[r2]
     (* must be Thumb mode *)
     IF ODD(lr) THEN
-.   186  0000014B6      09802  ldr       r0,[sp,#8]
-.   188  0000014B8      06800  ldr       r0,[r0]
-.   190  0000014BA  0F0100F01  tst.w     r0,#1
-.   194  0000014BE  0F0008040  beq.w     128 -> 326
-      DEC(lr, 1);
-.   198  0000014C2      09802  ldr       r0,[sp,#8]
-.   200  0000014C4      06801  ldr       r1,[r0]
-.   202  0000014C6      03901  subs      r1,#1
-.   204  0000014C8      06001  str       r1,[r0]
+.   186  010001726      09802  ldr       r0,[sp,#8]
+.   188  010001728      06800  ldr       r0,[r0]
+.   190  01000172A  0F0100F01  tst.w     r0,#1
+.   194  01000172E  0F0008040  beq.w     128 -> 326
+      DEC(lr);
+.   198  010001732      09802  ldr       r0,[sp,#8]
+.   200  010001734      06801  ldr       r1,[r0]
+.   202  010001736      03901  subs      r1,#1
+.   204  010001738      06001  str       r1,[r0]
       IF (lr >= Config.CodeMem.start + 100H) & (lr < Config.CodeMem.end) THEN
-.   206  0000014CA  0F8DF007C  ldr.w     r0,[pc,#124] -> 332
-.   210  0000014CE      06800  ldr       r0,[r0]
-.   212  0000014D0  0F5007080  add.w     r0,r0,#256
-.   216  0000014D4      09902  ldr       r1,[sp,#8]
-.   218  0000014D6      06809  ldr       r1,[r1]
-.   220  0000014D8      04281  cmp       r1,r0
-.   222  0000014DA  0F2C08032  blt.w     100 -> 326
-.   226  0000014DE  0F8DF0068  ldr.w     r0,[pc,#104] -> 332
-.   230  0000014E2      09902  ldr       r1,[sp,#8]
-.   232  0000014E4      06809  ldr       r1,[r1]
-.   234  0000014E6      06840  ldr       r0,[r0,#4]
-.   236  0000014E8      04281  cmp       r1,r0
-.   238  0000014EA  0F280802A  bge.w     84 -> 326
+.   206  01000173A  0F8DF007C  ldr.w     r0,[pc,#124] -> 332
+.   210  01000173E      06800  ldr       r0,[r0]
+.   212  010001740  0F5007080  add.w     r0,r0,#256
+.   216  010001744      09902  ldr       r1,[sp,#8]
+.   218  010001746      06809  ldr       r1,[r1]
+.   220  010001748      04281  cmp       r1,r0
+.   222  01000174A  0F2C08032  blt.w     100 -> 326
+.   226  01000174E  0F8DF0068  ldr.w     r0,[pc,#104] -> 332
+.   230  010001752      09902  ldr       r1,[sp,#8]
+.   232  010001754      06809  ldr       r1,[r1]
+.   234  010001756      06840  ldr       r0,[r0,#4]
+.   236  010001758      04281  cmp       r1,r0
+.   238  01000175A  0F280802A  bge.w     84 -> 326
         IF isBL(lr - 4) OR isBLX(lr - 2) THEN
-.   242  0000014EE      09802  ldr       r0,[sp,#8]
-.   244  0000014F0      06800  ldr       r0,[r0]
-.   246  0000014F2      03804  subs      r0,#4
-.   248  0000014F4  0F7FFFFAA  bl.w      -172 -> 80
-.   252  0000014F8      0E000  b         0 -> 256
-.   254  0000014FA      00082  <LineNo: 130>
-.   256  0000014FC  0F0100F01  tst.w     r0,#1
-.   260  000001500  0F040800B  bne.w     22 -> 286
-.   264  000001504      09802  ldr       r0,[sp,#8]
-.   266  000001506      06800  ldr       r0,[r0]
-.   268  000001508      03802  subs      r0,#2
-.   270  00000150A  0F7FFFFB3  bl.w      -154 -> 120
-.   274  00000150E      0E000  b         0 -> 278
-.   276  000001510      00082  <LineNo: 130>
-.   278  000001512  0F0100F01  tst.w     r0,#1
-.   282  000001516  0F0008014  beq.w     40 -> 326
+.   242  01000175E      09802  ldr       r0,[sp,#8]
+.   244  010001760      06800  ldr       r0,[r0]
+.   246  010001762      03804  subs      r0,#4
+.   248  010001764  0F7FFFFAA  bl.w      -172 -> 80
+.   252  010001768      0E000  b         0 -> 256
+.   254  01000176A      00082  <LineNo: 130>
+.   256  01000176C  0F0100F01  tst.w     r0,#1
+.   260  010001770  0F040800B  bne.w     22 -> 286
+.   264  010001774      09802  ldr       r0,[sp,#8]
+.   266  010001776      06800  ldr       r0,[r0]
+.   268  010001778      03802  subs      r0,#2
+.   270  01000177A  0F7FFFFB3  bl.w      -154 -> 120
+.   274  01000177E      0E000  b         0 -> 278
+.   276  010001780      00082  <LineNo: 130>
+.   278  010001782  0F0100F01  tst.w     r0,#1
+.   282  010001786  0F0008014  beq.w     40 -> 326
           getHalfWord(lr, nextInstr);
-.   286  00000151A      09802  ldr       r0,[sp,#8]
-.   288  00000151C      06800  ldr       r0,[r0]
-.   290  00000151E      04669  mov       r1,sp
-.   292  000001520  0F7FFFF8C  bl.w      -232 -> 64
-.   296  000001524      0E000  b         0 -> 300
-.   298  000001526      00083  <LineNo: 131>
+.   286  01000178A      09802  ldr       r0,[sp,#8]
+.   288  01000178C      06800  ldr       r0,[r0]
+.   290  01000178E      04669  mov       r1,sp
+.   292  010001790  0F7FFFF8C  bl.w      -232 -> 64
+.   296  010001794      0E000  b         0 -> 300
+.   298  010001796      00083  <LineNo: 131>
           (* if stack trace is enabled there is a B,0 instruction (0E0000H)
           that skips the line number after the BL or BLX instruction *)
           IF nextInstr = 0E000H THEN
-.   300  000001528      09800  ldr       r0,[sp]
-.   302  00000152A  0F5B04F60  cmp.w     r0,#000E000H
-.   306  00000152E  0F0408005  bne.w     10 -> 320
+.   300  010001798      09800  ldr       r0,[sp]
+.   302  01000179A  0F5B04F60  cmp.w     r0,#000E000H
+.   306  01000179E  0F0408005  bne.w     10 -> 320
             res := StackTraceLineNo
           ELSE
-.   310  000001532      02001  movs      r0,#1
-.   312  000001534      09903  ldr       r1,[sp,#12]
-.   314  000001536      06008  str       r0,[r1]
+.   310  0100017A2      02001  movs      r0,#1
+.   312  0100017A4      09903  ldr       r1,[sp,#12]
+.   314  0100017A6      06008  str       r0,[r1]
             res := StackTraceNoLineNo
-.   316  000001538  0F000B803  b.w       6 -> 326
+.   316  0100017A8  0F000B803  b.w       6 -> 326
           END
-.   320  00000153C      02002  movs      r0,#2
-.   322  00000153E      09903  ldr       r1,[sp,#12]
-.   324  000001540      06008  str       r0,[r1]
+.   320  0100017AC      02002  movs      r0,#2
+.   322  0100017AE      09903  ldr       r1,[sp,#12]
+.   324  0100017B0      06008  str       r0,[r1]
         END
       END
     END
   END getLR;
-.   326  000001542      0B004  add       sp,#16
-.   328  000001544      0BD00  pop       { pc }
-.   330  000001546      0BF00  nop       
-.   332  000001548  020027FA8  <Global: Config data>
+.   326  0100017B2      0B004  add       sp,#16
+.   328  0100017B4      0BD00  pop       { pc }
+.   330  0100017B6      0BF00  nop       
+.   332  0100017B8  02001FFA0  <Global: Config data>
 
   (* --- Astrobe code end --- *)
 
@@ -274,137 +274,136 @@ MODULE Stacktrace;
     CONST StackAlign = 9; (* in stacked PSR *)
     VAR startAddr: INTEGER;
   BEGIN
-.   336  00000154C      0B500  push      { lr }
+.   336  0100017BC      0B500  push      { lr }
     startAddr := stackframeBase + StateContextSize;
-.   338  00000154E  0F1000220  add.w     r2,r0,#32
+.   338  0100017BE  0F1000220  add.w     r2,r0,#32
     IF ~(EXC_RET_FType IN BITS(excRetVal)) THEN (* FP context *)
-.   342  000001552  0F0110F10  tst.w     r1,#16
-.   346  000001556  0F0408002  bne.w     4 -> 354
+.   342  0100017C2  0F0110F10  tst.w     r1,#16
+.   346  0100017C6  0F0408002  bne.w     4 -> 354
       startAddr := startAddr + FPcontextSize
     END;
-.   350  00000155A  0F1020248  add.w     r2,r2,#72
+.   350  0100017CA  0F1020248  add.w     r2,r2,#72
     IF SYSTEM.BIT(stackframeBase + PSRoffset, StackAlign) THEN
-.   354  00000155E  0F100031C  add.w     r3,r0,#28
-.   358  000001562      0681C  ldr       r4,[r3]
-.   360  000001564      005A4  lsls      r4,r4,#22
-.   362  000001566  0F1408001  bpl.w     2 -> 368
+.   354  0100017CE  0F100031C  add.w     r3,r0,#28
+.   358  0100017D2      0681C  ldr       r4,[r3]
+.   360  0100017D4      005A4  lsls      r4,r4,#22
+.   362  0100017D6  0F1408001  bpl.w     2 -> 368
       INC(startAddr, 4)
     END
-.   366  00000156A      03204  adds      r2,#4
+.   366  0100017DA      03204  adds      r2,#4
     RETURN startAddr
   END traceStart;
-.   368  00000156C      04610  mov       r0,r2
-.   370  00000156E      0BD00  pop       { pc }
+.   368  0100017DC      04610  mov       r0,r2
+.   370  0100017DE      0BD00  pop       { pc }
 
 
   PROCEDURE getAddr(VAR stackAddr, excRetVal: INTEGER; VAR isStackFrame: BOOLEAN);
     CONST R11 = 11;
     VAR stackVal, lr, res: INTEGER;
   BEGIN
-.   372  000001570      0B507  push      { r0, r1, r2, lr }
-.   374  000001572      0B083  sub       sp,#12
+.   372  0100017E0      0B507  push      { r0, r1, r2, lr }
+.   374  0100017E2      0B083  sub       sp,#12
     isStackFrame := FALSE;
-.   376  000001574      02000  movs      r0,#0
-.   378  000001576      09905  ldr       r1,[sp,#20]
-.   380  000001578      07008  strb      r0,[r1]
+.   376  0100017E4      02000  movs      r0,#0
+.   378  0100017E6      09905  ldr       r1,[sp,#20]
+.   380  0100017E8      07008  strb      r0,[r1]
     SYSTEM.GET(stackAddr, stackVal);
-.   382  00000157A      09803  ldr       r0,[sp,#12]
-.   384  00000157C      06800  ldr       r0,[r0]
-.   386  00000157E      06801  ldr       r1,[r0]
-.   388  000001580      09100  str       r1,[sp]
+.   382  0100017EA      09803  ldr       r0,[sp,#12]
+.   384  0100017EC      06800  ldr       r0,[r0]
+.   386  0100017EE      06801  ldr       r1,[r0]
+.   388  0100017F0      09100  str       r1,[sp]
     IF BITS(stackVal) * BITS(ExcRetMask) = BITS(ExcRetVal) THEN
-.   390  000001582      09800  ldr       r0,[sp]
-.   392  000001584  0F06F011C  mvn.w     r1,#28
-.   396  000001588      04008  ands      r0,r1
-.   398  00000158A  0F06F015F  mvn.w     r1,#95
-.   402  00000158E  0EA900F01  teq.w     r0,r1
-.   406  000001592  0F040804A  bne.w     148 -> 558
+.   390  0100017F2      09800  ldr       r0,[sp]
+.   392  0100017F4  0F06F017D  mvn.w     r1,#125
+.   396  0100017F8      04008  ands      r0,r1
+.   398  0100017FA  0F06F017F  mvn.w     r1,#127
+.   402  0100017FE  0EA900F01  teq.w     r0,r1
+.   406  010001802  0F040804A  bne.w     148 -> 558
       (* if a potential EXC_RETURN value *)
       excRetVal := stackVal; (* only valid if 'isStackFrame' *)
-.   410  000001596      09800  ldr       r0,[sp]
-.   412  000001598      09904  ldr       r1,[sp,#16]
-.   414  00000159A      06008  str       r0,[r1]
+.   410  010001806      09800  ldr       r0,[sp]
+.   412  010001808      09904  ldr       r1,[sp,#16]
+.   414  01000180A      06008  str       r0,[r1]
       SYSTEM.GET(stackAddr + 4, stackVal);
-.   416  00000159C      09803  ldr       r0,[sp,#12]
-.   418  00000159E      06800  ldr       r0,[r0]
-.   420  0000015A0      03004  adds      r0,#4
-.   422  0000015A2      06801  ldr       r1,[r0]
-.   424  0000015A4      09100  str       r1,[sp]
+.   416  01000180C      09803  ldr       r0,[sp,#12]
+.   418  01000180E      06800  ldr       r0,[r0]
+.   420  010001810      03004  adds      r0,#4
+.   422  010001812      06801  ldr       r1,[r0]
+.   424  010001814      09100  str       r1,[sp]
       IF stackVal = StackSeal THEN
-.   426  0000015A6      09800  ldr       r0,[sp]
-.   428  0000015A8  0F8DF1084  ldr.w     r1,[pc,#132] -> 564
-.   432  0000015AC      042C8  cmn       r0,r1
-.   434  0000015AE  0F040800A  bne.w     20 -> 458
+.   426  010001816      09800  ldr       r0,[sp]
+.   428  010001818  0F8DF1084  ldr.w     r1,[pc,#132] -> 564
+.   432  01000181C      042C8  cmn       r0,r1
+.   434  01000181E  0F040800A  bne.w     20 -> 458
         (* at top of main stack: we have an EXC_RETURN value with 'PSP used for stacking' *)
         (* switch stacks, point to stacked regs on process stack *)
         SYSTEM.EMIT(MCU.MRS_R11_PSP);
-.   438  0000015B2  0F3EF8B09  .word     0x8B09F3EF /* EMIT */
+.   438  010001822  0F3EF8B09  .word     0x8B09F3EF /* EMIT */
         stackAddr := SYSTEM.REG(R11);
-.   442  0000015B6      04658  mov       r0,r11
-.   444  0000015B8      09903  ldr       r1,[sp,#12]
-.   446  0000015BA      06008  str       r0,[r1]
+.   442  010001826      04658  mov       r0,r11
+.   444  010001828      09903  ldr       r1,[sp,#12]
+.   446  01000182A      06008  str       r0,[r1]
         isStackFrame := TRUE
       ELSE
-.   448  0000015BC      02001  movs      r0,#1
-.   450  0000015BE      09905  ldr       r1,[sp,#20]
-.   452  0000015C0      07008  strb      r0,[r1]
+.   448  01000182C      02001  movs      r0,#1
+.   450  01000182E      09905  ldr       r1,[sp,#20]
+.   452  010001830      07008  strb      r0,[r1]
         (* point to potential stack frame on main stack*)
         INC(stackAddr, 4);
-.   454  0000015C2  0F000B832  b.w       100 -> 558
-.   458  0000015C6      09803  ldr       r0,[sp,#12]
-.   460  0000015C8      06801  ldr       r1,[r0]
-.   462  0000015CA      03104  adds      r1,#4
-.   464  0000015CC      06001  str       r1,[r0]
+.   454  010001832  0F000B832  b.w       100 -> 558
+.   458  010001836      09803  ldr       r0,[sp,#12]
+.   460  010001838      06801  ldr       r1,[r0]
+.   462  01000183A      03104  adds      r1,#4
+.   464  01000183C      06001  str       r1,[r0]
         (* stacked value at LRoffset must be either a valid LR value... *)
         getLR(stackAddr + LRoffset, lr, res);
-.   466  0000015CE      09803  ldr       r0,[sp,#12]
-.   468  0000015D0      06800  ldr       r0,[r0]
-.   470  0000015D2      03014  adds      r0,#20
-.   472  0000015D4  0F11D0104  adds.w    r1,sp,#4
-.   476  0000015D8  0F11D0208  adds.w    r2,sp,#8
-.   480  0000015DC  0F7FFFF62  bl.w      -316 -> 168
-.   484  0000015E0      0E000  b         0 -> 488
-.   486  0000015E2      000B5  <LineNo: 181>
+.   466  01000183E      09803  ldr       r0,[sp,#12]
+.   468  010001840      06800  ldr       r0,[r0]
+.   470  010001842      03014  adds      r0,#20
+.   472  010001844  0F11D0104  adds.w    r1,sp,#4
+.   476  010001848  0F11D0208  adds.w    r2,sp,#8
+.   480  01000184C  0F7FFFF62  bl.w      -316 -> 168
+.   484  010001850      0E000  b         0 -> 488
+.   486  010001852      000B5  <LineNo: 181>
         isStackFrame := res > StackTraceNotLR;
-.   488  0000015E4      09802  ldr       r0,[sp,#8]
-.   490  0000015E6      02800  cmp       r0,#0
-.   492  0000015E8      0BFCC  ite       gt
-.   494  0000015EA  0F04F0001  movgt.w   r0,#1
-.   498  0000015EE  0F04F0000  movle.w   r0,#0
-.   502  0000015F2      09905  ldr       r1,[sp,#20]
-.   504  0000015F4      07008  strb      r0,[r1]
+.   488  010001854      09802  ldr       r0,[sp,#8]
+.   490  010001856      02800  cmp       r0,#0
+.   492  010001858      0BFCC  ite       gt
+.   494  01000185A  0F04F0001  movgt.w   r0,#1
+.   498  01000185E  0F04F0000  movle.w   r0,#0
+.   502  010001862      09905  ldr       r1,[sp,#20]
+.   504  010001864      07008  strb      r0,[r1]
         (* ... or an EXC_RETURN value *)
         IF ~isStackFrame THEN
-.   506  0000015F6      09805  ldr       r0,[sp,#20]
-.   508  0000015F8      07800  ldrb      r0,[r0]
-.   510  0000015FA  0F0100F01  tst.w     r0,#1
-.   514  0000015FE  0F0408014  bne.w     40 -> 558
+.   506  010001866      09805  ldr       r0,[sp,#20]
+.   508  010001868      07800  ldrb      r0,[r0]
+.   510  01000186A  0F0100F01  tst.w     r0,#1
+.   514  01000186E  0F0408014  bne.w     40 -> 558
           SYSTEM.GET(stackAddr + LRoffset, stackVal);
-.   518  000001602      09803  ldr       r0,[sp,#12]
-.   520  000001604      06800  ldr       r0,[r0]
-.   522  000001606      03014  adds      r0,#20
-.   524  000001608      06801  ldr       r1,[r0]
-.   526  00000160A      09100  str       r1,[sp]
+.   518  010001872      09803  ldr       r0,[sp,#12]
+.   520  010001874      06800  ldr       r0,[r0]
+.   522  010001876      03014  adds      r0,#20
+.   524  010001878      06801  ldr       r1,[r0]
+.   526  01000187A      09100  str       r1,[sp]
           isStackFrame := BITS(stackVal) * BITS(ExcRetMask) = BITS(ExcRetVal)
-.   528  00000160C      09800  ldr       r0,[sp]
-.   530  00000160E  0F06F011C  mvn.w     r1,#28
-.   534  000001612      04008  ands      r0,r1
+.   528  01000187C      09800  ldr       r0,[sp]
+.   530  01000187E  0F06F017D  mvn.w     r1,#125
+.   534  010001882      04008  ands      r0,r1
         END
-.   536  000001614  0F06F015F  mvn.w     r1,#95
-.   540  000001618  0EA900F01  teq.w     r0,r1
-.   544  00000161C      0BF0C  ite       eq
-.   546  00000161E  0F04F0001  moveq.w   r0,#1
-.   550  000001622  0F04F0000  movne.w   r0,#0
-.   554  000001626      09905  ldr       r1,[sp,#20]
-.   556  000001628      07008  strb      r0,[r1]
+.   536  010001884  0F06F017F  mvn.w     r1,#127
+.   540  010001888  0EA900F01  teq.w     r0,r1
+.   544  01000188C      0BF0C  ite       eq
+.   546  01000188E  0F04F0001  moveq.w   r0,#1
+.   550  010001892  0F04F0000  movne.w   r0,#0
+.   554  010001896      09905  ldr       r1,[sp,#20]
+.   556  010001898      07008  strb      r0,[r1]
       END
-    END;
-
+    END
   END getAddr;
-.   558  00000162A      0B006  add       sp,#24
-.   560  00000162C      0BD00  pop       { pc }
-.   562  00000162E      0BF00  nop       
-.   564  000001630  0010A125B  <Const:  17437275>
+.   558  01000189A      0B006  add       sp,#24
+.   560  01000189C      0BD00  pop       { pc }
+.   562  01000189E      0BF00  nop       
+.   564  0100018A0  0010A125B  <Const:  17437275>
 
 
   PROCEDURE stacktrace(stackAddr: INTEGER; VAR trace: Trace);
@@ -413,70 +412,70 @@ MODULE Stacktrace;
       (*addr, val: INTEGER; (* debug *)*)
       tp: TracePoint; isStackFrame: BOOLEAN;
   BEGIN
-.   568  000001634      0B507  push      { r0, r1, r2, lr }
-.   570  000001636      0B08B  sub       sp,#44
+.   568  0100018A4      0B507  push      { r0, r1, r2, lr }
+.   570  0100018A6      0B08B  sub       sp,#44
     CLEAR(tp);
-.   572  000001638  0F11D0018  adds.w    r0,sp,#24
-.   576  00000163C      02100  movs      r1,#0
-.   578  00000163E      02204  movs      r2,#4
-.   580  000001640  0F8401B04  str.w     r1,[r0],#4
-.   584  000001644      03A01  subs      r2,#1
-.   586  000001646      0DCFB  bgt.n     -10 -> 580
+.   572  0100018A8  0F11D0018  adds.w    r0,sp,#24
+.   576  0100018AC      02100  movs      r1,#0
+.   578  0100018AE      02204  movs      r2,#4
+.   580  0100018B0  0F8401B04  str.w     r1,[r0],#4
+.   584  0100018B4      03A01  subs      r2,#1
+.   586  0100018B6      0DCFB  bgt.n     -10 -> 580
     traceDepth := LEN(trace.tp);
-.   588  000001648      02010  movs      r0,#16
-.   590  00000164A      09005  str       r0,[sp,#20]
+.   588  0100018B8      02010  movs      r0,#16
+.   590  0100018BA      09005  str       r0,[sp,#20]
     SYSTEM.GET(stackAddr, stackVal);
-.   592  00000164C      0980B  ldr       r0,[sp,#44]
-.   594  00000164E      06801  ldr       r1,[r0]
-.   596  000001650      09100  str       r1,[sp]
+.   592  0100018BC      0980B  ldr       r0,[sp,#44]
+.   594  0100018BE      06801  ldr       r1,[r0]
+.   596  0100018C0      09100  str       r1,[sp]
     WHILE (stackVal # StackSeal) & (trace.count <= traceDepth) DO
-.   598  000001652      09800  ldr       r0,[sp]
-.   600  000001654  0F8DF1114  ldr.w     r1,[pc,#276] -> 880
-.   604  000001658      042C8  cmn       r0,r1
-.   606  00000165A  0F0008084  beq.w     264 -> 874
-.   610  00000165E      0980C  ldr       r0,[sp,#48]
-.   612  000001660  0F8D00100  ldr.w     r0,[r0,#256]
-.   616  000001664      09905  ldr       r1,[sp,#20]
-.   618  000001666      04288  cmp       r0,r1
-.   620  000001668  0F300807D  bgt.w     250 -> 874
+.   598  0100018C2      09800  ldr       r0,[sp]
+.   600  0100018C4  0F8DF1114  ldr.w     r1,[pc,#276] -> 880
+.   604  0100018C8      042C8  cmn       r0,r1
+.   606  0100018CA  0F0008084  beq.w     264 -> 874
+.   610  0100018CE      0980C  ldr       r0,[sp,#48]
+.   612  0100018D0  0F8D00100  ldr.w     r0,[r0,#256]
+.   616  0100018D4      09905  ldr       r1,[sp,#20]
+.   618  0100018D6      04288  cmp       r0,r1
+.   620  0100018D8  0F300807D  bgt.w     250 -> 874
       (* debug *)
       (*
       Out.Hex(stackAddr, 13); Out.Hex(stackVal, 13); Out.Ln;
       *)
       (* debug end *)
       getAddr(stackAddr, excRetVal, isStackFrame);
-.   624  00000166C  0F11D002C  adds.w    r0,sp,#44
-.   628  000001670  0F11D0108  adds.w    r1,sp,#8
-.   632  000001674  0F11D0228  adds.w    r2,sp,#40
-.   636  000001678  0F7FFFF7A  bl.w      -268 -> 372
-.   640  00000167C      0E000  b         0 -> 644
-.   642  00000167E      000D1  <LineNo: 209>
+.   624  0100018DC  0F11D002C  adds.w    r0,sp,#44
+.   628  0100018E0  0F11D0108  adds.w    r1,sp,#8
+.   632  0100018E4  0F11D0228  adds.w    r2,sp,#40
+.   636  0100018E8  0F7FFFF7A  bl.w      -268 -> 372
+.   640  0100018EC      0E000  b         0 -> 644
+.   642  0100018EE      000D0  <LineNo: 208>
       IF isStackFrame THEN
-.   644  000001680  0F89D0028  ldrb.w    r0,[sp,#40]
-.   648  000001684  0F0100F01  tst.w     r0,#1
-.   652  000001688  0F0008014  beq.w     40 -> 696
+.   644  0100018F0  0F89D0028  ldrb.w    r0,[sp,#40]
+.   648  0100018F4  0F0100F01  tst.w     r0,#1
+.   652  0100018F8  0F0008014  beq.w     40 -> 696
         SYSTEM.GET(stackAddr + PCoffset, retAddr);
-.   656  00000168C      0980B  ldr       r0,[sp,#44]
-.   658  00000168E      03018  adds      r0,#24
-.   660  000001690      06801  ldr       r1,[r0]
-.   662  000001692      09101  str       r1,[sp,#4]
+.   656  0100018FC      0980B  ldr       r0,[sp,#44]
+.   658  0100018FE      03018  adds      r0,#24
+.   660  010001900      06801  ldr       r1,[r0]
+.   662  010001902      09101  str       r1,[sp,#4]
         tp.address := retAddr;
-.   664  000001694      09801  ldr       r0,[sp,#4]
-.   666  000001696      09006  str       r0,[sp,#24]
+.   664  010001904      09801  ldr       r0,[sp,#4]
+.   666  010001906      09006  str       r0,[sp,#24]
         tp.annotation := AnnStackframe;
-.   668  000001698  0F8DF00D4  ldr.w     r0,[pc,#212] -> 884
-.   672  00000169C      09009  str       r0,[sp,#36]
+.   668  010001908  0F8DF00D4  ldr.w     r0,[pc,#212] -> 884
+.   672  01000190C      09009  str       r0,[sp,#36]
         tp.stackAddr := stackAddr;
-.   674  00000169E      0980B  ldr       r0,[sp,#44]
-.   676  0000016A0      09008  str       r0,[sp,#32]
+.   674  01000190E      0980B  ldr       r0,[sp,#44]
+.   676  010001910      09008  str       r0,[sp,#32]
         (* addr := stackAddr; (* debug *) *)
         stackAddr := traceStart(stackAddr, excRetVal);
-.   678  0000016A2      0980B  ldr       r0,[sp,#44]
-.   680  0000016A4      09902  ldr       r1,[sp,#8]
-.   682  0000016A6  0F7FFFF51  bl.w      -350 -> 336
-.   686  0000016AA      0E000  b         0 -> 690
-.   688  0000016AC      000D8  <LineNo: 216>
-.   690  0000016AE      0900B  str       r0,[sp,#44]
+.   678  010001912      0980B  ldr       r0,[sp,#44]
+.   680  010001914      09902  ldr       r1,[sp,#8]
+.   682  010001916  0F7FFFF51  bl.w      -350 -> 336
+.   686  01000191A      0E000  b         0 -> 690
+.   688  01000191C      000D7  <LineNo: 215>
+.   690  01000191E      0900B  str       r0,[sp,#44]
         (* debug: print stack dump *)
         (*
         WHILE addr < stackAddr DO
@@ -488,222 +487,222 @@ MODULE Stacktrace;
         (* debug end *)
       ELSE
         getLR(stackAddr, lr, res);
-.   692  0000016B0  0F000B821  b.w       66 -> 762
-.   696  0000016B4      0980B  ldr       r0,[sp,#44]
-.   698  0000016B6  0F11D0110  adds.w    r1,sp,#16
-.   702  0000016BA  0F11D020C  adds.w    r2,sp,#12
-.   706  0000016BE  0F7FFFEF1  bl.w      -542 -> 168
-.   710  0000016C2      0E000  b         0 -> 714
-.   712  0000016C4      000E3  <LineNo: 227>
+.   692  010001920  0F000B821  b.w       66 -> 762
+.   696  010001924      0980B  ldr       r0,[sp,#44]
+.   698  010001926  0F11D0110  adds.w    r1,sp,#16
+.   702  01000192A  0F11D020C  adds.w    r2,sp,#12
+.   706  01000192E  0F7FFFEF1  bl.w      -542 -> 168
+.   710  010001932      0E000  b         0 -> 714
+.   712  010001934      000E2  <LineNo: 226>
         IF res > StackTraceNotLR THEN
-.   714  0000016C6      09803  ldr       r0,[sp,#12]
-.   716  0000016C8      02800  cmp       r0,#0
-.   718  0000016CA  0F3408011  ble.w     34 -> 756
+.   714  010001936      09803  ldr       r0,[sp,#12]
+.   716  010001938      02800  cmp       r0,#0
+.   718  01000193A  0F3408011  ble.w     34 -> 756
           tp.address := lr - 4;
-.   722  0000016CE      09804  ldr       r0,[sp,#16]
-.   724  0000016D0      03804  subs      r0,#4
-.   726  0000016D2      09006  str       r0,[sp,#24]
+.   722  01000193E      09804  ldr       r0,[sp,#16]
+.   724  010001940      03804  subs      r0,#4
+.   726  010001942      09006  str       r0,[sp,#24]
           tp.stackAddr := stackAddr;
-.   728  0000016D4      0980B  ldr       r0,[sp,#44]
-.   730  0000016D6      09008  str       r0,[sp,#32]
+.   728  010001944      0980B  ldr       r0,[sp,#44]
+.   730  010001946      09008  str       r0,[sp,#32]
           IF res = StackTraceLineNo THEN
-.   732  0000016D8      09803  ldr       r0,[sp,#12]
-.   734  0000016DA      02801  cmp       r0,#1
-.   736  0000016DC  0F0408008  bne.w     16 -> 756
+.   732  010001948      09803  ldr       r0,[sp,#12]
+.   734  01000194A      02801  cmp       r0,#1
+.   736  01000194C  0F0408008  bne.w     16 -> 756
             getHalfWord(lr + 2, tp.lineNo)
-.   740  0000016E0      09804  ldr       r0,[sp,#16]
-.   742  0000016E2      03002  adds      r0,#2
-.   744  0000016E4  0F11D011C  adds.w    r1,sp,#28
+.   740  010001950      09804  ldr       r0,[sp,#16]
+.   742  010001952      03002  adds      r0,#2
+.   744  010001954  0F11D011C  adds.w    r1,sp,#28
           END
-.   748  0000016E8  0F7FFFEA8  bl.w      -688 -> 64
-.   752  0000016EC      0E000  b         0 -> 756
-.   754  0000016EE      000E8  <LineNo: 232>
+.   748  010001958  0F7FFFEA8  bl.w      -688 -> 64
+.   752  01000195C      0E000  b         0 -> 756
+.   754  01000195E      000E7  <LineNo: 231>
         END;
         INC(stackAddr, 4)
       END;
-.   756  0000016F0      0980B  ldr       r0,[sp,#44]
-.   758  0000016F2      03004  adds      r0,#4
-.   760  0000016F4      0900B  str       r0,[sp,#44]
+.   756  010001960      0980B  ldr       r0,[sp,#44]
+.   758  010001962      03004  adds      r0,#4
+.   760  010001964      0900B  str       r0,[sp,#44]
       IF tp.address # 0 THEN (* tp is valid *)
-.   762  0000016F6      09806  ldr       r0,[sp,#24]
-.   764  0000016F8      02800  cmp       r0,#0
-.   766  0000016FA  0F000802F  beq.w     94 -> 864
+.   762  010001966      09806  ldr       r0,[sp,#24]
+.   764  010001968      02800  cmp       r0,#0
+.   766  01000196A  0F000802F  beq.w     94 -> 864
         IF trace.count < TraceDepth THEN
-.   770  0000016FE      0980C  ldr       r0,[sp,#48]
-.   772  000001700  0F8D00100  ldr.w     r0,[r0,#256]
-.   776  000001704      02810  cmp       r0,#16
-.   778  000001706  0F2808025  bge.w     74 -> 856
+.   770  01000196E      0980C  ldr       r0,[sp,#48]
+.   772  010001970  0F8D00100  ldr.w     r0,[r0,#256]
+.   776  010001974      02810  cmp       r0,#16
+.   778  010001976  0F2808025  bge.w     74 -> 856
           trace.tp[trace.count] := tp;
-.   782  00000170A      0980C  ldr       r0,[sp,#48]
-.   784  00000170C  0F8D00100  ldr.w     r0,[r0,#256]
-.   788  000001710      02810  cmp       r0,#16
-.   790  000001712      0D301  bcc.n     2 -> 796
-.   792  000001714      0DF01  svc       1
-.   794  000001716      000EF  <LineNo: 239>
-.   796  000001718      0990C  ldr       r1,[sp,#48]
-.   798  00000171A      00102  lsls      r2,r0,#4
-.   800  00000171C  0EB020001  add.w     r0,r2,r1
-.   804  000001720      02104  movs      r1,#4
-.   806  000001722  0F11D0218  adds.w    r2,sp,#24
-.   810  000001726  0F8523B04  ldr.w     r3,[r2],#4
-.   814  00000172A  0F8403B04  str.w     r3,[r0],#4
-.   818  00000172E      03901  subs      r1,#1
-.   820  000001730      0D1F9  bne.n     -14 -> 810
+.   782  01000197A      0980C  ldr       r0,[sp,#48]
+.   784  01000197C  0F8D00100  ldr.w     r0,[r0,#256]
+.   788  010001980      02810  cmp       r0,#16
+.   790  010001982      0D301  bcc.n     2 -> 796
+.   792  010001984      0DF01  svc       1
+.   794  010001986      000EE  <LineNo: 238>
+.   796  010001988      0990C  ldr       r1,[sp,#48]
+.   798  01000198A      00102  lsls      r2,r0,#4
+.   800  01000198C  0EB020001  add.w     r0,r2,r1
+.   804  010001990      02104  movs      r1,#4
+.   806  010001992  0F11D0218  adds.w    r2,sp,#24
+.   810  010001996  0F8523B04  ldr.w     r3,[r2],#4
+.   814  01000199A  0F8403B04  str.w     r3,[r0],#4
+.   818  01000199E      03901  subs      r1,#1
+.   820  0100019A0      0D1F9  bne.n     -14 -> 810
           INC(trace.count);
-.   822  000001732      0980C  ldr       r0,[sp,#48]
-.   824  000001734  0F8D01100  ldr.w     r1,[r0,#256]
-.   828  000001738      03101  adds      r1,#1
-.   830  00000173A  0F8C01100  str.w     r1,[r0,#256]
+.   822  0100019A2      0980C  ldr       r0,[sp,#48]
+.   824  0100019A4  0F8D01100  ldr.w     r1,[r0,#256]
+.   828  0100019A8      03101  adds      r1,#1
+.   830  0100019AA  0F8C01100  str.w     r1,[r0,#256]
           CLEAR(tp)
         ELSE
-.   834  00000173E  0F11D0018  adds.w    r0,sp,#24
-.   838  000001742      02100  movs      r1,#0
-.   840  000001744      02204  movs      r2,#4
-.   842  000001746      0BF00  nop       
-.   844  000001748  0F8401B04  str.w     r1,[r0],#4
-.   848  00000174C      03A01  subs      r2,#1
-.   850  00000174E      0DCFB  bgt.n     -10 -> 844
+.   834  0100019AE  0F11D0018  adds.w    r0,sp,#24
+.   838  0100019B2      02100  movs      r1,#0
+.   840  0100019B4      02204  movs      r2,#4
+.   842  0100019B6      0BF00  nop       
+.   844  0100019B8  0F8401B04  str.w     r1,[r0],#4
+.   848  0100019BC      03A01  subs      r2,#1
+.   850  0100019BE      0DCFB  bgt.n     -10 -> 844
           trace.more := TRUE
-.   852  000001750  0F000B804  b.w       8 -> 864
+.   852  0100019C0  0F000B804  b.w       8 -> 864
         END
-.   856  000001754      02001  movs      r0,#1
-.   858  000001756      0990C  ldr       r1,[sp,#48]
-.   860  000001758  0F8810104  strb.w    r0,[r1,#260]
+.   856  0100019C4      02001  movs      r0,#1
+.   858  0100019C6      0990C  ldr       r1,[sp,#48]
+.   860  0100019C8  0F8810104  strb.w    r0,[r1,#260]
       END;
-      SYSTEM.GET(stackAddr, stackVal);
-.   864  00000175C      0980B  ldr       r0,[sp,#44]
-.   866  00000175E      06801  ldr       r1,[r0]
-.   868  000001760      09100  str       r1,[sp]
+      SYSTEM.GET(stackAddr, stackVal)
     END
-.   870  000001762  0F7FFBF76  b.w       -276 -> 598
+.   864  0100019CC      0980B  ldr       r0,[sp,#44]
+.   866  0100019CE      06801  ldr       r1,[r0]
+.   868  0100019D0      09100  str       r1,[sp]
+.   870  0100019D2  0F7FFBF76  b.w       -276 -> 598
   END stacktrace;
-.   874  000001766      0B00E  add       sp,#56
-.   876  000001768      0BD00  pop       { pc }
-.   878  00000176A      0BF00  nop       
-.   880  00000176C  0010A125B  <Const:  17437275>
-.   884  000001770  0FFFFFFFF  <Const:  -1>
+.   874  0100019D6      0B00E  add       sp,#56
+.   876  0100019D8      0BD00  pop       { pc }
+.   878  0100019DA      0BF00  nop       
+.   880  0100019DC  0010A125B  <Const:  17437275>
+.   884  0100019E0  0FFFFFFFF  <Const:  -1>
 
 
   PROCEDURE CreateTrace*(er: RuntimeErrors.ErrorDesc; VAR tr: Trace);
     VAR tp: TracePoint;
   BEGIN
-.   888  000001774      0B50F  push      { r0, r1, r2, r3, lr }
-.   890  000001776      0B084  sub       sp,#16
+.   888  0100019E4      0B50F  push      { r0, r1, r2, r3, lr }
+.   890  0100019E6      0B084  sub       sp,#16
     tp.address := er.errAddr;
-.   892  000001778      09804  ldr       r0,[sp,#16]
-.   894  00000177A      06840  ldr       r0,[r0,#4]
-.   896  00000177C      09000  str       r0,[sp]
+.   892  0100019E8      09804  ldr       r0,[sp,#16]
+.   894  0100019EA      06840  ldr       r0,[r0,#4]
+.   896  0100019EC      09000  str       r0,[sp]
     tp.lineNo := er.errLineNo;
-.   898  00000177E      09804  ldr       r0,[sp,#16]
-.   900  000001780      06880  ldr       r0,[r0,#8]
-.   902  000001782      09001  str       r0,[sp,#4]
+.   898  0100019EE      09804  ldr       r0,[sp,#16]
+.   900  0100019F0      06880  ldr       r0,[r0,#8]
+.   902  0100019F2      09001  str       r0,[sp,#4]
     tp.stackAddr := 0;
-.   904  000001784      02000  movs      r0,#0
-.   906  000001786      09002  str       r0,[sp,#8]
+.   904  0100019F4      02000  movs      r0,#0
+.   906  0100019F6      09002  str       r0,[sp,#8]
     tp.annotation := 0;
-.   908  000001788      02000  movs      r0,#0
-.   910  00000178A      09003  str       r0,[sp,#12]
+.   908  0100019F8      02000  movs      r0,#0
+.   910  0100019FA      09003  str       r0,[sp,#12]
     tr.tp[0] := tp;
-.   912  00000178C      02004  movs      r0,#4
-.   914  00000178E      09906  ldr       r1,[sp,#24]
-.   916  000001790      0466A  mov       r2,sp
-.   918  000001792  0F8523B04  ldr.w     r3,[r2],#4
-.   922  000001796  0F8413B04  str.w     r3,[r1],#4
-.   926  00000179A      03801  subs      r0,#1
-.   928  00000179C      0D1F9  bne.n     -14 -> 918
+.   912  0100019FC      02004  movs      r0,#4
+.   914  0100019FE      09906  ldr       r1,[sp,#24]
+.   916  010001A00      0466A  mov       r2,sp
+.   918  010001A02  0F8523B04  ldr.w     r3,[r2],#4
+.   922  010001A06  0F8413B04  str.w     r3,[r1],#4
+.   926  010001A0A      03801  subs      r0,#1
+.   928  010001A0C      0D1F9  bne.n     -14 -> 918
     tr.count := 1;
-.   930  00000179E      02001  movs      r0,#1
-.   932  0000017A0      09906  ldr       r1,[sp,#24]
-.   934  0000017A2  0F8C10100  str.w     r0,[r1,#256]
+.   930  010001A0E      02001  movs      r0,#1
+.   932  010001A10      09906  ldr       r1,[sp,#24]
+.   934  010001A12  0F8C10100  str.w     r0,[r1,#256]
     tr.more := FALSE;
-.   938  0000017A6      02000  movs      r0,#0
-.   940  0000017A8      09906  ldr       r1,[sp,#24]
-.   942  0000017AA  0F8810104  strb.w    r0,[r1,#260]
+.   938  010001A16      02000  movs      r0,#0
+.   940  010001A18      09906  ldr       r1,[sp,#24]
+.   942  010001A1A  0F8810104  strb.w    r0,[r1,#260]
     stacktrace(traceStart(er.stackframeBase, er.excRetVal), tr)
-.   946  0000017AE      09804  ldr       r0,[sp,#16]
-.   948  0000017B0      068C0  ldr       r0,[r0,#12]
-.   950  0000017B2      09904  ldr       r1,[sp,#16]
-.   952  0000017B4      06909  ldr       r1,[r1,#16]
-.   954  0000017B6  0F7FFFEC9  bl.w      -622 -> 336
-.   958  0000017BA      0E000  b         0 -> 962
-.   960  0000017BC      00105  <LineNo: 261>
-.   962  0000017BE      09906  ldr       r1,[sp,#24]
-.   964  0000017C0      09A07  ldr       r2,[sp,#28]
+.   946  010001A1E      09804  ldr       r0,[sp,#16]
+.   948  010001A20      068C0  ldr       r0,[r0,#12]
+.   950  010001A22      09904  ldr       r1,[sp,#16]
+.   952  010001A24      06909  ldr       r1,[r1,#16]
+.   954  010001A26  0F7FFFEC9  bl.w      -622 -> 336
+.   958  010001A2A      0E000  b         0 -> 962
+.   960  010001A2C      00104  <LineNo: 260>
+.   962  010001A2E      09906  ldr       r1,[sp,#24]
+.   964  010001A30      09A07  ldr       r2,[sp,#28]
   END CreateTrace;
-.   966  0000017C2  0F7FFFF37  bl.w      -402 -> 568
-.   970  0000017C6      0E000  b         0 -> 974
-.   972  0000017C8      00105  <LineNo: 261>
-.   974  0000017CA      0B008  add       sp,#32
-.   976  0000017CC      0BD00  pop       { pc }
-.   978  0000017CE      0BF00  nop       
+.   966  010001A32  0F7FFFF37  bl.w      -402 -> 568
+.   970  010001A36      0E000  b         0 -> 974
+.   972  010001A38      00104  <LineNo: 260>
+.   974  010001A3A      0B008  add       sp,#32
+.   976  010001A3C      0BD00  pop       { pc }
+.   978  010001A3E      0BF00  nop       
 
 
   PROCEDURE ReadRegisters*(er: RuntimeErrors.ErrorDesc; VAR sr: StackedRegs);
     VAR stackframeBase: INTEGER;
   BEGIN
-.   980  0000017D0      0B50F  push      { r0, r1, r2, r3, lr }
-.   982  0000017D2      0B081  sub       sp,#4
+.   980  010001A40      0B50F  push      { r0, r1, r2, r3, lr }
+.   982  010001A42      0B081  sub       sp,#4
     stackframeBase := er.stackframeBase;
-.   984  0000017D4      09801  ldr       r0,[sp,#4]
-.   986  0000017D6      068C0  ldr       r0,[r0,#12]
-.   988  0000017D8      09000  str       r0,[sp]
+.   984  010001A44      09801  ldr       r0,[sp,#4]
+.   986  010001A46      068C0  ldr       r0,[r0,#12]
+.   988  010001A48      09000  str       r0,[sp]
     SYSTEM.GET(stackframeBase, sr.r0);
-.   990  0000017DA      09800  ldr       r0,[sp]
-.   992  0000017DC      06801  ldr       r1,[r0]
-.   994  0000017DE      09A03  ldr       r2,[sp,#12]
-.   996  0000017E0      06011  str       r1,[r2]
+.   990  010001A4A      09800  ldr       r0,[sp]
+.   992  010001A4C      06801  ldr       r1,[r0]
+.   994  010001A4E      09A03  ldr       r2,[sp,#12]
+.   996  010001A50      06011  str       r1,[r2]
     SYSTEM.GET(stackframeBase + 4, sr.r1);
-.   998  0000017E2      09800  ldr       r0,[sp]
-.  1000  0000017E4      03004  adds      r0,#4
-.  1002  0000017E6      06801  ldr       r1,[r0]
-.  1004  0000017E8      09A03  ldr       r2,[sp,#12]
-.  1006  0000017EA      06051  str       r1,[r2,#4]
+.   998  010001A52      09800  ldr       r0,[sp]
+.  1000  010001A54      03004  adds      r0,#4
+.  1002  010001A56      06801  ldr       r1,[r0]
+.  1004  010001A58      09A03  ldr       r2,[sp,#12]
+.  1006  010001A5A      06051  str       r1,[r2,#4]
     SYSTEM.GET(stackframeBase + 8, sr.r2);
-.  1008  0000017EC      09800  ldr       r0,[sp]
-.  1010  0000017EE      03008  adds      r0,#8
-.  1012  0000017F0      06801  ldr       r1,[r0]
-.  1014  0000017F2      09A03  ldr       r2,[sp,#12]
-.  1016  0000017F4      06091  str       r1,[r2,#8]
+.  1008  010001A5C      09800  ldr       r0,[sp]
+.  1010  010001A5E      03008  adds      r0,#8
+.  1012  010001A60      06801  ldr       r1,[r0]
+.  1014  010001A62      09A03  ldr       r2,[sp,#12]
+.  1016  010001A64      06091  str       r1,[r2,#8]
     SYSTEM.GET(stackframeBase + 12, sr.r3);
-.  1018  0000017F6      09800  ldr       r0,[sp]
-.  1020  0000017F8      0300C  adds      r0,#12
-.  1022  0000017FA      06801  ldr       r1,[r0]
-.  1024  0000017FC      09A03  ldr       r2,[sp,#12]
-.  1026  0000017FE      060D1  str       r1,[r2,#12]
+.  1018  010001A66      09800  ldr       r0,[sp]
+.  1020  010001A68      0300C  adds      r0,#12
+.  1022  010001A6A      06801  ldr       r1,[r0]
+.  1024  010001A6C      09A03  ldr       r2,[sp,#12]
+.  1026  010001A6E      060D1  str       r1,[r2,#12]
     SYSTEM.GET(stackframeBase + 16, sr.r12);
-.  1028  000001800      09800  ldr       r0,[sp]
-.  1030  000001802      03010  adds      r0,#16
-.  1032  000001804      06801  ldr       r1,[r0]
-.  1034  000001806      09A03  ldr       r2,[sp,#12]
-.  1036  000001808      06111  str       r1,[r2,#16]
+.  1028  010001A70      09800  ldr       r0,[sp]
+.  1030  010001A72      03010  adds      r0,#16
+.  1032  010001A74      06801  ldr       r1,[r0]
+.  1034  010001A76      09A03  ldr       r2,[sp,#12]
+.  1036  010001A78      06111  str       r1,[r2,#16]
     SYSTEM.GET(stackframeBase + 20, sr.lr);
-.  1038  00000180A      09800  ldr       r0,[sp]
-.  1040  00000180C      03014  adds      r0,#20
-.  1042  00000180E      06801  ldr       r1,[r0]
-.  1044  000001810      09A03  ldr       r2,[sp,#12]
-.  1046  000001812      06151  str       r1,[r2,#20]
+.  1038  010001A7A      09800  ldr       r0,[sp]
+.  1040  010001A7C      03014  adds      r0,#20
+.  1042  010001A7E      06801  ldr       r1,[r0]
+.  1044  010001A80      09A03  ldr       r2,[sp,#12]
+.  1046  010001A82      06151  str       r1,[r2,#20]
     SYSTEM.GET(stackframeBase + 24, sr.pc);
-.  1048  000001814      09800  ldr       r0,[sp]
-.  1050  000001816      03018  adds      r0,#24
-.  1052  000001818      06801  ldr       r1,[r0]
-.  1054  00000181A      09A03  ldr       r2,[sp,#12]
-.  1056  00000181C      06191  str       r1,[r2,#24]
+.  1048  010001A84      09800  ldr       r0,[sp]
+.  1050  010001A86      03018  adds      r0,#24
+.  1052  010001A88      06801  ldr       r1,[r0]
+.  1054  010001A8A      09A03  ldr       r2,[sp,#12]
+.  1056  010001A8C      06191  str       r1,[r2,#24]
     SYSTEM.GET(stackframeBase + 28, sr.xpsr);
-.  1058  00000181E      09800  ldr       r0,[sp]
-.  1060  000001820      0301C  adds      r0,#28
-.  1062  000001822      06801  ldr       r1,[r0]
-.  1064  000001824      09A03  ldr       r2,[sp,#12]
-.  1066  000001826      061D1  str       r1,[r2,#28]
+.  1058  010001A8E      09800  ldr       r0,[sp]
+.  1060  010001A90      0301C  adds      r0,#28
+.  1062  010001A92      06801  ldr       r1,[r0]
+.  1064  010001A94      09A03  ldr       r2,[sp,#12]
+.  1066  010001A96      061D1  str       r1,[r2,#28]
     sr.sp := stackframeBase
   END ReadRegisters;
-.  1068  000001828      09800  ldr       r0,[sp]
-.  1070  00000182A      09903  ldr       r1,[sp,#12]
-.  1072  00000182C      06208  str       r0,[r1,#32]
-.  1074  00000182E      0B005  add       sp,#20
-.  1076  000001830      0BD00  pop       { pc }
-.  1078  000001832      0BF00  nop       
+.  1068  010001A98      09800  ldr       r0,[sp]
+.  1070  010001A9A      09903  ldr       r1,[sp,#12]
+.  1072  010001A9C      06208  str       r0,[r1,#32]
+.  1074  010001A9E      0B005  add       sp,#20
+.  1076  010001AA0      0BD00  pop       { pc }
+.  1078  010001AA2      0BF00  nop       
 
 END Stacktrace.
-.  1080  000001834      0B500  push      { lr }
-.  1082  000001836      0BD00  pop       { pc }
+.  1080  010001AA4      0B500  push      { lr }
+.  1082  010001AA6      0BD00  pop       { pc }
  

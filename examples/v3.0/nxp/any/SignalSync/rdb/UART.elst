@@ -1,0 +1,441 @@
+. <tool: Astrobe for RP2350>
+. <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
+
+.     0  0100039BC              <Pad: 0>
+MODULE UART;
+(**
+  Oberon RTK Framework
+  Version: v3.0
+  --
+  UART device driver
+  --
+  Type: MCU
+  --
+  The GPIO pins and pads used must be configured by the client module or program.
+  --
+  MCU: MCXN947
+  --
+  Copyright (c) 2020-2025 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, Errors, MCU := MCU2, CLK, TextIO;
+
+  CONST
+    UART0* = 0;
+    UART1* = 1;
+    UART2* = 2;
+    UART3* = 3;
+    UART4* = 4;
+    UART5* = 5;
+    UART6* = 6;
+    UART7* = 7;
+    UART8* = 8;
+    UART9* = 9;
+    UARTs = {UART0 .. UART9};
+    NumUART* = MCU.NumUART;
+
+    Disabled* = 0;
+    Enabled* = 1;
+
+    (* functional clock values *)
+    CLK_NONE* = 0;
+    CLK_SPLL_DIV* = 1;
+    CLK_CLK12M* = 2;
+    CLK_CLKHF_DIV* = 3;
+    CLK_CLK1M* = 4;
+    CLK_UPLL* = 5;
+    CLK_CLK16K* = 6;
+
+(*
+    ClkFreq = Clocks.SIRC_FRQ;
+    ClkSel = ClockCtrl.FLEXCOM_SIRC;
+    ClkDiv = 0; (* actual div is ClkDiv + 1 *)
+*)
+    FifoSize* = 8;
+(*
+    (* FLEXCOM function *)
+    PSELID_PERSEL_val_UART = 1;
+    PSELID_PERSEL_val_SPI  = 2;
+    PSELID_PERSEL_val_I2C  = 3;
+    PSELID_PERSEL_val_UI   = 7; (* UART and I2C *)
+*)
+(*
+    (* BAUD bits and values *)
+    BAUD_OSR_1 = 28;
+    BAUD_OSR_0 = 24;
+    BAUD_SBR_1 = 12;
+    BAUD_SBR_0 = 0;
+*)
+    (* STAT bits and values *)
+    STAT_TDRE* = 23;
+(*
+    (* CTRL bits and values *)
+    CTRL_TE = 19;
+    CTRL_RE = 18;
+*)
+(*
+    (* FIFO bits and values *)
+    FIFO_TXEMPT* = 23;
+    FIFO_RXEMPT* = 22;
+    FIFO_TXFE = 7;
+    FIFO_RXFE = 3;
+
+    (* WATER bits and values *)
+    WATER_RX_1 = 18;
+    WATER_RX_0 = 16;
+    WATER_TX_1 = 2;
+    WATER_TX_0 = 0;
+*)
+
+  TYPE
+    Device* = POINTER TO DeviceDesc;
+    DeviceDesc* = RECORD(TextIO.DeviceDesc)
+      uartNo*: INTEGER;
+      devNo*, clkSelReg, clkDivReg: INTEGER;
+      BAUD, STAT*: INTEGER;
+      CTRL, FIFO, WATER: INTEGER;
+      DATA*: INTEGER;
+      PSELID: INTEGER
+    END;
+.     4  0100039C0  0100039C0      0002C  <Type:   44>
+.     8  0100039C4  0100039C4  0100039C0  <Type:   040000H>
+.    12  0100039C8  0100039C8      00000  <Type:   0>
+.    16  0100039CC  0100039CC      00000  <Type:   0>
+.    20  0100039D0  0100039D0      00000  <Type:   0>
+
+
+    DeviceCfg* = RECORD
+      osr*: INTEGER;          (* oversampling rate *)
+      txfe*, rxfe*: INTEGER;  (* fifo enable *)
+      txwater*, rxwater*: INTEGER;
+      clkSel*: INTEGER;
+      clkDiv*: INTEGER;
+      clkFreq*: INTEGER
+    END;
+.    24  0100039D4  0100039D4      00020  <Type:   32>
+.    28  0100039D8  0100039D8      00000  <Type:   0>
+.    32  0100039DC  0100039DC      00000  <Type:   0>
+.    36  0100039E0  0100039E0      00000  <Type:   0>
+.    40  0100039E4  0100039E4      00000  <Type:   0>
+
+
+    PROCEDURE* Init*(dev: Device; uartNo: INTEGER);
+      VAR base: INTEGER;
+    BEGIN
+.    44  0100039E8      0B500  push      { lr }
+      ASSERT(dev # NIL, Errors.PreCond);
+.    46  0100039EA      02800  cmp       r0,#0
+.    48  0100039EC      0D101  bne.n     2 -> 54
+.    50  0100039EE      0DF22  svc       34
+.    52  0100039F0      00070  <LineNo: 112>
+      ASSERT(uartNo IN UARTs, Errors.PreCond);
+.    54  0100039F2  0F24033FF  movw      r3,#1023
+.    58  0100039F6      02401  movs      r4,#1
+.    60  0100039F8      0408C  lsls      r4,r1
+.    62  0100039FA  0EA130F04  tst.w     r3,r4
+.    66  0100039FE      0D101  bne.n     2 -> 72
+.    68  010003A00      0DF22  svc       34
+.    70  010003A02      00071  <LineNo: 113>
+      dev.uartNo := uartNo;
+.    72  010003A04      06001  str       r1,[r0]
+      IF uartNo < UART4 THEN
+.    74  010003A06      02904  cmp       r1,#4
+.    76  010003A08  0F2808014  bge.w     40 -> 120
+        base := MCU.FLEXCOM0_BASE + (uartNo * MCU.FLEXCOM_Offset);
+.    80  010003A0C      0030B  lsls      r3,r1,#12
+.    82  010003A0E  0F8DF407C  ldr.w     r4,[pc,#124] -> 208
+.    86  010003A12      04423  add       r3,r4
+.    88  010003A14      0461A  mov       r2,r3
+        dev.devNo := MCU.DEV_FLEXCOM0 + uartNo;
+.    90  010003A16  0F101032B  add.w     r3,r1,#43
+.    94  010003A1A      06043  str       r3,[r0,#4]
+        dev.clkSelReg := MCU.CLKSEL_FLEXCOM0 + (uartNo * MCU.CLK_FLEXCOM_Offset);
+.    96  010003A1C      0008B  lsls      r3,r1,#2
+.    98  010003A1E  0F8DF4070  ldr.w     r4,[pc,#112] -> 212
+.   102  010003A22      04423  add       r3,r4
+.   104  010003A24      06083  str       r3,[r0,#8]
+        dev.clkDivReg := MCU.CLKDIV_FLEXCOM0 + (uartNo * MCU.CLK_FLEXCOM_Offset)
+.   106  010003A26      0008B  lsls      r3,r1,#2
+      ELSE
+.   108  010003A28  0F8DF4068  ldr.w     r4,[pc,#104] -> 216
+.   112  010003A2C      04423  add       r3,r4
+.   114  010003A2E      060C3  str       r3,[r0,#12]
+        base := MCU.FLEXCOM4_BASE + ((uartNo - UART4) * MCU.FLEXCOM_Offset);
+.   116  010003A30  0F000B815  b.w       42 -> 162
+.   120  010003A34      01F0B  subs      r3,r1,#4
+.   122  010003A36      0031B  lsls      r3,r3,#12
+.   124  010003A38  0F8DF405C  ldr.w     r4,[pc,#92] -> 220
+.   128  010003A3C      04423  add       r3,r4
+.   130  010003A3E      0461A  mov       r2,r3
+        dev.devNo := MCU.DEV_FLEXCOM0 + uartNo;
+.   132  010003A40  0F101032B  add.w     r3,r1,#43
+.   136  010003A44      06043  str       r3,[r0,#4]
+        dev.clkSelReg := MCU.CLKSEL_FLEXCOM4 + ((uartNo - UART4) * MCU.CLK_FLEXCOM_Offset);
+.   138  010003A46      01F0B  subs      r3,r1,#4
+.   140  010003A48      0009B  lsls      r3,r3,#2
+.   142  010003A4A  0F8DF4050  ldr.w     r4,[pc,#80] -> 224
+.   146  010003A4E      04423  add       r3,r4
+.   148  010003A50      06083  str       r3,[r0,#8]
+        dev.clkDivReg := MCU.CLKDIV_FLEXCOM4 + ((uartNo - UART4) * MCU.CLK_FLEXCOM_Offset)
+.   150  010003A52      01F0B  subs      r3,r1,#4
+.   152  010003A54      0009B  lsls      r3,r3,#2
+      END;
+.   154  010003A56  0F8DF4048  ldr.w     r4,[pc,#72] -> 228
+.   158  010003A5A      04423  add       r3,r4
+.   160  010003A5C      060C3  str       r3,[r0,#12]
+      dev.BAUD := base + MCU.UART_BAUD_Offset;
+.   162  010003A5E  0F1020310  add.w     r3,r2,#16
+.   166  010003A62      06103  str       r3,[r0,#16]
+      dev.STAT := base + MCU.UART_STAT_Offset;
+.   168  010003A64  0F1020314  add.w     r3,r2,#20
+.   172  010003A68      06143  str       r3,[r0,#20]
+      dev.CTRL := base + MCU.UART_CTRL_Offset;
+.   174  010003A6A  0F1020318  add.w     r3,r2,#24
+.   178  010003A6E      06183  str       r3,[r0,#24]
+      dev.DATA := base + MCU.UART_DATA_Offset;
+.   180  010003A70  0F102031C  add.w     r3,r2,#28
+.   184  010003A74      06243  str       r3,[r0,#36]
+      dev.FIFO := base + MCU.UART_FIFO_Offset;
+.   186  010003A76  0F1020328  add.w     r3,r2,#40
+.   190  010003A7A      061C3  str       r3,[r0,#28]
+      dev.WATER := base + MCU.UART_WATER_Offset;
+.   192  010003A7C  0F102032C  add.w     r3,r2,#44
+.   196  010003A80      06203  str       r3,[r0,#32]
+      dev.PSELID := base + MCU.FLEXCOM_PSELID_Offset
+    END Init;
+.   198  010003A82  0F60273F8  addw      r3,r2,#4088
+.   202  010003A86      06283  str       r3,[r0,#40]
+.   204  010003A88      0BD00  pop       { pc }
+.   206  010003A8A      0BF00  nop       
+.   208  010003A8C  040092000  <Const:  1074339840>
+.   212  010003A90  0400002B0  <Const:  1073742512>
+.   216  010003A94  040000850  <Const:  1073743952>
+.   220  010003A98  0400B4000  <Const:  1074479104>
+.   224  010003A9C  0400002C0  <Const:  1073742528>
+.   228  010003AA0  040000860  <Const:  1073743968>
+
+
+    PROCEDURE Configure*(dev: Device; cfg: DeviceCfg; baudrate: INTEGER);
+      CONST PSELID_PERSEL_val_UART = 1; CTRL_TE = 19; CTRL_RE = 18;
+      VAR val, x: INTEGER;
+    BEGIN
+.   232  010003AA4      0B50F  push      { r0, r1, r2, r3, lr }
+.   234  010003AA6      0B082  sub       sp,#8
+
+      (* set clock *)
+      CLK.ConfigDevClock(cfg.clkSel, cfg.clkDiv, dev.clkSelReg, dev.clkDivReg);
+.   236  010003AA8      09803  ldr       r0,[sp,#12]
+.   238  010003AAA      06940  ldr       r0,[r0,#20]
+.   240  010003AAC      09903  ldr       r1,[sp,#12]
+.   242  010003AAE      06989  ldr       r1,[r1,#24]
+.   244  010003AB0      09A02  ldr       r2,[sp,#8]
+.   246  010003AB2      06892  ldr       r2,[r2,#8]
+.   248  010003AB4      09B02  ldr       r3,[sp,#8]
+.   250  010003AB6      068DB  ldr       r3,[r3,#12]
+.   252  010003AB8  0F7FCFD78  bl.w      Ext Proc #13
+.   256  010003ABC      0E000  b         0 -> 260
+.   258  010003ABE      0008E  <LineNo: 142>
+      CLK.EnableBusClock(dev.devNo);
+.   260  010003AC0      09802  ldr       r0,[sp,#8]
+.   262  010003AC2      06840  ldr       r0,[r0,#4]
+.   264  010003AC4  0F7FCFD4E  bl.w      Ext Proc #11
+.   268  010003AC8      0E000  b         0 -> 272
+.   270  010003ACA      0008F  <LineNo: 143>
+
+      (* configure FLEXCOM function *)
+      SYSTEM.GET(dev.PSELID, val);
+.   272  010003ACC      09802  ldr       r0,[sp,#8]
+.   274  010003ACE      06A80  ldr       r0,[r0,#40]
+.   276  010003AD0      06801  ldr       r1,[r0]
+.   278  010003AD2      09100  str       r1,[sp]
+      BFI(val, 2, 0, PSELID_PERSEL_val_UART);
+.   280  010003AD4      04668  mov       r0,sp
+.   282  010003AD6      02101  movs      r1,#1
+.   284  010003AD8      06802  ldr       r2,[r0]
+.   286  010003ADA  0F3610202  bfi       r2,r1,0,3
+.   290  010003ADE      09200  str       r2,[sp]
+      SYSTEM.PUT(dev.PSELID, val);
+.   292  010003AE0      09802  ldr       r0,[sp,#8]
+.   294  010003AE2      06A80  ldr       r0,[r0,#40]
+.   296  010003AE4      09900  ldr       r1,[sp]
+.   298  010003AE6      06001  str       r1,[r0]
+
+      (* disable transmitter and receiver *)
+      SYSTEM.GET(dev.CTRL, val);
+.   300  010003AE8      09802  ldr       r0,[sp,#8]
+.   302  010003AEA      06980  ldr       r0,[r0,#24]
+.   304  010003AEC      06801  ldr       r1,[r0]
+.   306  010003AEE      09100  str       r1,[sp]
+      BFI(val, CTRL_TE, CTRL_RE, 0);
+.   308  010003AF0      04668  mov       r0,sp
+.   310  010003AF2      02100  movs      r1,#0
+.   312  010003AF4      06802  ldr       r2,[r0]
+.   314  010003AF6  0F3614293  bfi       r2,r1,18,2
+.   318  010003AFA      09200  str       r2,[sp]
+      SYSTEM.PUT(dev.CTRL, val);
+.   320  010003AFC      09802  ldr       r0,[sp,#8]
+.   322  010003AFE      06980  ldr       r0,[r0,#24]
+.   324  010003B00      09900  ldr       r1,[sp]
+.   326  010003B02      06001  str       r1,[r0]
+      REPEAT
+        SYSTEM.GET(dev.CTRL, val)
+      UNTIL BFX(val, CTRL_TE, CTRL_RE) = 0;
+.   328  010003B04      09802  ldr       r0,[sp,#8]
+.   330  010003B06      06980  ldr       r0,[r0,#24]
+.   332  010003B08      06801  ldr       r1,[r0]
+.   334  010003B0A      09100  str       r1,[sp]
+.   336  010003B0C      09800  ldr       r0,[sp]
+.   338  010003B0E  0F3C04081  ubfx      r0,r0,18,2
+.   342  010003B12      02800  cmp       r0,#0
+.   344  010003B14  0F47FAFF6  bne.w     -20 -> 328
+
+      (* baudrate *)
+      SYSTEM.GET(dev.BAUD, val);
+.   348  010003B18      09802  ldr       r0,[sp,#8]
+.   350  010003B1A      06900  ldr       r0,[r0,#16]
+.   352  010003B1C      06801  ldr       r1,[r0]
+.   354  010003B1E      09100  str       r1,[sp]
+      BFI(val, 28, 24, cfg.osr);
+.   356  010003B20      04668  mov       r0,sp
+.   358  010003B22      09903  ldr       r1,[sp,#12]
+.   360  010003B24      06809  ldr       r1,[r1]
+.   362  010003B26      06802  ldr       r2,[r0]
+.   364  010003B28  0F361621C  bfi       r2,r1,24,5
+.   368  010003B2C      09200  str       r2,[sp]
+      x := (cfg.clkFreq DIV (cfg.osr + 1)) DIV baudrate;
+.   370  010003B2E      09803  ldr       r0,[sp,#12]
+.   372  010003B30      06800  ldr       r0,[r0]
+.   374  010003B32      03001  adds      r0,#1
+.   376  010003B34      09903  ldr       r1,[sp,#12]
+.   378  010003B36      069C9  ldr       r1,[r1,#28]
+.   380  010003B38  0F1B00F00  cmp.w     r0,#0
+.   384  010003B3C      0DC01  bgt.n     2 -> 390
+.   386  010003B3E      0DF07  svc       7
+.   388  010003B40      000A1  <LineNo: 161>
+.   390  010003B42  0FB91F2F0  sdiv.w    r2,r1,r0
+.   394  010003B46  0FB021010  mls.w     r0,r2,r0,r1
+.   398  010003B4A  0EBA270D0  sub.w     r0,r2,r0,lsr 31
+.   402  010003B4E      09905  ldr       r1,[sp,#20]
+.   404  010003B50  0F1B10F00  cmp.w     r1,#0
+.   408  010003B54      0DC01  bgt.n     2 -> 414
+.   410  010003B56      0DF07  svc       7
+.   412  010003B58      000A1  <LineNo: 161>
+.   414  010003B5A  0FB90F2F1  sdiv.w    r2,r0,r1
+.   418  010003B5E  0FB020011  mls.w     r0,r2,r1,r0
+.   422  010003B62  0EBA270D0  sub.w     r0,r2,r0,lsr 31
+.   426  010003B66      09001  str       r0,[sp,#4]
+      BFI(val, 12, 0, x);
+.   428  010003B68      04668  mov       r0,sp
+.   430  010003B6A      09901  ldr       r1,[sp,#4]
+.   432  010003B6C      06802  ldr       r2,[r0]
+.   434  010003B6E  0F361020C  bfi       r2,r1,0,13
+.   438  010003B72      09200  str       r2,[sp]
+      SYSTEM.PUT(dev.BAUD, val);
+.   440  010003B74      09802  ldr       r0,[sp,#8]
+.   442  010003B76      06900  ldr       r0,[r0,#16]
+.   444  010003B78      09900  ldr       r1,[sp]
+.   446  010003B7A      06001  str       r1,[r0]
+
+      (* tx watermark *)
+      SYSTEM.GET(dev.WATER, val);
+.   448  010003B7C      09802  ldr       r0,[sp,#8]
+.   450  010003B7E      06A00  ldr       r0,[r0,#32]
+.   452  010003B80      06801  ldr       r1,[r0]
+.   454  010003B82      09100  str       r1,[sp]
+      BFI(val, 2, 0, cfg.txwater);
+.   456  010003B84      04668  mov       r0,sp
+.   458  010003B86      09903  ldr       r1,[sp,#12]
+.   460  010003B88      068C9  ldr       r1,[r1,#12]
+.   462  010003B8A      06802  ldr       r2,[r0]
+.   464  010003B8C  0F3610202  bfi       r2,r1,0,3
+.   468  010003B90      09200  str       r2,[sp]
+      BFI(val, 18, 16, cfg.rxwater);
+.   470  010003B92      04668  mov       r0,sp
+.   472  010003B94      09903  ldr       r1,[sp,#12]
+.   474  010003B96      06909  ldr       r1,[r1,#16]
+.   476  010003B98      06802  ldr       r2,[r0]
+.   478  010003B9A  0F3614212  bfi       r2,r1,16,3
+.   482  010003B9E      09200  str       r2,[sp]
+      SYSTEM.PUT(dev.WATER, val);
+.   484  010003BA0      09802  ldr       r0,[sp,#8]
+.   486  010003BA2      06A00  ldr       r0,[r0,#32]
+.   488  010003BA4      09900  ldr       r1,[sp]
+.   490  010003BA6      06001  str       r1,[r0]
+
+      (* enable fifos *)
+      SYSTEM.GET(dev.FIFO, val);
+.   492  010003BA8      09802  ldr       r0,[sp,#8]
+.   494  010003BAA      069C0  ldr       r0,[r0,#28]
+.   496  010003BAC      06801  ldr       r1,[r0]
+.   498  010003BAE      09100  str       r1,[sp]
+      BFI(val, 7, cfg.txfe);
+.   500  010003BB0      04668  mov       r0,sp
+.   502  010003BB2      09903  ldr       r1,[sp,#12]
+.   504  010003BB4      06849  ldr       r1,[r1,#4]
+.   506  010003BB6      06802  ldr       r2,[r0]
+.   508  010003BB8  0F36112C7  bfi       r2,r1,7,1
+.   512  010003BBC      09200  str       r2,[sp]
+      BFI(val, 3, cfg.rxfe);
+.   514  010003BBE      04668  mov       r0,sp
+.   516  010003BC0      09903  ldr       r1,[sp,#12]
+.   518  010003BC2      06889  ldr       r1,[r1,#8]
+.   520  010003BC4      06802  ldr       r2,[r0]
+.   522  010003BC6  0F36102C3  bfi       r2,r1,3,1
+.   526  010003BCA      09200  str       r2,[sp]
+      SYSTEM.PUT(dev.FIFO, val)
+    END Configure;
+.   528  010003BCC      09802  ldr       r0,[sp,#8]
+.   530  010003BCE      069C0  ldr       r0,[r0,#28]
+.   532  010003BD0      09900  ldr       r1,[sp]
+.   534  010003BD2      06001  str       r1,[r0]
+.   536  010003BD4      0B006  add       sp,#24
+.   538  010003BD6      0BD00  pop       { pc }
+
+
+    PROCEDURE* GetBaseCfg*(VAR cfg: DeviceCfg);
+    BEGIN
+.   540  010003BD8      0B500  push      { lr }
+      CLEAR(cfg);
+.   542  010003BDA      04602  mov       r2,r0
+.   544  010003BDC      02300  movs      r3,#0
+.   546  010003BDE      02408  movs      r4,#8
+.   548  010003BE0  0F8423B04  str.w     r3,[r2],#4
+.   552  010003BE4      03C01  subs      r4,#1
+.   554  010003BE6      0DCFB  bgt.n     -10 -> 548
+      cfg.osr := 15;
+.   556  010003BE8      0220F  movs      r2,#15
+.   558  010003BEA      06002  str       r2,[r0]
+      cfg.txfe := Disabled;
+.   560  010003BEC      02200  movs      r2,#0
+.   562  010003BEE      06042  str       r2,[r0,#4]
+      cfg.rxfe := Disabled
+    END GetBaseCfg;
+.   564  010003BF0      02200  movs      r2,#0
+.   566  010003BF2      06082  str       r2,[r0,#8]
+.   568  010003BF4      0BD00  pop       { pc }
+.   570  010003BF6      0BF00  nop       
+
+
+    PROCEDURE* Enable*(dev: Device);
+      CONST CTRL_TE = 19; CTRL_RE = 18;
+      VAR val: INTEGER;
+    BEGIN
+.   572  010003BF8      0B500  push      { lr }
+      SYSTEM.GET(dev.CTRL, val);
+.   574  010003BFA      06982  ldr       r2,[r0,#24]
+.   576  010003BFC      06811  ldr       r1,[r2]
+      BFI(val, CTRL_TE, CTRL_RE, 3);
+.   578  010003BFE      0460A  mov       r2,r1
+.   580  010003C00      02303  movs      r3,#3
+.   582  010003C02  0F3634193  bfi       r1,r3,18,2
+      SYSTEM.PUT(dev.CTRL, val)
+    END Enable;
+.   586  010003C06      06982  ldr       r2,[r0,#24]
+.   588  010003C08      06011  str       r1,[r2]
+.   590  010003C0A      0BD00  pop       { pc }
+
+END UART.
+.   592  010003C0C      0B500  push      { lr }
+.   594  010003C0E      0BD00  pop       { pc }
+ 

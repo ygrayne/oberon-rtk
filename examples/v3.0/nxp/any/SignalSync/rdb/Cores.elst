@@ -1,7 +1,7 @@
 . <tool: Astrobe for RP2350>
 . <prog: C:\Users\gray\Projects\oberon\dev\oberon-rtk\examples\v3.0\nxp\any\SignalSync\SignalSync.mod>
 
-.     0  000000804              <Pad: 0>
+.     0  010000A3C              <Pad: 0>
 MODULE Cores;
 (**
   Oberon RTK Framework
@@ -9,7 +9,7 @@ MODULE Cores;
   --
   Core handling
   --
-  MCU: MCXA346
+  MCU: MCXN947
   --
   Copyright (c) 2023-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -25,47 +25,47 @@ MODULE Cores;
   PROCEDURE* SetCoreId*(id: INTEGER);
     VAR vtor: INTEGER;
   BEGIN
-.     4  000000808      0B500  push      { lr }
+.     4  010000A40      0B500  push      { lr }
     SYSTEM.GET(MCU.PPB_VTOR, vtor);
-.     6  00000080A  0F8DF2008  ldr.w     r2,[pc,#8] -> 16
-.    10  00000080E      06811  ldr       r1,[r2]
+.     6  010000A42  0F8DF2008  ldr.w     r2,[pc,#8] -> 16
+.    10  010000A46      06811  ldr       r1,[r2]
     SYSTEM.PUT(vtor, id)
   END SetCoreId;
-.    12  000000810      06008  str       r0,[r1]
-.    14  000000812      0BD00  pop       { pc }
-.    16  000000814  0E000ED08  <Const:  -536810232>
+.    12  010000A48      06008  str       r0,[r1]
+.    14  010000A4A      0BD00  pop       { pc }
+.    16  010000A4C  0E000ED08  <Const:  -536810232>
 
 
   PROCEDURE* GetCoreId*(VAR cid: INTEGER);
   BEGIN
-.    20  000000818      0B500  push      { lr }
+.    20  010000A50      0B500  push      { lr }
     SYSTEM.GET(MCU.PPB_VTOR, cid);
-.    22  00000081A  0F8DF1010  ldr.w     r1,[pc,#16] -> 40
-.    26  00000081E      0680A  ldr       r2,[r1]
-.    28  000000820      06002  str       r2,[r0]
+.    22  010000A52  0F8DF1010  ldr.w     r1,[pc,#16] -> 40
+.    26  010000A56      0680A  ldr       r2,[r1]
+.    28  010000A58      06002  str       r2,[r0]
     SYSTEM.GET(cid, cid)
   END GetCoreId;
-.    30  000000822      06801  ldr       r1,[r0]
-.    32  000000824      0680A  ldr       r2,[r1]
-.    34  000000826      06002  str       r2,[r0]
-.    36  000000828      0BD00  pop       { pc }
-.    38  00000082A      0BF00  nop       
-.    40  00000082C  0E000ED08  <Const:  -536810232>
+.    30  010000A5A      06801  ldr       r1,[r0]
+.    32  010000A5C      0680A  ldr       r2,[r1]
+.    34  010000A5E      06002  str       r2,[r0]
+.    36  010000A60      0BD00  pop       { pc }
+.    38  010000A62      0BF00  nop       
+.    40  010000A64  0E000ED08  <Const:  -536810232>
 
 
   PROCEDURE* CoreId*(): INTEGER;
     VAR cid: INTEGER;
   BEGIN
-.    44  000000830      0B500  push      { lr }
+.    44  010000A68      0B500  push      { lr }
     SYSTEM.GET(MCU.PPB_VTOR, cid);
-.    46  000000832  0F8DF1008  ldr.w     r1,[pc,#8] -> 56
-.    50  000000836      06808  ldr       r0,[r1]
+.    46  010000A6A  0F8DF1008  ldr.w     r1,[pc,#8] -> 56
+.    50  010000A6E      06808  ldr       r0,[r1]
     SYSTEM.GET(cid, cid)
     RETURN cid
-.    52  000000838      06800  ldr       r0,[r0]
+.    52  010000A70      06800  ldr       r0,[r0]
   END CoreId;
-.    54  00000083A      0BD00  pop       { pc }
-.    56  00000083C  0E000ED08  <Const:  -536810232>
+.    54  010000A72      0BD00  pop       { pc }
+.    56  010000A74  0E000ED08  <Const:  -536810232>
 
 (*
   PROCEDURE init;
@@ -86,6 +86,6 @@ MODULE Cores;
   END StartCoreOne;
 *)
 END Cores.
-.    60  000000840      0B500  push      { lr }
-.    62  000000842      0BD00  pop       { pc }
+.    60  010000A78      0B500  push      { lr }
+.    62  010000A7A      0BD00  pop       { pc }
  
