@@ -5,7 +5,7 @@ MODULE StacktrK2C0;
   Example/test program
   https://oberon-rtk.org/docs/examples/v2/stacktrace
   --
-  MCU: MCX-A346
+  MCU: MCXA346
   Board: FRDM-MCXA346
    --
   Kernel-v1
@@ -20,11 +20,11 @@ MODULE StacktrK2C0;
 
   CONST
     ThreadStackSize = 1024;
-    MicrosecsPerTick = 10000;
+    MillisecsPerTick = 10;
 
     CaseError = 0;
     CaseFault = 1;
-    Case = CaseFault;
+    Case = CaseError;
 
   VAR
     p: PROCEDURE;
@@ -61,7 +61,7 @@ MODULE StacktrK2C0;
   PROCEDURE p0;
     CONST R12 = 12;
   BEGIN
-    SYSTEM.LDREG(R12, 0A0B0000H + SYSTEM.REG(R12)); (* marker *)
+    SYSTEM.LDREG(R12, 0A0B0C0DH); (* marker *)
     p1
   END p0;
 
@@ -85,7 +85,7 @@ MODULE StacktrK2C0;
       x, tid0: INTEGER;
   BEGIN
     (* in main stack *)
-    Kernel.Install(MicrosecsPerTick);
+    Kernel.Install(MillisecsPerTick);
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, x); ASSERT(x = Kernel.OK, Errors.ProgError);
     Kernel.Enable(t0);
     (* threads will use in their stacks, exceptions will use main stack *)

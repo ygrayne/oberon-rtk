@@ -102,9 +102,8 @@ MODULE StacktrK2C1;
   END p1;
 
   PROCEDURE p0;
-    CONST R12 = 12;
   BEGIN
-    SYSTEM.LDREG(R12, 0A0B0000H + SYSTEM.REG(R12)); (* marker *)
+    SYSTEM.LDREG(12, 0A0B0C0DH); (* marker *)
     p1
   END p0;
 

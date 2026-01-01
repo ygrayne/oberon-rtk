@@ -50,11 +50,16 @@ MODULE Config;
       start*, end*: INTEGER
     END;
 
+    VectDesc* = RECORD (* vector table *)
+      start*, end*: INTEGER
+    END;
+
   VAR
     DataMem*: ARRAY NumCoresUsed OF DataDesc;
     HeapMem*: ARRAY NumCoresUsed OF HeapDesc;
     StackMem*: ARRAY NumCoresUsed OF StackDesc;
     ExtMem*: ARRAY NumCoresUsed OF ExtDesc;
+    VectMem*: ARRAY NumCoresUsed OF VectDesc;
     ModMem*: ModDesc;
     CodeMem*: CodeDesc;
     ResMem*: ResDesc;
@@ -94,6 +99,7 @@ MODULE Config;
     CONST Core0 = 0; Core1 = 1;
     VAR vtor: INTEGER;
   BEGIN
+    (* core 0 *)
     DataMem[Core0].start := LinkOptions.DataStart;
     DataMem[Core0].end := LinkOptions.DataEnd;
     HeapMem[Core0].start := LinkOptions.HeapStart;
@@ -101,13 +107,17 @@ MODULE Config;
     StackMem[Core0].start := LinkOptions.StackStart;
     ExtMem[Core0].start := MCU.SRAM4_BASE;
     ExtMem[Core0].end := MCU.SRAM4_BASE + MCU.SRAM4_Size;
+    VectMem[Core0].start := DataMem[Core0].start;
+    VectMem[Core0].end := VectMem[Core0].start + MCU.VectorTableSize;
 
+    (* common *)
     CodeMem.start := LinkOptions.CodeStart;
     CodeMem.end := LinkOptions.CodeEnd;
     ResMem.start := LinkOptions.ResourceStart;
     ModMem.start := StackMem[Core0].start + 04H;
     ModMem.end := DataMem[Core0].end;
 
+    (* core 1 *)
     DataMem[Core1].start := DataMem[Core0].end;
     DataMem[Core1].end := MCU.SRAM0_BASE + MCU.SRAM0_Size + MCU.SRAM4_Size;
     HeapMem[Core1].start := DataMem[Core1].start + (HeapMem[Core0].start - DataMem[Core0].start);
@@ -119,10 +129,12 @@ MODULE Config;
     StackMem[Core1].start := DataMem[Core1].end - 04H;
     ExtMem[Core1].start := MCU.SRAM5_BASE;
     ExtMem[Core1].end := MCU.SRAM5_BASE + MCU.SRAM5_Size;
+    VectMem[Core1].start := DataMem[Core1].start;
+    VectMem[Core1].end := VectMem[Core1].start + MCU.VectorTableSize;
 
-    (* VTOR and initial simple error/fault handlers *)
+    (* VTOR and initial simple error/fault handlers (core 0) *)
     (* UsageFault and friends are not enabled yet and escalate to HardFault *)
-    vtor := DataMem[Core0].start;
+    vtor := VectMem[Core0].start;
     SYSTEM.PUT(MCU.PPB_VTOR, vtor);
     SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB);
     install(vtor + MCU.EXC_NMI_Offset, faultHandler);

@@ -50,12 +50,17 @@ MODULE Config;
       start*, end*: INTEGER
     END;
 
+    VectDesc* = RECORD (* vector table *)
+      start*, end*: INTEGER
+    END;
+
 
   VAR
     DataMem*: ARRAY NumCoresUsed OF DataDesc;
     HeapMem*: ARRAY NumCoresUsed OF HeapDesc;
     StackMem*: ARRAY NumCoresUsed OF StackDesc;
     ExtMem*: ARRAY NumCoresUsed OF ExtDesc;
+    VectMem*: ARRAY NumCoresUsed OF VectDesc;
     ModMem*: ModDesc;
     CodeMem*: CodeDesc;
     ResMem*: ResDesc;
@@ -94,27 +99,30 @@ MODULE Config;
     CONST Core0 = 0;
     VAR vtor: INTEGER;
   BEGIN
+    (* core 0 *)
     DataMem[Core0].start := LinkOptions.DataStart;
     DataMem[Core0].end := LinkOptions.DataEnd;
     HeapMem[Core0].start := LinkOptions.HeapStart;
     HeapMem[Core0].limit := LinkOptions.HeapLimit;
     StackMem[Core0].start := LinkOptions.StackStart;
+    ExtMem[Core0].start := MCU.SRAM2_Cb_NS_BASE;
+    ExtMem[Core0].end := MCU.SRAM2_Cb_NS_BASE + MCU.SRAM2_Size;
+    VectMem[Core0].start := DataMem[Core0].start;
+    VectMem[Core0].end := VectMem[Core0].start + MCU.VectorTableSize;
 
+    (* common *)
     CodeMem.start := LinkOptions.CodeStart;
     CodeMem.end := LinkOptions.CodeEnd;
     ResMem.start := LinkOptions.ResourceStart;
     ModMem.start := StackMem[Core0].start + 04H;
     ModMem.end := DataMem[Core0].end;
 
-    ExtMem[Core0].start := MCU.SRAM2_Cb_NS_BASE;
-    ExtMem[Core0].end := MCU.SRAM2_Cb_NS_BASE + MCU.SRAM2_Size;
 
     (* VTOR and initial simple error/fault handlers *)
     (* UsageFault and friends are not enabled yet and escalate to HardFault *)
-    SYSTEM.PUT(MCU.PPB_VTOR, DataMem[Core0].start);
+    vtor := VectMem[Core0].start;
+    SYSTEM.PUT(MCU.PPB_VTOR, vtor);
     SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB);
-
-    vtor := DataMem[Core0].start;
     install(vtor + MCU.EXC_NMI_Offset, faultHandler);
     install(vtor + MCU.EXC_HardFault_Offset, faultHandler);
     install(vtor + MCU.EXC_SVC_Offset, errorHandler);
@@ -122,7 +130,6 @@ MODULE Config;
     (* the STM32U585 does not provide a register to get the core ID *)
     (* use value at address 0H of vector table as core ID *)
     (* see Cores.GetCoreId *)
-    SYSTEM.GET(MCU.PPB_VTOR, vtor);
     SYSTEM.PUT(vtor, Core0)
   END init;
 

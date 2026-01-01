@@ -260,17 +260,6 @@ MODULE CLK;
   END ConfigLsOsc;
 
 
-  PROCEDURE* SetClkOut*(mcoSel, mcoPre: INTEGER);
-    VAR val: INTEGER;
-  BEGIN
-    SYSTEM.GET(MCU.RCC_CFGR1, val);
-    BFI(val, 30, 28, mcoPre); (* set prescaler before selecting clock *)
-    SYSTEM.PUT(MCU.RCC_CFGR1, val);
-    BFI(val, 27, 24, mcoSel);
-    SYSTEM.PUT(MCU.RCC_CFGR1, val)
-  END SetClkOut;
-
-
   PROCEDURE* EnableBusClock*(device: INTEGER);
   (* MCU.DEV_* device values *)
     VAR reg, devNo: INTEGER; val: SET;
@@ -285,7 +274,6 @@ MODULE CLK;
 
 
   PROCEDURE* DisableBusClock*(device: INTEGER);
-  (* bus clock *)
   (* MCU.DEV_* device values *)
     VAR reg, devNo: INTEGER; val: SET;
   BEGIN
@@ -310,6 +298,17 @@ MODULE CLK;
     val := val - mask + sel;
     SYSTEM.PUT(clkSelReg, val)
   END ConfigDevClock;
+
+
+  PROCEDURE* SetClkOut*(mcoSel, mcoPre: INTEGER);
+    VAR val: INTEGER;
+  BEGIN
+    SYSTEM.GET(MCU.RCC_CFGR1, val);
+    BFI(val, 30, 28, mcoPre); (* set prescaler before selecting clock *)
+    SYSTEM.PUT(MCU.RCC_CFGR1, val);
+    BFI(val, 27, 24, mcoSel);
+    SYSTEM.PUT(MCU.RCC_CFGR1, val)
+  END SetClkOut;
 
 END CLK.
 

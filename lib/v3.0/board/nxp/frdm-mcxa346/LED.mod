@@ -25,7 +25,7 @@ MODULE LED;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, StartUp, GPIO;
+  IMPORT SYSTEM, MCU := MCU2, RST, CLK, GPIO;
 
   CONST
     LEDgreenPinNo = 19; (* all on port 3 *)
@@ -46,26 +46,29 @@ MODULE LED;
 
   PROCEDURE* Set*(leds: SET);
   BEGIN
+    leds := leds * LEDx;
     SYSTEM.PUT(LSET, leds)
   END Set;
 
   PROCEDURE* Clear*(leds: SET);
   BEGIN
+    leds := leds * LEDx;
     SYSTEM.PUT(LCLR, leds)
   END Clear;
 
   PROCEDURE* Toggle*(leds: SET);
   BEGIN
+    leds := leds * LEDx;
     SYSTEM.PUT(LXOR, leds)
   END Toggle;
 
 
   PROCEDURE init;
   BEGIN
-    StartUp.ReleaseReset(MCU.DEV_PORT3);
-    StartUp.ReleaseReset(MCU.DEV_GPIO3);
-    StartUp.EnableClock(MCU.DEV_PORT3);
-    StartUp.EnableClock(MCU.DEV_GPIO3);
+    RST.ReleaseReset(MCU.DEV_PORT3);
+    RST.ReleaseReset(MCU.DEV_GPIO3);
+    CLK.EnableBusClock(MCU.DEV_PORT3);
+    CLK.EnableBusClock(MCU.DEV_GPIO3);
     GPIO.EnableOutput(MCU.GPIO3, LEDx);
     Clear(LEDx)
   END init;

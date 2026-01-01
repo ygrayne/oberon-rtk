@@ -18,10 +18,10 @@ MODULE K4base;
     Main, MCU := MCU2, TIM, Kernel, Out, Errors;
 
   CONST
-    RunPrio = MCU.ExcPrio4;
+    RunPrio = MCU.ExcPrio40;
     RunIntNo = MCU.IRQ_SPI3;
-    SysTickPrio = MCU.ExcPrio2;
-    MillisecsPerTick = 500; (* 500 ms *)
+    SysTickPrio = MCU.ExcPrio20;
+    MillisecsPerTick = 500;
 
   TYPE
     A0 = POINTER TO A0desc;

@@ -3,11 +3,7 @@ MODULE UART;
   Oberon RTK Framework
   Version: v3.0
   --
-  UART device
-  * initialisation of device data structure
-  * configure UART hardware
-  * enable physical UART device
-  * configure and enable interrupts
+  UART device driver
   --
   Type: MCU
   --

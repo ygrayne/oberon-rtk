@@ -5,7 +5,7 @@ MODULE Stacktr0;
   Example/test program
   https://oberon-rtk.org/docs/examples/v2/stacktrace
   --
-  MCU: MCX-N947
+  MCU: MCXN947
   Board: FRDM-MCXN947
   --
   Copyright (c) 2025 Gray gray@grayraven.org

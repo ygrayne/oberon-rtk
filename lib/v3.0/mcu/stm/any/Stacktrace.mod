@@ -6,7 +6,7 @@ MODULE Stacktrace;
   Create stack trace amd read stack registers based on error data
   collected by run-time error handling RuntimeErrors.
   --
-  MCU: STM32H573II
+  MCU: STM32U585AI, STM32H573II
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   Portions copyright (c) 2008-2024 CFB Software, https://www.astrobe.com

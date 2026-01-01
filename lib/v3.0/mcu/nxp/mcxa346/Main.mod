@@ -5,6 +5,8 @@ MODULE Main;
   --
   Main module
   --
+  Type: MCU + board
+  --
   MCU: MCXA346
   Board: FRDM-MCXA346
   --
@@ -13,27 +15,27 @@ MODULE Main;
 **)
 
   IMPORT
-    SYSTEM, Config, Memory, MCU := MCU2, RuntimeErrors, RuntimeErrorsOut, StartUp, Clocks, Terminals,
-    UARTdev, UARTstr, FPUctrl, GPIO, Out, In;
+    SYSTEM, Config, Memory, MCU := MCU2, RuntimeErrors, RuntimeErrorsOut, CLK, RST, Clocks,
+    Terminals, UART, UARTstr, FPUctrl, GPIO, Out, In;
 
   CONST
     Baudrate0 = 38400; (* terminal 0 *)
-    UARTt0 = UARTdev.UART2;
-    UARTt0_TxPinNo = MCU.PORT2 + 2;
-    UARTt0_RxPinNo = MCU.PORT2 + 3;
+    UARTt0 = UART.UART2;
+    UARTt0_TxPinNo = 2; (* PORT2 *)
+    UARTt0_RxPinNo = 3; (* PORT2 *)
     TERM0 = Terminals.TERM0;
 
 
   PROCEDURE cfgPins(txPin, rxPin: INTEGER);
     VAR padCfg: GPIO.PadCfg;
   BEGIN
-    StartUp.ReleaseReset(MCU.DEV_PORT2);
-    StartUp.EnableClock(MCU.DEV_PORT2);
+    RST.ReleaseReset(MCU.DEV_PORT2);
+    CLK.EnableBusClock(MCU.DEV_PORT2);
     GPIO.GetPadBaseCfg(padCfg);
-    GPIO.ConfigurePad(txPin, padCfg);
-    GPIO.ConfigurePad(rxPin, padCfg);
-    GPIO.SetFunction(txPin, GPIO.Fuart1);
-    GPIO.SetFunction(rxPin, GPIO.Fuart1)
+    GPIO.ConfigurePad(MCU.PORT2, txPin, padCfg);
+    GPIO.ConfigurePad(MCU.PORT2, rxPin, padCfg);
+    GPIO.SetFunction(MCU.PORT2, txPin, GPIO.Fuart1);
+    GPIO.SetFunction(MCU.PORT2, rxPin, GPIO.Fuart1)
   END cfgPins;
 
 
@@ -51,15 +53,11 @@ MODULE Main;
   PROCEDURE init;
     CONST Core0 = 0;
     VAR
-      uartDev: UARTdev.Device;
-      uartCfg: UARTdev.DeviceCfg;
+      uartDev: UART.Device;
+      uartCfg: UART.DeviceCfg;
   BEGIN
-    (* init vector table *)
-    RuntimeErrors.Init;
-
-    (* config the clocks *)
-    (*Clocks.InitFIRC(Clocks.FIRC_90);*)
-    Clocks.InitSPLL;
+    Clocks.Configure;
+    RuntimeErrors.Install(Core0);
 
     (* flash cache *)
     enableFlashCache;
@@ -68,20 +66,23 @@ MODULE Main;
     cfgPins(UARTt0_TxPinNo, UARTt0_RxPinNo);
 
     (* define UART cfg *)
-    UARTdev.GetBaseCfg(uartCfg);
+    UART.GetBaseCfg(uartCfg);
     uartCfg.osr := 11;
-    uartCfg.txfe := UARTdev.Enabled;
-    uartCfg.rxfe := UARTdev.Enabled;
-    uartCfg.txwater := UARTdev.FifoSize - 1;
-    uartCfg.rxwater := UARTdev.FifoSize - 1;
+    uartCfg.txfe := UART.Enabled;
+    uartCfg.rxfe := UART.Enabled;
+    uartCfg.txwater := UART.FifoSize - 1;
+    uartCfg.rxwater := UART.FifoSize - 1;
+    uartCfg.clkSel := UART.CLK_CLKLF_DIV;
+    uartCfg.clkDiv := 0;
+    uartCfg.clkFreq := Clocks.CLKLF_DIV_FRQ;
 
     (* open text IO to/from serial terminal *)
     Terminals.InitUART(UARTt0, uartCfg, Baudrate0, uartDev);
     Terminals.Open(TERM0, uartDev, UARTstr.PutString, UARTstr.GetString);
 
     (* init Out and In to use terminal *)
-    Out.Open(Terminals.W[0], NIL);
-    In.Open(Terminals.R[0], NIL);
+    Out.Open(Terminals.W[0]);
+    In.Open(Terminals.R[0]);
 
     (* init run-time error printing to serial terminal *)
     (* use error output writer *)

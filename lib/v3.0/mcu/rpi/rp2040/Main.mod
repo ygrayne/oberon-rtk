@@ -5,6 +5,8 @@ MODULE Main;
   --
   Main module
   --
+  Type: MCU + board
+  --
   Always runs on core 0, hence cannot set any registers on the PPB of core 1.
   See module InitCoreOne.
   --
@@ -54,8 +56,9 @@ MODULE Main;
       uartDev0, uartDev1: UART.Device;
       uartCfg: UART.DeviceCfg;
   BEGIN
-    RuntimeErrors.Init;
     Clocks.Configure;
+    RuntimeErrors.Install(Core0);
+    RuntimeErrors.Install(Core1);
 
     (* define UART cfg *)
     UART.GetBaseCfg(uartCfg);

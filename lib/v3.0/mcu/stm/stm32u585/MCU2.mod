@@ -704,17 +704,19 @@ MODULE MCU2;
     ExcPrioLow*    = ExcPrioF0;
 
     (* -- vector table -- *)
-    VectorTableSize*        = 628; (* bytes: 16 sys exceptions + 141 interrupts, one word each *)
-    EXC_Reset_Offset*       = 004H;
-    EXC_NMI_Offset*         = 008H;
-    EXC_HardFault_Offset*   = 00CH;
-    EXC_BusFault_Offset*    = 014H;
-    EXC_UsageFault_Offset*  = 018H;
-    EXC_SVC_Offset*         = 02CH;
-    EXC_DebugMon_Offset*    = 030H;
-    EXC_PendSV_Offset*      = 038H;
-    EXC_SysTick_Offset*     = 03CH;
-    EXC_IRQ0_Offset*        = 040H;
+    VectorTableSize*          = 628; (* bytes: 16 sys exceptions + 141 interrupts, one word each *)
+    EXC_Reset_Offset*         = 004H;
+    EXC_NMI_Offset*           = 008H;
+    EXC_HardFault_Offset*     = 00CH;
+    EXC_MemMgmtFault_Offset*  = 010H;
+    EXC_BusFault_Offset*      = 014H;
+    EXC_UsageFault_Offset*    = 018H;
+    EXC_SecureFault_Offset*   = 01CH;
+    EXC_SVC_Offset*           = 02CH;
+    EXC_DebugMon_Offset*      = 030H;
+    EXC_PendSV_Offset*        = 038H;
+    EXC_SysTick_Offset*       = 03CH;
+    EXC_IRQ0_Offset*          = 040H;
 
     (* -- SCB system control block -- *)
     PPB_ICSR*         = PPB_BASE + 0ED04H;

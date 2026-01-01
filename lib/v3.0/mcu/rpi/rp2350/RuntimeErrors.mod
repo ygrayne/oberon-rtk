@@ -17,7 +17,7 @@ MODULE RuntimeErrors;
   --
   IMPORTANT:
     * 'EnableFaults' needs to called from the core whose faults shall be enabled.
-    * See modules InitCoreOne and MultiCore.
+    * See modules 'InitCoreOne' and 'Cores'.
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -27,8 +27,7 @@ MODULE RuntimeErrors;
     SYSTEM, MCU := MCU2, LED, Config;
 
   CONST
-    NumCores* = Config.NumCoresUsed;
-    TraceDepth* = 16;
+    NumCores = Config.NumCoresUsed;
 
     (* register offsets from stacked r0 *)
     PCoffset = 24;
@@ -149,14 +148,6 @@ PROCEDURE excHandler[0];
   END install;
 
 
-  PROCEDURE InstallErrorHandler*(cid: INTEGER; eh: PROCEDURE);
-    VAR vectorTableBase: INTEGER;
-  BEGIN
-    vectorTableBase := Config.DataMem[cid].start;
-    install(vectorTableBase + MCU.EXC_PendSV_Offset, eh);
-  END InstallErrorHandler;
-
-
   PROCEDURE* EnableFaults*;
   (* call from code running on core 0 AND on core 1*)
     VAR x: SET;
@@ -168,33 +159,40 @@ PROCEDURE excHandler[0];
   END EnableFaults;
 
 
-  PROCEDURE Init*;
-    VAR cid, addr, vectorTableBase, vectorTableTop: INTEGER;
+  PROCEDURE InstallErrorHandler*(cid: INTEGER; eh: PROCEDURE);
+    VAR vectorTableBase: INTEGER;
   BEGIN
-    cid := 0;
-    WHILE cid < NumCores DO
-      (* initialise vector tables for each used core *)
-      (* install exception handlers for all errors and faults *)
-      vectorTableBase := Config.DataMem[cid].start;
-      vectorTableTop := vectorTableBase + MCU.VectorTableSize;
-      install(vectorTableBase + MCU.EXC_NMI_Offset, excHandler);
-      install(vectorTableBase + MCU.EXC_HardFault_Offset, excHandler);
-      install(vectorTableBase + MCU.EXC_MemMgmtFault_Offset, excHandler);
-      install(vectorTableBase + MCU.EXC_BusFault_Offset, excHandler);
-      install(vectorTableBase + MCU.EXC_UsageFault_Offset, excHandler);
-      install(vectorTableBase + MCU.EXC_SecureFault_Offset, excHandler);
-      install(vectorTableBase + MCU.EXC_SVC_Offset, excHandler);
-      install(vectorTableBase + MCU.EXC_DebugMon_Offset, excHandler);
-      (* install default error handler *)
-      install(vectorTableBase + MCU.EXC_PendSV_Offset, errorHandler);
-      (* install excHandler across the rest of the vector table *)
-      (* will catch any exception with a missing handler *)
-      addr := vectorTableBase + MCU.EXC_SysTick_Offset;
-      WHILE addr < vectorTableTop DO
-        install(addr, excHandler); INC(addr, 4)
-      END;
-      INC(cid)
+    vectorTableBase := Config.DataMem[cid].start;
+    install(vectorTableBase + MCU.EXC_PendSV_Offset, eh);
+  END InstallErrorHandler;
+
+
+  PROCEDURE Install*(cid: INTEGER);
+  (* initialise vector table for core cid *)
+    VAR addr, vectorTableBase, vectorTableTop: INTEGER;
+  BEGIN
+    ASSERT(cid < Config.NumCoresUsed);
+    (* vector table address and range *)
+    vectorTableBase := Config.DataMem[cid].start;
+    vectorTableTop := vectorTableBase + MCU.VectorTableSize;
+    (* install excHandler for all errors and faults *)
+    install(vectorTableBase + MCU.EXC_NMI_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_HardFault_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_MemMgmtFault_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_BusFault_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_UsageFault_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_SecureFault_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_SVC_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_DebugMon_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_SysTick_Offset, excHandler);
+    (* install default errorhandler *)
+    install(vectorTableBase + MCU.EXC_PendSV_Offset, errorHandler);
+    (* install excHandler across the rest of the vector table *)
+    (* will catch any exception with a missing handler *)
+    addr := vectorTableBase + MCU.EXC_IRQ0_Offset;
+    WHILE addr < vectorTableTop DO
+      install(addr, excHandler); INC(addr, 4)
     END
-  END Init;
+  END Install;
 
 END RuntimeErrors.

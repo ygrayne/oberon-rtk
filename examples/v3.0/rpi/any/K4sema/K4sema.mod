@@ -51,7 +51,7 @@ MODULE K4sema;
   PROCEDURE aiPrint1(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
-    Out.String("=> print message part 2"); Out.Int(act.id, 2); Out.Ln;
+    Out.String("=> print message part 2 actor"); Out.Int(act.id, 2); Out.Ln;
     Out.String("=> release"); Out.Int(act.id, 2); Out.Ln;
     a := act(A0);
     a.run := a.states[StateClaim];
@@ -62,7 +62,7 @@ MODULE K4sema;
   PROCEDURE aiPrint0(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
-    Out.String("=> print message part 1"); Out.Int(act.id, 2); Out.Ln;
+    Out.String("=> print message part 1 actor"); Out.Int(act.id, 2); Out.Ln;
     a := act(A0);
     a.run := a.states[StatePrint1];
     Kernel.GetTick(act)

@@ -8,7 +8,7 @@ MODULE Errors;
   Copyright (c) 2019-2025 Gray, gray@grayraven.org
 **)
 
-  IMPORT Error, MCU := MCU2;
+  IMPORT Error;
 
   CONST
     MaxMsgLength = 64;
@@ -19,14 +19,14 @@ MODULE Errors;
 
     (* MCU fault codes *)
     (* all *)
-    NMI*          = MCU.EXC_NMI;
-    HardFault*    = MCU.EXC_HardFault;
+    NMI*          = 2;
+    HardFault*    = 3;
     (* M33 only *)
-    MemMgmtFault* = MCU.EXC_MemMgmtFault;
-    BusFault*     = MCU.EXC_BusFault;
-    UsageFault*   = MCU.EXC_UsageFault;
-    SecureFault*  = MCU.EXC_SecureFault;
-    DebugMon*     = MCU.EXC_DebugMon;
+    MemMgmtFault* = 4;
+    BusFault*     = 5;
+    UsageFault*   = 6;
+    SecureFault*  = 7;
+    DebugMon*     = 12;
 
     (* error types *)
     ErrTypeErrorHandler* = 0;
@@ -40,7 +40,7 @@ MODULE Errors;
     LastAstrobeCode  = 25;
 
     (* RTK error/assert codes *)
-    FirstRTKcode = 32;
+    FirstRTKcode = 33;
     Trace* = 33;
     PreCond* = 34;
     PostCond* = 35;

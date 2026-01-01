@@ -25,7 +25,7 @@ MODULE LED;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, StartUp, GPIO;
+  IMPORT SYSTEM, MCU := MCU2, CLK, GPIO;
 
   CONST
     LEDgreenPinNo = 27; (* port 0 *)
@@ -88,11 +88,11 @@ MODULE LED;
 
   PROCEDURE init;
   BEGIN
-    StartUp.EnableClock(MCU.DEV_PORT0);
-    StartUp.EnableClock(MCU.DEV_GPIO0);
+    CLK.EnableBusClock(MCU.DEV_PORT0);
+    CLK.EnableBusClock(MCU.DEV_GPIO0);
     GPIO.EnableOutput(MCU.GPIO0, LED0);
-    StartUp.EnableClock(MCU.DEV_PORT1);
-    StartUp.EnableClock(MCU.DEV_GPIO1);
+    CLK.EnableBusClock(MCU.DEV_PORT1);
+    CLK.EnableBusClock(MCU.DEV_GPIO1);
     GPIO.EnableOutput(MCU.GPIO1, LED1);
     Clear(LEDx)
   END init;

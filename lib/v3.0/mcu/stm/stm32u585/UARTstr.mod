@@ -3,7 +3,7 @@ MODULE UARTstr;
   Oberon RTK Framework
   Version: v3.0
   --
-  UART string device driver, kernel not required (busy waiting)
+  UART string IO, kernel not required (busy waiting)
   --
   MCU: STM32U585AI
   --

@@ -35,7 +35,7 @@ MODULE Exceptions;
 
   PROCEDURE* iset(intNo, ireg: INTEGER);
   BEGIN
-    (*ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);*)
+    ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);
     SYSTEM.PUT(ireg + ((intNo DIV IntPerRegSet) * RegOffset), {intNo MOD IntPerRegSet});
     SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
   END iset;
@@ -43,7 +43,7 @@ MODULE Exceptions;
   PROCEDURE* iget(intNo, ireg: INTEGER; VAR value: BOOLEAN);
     VAR x: SET;
   BEGIN
-    (*ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);*)
+    ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);
     SYSTEM.GET(ireg + ((intNo DIV IntPerRegSet) * RegOffset), x);
     value := (intNo MOD IntPerRegSet) IN x
   END iget;
@@ -90,7 +90,7 @@ MODULE Exceptions;
   (* prio's three most significant bits (of eight) used => eight levels *)
     VAR addr, val, shift: INTEGER; clrMask: SET;
   BEGIN
-    (*ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);*)
+    ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);
     prio := ORD(BITS(prio) * BITS(PrioMask));
     addr := MCU.PPB_NVIC_IPR0 + ((intNo DIV IntPerRegPrio) * RegOffset);
     shift := (intNo MOD IntPerRegPrio) * PrioBits;
@@ -106,7 +106,7 @@ MODULE Exceptions;
   PROCEDURE* GetIntPrio*(intNo: INTEGER; VAR prio: INTEGER);
     VAR addr: INTEGER;
   BEGIN
-    (*ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);*)
+    ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);
     addr := MCU.PPB_NVIC_IPR0 + ((intNo DIV IntPerRegPrio) * RegOffset);
     SYSTEM.GET(addr, prio);
     prio := LSR(prio, (intNo MOD IntPerRegPrio) * PrioBits);
@@ -117,7 +117,7 @@ MODULE Exceptions;
   PROCEDURE* InstallIntHandler*(intNo: INTEGER; handler: PROCEDURE);
     VAR vectAddr, vtor: INTEGER;
   BEGIN
-    (*ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);*)
+    ASSERT(intNo < MCU.NumInterrupts, Errors.PreCond);
     ASSERT(handler # NIL, Errors.PreCond);
     SYSTEM.GET(MCU.PPB_VTOR, vtor);
     vectAddr := vtor + IRQ0_VectOffset + (intNo * 4);
@@ -132,7 +132,7 @@ MODULE Exceptions;
     CONST SHPR0 = MCU.PPB_SHPR1 - 04H;
     VAR addr, val, shift: INTEGER; clrMask: SET;
   BEGIN
-    (*ASSERT(excNo IN MCU.PPB_SysExc, Errors.PreCond);*)
+    ASSERT(excNo IN MCU.SysExc, Errors.PreCond);
     prio := ORD(BITS(prio) * BITS(PrioMask));
     addr := SHPR0 + ((excNo DIV ExcPerRegPrio) * RegOffset);
     shift := (excNo MOD ExcPerRegPrio) * PrioBits;
@@ -149,7 +149,7 @@ MODULE Exceptions;
     CONST SHPR0 = MCU.PPB_SHPR1 - 04H;
     VAR addr: INTEGER;
   BEGIN
-    (*ASSERT(excNo IN MCU.PPB_SysExc, Errors.PreCond);*)
+    ASSERT(excNo IN MCU.SysExc, Errors.PreCond);
     addr := SHPR0 + (excNo DIV ExcPerRegPrio) * RegOffset;
     SYSTEM.GET(addr, prio);
     prio := LSR(prio, (excNo MOD ExcPerRegPrio) * PrioBits);
@@ -160,7 +160,7 @@ MODULE Exceptions;
   PROCEDURE* InstallSysExcHandler*(excNo: INTEGER; handler: PROCEDURE);
     VAR vtor, vectAddr: INTEGER;
   BEGIN
-    (*ASSERT(excNo IN MCU.PPB_SysExc, Errors.PreCond);*)
+    ASSERT(excNo IN MCU.SysExc, Errors.PreCond);
     ASSERT(handler # NIL, Errors.PreCond);
     SYSTEM.GET(MCU.PPB_VTOR, vtor);
     vectAddr := vtor + (excNo * 4);

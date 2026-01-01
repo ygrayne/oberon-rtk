@@ -3,9 +3,9 @@ MODULE Out;
   Oberon RTK Framework
   Version: v3.0
   --
-  Output via two TextIO.Writer.
+  Output via TextIO.Writer.
   --
-  MCU: MCXA346, MCXN947
+  MCU: MCXN947
   --
   Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

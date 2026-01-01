@@ -53,7 +53,6 @@ MODULE GPIO;
     END;
 
 
-
   PROCEDURE* ConfigurePad*(port, pin: INTEGER; cfg: PadCfg);
   (* parameter 'port': MCU.PORTx *)
     VAR addr: INTEGER; val, mask: SET;

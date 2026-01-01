@@ -5,7 +5,7 @@ MODULE Stacktr0;
   Example/test program
   https://oberon-rtk.org/docs/examples/v2/stacktrace
   --
-  MCU: MCX-A346
+  MCU: MCXA346
   Board: FRDM-MCXA346
   --
   Copyright (c) 2025 Gray gray@grayraven.org

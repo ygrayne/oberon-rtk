@@ -3,7 +3,7 @@ MODULE SysTick;
   Oberon RTK Framework
   Version: v3.0
   --
-  System tick
+  System tick for kernel-v1
   --
   MCU: MCXA346, MCXN947
   --
@@ -11,32 +11,24 @@ MODULE SysTick;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Clocks;
-
-  CONST
-    (* CSR bits *)
-    SYST_CSR_COUNTFLAG = 16;
-    SYST_CSR_ENABLE = 0;
+  IMPORT SYST, MCU := MCU2, CLK, Clocks;
 
 
-  PROCEDURE* Tick*(): BOOLEAN;
-    RETURN SYSTEM.BIT(MCU.PPB_SYST_CSR, SYST_CSR_COUNTFLAG)
+  PROCEDURE Config*(msPerTick: INTEGER);
+  BEGIN
+    CLK.ConfigDevClock(SYST.CLK_CLK1M, 0, MCU.CLKSEL_SYSTICK0, MCU.CLKDIV_SYSTICK0);
+    SYST.Configure(Clocks.CLK1M_FRQ, msPerTick)
+  END Config;
+
+
+  PROCEDURE Tick*(): BOOLEAN;
+    RETURN SYST.Tick()
   END Tick;
 
 
-  PROCEDURE* Enable*;
+  PROCEDURE Enable*;
   BEGIN
-    SYSTEM.PUT(MCU.PPB_SYST_CSR, {SYST_CSR_ENABLE})
+    SYST.Enable
   END Enable;
-
-
-  PROCEDURE Config*(usPerTick: INTEGER);
-    VAR cntRld: INTEGER;
-  BEGIN
-    Clocks.SetSysTickClock;
-    cntRld := usPerTick - 1;
-    SYSTEM.PUT(MCU.PPB_SYST_RVR, cntRld);
-    SYSTEM.PUT(MCU.PPB_SYST_CVR, 0) (* clear counter *)
-  END Config;
 
 END SysTick.

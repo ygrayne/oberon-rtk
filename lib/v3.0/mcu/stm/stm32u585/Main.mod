@@ -49,7 +49,7 @@ MODULE Main;
     Clocks.Configure;
 
     (* init vector table *)
-    RuntimeErrors.Init;
+    RuntimeErrors.Install(Core0);
 
     (* config UART pins and pads *)
     cfgPins(UARTt0_TxPinNo, UARTt0_RxPinNo);
@@ -67,8 +67,8 @@ MODULE Main;
     Terminals.Open(TERM0, uartDev, UARTstr.PutString, UARTstr.GetString);
 
     (* init Out and In to use terminal *)
-    Out.Open(Terminals.W[0], NIL);
-    In.Open(Terminals.R[0], NIL);
+    Out.Open(Terminals.W[0]);
+    In.Open(Terminals.R[0]);
 
     (* init run-time error printing to serial terminal *)
     (* use error output writer *)

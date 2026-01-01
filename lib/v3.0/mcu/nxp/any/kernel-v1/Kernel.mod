@@ -17,7 +17,7 @@ MODULE Kernel;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Config, Coroutines, Memory, SysTick, Cores, MCU := MCU2, Errors, Out;
+  IMPORT SYSTEM, Coroutines, Config, Memory, SysTick, Cores, MCU := MCU2, Errors;
 
   CONST
     MaxNumThreads* = 16;
@@ -44,10 +44,6 @@ MODULE Kernel;
     (* loop *)
     LoopStackSize = 256; (* bytes *)
     LoopCorId = -1;
-
-    (* scheduler slow motion factor (debugging) *)
-    SloMo = 1;
-
 
   TYPE
     (* one thread *)
@@ -378,7 +374,7 @@ MODULE Kernel;
 
   (* installation *)
 
-  PROCEDURE Install*(microsecsPerTick: INTEGER);
+  PROCEDURE Install*(millisecsPerTick: INTEGER);
     VAR i, stkAddr, cid: INTEGER; ctx: CoreContext;
   BEGIN
     Cores.GetCoreId(cid);
@@ -389,7 +385,7 @@ MODULE Kernel;
     ctx.Ct := NIL; ctx.ct := NIL;
     ctx.queued := {};
     ctx.numThreads := 0;
-    ctx.loopPeriod := microsecsPerTick;
+    ctx.loopPeriod := millisecsPerTick;
     NEW(ctx.jump); ASSERT(ctx.jump # NIL, Errors.HeapOverflow);
     NEW(ctx.loop); ASSERT(ctx.loop # NIL, Errors.HeapOverflow);
     Memory.AllocLoopStack(stkAddr, LoopStackSize); ASSERT(stkAddr # 0, Errors.StorageOverflow);
@@ -407,7 +403,7 @@ MODULE Kernel;
       INC(i)
     END;
     (* configure sys tick *)
-    SysTick.Config(microsecsPerTick)
+    SysTick.Config(millisecsPerTick)
   END Install;
 
 BEGIN

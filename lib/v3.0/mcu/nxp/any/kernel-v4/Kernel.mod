@@ -17,8 +17,8 @@ MODULE Kernel;
     SYSTEM, MCU := MCU2, Config, Cores, Exceptions, SysTick, Errors, LED;
 
   CONST
-    NumCores = Config.NumCoresUsed;
     ExcPrioBlock = MCU.ExcPrioHigh;
+    NumCores = Config.NumCoresUsed;
 
   TYPE
     Actor* = POINTER TO ActorDesc;
@@ -56,7 +56,8 @@ MODULE Kernel;
     ReadyQueueDesc* = RECORD
       head, tail: Actor;
       intNo: INTEGER;
-      cid, id: INTEGER
+      cid, id: INTEGER;
+      ispr, intMask: INTEGER
     END;
 
     MessageQueueDesc* = RECORD
@@ -139,6 +140,8 @@ MODULE Kernel;
   PROCEDURE InstallRdyQ*(rq: ReadyQ; rh: RunHandler; intNo, prio: INTEGER);
   BEGIN
     rq.intNo := intNo;
+    rq.ispr := MCU.PPB_NVIC_ISPR0 + ((intNo DIV 32) * 4);
+    rq.intMask := intNo MOD 32;
     Exceptions.InstallIntHandler(intNo, rh);
     Exceptions.SetIntPrio(intNo, prio);
     Exceptions.EnableInt(intNo)
@@ -157,8 +160,9 @@ MODULE Kernel;
     END;
     rq.tail := act;
     act.next := NIL;
-    IF rq.intNo # 0 THEN
-      SYSTEM.PUT(MCU.PPB_STIR, rq.intNo); (* trigger the readyQ's interrupt *)
+    IF rq.intNo # 0 THEN (* trigger the readyQ's interrupt *)
+      SYSTEM.PUT(rq.ispr, {rq.intMask});
+      (*SYSTEM.PUT(MCU.PPB_STIR, rq.intNo); *)
     END;
     SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
   END PutToRdyQ;
@@ -483,7 +487,7 @@ MODULE Kernel;
   END Run;
 
 
-  PROCEDURE Install*(microsecsPerTick, tickPrio: INTEGER);
+  PROCEDURE Install*(millisecsPerTick, tickPrio: INTEGER);
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
     Cores.GetCoreId(cid);
@@ -494,7 +498,7 @@ MODULE Kernel;
     NewRdyQ(ctx.loopRdyQ, cid, 0);
     (* tick *)
     NewActQ(ctx.tickActQ);
-    SysTick.Config(microsecsPerTick, tickPrio, tickHandler)
+    SysTick.Config(millisecsPerTick, tickHandler, tickPrio)
   END Install;
 
 BEGIN

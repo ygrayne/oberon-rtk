@@ -228,8 +228,7 @@ MODULE CLK;
 
   PROCEDURE* ConfigLsOsc*(cfg: LsOscCfg);
   (* requires PWR to be clocked *)
-    CONST
-      LsMaskEn = {0, 26}; LsMaskRdy = {1, 27};
+    CONST LsMaskEn = {0, 26}; LsMaskRdy = {1, 27};
     VAR oscMask: INTEGER; val, rdyMask: SET;
   BEGIN
     oscMask := 0;
@@ -248,23 +247,6 @@ MODULE CLK;
   END ConfigLsOsc;
 
 
-  PROCEDURE* SetClkOut*(mcoId, mcoSel, mcoPre: INTEGER);
-  (* modify only after reset, before enabling external oscillators and PLLs *)
-    VAR val: INTEGER;
-  BEGIN
-    ASSERT(mcoId IN MCO);
-    SYSTEM.GET(MCU.RCC_CFGR1, val);
-    IF mcoId = MCO1 THEN
-      BFI(val, 24, 22, mcoSel);
-      BFI(val, 21, 18, mcoPre)
-    ELSE
-      BFI(val, 31, 29, mcoSel);
-      BFI(val, 28, 25, mcoPre)
-    END;
-    SYSTEM.PUT(MCU.RCC_CFGR1, val)
-  END SetClkOut;
-
-
   PROCEDURE* EnableBusClock*(device: INTEGER);
   (* MCU.DEV_* device values *)
     VAR reg, devNo: INTEGER; val: SET;
@@ -279,7 +261,6 @@ MODULE CLK;
 
 
   PROCEDURE* DisableBusClock*(device: INTEGER);
-  (* bus clock *)
   (* MCU.DEV_* device values *)
     VAR reg, devNo: INTEGER; val: SET;
   BEGIN
@@ -304,6 +285,23 @@ MODULE CLK;
     val := val - mask + sel;
     SYSTEM.PUT(clkSelReg, val)
   END ConfigDevClock;
+
+
+  PROCEDURE* SetClkOut*(mcoId, mcoSel, mcoPre: INTEGER);
+  (* modify only after reset, before enabling external oscillators and PLLs *)
+    VAR val: INTEGER;
+  BEGIN
+    ASSERT(mcoId IN MCO);
+    SYSTEM.GET(MCU.RCC_CFGR1, val);
+    IF mcoId = MCO1 THEN
+      BFI(val, 24, 22, mcoSel);
+      BFI(val, 21, 18, mcoPre)
+    ELSE
+      BFI(val, 31, 29, mcoSel);
+      BFI(val, 28, 25, mcoPre)
+    END;
+    SYSTEM.PUT(MCU.RCC_CFGR1, val)
+  END SetClkOut;
 
 END CLK.
 

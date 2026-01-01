@@ -5,6 +5,8 @@ MODULE MCU2;
   --
   MCU register and memory addresses, bits, values, assembly instructions
   --
+  Type: MCU
+  --
   MCU: MCXA346
   --
   Copyright (c) 2025 Gray gray@grayraven.org
@@ -22,60 +24,60 @@ MODULE MCU2;
     NumInterrupts*    = 122; (* not all used/connected *)
 
     (* atomic registers *)
-    ASET* = 004H;
-    ACLR* = 008H;
-    AXOR* = 0C0H;
+    ASET = 004H;
+    ACLR = 008H;
 
-
-(* === base addresses === *)
-    (* -- AHB -- *)
+    (* AHB *)
     FLASH_PROG_BASE*      = 000000000H; (* port T0 *)
-    FLASH_PROG_Size*      = 0100000H;   (* 1M *)
     FLASH_B0_IFR0_BASE*   = 001000000H; (* port T0 *)
-    FLASH_B0_IFR0_Size*   = 08000H;     (* 32k *)
     FLASH_B0_IFR1_BASE*   = 001100000H; (* port T0 *)
-    FLASH_B0_IFR1_Size*   = 02000H;     (* 8k *)
     ROM_BASE*             = 003000000H; (* port T1 *)
-    ROM_Size*             = 06000H;     (* 24k *)
     SRAM_X0_BASE*         = 004000000H; (* port T2 *)
-    SRAM_X0_Size*         = 02000H;     (* 8k *)
     SRAM_X1_BASE*         = 004002000H; (* port T2 *)
-    SRAM_X1_Size*         = 02000H;     (* 8k *)
 
     SRAM_A0_BASE*   = 020000000H; (* port T3 *)
-    SRAM_A0_Size*   = 02000H;     (* 8k *)
     SRAM_A1_BASE*   = 020002000H; (* port T3, PKC RAM 0 *)
-    SRAM_A1_Size*   = 01000H;     (* 4k *)
     SRAM_A2_BASE*   = 020003000H; (* port T3, PKC RAM 1 *)
-    SRAM_A2_Size*   = 01000H;     (* 4k *)
     SRAM_A3_BASE*   = 020004000H; (* port T3 *)
-    SRAM_A3_Size*   = 04000H;     (* 16k *)
     SRAM_A4_BASE*   = 020008000H; (* port T3 *)
-    SRAM_A4_Size*   = 08000H;     (* 32k *)
     SRAM_A_BASE*    = SRAM_A0_BASE;
-    SRAM_A_Size*    = SRAM_A0_Size + SRAM_A1_Size + SRAM_A2_Size + SRAM_A3_Size + SRAM_A4_Size;
 
     SRAM_B0_BASE*   = 020010000H; (* port T4 *)
-    SRAM_B0_Size*   = 08000H;     (* 32k *)
     SRAM_B1_BASE*   = 020018000H; (* port T4 *)
-    SRAM_B1_Size*   = 08000H;     (* 32k *)
     SRAM_B_BASE*    = SRAM_B0_BASE;
-    SRAM_B_Size*    = SRAM_B0_Size + SRAM_B1_Size;
 
     SRAM_C0_BASE*   = 020020000H; (* port T5 *)
-    SRAM_C0_Size*   = 08000H;     (* 32k *)
     SRAM_C1_BASE*   = 020028000H; (* port T5 *)
-    SRAM_C1_Size*   = 08000H;     (* 32k *)
     SRAM_C2_BASE*   = 020030000H; (* port T5 *)
-    SRAM_C2_Size*   = 08000H;     (* 32k *)
     SRAM_C3_BASE*   = 020038000H; (* port T5 *)
-    SRAM_C3_Size*   = 04000H;     (* 16k *)
     SRAM_C_BASE*    = SRAM_C0_BASE;
-    SRAM_C_Size*    = SRAM_C0_Size + SRAM_C1_Size + SRAM_C2_Size + SRAM_C3_Size;
 
     SRAM_X0_ALIAS*  = 02003C000H; (* 8k, port T2 *)
 
-    (* -- APB peripheral bridge 0 port T6 -- *)
+    (* sizes *)
+    FLASH_PROG_Size*    = 0100000H;   (* 1M *)
+    FLASH_B0_IFR0_Size* = 08000H;     (* 32k *)
+    FLASH_B0_IFR1_Size* = 02000H;     (* 8k *)
+    ROM_Size*           = 06000H;     (* 24k *)
+    SRAM_X0_Size*       = 02000H;     (* 8k *)
+    SRAM_X1_Size*       = 02000H;     (* 8k *)
+    SRAM_A0_Size*       = 02000H;     (* 8k *)
+    SRAM_A1_Size*       = 01000H;     (* 4k *)
+    SRAM_A2_Size*       = 01000H;     (* 4k *)
+    SRAM_A3_Size*       = 04000H;     (* 16k *)
+    SRAM_A4_Size*       = 08000H;     (* 32k *)
+    SRAM_A_Size*        = SRAM_A0_Size + SRAM_A1_Size + SRAM_A2_Size + SRAM_A3_Size + SRAM_A4_Size;
+    SRAM_B0_Size*       = 08000H;     (* 32k *)
+    SRAM_B1_Size*       = 08000H;     (* 32k *)
+    SRAM_B_Size*        = SRAM_B0_Size + SRAM_B1_Size;
+    SRAM_C0_Size*       = 08000H;     (* 32k *)
+    SRAM_C1_Size*       = 08000H;     (* 32k *)
+    SRAM_C2_Size*       = 08000H;     (* 32k *)
+    SRAM_C3_Size*       = 04000H;     (* 16k *)
+    SRAM_C_Size*        = SRAM_C0_Size + SRAM_C1_Size + SRAM_C2_Size + SRAM_C3_Size;
+
+
+    (* APB peripheral bridge 0 *)
     INPUTMUX0_BASE* = 040001000H;
     CTIMER0_BASE*   = 040004000H;
     CTIMER1_BASE*   = 040005000H;
@@ -87,7 +89,7 @@ MODULE MCU2;
     WWDT0_BASE*     = 04000C000H;
     SmartDMA0_BASE* = 04000E000H;
 
-    (* -- APB peripheral bridge 1 port T6 -- *)
+    (* APB peripheral bridge 1 *)
     CMC_BASE*       = 04008B000H;
     ERM0_BASE*      = 04008D000H;
     MBC0_BASE*      = 04008E000H;
@@ -143,7 +145,7 @@ MODULE MCU2;
     HSADC2_BASE*    = 0400F0000H;
     HSADC3_BASE*    = 0400F1000H;
 
-    (* -- AHB fast peripherals port T6-- *)
+    (* AHB fast peripherals *)
     CDOG0_BASE*     = 040100000H;
     GPIO0_BASE*     = 040102000H;
     GPIO1_BASE*     = 040103000H;
@@ -153,10 +155,10 @@ MODULE MCU2;
     CDOG1_BASE*     = 040107000H;
     MAU_BASE*       = 040108000H;
 
-    (* -- PPB base addresses -- *)
+    (* PPB *)
     PPB_BASE*       = 0E0000000H;
 
-(* == APB peripheral bridge 0 == *)
+    (* -- CTIMER -- *)
     CTIMER_Offset* = CTIMER1_BASE - CTIMER0_BASE;
     CTIMER_IR_Offset*     = 000H;
     CTIMER_TCR_Offset*    = 004H;
@@ -181,9 +183,8 @@ MODULE MCU2;
     CTIMER_MSR2_Offset*   = 080H;
     CTIMER_MSR3_Offset*   = 084H;
 
-(* == APB peripheral bridge 1 == *)
 
-    (* == MBC memory block checker == *)
+    (* -- MBC memory block checker -- *)
     (* ref manual 48, p1762 *)
     MBC_MEM0_GLBCFG* = MBC0_BASE;
     MBC_MEM1_GLBCFG* = MBC0_BASE + 0004H;
@@ -200,7 +201,7 @@ MODULE MCU2;
 
     MBC_DOM0_MEM0_BLK_CFG_W0* = MBC0_BASE + 0040H;
 
-    (* == SCG system clock generator == *)
+    (* -- SCG system clock generator -- *)
     (* ref manual 23.7.1, p912 *)
     SCG_VERID*          = SCG0_BASE;
     SCG_PARAM*          = SCG0_BASE + 0004H;
@@ -229,13 +230,13 @@ MODULE MCU2;
     SCG_SPLL_SSCG1*     = SCG0_BASE + 0628H;
     SCG_LDO_CSR*        = SCG0_BASE + 0800H;
 
-    (* == SPC system power controller == *)
+    (* -- SPC system power controller -- *)
     (* ref manual 26.7.1, p981 *)
     SPC_SC*         = SPC0_BASE + 0010H;
     SPC_SRAMCTL*    = SPC0_BASE + 0040H;
     SPC_ACTIVE_CFG* = SPC0_BASE + 0100H;
 
-    (* == SYSCON == *)
+    (* -- SYSCON -- *)
     (* ref manual 14.5.1, p483 *)
     SYSCON_AHBMATPRIO*  = SYSCON_BASE + 0210H;
     SYSCON_NMISRC*      = SYSCON_BASE + 0248H;
@@ -250,7 +251,7 @@ MODULE MCU2;
 
     SYSCON_RAM_CTRL*    = SYSCON_BASE + 0944H;
 
-    (* == MRCC == *)
+    (* -- MRCC -- *)
     (* ref manual 14.5.2, p520 *)
     (* device reset control *)
     MRCC_GLB_RST0*     = SYSCON_BASE;
@@ -276,11 +277,6 @@ MODULE MCU2;
     MRCC_GLB_CC2_CLR*  = MRCC_GLB_CC2 + ACLR;
       MRCC_GLB_CC_Offset* = 010H;
 
-    (* functional clock selection & divider *)
-    (* USE CLK_* device numbers to calculate offset *)
-    MRCC_CLKSEL* = SYSCON_BASE + 0A0H;
-    MRCC_CLKDIV* = SYSCON_BASE + 0A4H;
-      MRCC_CLK_Offset* = 8;
 
     (* device numbers *)
     (* MRCC_GLB_RST0, MRCC_GLB_CC0, MRCC_GLB_ACC0 *)
@@ -313,6 +309,7 @@ MODULE MCU2;
     DEV_GPIO3*      = 64 + 7;
     DEV_GPIO4*      = 64 + 8;
 
+    (* clock selection and divider registers *)
     (* MRCC_CLKSEL, MRCC_CLKDIV *)
     CLKSEL_CTIMER0*   = SYSCON_BASE + 00A8H;
     CLKSEL_CTIMER1*   = SYSCON_BASE + 00B0H;
@@ -395,15 +392,15 @@ MODULE MCU2;
     CLKSEL_CLKOUT*    = SYSCON_BASE + 01B0H;
     CLKDIV_CLKOUT*    = CLKSEL_CLKOUT + 04H;
 
-    CLKSEL_SYSTICK0*   = SYSCON_BASE + 01B8H;
-    CLKDIV_SYSTICK0*   = CLKSEL_SYSTICK0 + 04H;
+    CLKSEL_SYSTICK0*  = SYSCON_BASE + 01B8H;
+    CLKDIV_SYSTICK0*  = CLKSEL_SYSTICK0 + 04H;
 
 
-    (* == FMU flash management unit == *)
-    FMU_FCTRL*      = FMU0_BASE + 008H;
+    (* -- FMU flash management unit -- *)
+    FMU_FCTRL*        = FMU0_BASE + 008H;
 
 
-    (* == (LP)UART0 .. UART5 == *)
+    (* -- (LP)UART0 .. UART5 -- *)
     (* ref manual 39, p1519 *)
     (* UART_Offset valid for UART0 to UART4 *)
     UART_Offset*        = LPUART1_BASE - LPUART0_BASE;
@@ -422,7 +419,7 @@ MODULE MCU2;
     UART_DATARO_Offset* = 030H;
 
 
-    (* == PORT0 .. PORT4 == *)
+    (* -- PORT -- *)
     (* ref manual 11.6.1, p138 *)
     PORT_Offset* = PORT1_BASE - PORT0_BASE;
     PORT_VERID_Offset*  = 000H;
@@ -452,16 +449,15 @@ MODULE MCU2;
     (* ports with non-zero resets *)
     PORT_reset* = {0, 1, 3};
 
-    (* pin number = PORTx + pin index within port *)
-    PORT0* = 0;
-    PORT1* = 32;
-    PORT2* = 64;
-    PORT3* = 96;
-    PORT4* = 128;
+    (* use for parameter 'gpio' in GPIO.SetFunction and friends *)
+    PORT0* = PORT0_BASE;
+    PORT1* = PORT1_BASE;
+    PORT2* = PORT2_BASE;
+    PORT3* = PORT3_BASE;
+    PORT4* = PORT4_BASE;
 
-(* == AHB fast peripherals == *)
 
-    (* == GPIO == *)
+    (* -- GPIO -- *)
     GPIO_Offset* = GPIO1_BASE - GPIO0_BASE;
     GPIO_PDOR_Offset* = 040H;  (* data output value *)
     GPIO_PSOR_Offset* = 044H;  (* data output set masked *)
@@ -499,8 +495,6 @@ MODULE MCU2;
     GPIO4_OUT_CLR*  = GPIO4_BASE + GPIO_PCOR_Offset;
     GPIO4_OUT_XOR*  = GPIO4_BASE + GPIO_PTOR_Offset;
 
-
-(* == PPB: private peripheral bus == *)
 
     (* begin of SCS: System Control Space *)
 
@@ -673,15 +667,6 @@ MODULE MCU2;
     SysExc*  = {3, 5, 6, 11, 14, 15};
 
     (* -- exception priorities, 3 bits *)
-    ExcPrio0* = 000H; (* 0000 0000 *)
-    ExcPrio1* = 020H; (* 0010 0000 *)
-    ExcPrio2* = 040H; (* 0100 0000 *)
-    ExcPrio3* = 060H; (* 0110 0000 *)
-    ExcPrio4* = 080H; (* 1000 0000 *)
-    ExcPrio5* = 0A0H; (* 1010 0000 *)
-    ExcPrio6* = 0C0H; (* 1100 0000 *)
-    ExcPrio7* = 0E0H; (* 1110 0000 *)
-
     ExcPrio00* = 000H; (* 0000 0000 *)
     ExcPrio20* = 020H; (* 0010 0000 *)
     ExcPrio40* = 040H; (* 0100 0000 *)
@@ -690,6 +675,16 @@ MODULE MCU2;
     ExcPrioA0* = 0A0H; (* 1010 0000 *)
     ExcPrioC0* = 0C0H; (* 1100 0000 *)
     ExcPrioE0* = 0E0H; (* 1110 0000 *)
+
+    (* deprecated *)
+    ExcPrio0* = 000H; (* 0000 0000 *)
+    ExcPrio1* = 020H; (* 0010 0000 *)
+    ExcPrio2* = 040H; (* 0100 0000 *)
+    ExcPrio3* = 060H; (* 0110 0000 *)
+    ExcPrio4* = 080H; (* 1000 0000 *)
+    ExcPrio5* = 0A0H; (* 1010 0000 *)
+    ExcPrio6* = 0C0H; (* 1100 0000 *)
+    ExcPrio7* = 0E0H; (* 1110 0000 *)
 
     NumExcPrio* = 8;
 
@@ -735,12 +730,14 @@ MODULE MCU2;
     (* -- sw interrupt generation -- *)
     PPB_STIR*         = PPB_BASE + 0EF00H;
 
-(* ===== CPU registers ===== *)
+    (* end of system control space *)
+
+    (* -- CPU registers -- *)
     (* CONTROL special register *)
     CONTROL_SPSEL* = 1; (* enable PSP *)
 
 
-(* ===== assembly instructions ===== *)
+    (* -- assembly instructions -- *)
 
     NOP* = 046C0H;
 
@@ -803,6 +800,5 @@ MODULE MCU2;
     (* SVC *)
     (* SVCinstr = 'SVC' + SVCvalue *)
     SVC* = 0DF00H;
-
 
 END MCU2.

@@ -81,7 +81,7 @@ MODULE Stacktrace;
   BEGIN
     SYSTEM.GET(addr + 1, b1);
     SYSTEM.GET(addr, b2);
-    value := LSL(b1, 8) + b2;
+    value := LSL(b1, 8) + b2
   END getHalfWord;
 
   PROCEDURE isBL(codeAddr: INTEGER): BOOLEAN;
@@ -125,7 +125,7 @@ MODULE Stacktrace;
     SYSTEM.GET(stackAddr, lr);
     (* must be Thumb mode *)
     IF ODD(lr) THEN
-      DEC(lr, 1);
+      DEC(lr);
       IF (lr >= Config.CodeMem.start + 100H) & (lr < Config.CodeMem.end) THEN
         IF isBL(lr - 4) OR isBLX(lr - 2) THEN
           getHalfWord(lr, nextInstr);
@@ -186,8 +186,7 @@ MODULE Stacktrace;
           isStackFrame := BITS(stackVal) * BITS(ExcRetMask) = BITS(ExcRetVal)
         END
       END
-    END;
-
+    END
   END getAddr;
 
 
@@ -243,7 +242,7 @@ MODULE Stacktrace;
           trace.more := TRUE
         END
       END;
-      SYSTEM.GET(stackAddr, stackVal);
+      SYSTEM.GET(stackAddr, stackVal)
     END
   END stacktrace;
 

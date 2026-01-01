@@ -19,7 +19,7 @@ MODULE K4sema;
     RunPrio = MCU.ExcPrio4;
     RunIntNo = MCU.IRQ_SW_0;
     SysTickPrio = MCU.ExcPrio2;
-    MicrosecsPerTick = 1000000; (* 1000 ms *)
+    MillisecsPerTick = 1000;
 
     StateClaim = 0;
     StatePrint0 = 1;
@@ -49,7 +49,7 @@ MODULE K4sema;
   PROCEDURE aiPrint1(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
-    Out.String("=> print message part 2"); Out.Int(act.id, 2); Out.Ln;
+    Out.String("=> print message part 2 actor"); Out.Int(act.id, 2); Out.Ln;
     Out.String("=> release"); Out.Int(act.id, 2); Out.Ln;
     a := act(A0);
     a.run := a.states[StateClaim];
@@ -60,7 +60,7 @@ MODULE K4sema;
   PROCEDURE aiPrint0(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
-    Out.String("=> print message part 1"); Out.Int(act.id, 2); Out.Ln;
+    Out.String("=> print message part 1 actor"); Out.Int(act.id, 2); Out.Ln;
     a := act(A0);
     a.run := a.states[StatePrint1];
     Kernel.GetTick(act)
@@ -91,7 +91,7 @@ MODULE K4sema;
   PROCEDURE run;
   BEGIN
     Out.String("begin init"); Out.Ln;
-    Kernel.Install(MicrosecsPerTick, SysTickPrio);
+    Kernel.Install(MillisecsPerTick, SysTickPrio);
     Kernel.NewRdyQ(rdyQ, 0, 0);
     Kernel.InstallRdyQ(rdyQ, rdyRun, RunIntNo, RunPrio);
 

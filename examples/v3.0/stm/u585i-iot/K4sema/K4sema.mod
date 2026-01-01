@@ -18,7 +18,7 @@ MODULE K4sema;
     Main, MCU := MCU2, Kernel, Semaphores, Out, Errors;
 
   CONST
-    MicrosecsPerTick = 500000;
+    MillisecsPerTick = 500;
     RunPrio = MCU.ExcPrio4;
     RunIntNo = MCU.IRQ_SPI3;
     SysTickPrio = MCU.ExcPrio2;
@@ -93,7 +93,7 @@ MODULE K4sema;
   PROCEDURE run;
   BEGIN
     Out.String("begin init"); Out.Ln;
-    Kernel.Install(MicrosecsPerTick, SysTickPrio);
+    Kernel.Install(MillisecsPerTick, SysTickPrio);
     Kernel.NewRdyQ(rdyQ, 0, 0);
     Kernel.InstallRdyQ(rdyQ, rdyRun, RunIntNo, RunPrio);
 

@@ -5,13 +5,13 @@ MODULE Out;
   --
   Output via TextIO.Writer.
   --
-  MCU: STM32U585AI, STM32H573II
+  MCU: MCXA346
   --
   Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT Errors, TextIO, Texts;
+  IMPORT TextIO, Texts, Errors;
 
   CONST
     NumTerminals = 1;
@@ -69,5 +69,5 @@ MODULE Out;
   END Flush;
 
 BEGIN
-  W[0] := NIL
+  W[0] := NIL;
 END Out.

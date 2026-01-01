@@ -1,11 +1,11 @@
 MODULE SignalSync;
 (**
   Oberon RTK Framework v3.0
-  --
+  --cd
   Example program, multi-threaded, single-core, kernel-v1
   Description: https://oberon-rtk.org/docs/examples/v2/signalsync/
   --
-  MCU: MCX-A346, MCX-N947
+  MCU: MCXA346, MCXN947
   Board: FRDM-MCXA346, FRDM-MCXN947
   --
   Copyright (c) 2024-2015 Gray, gray@grayraven.org
@@ -15,7 +15,7 @@ MODULE SignalSync;
   IMPORT Main, Kernel, Out, Cores, Signals, Errors, LED;
 
   CONST
-    MicrosecondsPerTick  = 10000; (* 10 ms *)
+    MillisecsPerTick  = 10; (* 10 ms *)
     ThreadStackSize = 1024;
 
     T0period = 50; (* ticks *)
@@ -82,7 +82,7 @@ MODULE SignalSync;
   BEGIN
     NEW(sig); ASSERT(sig # NIL, Errors.HeapOverflow);
     Signals.Init(sig);
-    Kernel.Install(MicrosecondsPerTick);
+    Kernel.Install(MillisecsPerTick);
     (* heartbeat blinker *)
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.ProgError);
     Kernel.Enable(t0);

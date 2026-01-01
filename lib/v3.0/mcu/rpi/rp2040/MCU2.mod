@@ -923,6 +923,7 @@ MODULE MCU2;
 
     (* IRQ numbers *)
     (* datasheet 32.3.2, p60 *)
+    IRQ_BASE*       = 16; (* exc no = IRQ_BASE + IRQ number *)
     IRQ_TIMER0_0*   = 0;
     IRQ_TIMER0_1*   = 1;
     IRQ_TIMER0_2*   = 2;
@@ -963,10 +964,6 @@ MODULE MCU2;
     IRQ_SW_3*   = IRQ_SPAREIRQ_3;
     IRQ_SW_4*   = IRQ_SPAREIRQ_4;
     IRQ_SW_5*   = IRQ_SPAREIRQ_5;
-
-    (* IRQ exception numbers *)
-    (* exception number = IRQ number + IRQ_BASE *)
-    IRQ_BASE* = 16;
 
     (* -- exception numbers -- *)
     EXC_NMI*           = 2;
@@ -1092,8 +1089,9 @@ MODULE MCU2;
     CPSIE_F* = 0B662H; (* enable:  1011 0110 0110 0001 *)
     CPSID_F* = 0B672H; (* disable: 1011 0110 0111 0001 *)
 
-    (* wait for event *)
+    (* wait for event/interrupt *)
     WFE* = 0BF20H;
+    WFI* = 0BF30H;
 
     (* SVC *)
     (* SVCinstr = 'SVC' + SVCvalue *)

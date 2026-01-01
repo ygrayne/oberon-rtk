@@ -1,8 +1,9 @@
-MODULE CounterTimers;
+MODULE CTIMER;
 (**
-  Oberon RTK Framework v2
+  Oberon RTK Framework
+  Version: v3.0
   --
-  Counter timers CTIMER.
+  CTIMER counter timer device driver.
   Basic timer functionality only for now.
   --
   MCU: MCXN947
@@ -11,7 +12,7 @@ MODULE CounterTimers;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Errors, StartUp, ClockCtrl;
+  IMPORT SYSTEM, MCU := MCU2, Errors, CLK;
 
   CONST
     CTIMER0* = 0;
@@ -19,19 +20,37 @@ MODULE CounterTimers;
     CTIMER2* = 2;
     CTIMER3* = 3;
     CTIMER4* = 4;
-    CounterTimers = {CTIMER0 .. CTIMER4};
+    CTIMER = {CTIMER0 .. CTIMER4};
 
-    (* TCR bits and values *)
-    TCR_CEN = 0;
+    (* functional clocks *)
+    CLK_CLK1M* = 0;
+    CLK_APLL* = 1; (* pll0 *)
+    CLK_SPLL* = 2; (* pll1 *)
+    CLK_CLKHF* = 3;
+    CLK_CLK12M* = 4;
+    CLK_SAI0_MCLK*  = 5;
+    CLK_CLK16K* = 6;
+    CLK_SAI1_MCLK* = 8;
+    CLK_SAI0_TX* = 9;
+    CLK_SAI0_RX* = 10;
+    CLK_SAI1_TX* = 11;
+    CLK_SAI1_RX* = 12;
+    CLK_NONE* = 15; (* reset *)
 
 
   TYPE
     Device* = POINTER TO DeviceDesc;
     DeviceDesc* = RECORD
       ctimerNo: INTEGER;
-      devNo, clkSel, clkDiv: INTEGER;
+      devNo, clkSelReg, clkDivReg: INTEGER;
       TCR, TC: INTEGER;
       PR, PC: INTEGER;
+    END;
+
+    DeviceCfg* = RECORD
+      clkSel*: INTEGER;
+      clkDiv*: INTEGER;
+      presc*: INTEGER;
     END;
 
 
@@ -39,7 +58,7 @@ MODULE CounterTimers;
     VAR base: INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
-    ASSERT(ctimNo IN CounterTimers, Errors.ProgError);
+    ASSERT(ctimNo IN CTIMER, Errors.ProgError);
     base := MCU.CTIMER0_BASE + (ctimNo * MCU.CTIMER_Offset);
     dev.ctimerNo := ctimNo;
     CASE ctimNo OF
@@ -47,8 +66,8 @@ MODULE CounterTimers;
     | CTIMER2: dev.devNo := MCU.DEV_CTIMER2
     | CTIMER3, CTIMER4: dev.devNo := MCU.DEV_CTIMER3 + ctimNo - 3
     END;
-    dev.clkSel := MCU.CLKSEL_CTIMER0 + (ctimNo * MCU.CLK_CTIMER_Offset);
-    dev.clkDiv := MCU.CLKDIV_CTIMER0 + (ctimNo * MCU.CLK_CTIMER_Offset);
+    dev.clkSelReg := MCU.CLKSEL_CTIMER0 + (ctimNo * MCU.CLK_CTIMER_Offset);
+    dev.clkDivReg := MCU.CLKDIV_CTIMER0 + (ctimNo * MCU.CLK_CTIMER_Offset);
     dev.TCR := base + MCU.CTIMER_TCR_Offset;
     dev.TC := base + MCU.CTIMER_TC_Offset;
     dev.PR := base + MCU.CTIMER_PR_Offset;
@@ -56,21 +75,22 @@ MODULE CounterTimers;
   END Init;
 
 
-  PROCEDURE Configure*(dev: Device; clkSel, clkDiv, pre: INTEGER);
+  PROCEDURE Configure*(dev: Device; cfg: DeviceCfg);
   BEGIN
     (* set clock, enable clock *)
-    ClockCtrl.ConfigDevClock(dev.clkSel, dev.clkDiv, clkSel, clkDiv);
-    StartUp.EnableClock(dev.devNo);
+    CLK.ConfigDevClock(cfg.clkSel, cfg.clkDiv, dev.clkSelReg, dev.clkDivReg);
+    CLK.EnableBusClock(dev.devNo);
 
-    (* reset cfg *)
+    (* reset *)
     SYSTEM.PUT(dev.TCR, 0);
 
     (* set prescaler *)
-    SYSTEM.PUT(dev.PR, pre)
+    SYSTEM.PUT(dev.PR, cfg.presc)
   END Configure;
 
 
   PROCEDURE* Enable*(dev: Device);
+    CONST TCR_CEN = 0;
     VAR val: SET;
   BEGIN
     SYSTEM.GET(dev.TCR, val);
@@ -83,5 +103,4 @@ MODULE CounterTimers;
     SYSTEM.GET(dev.TC, cnt)
   END GetCount;
 
-
-END CounterTimers.
+END CTIMER.

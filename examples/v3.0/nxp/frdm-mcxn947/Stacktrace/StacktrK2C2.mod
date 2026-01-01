@@ -5,7 +5,7 @@ MODULE StacktrK2C2;
   Example/test program
   https://oberon-rtk.org/docs/examples/v2/stacktrace
   --
-  MCU: MCX-N947
+  MCU: MCXN947
   Board: FRDM-MCXN947
   --
   Kernel-v1
@@ -23,7 +23,7 @@ MODULE StacktrK2C2;
     IntNo1 = MCU.IRQ_SW_1;
 
     ThreadStackSize = 1024;
-    MicrosecsPerTick = 10;
+    MillisecsPerTick = 10;
 
   VAR
     p: PROCEDURE;
@@ -55,7 +55,7 @@ MODULE StacktrK2C2;
   PROCEDURE p0;
     CONST R12 = 12;
   BEGIN
-    SYSTEM.LDREG(R12, 0A0B0000H + SYSTEM.REG(R12)); (* marker *)
+    SYSTEM.LDREG(R12, 0A0B0C0DH); (* marker *)
     p1
   END p0;
 
@@ -85,7 +85,7 @@ MODULE StacktrK2C2;
     Exceptions.InstallIntHandler(IntNo1, i0);
     Exceptions.SetIntPrio(IntNo1, MCU.ExcPrio2);
     Exceptions.EnableInt(IntNo1);
-    Kernel.Install(MicrosecsPerTick);
+    Kernel.Install(MillisecsPerTick);
     Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, x); ASSERT(x = Kernel.OK, Errors.ProgError);
     Kernel.Enable(t0);
     (* threads will use their stacks, exceptions will use main stack *)

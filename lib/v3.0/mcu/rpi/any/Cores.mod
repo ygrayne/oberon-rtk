@@ -121,7 +121,7 @@ MODULE Cores;
   BEGIN
     runInit := initProc;
     runStart := startProc;
-    InitCoreOne(init, Config.StackMem[Core1].start, Config.DataMem[Core1].start)
+    InitCoreOne(init, Config.StackMem[Core1].start, Config.VectMem[Core1].start)
   END StartCoreOne;
 
 END Cores.

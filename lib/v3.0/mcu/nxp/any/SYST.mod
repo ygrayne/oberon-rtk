@@ -5,9 +5,9 @@ MODULE SYST;
   --
   System tick driver
   --
-  Type: Cortex-M33, Cortex-M0+
+  Type: Cortex-M33
   --
-  MCU: RP2040, RP2350
+  MCU: MCXA346
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -16,6 +16,14 @@ MODULE SYST;
   IMPORT SYSTEM, MCU := MCU2, Exceptions, Errors;
 
   CONST
+    (* clock source *)
+    (* parameter 'clkSel' in 'Configure' *)
+    CLK_SYSCLK* = 0;  (* MCXA346, CPU_CLK, divider after selector mux *)
+    CLK_DIVCLK* = 0;  (* MCXN947, MAINCLK divided, divider before selector mux *)
+    CLK_CLK1M* = 1;   (* MCXA346: divided; MCXN947: no divider *)
+    CLK_CLK16K* = 2;  (* MCXA346: divided; MCXN947: no divider *)
+    CLK_NONE* = 3;
+
     (* CSR bits *)
     SYST_CSR_COUNTFLAG = 16;
     SYST_CSR_TICKINT = 1;

@@ -232,7 +232,7 @@ MODULE MCU2;
     UART_AUTOCR_Offset* = 030H;
 
     (* -- FLASH -- *)
-    FLASH_ACR*    = FLASH_BASE + 000H;
+    FLASH_ACR*          = FLASH_BASE + 000H;
 
     (* -- RAMCFG -- *)
     (* SRAM1 *)
@@ -687,12 +687,14 @@ MODULE MCU2;
     ExcPrioLow*    = ExcPrioF0;
 
     (* -- vector table -- *)
-    VectorTableSize*        = 548; (* bytes: 16 sys exceptions + 121 interrupts, one word each *)
+    VectorTableSize*        = 588; (* bytes: 16 sys exceptions + 131 interrupts, one word each *)
     EXC_Reset_Offset*       = 004H;
     EXC_NMI_Offset*         = 008H;
     EXC_HardFault_Offset*   = 00CH;
+    EXC_MemMgmtFault_Offset*  = 010H;
     EXC_BusFault_Offset*    = 014H;
     EXC_UsageFault_Offset*  = 018H;
+    EXC_SecureFault_Offset* = 01CH;
     EXC_SVC_Offset*         = 02CH;
     EXC_DebugMon_Offset*    = 030H;
     EXC_PendSV_Offset*      = 038H;
@@ -736,7 +738,7 @@ MODULE MCU2;
     PPB_MPU_MAIR1*    = PPB_BASE + 0EDC4H;
 
 
-    (* -- SW interrupt generation -- *)
+    (* -- sw interrupt generation -- *)
     PPB_STIR*         = PPB_BASE + 0EF00H;
 
     (* end of system control space *)

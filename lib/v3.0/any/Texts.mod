@@ -9,7 +9,7 @@ MODULE Texts;
   The behaviour of the procedures depends on the write string and read
   procedures allocated to 'W' and 'R' parameters:
   * blocking
-  * non-blocking (using the kernel)
+  * non-blocking (kernel, interrupts)
   --
   Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

@@ -5,7 +5,7 @@ MODULE Stacktr1;
   Example/test program
   https://oberon-rtk.org/docs/examples/v2/stacktrace
   --
-  MCU: MCX-A346
+  MCU: MCXA346
   Board: FRDM-MCXA346
   --
   Copyright (c) 2025 Gray gray@grayraven.org
@@ -106,10 +106,10 @@ MODULE Stacktr1;
   PROCEDURE run;
   BEGIN
     Exceptions.InstallIntHandler(IntNo0, h0);
-    Exceptions.SetIntPrio(IntNo0, MCU.ExcPrio4);
+    Exceptions.SetIntPrio(IntNo0, MCU.ExcPrio80);
     Exceptions.EnableInt(IntNo0);
     Exceptions.InstallIntHandler(IntNo1, i0);
-    Exceptions.SetIntPrio(IntNo1, MCU.ExcPrio2);
+    Exceptions.SetIntPrio(IntNo1, MCU.ExcPrio40);
     Exceptions.EnableInt(IntNo1);
     p
   END run;

@@ -5,7 +5,7 @@ MODULE K4base;
   Base test program for kernel-v4.
   https://oberon-rtk.org/docs/examples/v2/k4tests/
   --
-  MCU: MCX-A346, MCX-N947
+  MCU: MCXA346, MCXN947
   Board: FRDM-MCXA346, FRDM-MCXN947
   --
   Copyright (c) 2025 Gray gray@grayraven.org
@@ -13,13 +13,13 @@ MODULE K4base;
 **)
 
   IMPORT
-    Main, MCU := MCU2, Kernel, Out, CounterTimers, ClockCtrl, Errors;
+    Main, MCU := MCU2, Kernel, Out, CTIMER, Errors;
 
   CONST
     RunPrio = MCU.ExcPrio4;
     RunIntNo = MCU.IRQ_SW_0;
     SysTickPrio = MCU.ExcPrio2;
-    MicrosecsPerTick = 1000000; (* 1000 ms *)
+    MillisecsPerTick = 1000;
 
   TYPE
     A0 = POINTER TO A0desc;
@@ -31,7 +31,7 @@ MODULE K4base;
   VAR
     ai0, ai1, ab0, ab1: A0;
     rdyQ: Kernel.ReadyQ;
-    ct: CounterTimers.Device;
+    ct: CTIMER.Device;
 
 
   PROCEDURE rdyRun[0];
@@ -45,7 +45,7 @@ MODULE K4base;
   (* systick-interrupt-driven actor run procedure *)
     VAR a: A0; cnt: INTEGER;
   BEGIN
-    CounterTimers.GetCount(ct, cnt);
+    CTIMER.GetCount(ct, cnt);
     a := act(A0);
     Out.String("=> int"); Out.Int(a.id, 2); Out.Int(a.cnt, 12);
     Out.Int(cnt - a.startAt, 12); Out.Ln;
@@ -59,7 +59,7 @@ MODULE K4base;
   (* background actor run procedure *)
     VAR a: A0; cnt, i: INTEGER;
   BEGIN
-    CounterTimers.GetCount(ct, cnt);
+    CTIMER.GetCount(ct, cnt);
     a := act(A0);
     Out.String("-> bg"); Out.Int(a.id, 2); Out.String(" begin"); Out.Int(a.cnt, 12);
     Out.Int(cnt - a.startAt, 12); Out.Ln;
@@ -95,18 +95,25 @@ MODULE K4base;
 
 
   PROCEDURE run;
+    VAR timCfg: CTIMER.DeviceCfg;
   BEGIN
     Out.String("begin init"); Out.Ln;
 
+    (* timer *)
     NEW(ct); ASSERT(ct # NIL, Errors.HeapOverflow);
-    CounterTimers.Init(ct, CounterTimers.CTIMER4);
-    CounterTimers.Configure(ct, ClockCtrl.CTIMER_CLK_1M, 0, 0);
-    CounterTimers.Enable(ct);
+    timCfg.clkSel := CTIMER.CLK_CLK1M;
+    timCfg.clkDiv := 0;
+    timCfg.presc := 0;
+    CTIMER.Init(ct, CTIMER.CTIMER4);
+    CTIMER.Configure(ct, timCfg);
+    CTIMER.Enable(ct);
 
-    Kernel.Install(MicrosecsPerTick, SysTickPrio);
+    (* create kernel *)
+    Kernel.Install(MillisecsPerTick, SysTickPrio);
     Kernel.NewRdyQ(rdyQ, 0, 0);
     Kernel.InstallRdyQ(rdyQ, rdyRun, RunIntNo, RunPrio);
 
+    (* actors *)
     NEW(ai0); ASSERT(ai0 # NIL, Errors.HeapOverflow);
     Kernel.InitAct(ai0, aiInit, 0);
     NEW(ai1); ASSERT(ai1 # NIL, Errors.HeapOverflow);

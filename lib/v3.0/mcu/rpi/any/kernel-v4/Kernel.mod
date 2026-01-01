@@ -437,7 +437,7 @@ MODULE Kernel;
   PROCEDURE tickHandler[0];
     VAR cid: INTEGER; ctx: CoreContext; act: Actor;
   BEGIN
-    SYSTEM.PUT(LED.LXOR, {LED.Green});
+    LED.Toggle({LED.Green});
     Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     GetFromActQ(ctx.tickActQ, act);
@@ -456,7 +456,7 @@ MODULE Kernel;
     Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     REPEAT
-      SYSTEM.EMITH(MCU.WFE);
+      SYSTEM.EMITH(MCU.WFI);
       IF SysTick.Tick() THEN
         GetFromActQ(ctx.loopActQ, act);
         GetTailFromActQ(ctx.loopActQ, tail);

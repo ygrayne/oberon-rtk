@@ -8,7 +8,7 @@ MODULE RuntimeErrors;
   * Error: run-time errors, including ASSERT, triggered by SVC calls in software
   * Fault: hardware faults, triggered by MCU hardware
   --
-  MCU: STM32H573II
+  MCU: STM32U585AI, STM32H573II
   --
   Copyright (c) 2020-2025 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -19,7 +19,6 @@ MODULE RuntimeErrors;
 
   CONST
     NumCores = Config.NumCoresUsed;
-    TraceDepth* = 16;
 
     (* register offsets from stacked r0 *)
     PCoffset = 24;
@@ -162,32 +161,32 @@ MODULE RuntimeErrors;
   END EnableFaults;
 
 
-  PROCEDURE Init*;
-    VAR cid, addr, vectorTableBase, vectorTableTop: INTEGER;
+  PROCEDURE Install*(cid: INTEGER);
+  (* initialise vector table for core cid *)
+    VAR addr, vectorTableBase, vectorTableTop: INTEGER;
   BEGIN
-    cid := 0;
-    WHILE cid < NumCores DO
-      (* initialise vector tables for each core *)
-      (* install exception handlers for all errors and faults *)
-      vectorTableBase := Config.DataMem[cid].start;
-      vectorTableTop := vectorTableBase + MCU.VectorTableSize;
-      install(vectorTableBase + MCU.EXC_NMI_Offset, excHandler);
-      install(vectorTableBase + MCU.EXC_HardFault_Offset, excHandler);
-      install(vectorTableBase + MCU.EXC_BusFault_Offset, excHandler);
-      install(vectorTableBase + MCU.EXC_UsageFault_Offset, excHandler);
-      install(vectorTableBase + MCU.EXC_SVC_Offset, excHandler);
-      install(vectorTableBase + MCU.EXC_DebugMon_Offset, excHandler);
-      (* install default error handler *)
-      install(vectorTableBase + MCU.EXC_PendSV_Offset, errorHandler);
-
-      (* install excHandler across the rest of the vector table *)
-      (* will catch any exception with a missing handler *)
-      addr := vectorTableBase + MCU.EXC_SysTick_Offset;
-      WHILE addr < vectorTableTop DO
-        install(addr, excHandler); INC(addr, 4)
-      END;
-      INC(cid)
+    ASSERT(cid < NumCores);
+    (* vector table address and range *)
+    vectorTableBase := Config.VectMem[cid].start;
+    vectorTableTop := Config.VectMem[cid].end;
+    (* install excHandler for all errors and faults *)
+    install(vectorTableBase + MCU.EXC_NMI_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_HardFault_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_MemMgmtFault_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_BusFault_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_UsageFault_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_SecureFault_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_SVC_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_DebugMon_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_SysTick_Offset, excHandler);
+    (* install default errorhandler *)
+    install(vectorTableBase + MCU.EXC_PendSV_Offset, errorHandler);
+    (* install excHandler across the rest of the vector table *)
+    (* will catch any exception with a missing handler *)
+    addr := vectorTableBase + MCU.EXC_IRQ0_Offset;
+    WHILE addr < vectorTableTop DO
+      install(addr, excHandler); INC(addr, 4)
     END
-  END Init;
+  END Install;
 
 END RuntimeErrors.

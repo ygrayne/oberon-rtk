@@ -3,10 +3,7 @@ MODULE SysTick;
   Oberon RTK Framework
   Version: v3.0
   --
-  Kernel-v4
-  System tick
-  Enable interrupt and install an interrupt handler
-  so we can use WFE/WFI in kernel loop.
+  System tick for kernel-v4.
   --
   MCU: RP2040, RP2350
   --

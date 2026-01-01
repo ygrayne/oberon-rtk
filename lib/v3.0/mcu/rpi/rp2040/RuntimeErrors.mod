@@ -19,8 +19,7 @@ MODULE RuntimeErrors;
     SYSTEM, MCU := MCU2, LED, Config;
 
   CONST
-    NumCores* = Config.NumCoresUsed;
-    TraceDepth* = 16;
+    NumCores = Config.NumCoresUsed;
 
     (* register offsets from stacked r0 *)
     PCoffset = 24;
@@ -135,39 +134,32 @@ MODULE RuntimeErrors;
   PROCEDURE InstallErrorHandler*(cid: INTEGER; eh: PROCEDURE);
     VAR vectorTableBase: INTEGER;
   BEGIN
-    vectorTableBase := Config.DataMem[cid].start;
+    vectorTableBase := Config.VectMem[cid].start;
     install(vectorTableBase + MCU.EXC_PendSV_Offset, eh);
   END InstallErrorHandler;
 
 
-  PROCEDURE Init*;
-    VAR cid, addr, vectorTableBase, vectorTableTop: INTEGER;
+  PROCEDURE Install*(cid: INTEGER);
+  (* initialise vector table for core cid *)
+    VAR addr, vectorTableBase, vectorTableTop: INTEGER;
   BEGIN
-    cid := 0;
-    WHILE cid < NumCores DO
-      (* initialise vector tables for each used core *)
-      (* install exception handlers for all errors and faults as implemented in the MCU *)
-      vectorTableBase := Config.DataMem[cid].start;
-      vectorTableTop := vectorTableBase + MCU.VectorTableSize;
-      install(vectorTableBase + MCU.EXC_NMI_Offset, excHandler);
-      install(vectorTableBase + MCU.EXC_HardFault_Offset, excHandler);
-      install(vectorTableBase + MCU.EXC_SVC_Offset, excHandler);
-      (* install default error handler *)
-      install(vectorTableBase + MCU.EXC_PendSV_Offset, errorHandler);
-      (* install error exception handler across the rest of the vector table *)
-      (* will catch any exception with a missing handler *)
-      addr := vectorTableBase + MCU.EXC_SysTick_Offset;
-      WHILE addr < vectorTableTop DO
-        install(addr, excHandler); INC(addr, 4)
-      END;
-      (* todo: set error handler prio, must be called from corresponding core *
-      addr := SHPR0 + (MCU.PPB_PendSV_Exc DIV 4) * 4;
-      SYSTEM.GET(addr, x);
-      x := x + LSL(MCU.PPB_ExcPrio2, (MCU.PPB_PendSV_Exc MOD 4) * 8);
-      SYSTEM.PUT(addr, x);
-      *)
-      INC(cid)
+    ASSERT(cid < MCU.NumCores);
+    (* vector table address and range *)
+    vectorTableBase := Config.VectMem[cid].start;
+    vectorTableTop := Config.VectMem[cid].end;
+    (* install excHandler for all errors and faults *)
+    install(vectorTableBase + MCU.EXC_NMI_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_HardFault_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_SVC_Offset, excHandler);
+    install(vectorTableBase + MCU.EXC_SysTick_Offset, excHandler);
+    (* install default errorhandler *)
+    install(vectorTableBase + MCU.EXC_PendSV_Offset, errorHandler);
+    (* install excHandler across the rest of the vector table *)
+    (* will catch any exception with a missing handler *)
+    addr := vectorTableBase + MCU.EXC_IRQ0_Offset;
+    WHILE addr < vectorTableTop DO
+      install(addr, excHandler); INC(addr, 4)
     END
-  END Init;
+  END Install;
 
 END RuntimeErrors.

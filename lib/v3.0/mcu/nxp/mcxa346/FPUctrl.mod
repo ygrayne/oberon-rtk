@@ -5,6 +5,8 @@ MODULE FPUctrl;
   --
   FPU control/mgmt
   --
+  Type: Cortex-M33
+  --
   IMPORTANT:
     * 'Init' needs to called from the core whose FPU shall be initialised/enabled.
     * See modules InitCoreOne and Cores.

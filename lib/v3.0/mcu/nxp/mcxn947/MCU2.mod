@@ -22,8 +22,7 @@ MODULE MCU2;
     NumInterrupts*    = 156; (* not all used/connected *)
 
 
-(* === base addresses === *)
-    (* -- AHB -- *)
+    (* AHB *)
     (* non-secure *)
     FLASH_PROG_NS_BASE*     = 000000000H; (* port P0 *)
     FLASH_B0_IFR0_NS_BASE*  = 001000000H;
@@ -43,7 +42,6 @@ MODULE MCU2;
     SRAM_F_NS_BASE*         = 020040000H; (* port p8 *)
     SRAM_G_NS_BASE*         = 020050000H; (* port p9 *)
     SRAM_H_NS_BASE*         = 020060000H; (* port p10 *)
-
 
     (* secure *)
     SEC_Offset* = 010000000H;
@@ -66,7 +64,6 @@ MODULE MCU2;
     SRAM_G_S_BASE*         = SRAM_G_NS_BASE + SEC_Offset;
     SRAM_H_S_BASE*         = SRAM_H_NS_BASE + SEC_Offset;
 
-
     (* sizes *)
     FLASH_PROG_Size*    = 0200000H;   (* 2x 1M *)
     FLASH_B0_IFR0_Size* = 08000H;     (* 32k *)
@@ -85,8 +82,8 @@ MODULE MCU2;
     SRAM_H_Size*        = 08000H;     (* 32k *)
 
 
-    (* -- APB peripheral bridge 0 port P11 -- *)
-    (* -- APB 0 -- *)
+    (* APB peripheral bridge 0 *)
+    (* APB 0 *)
     SYSCON_BASE*    = 040000000H;
     PINT0_BASE*     = 040004000H;
     INPUTMUX0_BASE* = 040006000H;
@@ -102,7 +99,7 @@ MODULE MCU2;
     WWDT1_BASE*     = 040017000H;
     CACHE64_POLSEL0_BASE* = 04001B000H;
 
-    (* -- APB 1 -- *)
+    (* APB 1 *)
     I3C0_BASE*      = 040021000H;
     I3C1_BASE*      = 040022000H;
     GDET0_BASE*     = 040024000H;
@@ -114,7 +111,7 @@ MODULE MCU2;
     SmartDMA_BASE*  = 040033000H;
     PLU_BASE*       = 040034000H;
 
-    (* -- AIPS 0 -- *)
+    (* AIPS 0 *)
     GPIO5_BASE*     = 040040000H;
     GPIO5_ALIAS*    = 040041000H;
     PORT5_BASE*     = 040042000H;
@@ -139,13 +136,13 @@ MODULE MCU2;
     INTM0_BASE*     = 04005D000H;
 
 
-    (* -- APB peripheral bridge 1 port P11 -- *)
-    (* -- AIPS 1 -- *)
+    (* APB peripheral bridge 1 *)
+    (* AIPS 1 *)
     DMA0_MP_BASE*   = 040080000H;
     DMA0_CH_BASE*   = 040081000H;
       DMA0_CH_Offset* = 01000;
 
-    (* -- AHB -- *)
+    (* AHB *)
     SCT0_BASE*      = 040091000H;
     FLEXCOM0_BASE*  = 040092000H;
     FLEXCOM1_BASE*  = 040093000H;
@@ -162,14 +159,14 @@ MODULE MCU2;
     GPIO4_BASE*     = 04009E000H;
     GPIO4_ALIAS*    = 04009F000H;
 
-    (* -- APB peripheral bridge 2 port P11 -- *)
-    (* -- AIPS 2 -- *)
+    (* APB peripheral bridge 2 *)
+    (* AIPS 2 *)
     DMA1_MP_BASE*   = 0400A0000H;
     DMA1_CH_BASE*   = 0400A1000H;
       DMA1_CH_Offset* = 01000;
     SEMA0_BASE*     = 0400B1000H;
 
-    (* -- AHB -- *)
+    (* AHB *)
     MAILBOX0_BASE*  = 0400B2000H;
     PKC_RAM_BASE*   = 0400B3000H;
     FLEXCOM4_BASE*  = 0400B4000H;
@@ -185,8 +182,8 @@ MODULE MCU2;
     NPU0_BASE*      = 0400BE000H;
     PWRQUAD0_BASE*  = 0400BF000H;
 
-    (* -- APB peripheral bridge 3 port P11 -- *)
-    (* -- AIPS 3 -- *)
+    (* APB peripheral bridge 3 *)
+    (* AIPS 3 *)
     EWM0_BASE*      = 0400C000H;
     CMX_PERFMON0_BASE* = 0400C1000H;
     CMX_PERFMON1_BASE* = 0400C2000H;
@@ -205,8 +202,8 @@ MODULE MCU2;
     USBDCD0_BASE*   = 0400DC000H;
     USBFS0_BASE*    = 0400DD000H;
 
-    (* -- APB peripheral bridge 4 port P11 -- *)
-    (* -- AIPS 4 -- *)
+    (* APB peripheral bridge 4 *)
+    (* AIPS 4 *)
     ENET0_BASE*     = 040100000H;
     EMBSIM0_BASE*   = 040103000H;
     EMBSIM1_BASE*   = 040104000H;
@@ -233,17 +230,15 @@ MODULE MCU2;
     PORT3_BASE*     = 040119000H;
     PORT4_BASE*     = 04011A000H;
 
-    (* -- AHB -- *)
+    (* AHB *)
     AHBSC_BASE*     = 040120000H;
     AHBSC_ALIAS1*   = 040121000H;
     AHBSC_ALIAS2*   = 040122000H;
     AHBSC_ALIAS3*   = 040123000H;
 
-    (* -- PPB base addresses -- *)
+    (* PPB *)
     PPB_BASE*       = 0E0000000H;
 
-
-(* == APB peripheral bridge 0 == *)
 
     (* -- SYSCON -- *)
     (* ref manual 17.4, p481 *)
@@ -341,8 +336,8 @@ MODULE MCU2;
     SYSCON_AHBCLK_DIV*        = SYSCON_BASE + 0380H;
     SYSCON_FROHF_DIV*         = SYSCON_BASE + 0388H;
     SYSCON_PLLCLK_DIV*        = SYSCON_BASE + 03C4H; (* see SYSCON_PLLCLKDIV_SEL *)
-    SYSCON_PLL1_CLK0_DIV*     = SYSCON_BASE + 03E4H;
-    SYSCON_PLL1_CLK1_DIV*     = SYSCON_BASE + 03E8H;
+    SYSCON_PLL1CLK0_DIV*      = SYSCON_BASE + 03E4H;
+    SYSCON_PLL1CLK1_DIV*      = SYSCON_BASE + 03E8H;
 
     SYSCON_CLKUNLOCK*         = SYSCON_BASE + 03FCH;
     SYSCON_NVM_CTRL*          = SYSCON_BASE + 0400H;
@@ -530,7 +525,7 @@ MODULE MCU2;
     CTIMER_MSR3_Offset*   = 084H;
 
 
-    (* GDET glitch detectors *)
+    (* -- GDET glitch detectors -- *)
     GDET0_APB_SFR*        = 080048000H;
     GDET1_APB_SFR*        = 08004A000H;
     GDET_ENABLE1_Offset*  = 0008H;
@@ -599,11 +594,9 @@ MODULE MCU2;
     (* -- SPC system power controller -- *)
     (* ref manual 26.7.1, p981 *)
     SPC_SC*         = SPC0_BASE + 0010H;
-    SPC_SRAM_CTRL*  = SPC0_BASE + 0040H;
+    SPC_SRAMCTL*    = SPC0_BASE + 0040H;
     SPC_ACTIVE_CFG* = SPC0_BASE + 0100H;
 
-
-(* == APB peripheral bridge 1 == *)
 
     (* -- FLEXCOM -- *)
     (* ref manual 66.2.6, p2588 *)
@@ -612,7 +605,7 @@ MODULE MCU2;
     FLEXCOM_ISTAT_Offset*   = 0FF4H;
     FLEXCOM_PSELID_Offset*  = 0FF8H;
 
-    (* == (LP)UART == *)
+    (* (LP)UART *)
     (* ref manual 66.5.5, p2731 *)
     UART_Offset*        = FLEXCOM_Offset;
     UART_VERID_Offset*  = 000H;
@@ -630,7 +623,7 @@ MODULE MCU2;
     UART_DATARO_Offset* = 030H;
 
 
-    (* -- GPIOx -- *)
+    (* -- GPIO -- *)
     (* two blocks: 0 .. 4: GPIO0_BASE; 5: GPIO5_BASE *)
     GPIO_Offset* = GPIO1_BASE - GPIO0_BASE;
     GPIO_PCNS_Offset* = 010H;   (* pin ctrl non-secure *)
@@ -696,16 +689,7 @@ MODULE MCU2;
     MBC_DOM0_MEM0_BLK_CFG_W0* = MBC0_BASE + 0040H;
 
 
-(* == APB peripheral bridge 2 == *)
-
-
-
-(* == APB peripheral bridge 3 == *)
-
-
-(* == APB peripheral bridge 4 == *)
-
-    (* -- PORTx -- *)
+    (* -- PORT -- *)
     (* ref manual 75.6, p3579 *)
     (* two blocks: 0 .. 4: PORT0_BASE; 5: PORT5_BASE *)
     PORT_Offset* = PORT1_BASE - PORT0_BASE;
@@ -739,16 +723,14 @@ MODULE MCU2;
     (* ports with non-zero resets *)
     PORT_reset* = {0, 5};
 
-    (* pin number = PORTx + pin index within port *)
-    PORT0* = 0;
-    PORT1* = 32;
-    PORT2* = 64;
-    PORT3* = 96;
-    PORT4* = 128;
-    PORT5* = 160;
+    (* use for parameter 'gpio' in GPIO.SetFunction and friends *)
+    PORT0* = PORT0_BASE;
+    PORT1* = PORT1_BASE;
+    PORT2* = PORT2_BASE;
+    PORT3* = PORT3_BASE;
+    PORT4* = PORT4_BASE;
+    PORT5* = PORT5_BASE;
 
-
-(* == PPB: private peripheral bus == *)
 
     (* begin of SCS: System Control Space *)
 
@@ -955,15 +937,6 @@ MODULE MCU2;
     SysExc*  = {3, 4, 5, 6, 7, 11, 12, 14, 15};
 
     (* -- exception priorities, 3 bits *)
-    ExcPrio0* = 000H; (* 0000 0000 *)
-    ExcPrio1* = 020H; (* 0010 0000 *)
-    ExcPrio2* = 040H; (* 0100 0000 *)
-    ExcPrio3* = 060H; (* 0110 0000 *)
-    ExcPrio4* = 080H; (* 1000 0000 *)
-    ExcPrio5* = 0A0H; (* 1010 0000 *)
-    ExcPrio6* = 0C0H; (* 1100 0000 *)
-    ExcPrio7* = 0E0H; (* 1110 0000 *)
-
     ExcPrio00* = 000H; (* 0000 0000 *)
     ExcPrio20* = 020H; (* 0010 0000 *)
     ExcPrio40* = 040H; (* 0100 0000 *)
@@ -972,6 +945,16 @@ MODULE MCU2;
     ExcPrioA0* = 0A0H; (* 1010 0000 *)
     ExcPrioC0* = 0C0H; (* 1100 0000 *)
     ExcPrioE0* = 0E0H; (* 1110 0000 *)
+
+    (* deprecated *)
+    ExcPrio0* = 000H; (* 0000 0000 *)
+    ExcPrio1* = 020H; (* 0010 0000 *)
+    ExcPrio2* = 040H; (* 0100 0000 *)
+    ExcPrio3* = 060H; (* 0110 0000 *)
+    ExcPrio4* = 080H; (* 1000 0000 *)
+    ExcPrio5* = 0A0H; (* 1010 0000 *)
+    ExcPrio6* = 0C0H; (* 1100 0000 *)
+    ExcPrio7* = 0E0H; (* 1110 0000 *)
 
     NumExcPrio* = 8;
 
@@ -982,17 +965,19 @@ MODULE MCU2;
 
 
     (* -- vector table -- *)
-    VectorTableSize*        = 688; (* bytes: 16 sys exceptions + 156 interrupts, one word each *)
-    EXC_Reset_Offset*       = 004H;
-    EXC_NMI_Offset*         = 008H;
-    EXC_HardFault_Offset*   = 00CH;
-    EXC_BusFault_Offset*    = 014H;
-    EXC_UsageFault_Offset*  = 018H;
-    EXC_SVC_Offset*         = 02CH;
-    EXC_DebugMon_Offset*    = 030H;
-    EXC_PendSV_Offset*      = 038H;
-    EXC_SysTick_Offset*     = 03CH;
-    EXC_IRQ0_Offset*        = 040H;
+    VectorTableSize*          = 688; (* bytes: 16 sys exceptions + 156 interrupts, one word each *)
+    EXC_Reset_Offset*         = 004H;
+    EXC_NMI_Offset*           = 008H;
+    EXC_HardFault_Offset*     = 00CH;
+    EXC_MemMgmtFault_Offset*  = 010H;
+    EXC_BusFault_Offset*      = 014H;
+    EXC_UsageFault_Offset*    = 018H;
+    EXC_SecureFault_Offset*   = 01CH;
+    EXC_SVC_Offset*           = 02CH;
+    EXC_DebugMon_Offset*      = 030H;
+    EXC_PendSV_Offset*        = 038H;
+    EXC_SysTick_Offset*       = 03CH;
+    EXC_IRQ0_Offset*          = 040H;
 
     (* -- SCB system control block -- *)
     PPB_ICSR*         = PPB_BASE + 0ED04H;
@@ -1018,12 +1003,12 @@ MODULE MCU2;
     (* -- sw interrupt generation -- *)
     PPB_STIR*         = PPB_BASE + 0EF00H;
 
-(* ===== CPU registers ===== *)
+    (* -- CPU registers -- *)
     (* CONTROL special register *)
     CONTROL_SPSEL* = 1; (* enable PSP *)
 
 
-(* ===== assembly instructions ===== *)
+    (* -- assembly instructions -- *)
 
     NOP* = 046C0H;
 
@@ -1086,6 +1071,5 @@ MODULE MCU2;
     (* SVC *)
     (* SVCinstr = 'SVC' + SVCvalue *)
     SVC* = 0DF00H;
-
 
 END MCU2.

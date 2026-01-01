@@ -1,22 +1,21 @@
-MODULE UARTdev;
+MODULE UART;
 (**
   Oberon RTK Framework
   Version: v3.0
   --
-  UART device
-  * initialisation of device data structure
-  * configure UART hardware
-  * enable physical UART device
+  UART device driver
+  --
+  Type: MCU
   --
   The GPIO pins and pads used must be configured by the client module or program.
   --
-  MCU: MCXA346
+  MCU: MCXN947
   --
   Copyright (c) 2020-2025 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Errors, MCU := MCU2, StartUp, Clocks, ClockCtrl, TextIO;
+  IMPORT SYSTEM, Errors, MCU := MCU2, CLK, TextIO;
 
   CONST
     UART0* = 0;
@@ -25,51 +24,40 @@ MODULE UARTdev;
     UART3* = 3;
     UART4* = 4;
     UART5* = 5;
-    UARTs = {UART0 .. UART5};
+    UART6* = 6;
+    UART7* = 7;
+    UART8* = 8;
+    UART9* = 9;
+    UARTs = {UART0 .. UART9};
     NumUART* = MCU.NumUART;
 
     Disabled* = 0;
     Enabled* = 1;
 
-    ClkFreq = Clocks.SIRC_DIV_FRQ;
-    ClkSel = ClockCtrl.UART_SIRC_DIV;
-    ClkDiv = 0; (* actual div is ClkDiv + 1 *)
+    (* functional clock values *)
+    CLK_NONE* = 0;
+    CLK_SPLL_DIV* = 1;
+    CLK_CLK12M* = 2;
+    CLK_CLKHF_DIV* = 3;
+    CLK_CLK1M* = 4;
+    CLK_UPLL* = 5;
+    CLK_CLK16K* = 6;
 
-    FifoSize* = 4;
-
-    (* BAUD bits and values *)
-    BAUD_OSR_1 = 28;
-    BAUD_OSR_0 = 24;
-    BAUD_SBR_1 = 12;
-    BAUD_SBR_0 = 0;
+    FifoSize* = 8;
 
     (* STAT bits and values *)
     STAT_TDRE* = 23;
-
-    (* CTRL bits and values *)
-    CTRL_TE = 19;
-    CTRL_RE = 18;
-
-    (* FIFO bits and values *)
-    FIFO_TXEMPT* = 23;
-    FIFO_TXFE = 7;
-    FIFO_RXFE = 3;
-
-    (* WATER bits and values *)
-    WATER_RX_1 = 17;
-    WATER_RX_0 = 16;
-    WATER_TX_1 = 1;
-    WATER_TX_0 = 0;
 
 
   TYPE
     Device* = POINTER TO DeviceDesc;
     DeviceDesc* = RECORD(TextIO.DeviceDesc)
       uartNo*: INTEGER;
-      devNo*, clkSel, clkDiv: INTEGER;
+      devNo*, clkSelReg, clkDivReg: INTEGER;
       BAUD, STAT*: INTEGER;
-      FIFO, CTRL, WATER: INTEGER;
-      DATA*: INTEGER
+      CTRL, FIFO, WATER: INTEGER;
+      DATA*: INTEGER;
+      PSELID: INTEGER
     END;
 
 
@@ -77,7 +65,9 @@ MODULE UARTdev;
       osr*: INTEGER;          (* oversampling rate *)
       txfe*, rxfe*: INTEGER;  (* fifo enable *)
       txwater*, rxwater*: INTEGER;
-      (* ... *)
+      clkSel*: INTEGER;
+      clkDiv*: INTEGER;
+      clkFreq*: INTEGER
     END;
 
 
@@ -87,34 +77,40 @@ MODULE UARTdev;
       ASSERT(dev # NIL, Errors.PreCond);
       ASSERT(uartNo IN UARTs, Errors.PreCond);
       dev.uartNo := uartNo;
-      IF uartNo < UART5 THEN
-        base := MCU.LPUART0_BASE + (uartNo * MCU.UART_Offset);
-        dev.devNo := MCU.DEV_UART0 + uartNo;
-        dev.clkSel := MCU.CLKSEL_UART0 + (uartNo * MCU.CLK_UART_Offset);
-        dev.clkDiv := MCU.CLKDIV_UART0 + (uartNo * MCU.CLK_UART_Offset)
+      IF uartNo < UART4 THEN
+        base := MCU.FLEXCOM0_BASE + (uartNo * MCU.FLEXCOM_Offset);
+        dev.devNo := MCU.DEV_FLEXCOM0 + uartNo;
+        dev.clkSelReg := MCU.CLKSEL_FLEXCOM0 + (uartNo * MCU.CLK_FLEXCOM_Offset);
+        dev.clkDivReg := MCU.CLKDIV_FLEXCOM0 + (uartNo * MCU.CLK_FLEXCOM_Offset)
       ELSE
-        base := MCU.LPUART5_BASE;
-        dev.devNo := MCU.DEV_UART5;
-        dev.clkSel := MCU.CLKSEL_UART5;
-        dev.clkDiv := MCU.CLKDIV_UART5
+        base := MCU.FLEXCOM4_BASE + ((uartNo - UART4) * MCU.FLEXCOM_Offset);
+        dev.devNo := MCU.DEV_FLEXCOM0 + uartNo;
+        dev.clkSelReg := MCU.CLKSEL_FLEXCOM4 + ((uartNo - UART4) * MCU.CLK_FLEXCOM_Offset);
+        dev.clkDivReg := MCU.CLKDIV_FLEXCOM4 + ((uartNo - UART4) * MCU.CLK_FLEXCOM_Offset)
       END;
       dev.BAUD := base + MCU.UART_BAUD_Offset;
       dev.STAT := base + MCU.UART_STAT_Offset;
       dev.CTRL := base + MCU.UART_CTRL_Offset;
       dev.DATA := base + MCU.UART_DATA_Offset;
       dev.FIFO := base + MCU.UART_FIFO_Offset;
-      dev.WATER := base + MCU.UART_WATER_Offset
+      dev.WATER := base + MCU.UART_WATER_Offset;
+      dev.PSELID := base + MCU.FLEXCOM_PSELID_Offset
     END Init;
 
 
     PROCEDURE Configure*(dev: Device; cfg: DeviceCfg; baudrate: INTEGER);
+      CONST PSELID_PERSEL_val_UART = 1; CTRL_TE = 19; CTRL_RE = 18;
       VAR val, x: INTEGER;
     BEGIN
 
-      (* release reset on UART device, set clock *)
-      StartUp.ReleaseReset(dev.devNo);
-      ClockCtrl.ConfigDevClock(dev.clkSel, dev.clkDiv, ClkSel, ClkDiv);
-      StartUp.EnableClock(dev.devNo);
+      (* set clock *)
+      CLK.ConfigDevClock(cfg.clkSel, cfg.clkDiv, dev.clkSelReg, dev.clkDivReg);
+      CLK.EnableBusClock(dev.devNo);
+
+      (* configure FLEXCOM function *)
+      SYSTEM.GET(dev.PSELID, val);
+      BFI(val, 2, 0, PSELID_PERSEL_val_UART);
+      SYSTEM.PUT(dev.PSELID, val);
 
       (* disable transmitter and receiver *)
       SYSTEM.GET(dev.CTRL, val);
@@ -126,21 +122,21 @@ MODULE UARTdev;
 
       (* baudrate *)
       SYSTEM.GET(dev.BAUD, val);
-      BFI(val, BAUD_OSR_1, BAUD_OSR_0, cfg.osr);
-      x := (ClkFreq DIV (cfg.osr + 1)) DIV baudrate;
-      BFI(val, BAUD_SBR_1, BAUD_SBR_0, x);
+      BFI(val, 28, 24, cfg.osr);
+      x := (cfg.clkFreq DIV (cfg.osr + 1)) DIV baudrate;
+      BFI(val, 12, 0, x);
       SYSTEM.PUT(dev.BAUD, val);
 
       (* tx watermark *)
       SYSTEM.GET(dev.WATER, val);
-      BFI(val, WATER_TX_1, WATER_TX_0, cfg.txwater);
-      BFI(val, WATER_RX_1, WATER_RX_0, cfg.rxwater);
+      BFI(val, 2, 0, cfg.txwater);
+      BFI(val, 18, 16, cfg.rxwater);
       SYSTEM.PUT(dev.WATER, val);
 
       (* enable fifos *)
       SYSTEM.GET(dev.FIFO, val);
-      BFI(val, FIFO_TXFE, cfg.txfe);
-      BFI(val, FIFO_RXFE, cfg.rxfe);
+      BFI(val, 7, cfg.txfe);
+      BFI(val, 3, cfg.rxfe);
       SYSTEM.PUT(dev.FIFO, val)
     END Configure;
 
@@ -155,6 +151,7 @@ MODULE UARTdev;
 
 
     PROCEDURE* Enable*(dev: Device);
+      CONST CTRL_TE = 19; CTRL_RE = 18;
       VAR val: INTEGER;
     BEGIN
       SYSTEM.GET(dev.CTRL, val);
@@ -162,4 +159,4 @@ MODULE UARTdev;
       SYSTEM.PUT(dev.CTRL, val)
     END Enable;
 
-END UARTdev.
+END UART.

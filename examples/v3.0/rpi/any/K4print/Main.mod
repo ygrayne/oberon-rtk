@@ -64,8 +64,9 @@ MODULE Main;
       uartDev0, uartDev1: UART.Device;
       uartCfg: UART.DeviceCfg;
   BEGIN
-    RuntimeErrors.Init;
     Clocks.Configure;
+    RuntimeErrors.Install(Core0);
+    RuntimeErrors.Install(Core1);
 
     (* configure the pins and pads *)
     cfgPins(UART0_TxPinNo, UART0_RxPinNo);

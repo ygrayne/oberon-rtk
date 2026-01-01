@@ -3,7 +3,9 @@ MODULE UARTstr;
   Oberon RTK Framework
   Version: v3.0
   --
-  UART string device driver, kernel not required (busy waiting)
+  UART string IO, kernel not required (busy waiting)
+  --
+  Type: MCU
   --
   MCU: MCXA346
   --
@@ -11,26 +13,26 @@ MODULE UARTstr;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, UARTdev, TextIO;
+  IMPORT SYSTEM, UART, TextIO;
 
 
   PROCEDURE* PutChar*(dev: TextIO.Device; ch: CHAR);
-    VAR dev0: UARTdev.Device;
+    VAR dev0: UART.Device;
   BEGIN
-    dev0 := dev(UARTdev.Device);
-    REPEAT UNTIL SYSTEM.BIT(dev0.STAT, UARTdev.STAT_TDRE);
+    dev0 := dev(UART.Device);
+    REPEAT UNTIL SYSTEM.BIT(dev0.STAT, UART.STAT_TDRE);
     SYSTEM.PUT(dev0.DATA, ch)
   END PutChar;
 
 
   PROCEDURE* PutString*(dev: TextIO.Device; s: ARRAY OF CHAR; numChar: INTEGER);
-    VAR dev0: UARTdev.Device; i: INTEGER;
+    VAR dev0: UART.Device; i: INTEGER;
   BEGIN
-    dev0 := dev(UARTdev.Device);
+    dev0 := dev(UART.Device);
     IF numChar > LEN(s) THEN numChar := LEN(s) END;
     i := 0;
     WHILE i < numChar DO
-      IF SYSTEM.BIT(dev0.STAT, UARTdev.STAT_TDRE) THEN
+      IF SYSTEM.BIT(dev0.STAT, UART.STAT_TDRE) THEN
         SYSTEM.PUT(dev0.DATA, s[i]);
         INC(i)
       END
