@@ -61,7 +61,7 @@ class BinFile:
             with bin_file.open('br') as f:
                 data = f.read()
         except:
-            print(f"{PROG_NAME}: cannot read {self._file}")
+            print(f"{PROG_NAME}: cannot read {bin_file}")
             sys.exit(1)
         self._data = data
 

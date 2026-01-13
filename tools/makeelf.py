@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
-# Create an ELF file for NXP MCX-A346 with Astrobe for RP2350
+# Create an ELF file from several binaries
 # --
 # Run with option -h for help.
 # --
 # Put into a directory on $PYTHONPATH, and run as
 # 'python -m  makeelf ...'
 # --
-# Copyright (c) 2025 Gray, gray@graraven.org
+# Copyright (c) 2025-2026 Gray, gray@graraven.org
 # https://oberon-rtk.org/licences/
 
 import struct, sys
@@ -38,13 +38,7 @@ class Elf:
     assert section_name not in self.sections
     self.sections[section_name] = section
 
-  def set_code_addr(self, code_addr):
-    self._code_addr = code_addr
-
-  def set_entry_addr(self, entry_addr):
-    self._entry_addr = entry_addr
-
-  def make(self, prog_data):
+  def make(self, bin_files, entry_addr):
     # define file header
     self._fh.set_data_field('e_ident_magic', self._fh.magic)
     self._fh.set_data_field('e_ident_class', 1)
@@ -54,44 +48,47 @@ class Elf:
     self._fh.set_data_field('e_type', 0x02)    # little endian
     self._fh.set_data_field('e_machine', 0x28) # ARM
     self._fh.set_data_field('e_version', 1)
-    self._fh.set_data_field('e_entry', self._entry_addr)
-    self._fh.set_data_field('e_flags', 0x5000400) # from NXP MCUxpresso SDK example progs
+    self._fh.set_data_field('e_entry', entry_addr)
+    self._fh.set_data_field('e_flags', 0x5000400)
     self._fh.set_data_field('e_ehsize', FileHeader.entry_size)
     self._fh.set_data_field('e_phentsize', ProgramHeader.entry_size)
     self._fh.set_data_field('e_shentsize', SectionHeader.entry_size)
 
     # write file header
     self._fh.append_to_buf(self._buf)
-    #print("end of file header: {}".format(hex(len(self._buf))))
 
-    # create code section for .text
-    text = Section()
-    text.put_data(prog_data)
-    self.add_section(text, '.text')
-    self._shstr_tab.add_string('.text')
+    text_sections = list()
+    for file in bin_files:
+      # create code section for 'file' image
+      text = Section()
+      text_sections.append(text)
+      text.put_data(file.data)
+      section_name = f'.{file.name}'
+      self.add_section(text, section_name)
+      self._shstr_tab.add_string(section_name)
 
-    # create entry for .text in section header table
-    text_hd = SectionHeader()
-    text_hd.set_data_field('sh_name', self._shstr_tab.index_of('.text'))
-    text_hd.set_data_field('sh_type', 1) # SHT_PROGBITS
-    text_hd.set_data_field('sh_flags', 0x4 | 0x2) # SHF_EXECINSTR | SHF_ALLOC
-    text_hd.set_data_field('sh_addr', self._code_addr)
-    text_hd.set_data_field('sh_size', text.size())
-    text_hd.set_data_field('sh_addralign', 4)
-    self._sh_tab.add_entry(text_hd, '.text')
-    text.set_section_header(text_hd)
+      # create entry for 'file' image in section header table
+      text_sh = SectionHeader()
+      text_sh.set_data_field('sh_name', self._shstr_tab.index_of(section_name))
+      text_sh.set_data_field('sh_type', 1) # SHT_PROGBITS
+      text_sh.set_data_field('sh_flags', 0x4 | 0x2) # SHF_EXECINSTR | SHF_ALLOC
+      text_sh.set_data_field('sh_addr', file.load_addr)
+      text_sh.set_data_field('sh_size', text.size())
+      text_sh.set_data_field('sh_addralign', 4)
+      self._sh_tab.add_entry(text_sh, section_name)
+      text.set_section_header(text_sh)
 
-    # create entry for .text in program header table
-    text_ph = ProgramHeader()
-    text_ph.set_data_field('p_type', 1)  # PT_LOAD
-    text_ph.set_data_field('p_vaddr', self._code_addr)
-    text_ph.set_data_field('p_paddr', self._code_addr)
-    text_ph.set_data_field('p_filesz', text.size())
-    text_ph.set_data_field('p_memsz', text.size())
-    text_ph.set_data_field('p_flags', 0x04 | 0x01) # PF_R | PF_X
-    text_ph.set_data_field('p_align', 0x1000)
-    self._ph_tab.add_entry(text_ph, '.text')
-    text.set_program_header(text_ph)
+      # create entry for 'file' image in program header table
+      text_ph = ProgramHeader()
+      text_ph.set_data_field('p_type', 1)  # PT_LOAD
+      text_ph.set_data_field('p_vaddr', file.load_addr)
+      text_ph.set_data_field('p_paddr', file.load_addr)
+      text_ph.set_data_field('p_filesz', text.size())
+      text_ph.set_data_field('p_memsz', text.size())
+      text_ph.set_data_field('p_flags', 0x04 | 0x01) # PF_R | PF_X
+      text_ph.set_data_field('p_align', 0x1000)
+      self._ph_tab.add_entry(text_ph, section_name)
+      text.set_program_header(text_ph)
 
     # create string table .strtab
     self._str_tab = StringTable()
@@ -128,11 +125,12 @@ class Elf:
     # write section header table
     self._sh_tab.append_to_buf(self._buf, len(self._buf))
 
-    # write code section .text
-    text.append_to_buf(self._buf, len(self._buf))
-    # fix-up section and program header entries
-    text.section_header().set_buf_field("sh_offset", text.offset())
-    text.program_header().set_buf_field("p_offset", text.offset())
+    # write code sections
+    for text in text_sections:
+      text.append_to_buf(self._buf, len(self._buf))
+      # fix-up section and program header entries
+      text.section_header().set_buf_field("sh_offset", text.offset())
+      text.program_header().set_buf_field("p_offset", text.offset())
 
     # write section header string table section
     self._shstr_tab.append_to_buf(self._buf, len(self._buf))
@@ -275,7 +273,7 @@ class SectionHeader(TableEntry):
     'sh_offset':    (4, 0x10),
     'sh_size':      (4, 0x14),
     'sh_link':      (4, 0x18),
-    'sh_info':      (4, 0x01C),
+    'sh_info':      (4, 0x1C),
     'sh_addralign': (4, 0x20),
     'sh_entsize':   (4, 0x24)
   }
@@ -411,7 +409,7 @@ class SymbolTable(Table): # a section
 
 
 class BinFile:
-  def __init__(self, bin_file): # Path
+  def __init__(self, bin_file, load_addr): # Path
     # bin_file exists, tested by caller
     try:
       with bin_file.open('br') as f:
@@ -420,24 +418,30 @@ class BinFile:
       print(f'{PROG_NAME}: cannot read {self._file}')
       sys.exit(1)
     self._file = bin_file
+    self._load_addr = load_addr
+    self._name = bin_file.stem
     self._binbuf = bytearray(data)
     self._size = len(data)
 
   def make_nxp(self):
     print(hex(self._size))
     self._binbuf[0x20:0x24] = struct.pack('<I', self._size)
-    # for i in range(0, 0x100, 4):
-    #   print(i, self._binbuf[i:i+4])
 
   def clean(self):
     for i in range(0x8, 0x100, 4):
-        # print(i, self._binbuf[i:i+4])
         self._binbuf[i:i+4] = struct.pack('<I', 0x0)
-        # print(i, self._binbuf[i:i+4])
 
   @property
   def entry_addr(self):
     return struct.unpack('<L', self._binbuf[4:8])[0]
+
+  @property
+  def load_addr(self):
+    return self._load_addr
+
+  @property
+  def name(self):
+    return self._name
 
   @property
   def data(self):
@@ -445,67 +449,83 @@ class BinFile:
 
 
 def main():
-  import argparse, os
+  import argparse, os, re
   from pathlib import Path
+
+  file_pat = r'(.+)\:(.*)'
+  # file_pat = r'(\w+\.\w+)\:*([0-9A-Fa-f]*)'
 
   parser = argparse.ArgumentParser(
     prog = 'makeelf',
-    description = '',
+    description =
+    """Create an .elf file from binary files. The first binary defines the entry point as well
+    as the name of the .elf file if option '-o' is not used. Each binary file is given as
+    'file_name:load_address', with 'load_address' defaulting to 0x0.""",
     epilog = ''
   )
-  parser.add_argument('bin_file', type=str, help="binary file (.bin)")
+  parser.add_argument('bin_files', type=str, nargs='+', help="binary files (.bin), as 'bin_file:load_addr'")
   parser.add_argument('-v', action='store_true', dest='verbose', help="print feedback")
-  parser.add_argument('-o', type=str, dest='out_file', help="output file (.elf), default: bin_file.elf")
-  parser.add_argument('-l', dest='load_addr', default='0x00000000',
-                      help="program memory address in hexadecimal, default: 0x00000000")
+  parser.add_argument('-o', type=str, dest='out_file', help="output file (.elf), default: first bin_file.elf")
   parser.add_argument('--nxp', action='store_true', dest='nxp',
                       help="make NXP-specific modifications")
   args = parser.parse_args()
 
-  args.bin_file = Path(args.bin_file)
-  if args.out_file == None: args.out_file = args.bin_file.with_suffix('.elf')
+  file_re = re.compile(file_pat)
 
-  try:
-    args.load_addr = int(args.load_addr, base = 16)
-  except:
-    print(f'{PROG_NAME}: enter addresses in hexadecimal format (with or without \'0x\' prefix)')
-    sys.exit(1)
+  bin_files = list()
+  # print(args.bin_files)
+  first = True
+  for file in args.bin_files:
+    m = file_re.match(file)
+    if m is not None:
+      bin_f = Path(m.group(1)).resolve()
+      if m.group(2) != "":
+        try:
+          load_addr = int(m.group(2), 16)
+        except:
+          print(f'{PROG_NAME}: enter addresses in hexadecimal format (with or without \'0x\' prefix)')
+          sys.exit(1)
+      else:
+        load_addr = 0
+      # print(bin_f)
+      # print(hex(load_addr))
+      if not bin_f.is_file():
+        print(f'{PROG_NAME}: cannot find binary file {bin_f}')
+        sys.exit(1)
+      bin_file = BinFile(bin_f, load_addr)
+      bin_file.clean()
+      if args.nxp:
+        bin_file.make_nxp()
+      bin_files.append(bin_file)
+      if first:
+        if args.out_file == None: args.out_file = bin_f.with_suffix('.elf')
+        entry_addr = bin_file.entry_addr
+        first = False
 
-  bin_f = args.bin_file.resolve()
-  if not bin_f.is_file():
-    print(f'{PROG_NAME}: cannot find binary file {bin_f}')
-    sys.exit(1)
+  # print(bin_files)
+  # print(args.out_file)
 
-  bin_file = BinFile(bin_f)
-  bin_file.clean()
-  if args.nxp:
-    bin_file.make_nxp()
-  entry_addr = bin_file.entry_addr
+  if args.verbose:
+    print(f'ELF file: {args.out_file}')
+    print("binary files:")
+    for file in bin_files:
+      print(f'  {file.name} {hex(file.load_addr)}')
+    print(f'entry address: {hex(entry_addr)}')
 
   elf = Elf()
-  elf.set_code_addr(args.load_addr)
-  elf.set_entry_addr(entry_addr)
+  elf.make(bin_files, entry_addr)
 
   if args.verbose:
-    print("Binary file: {}".format(args.bin_file))
-    print("Elf file: {}".format(args.out_file))
-    print("Memory address: {}".format(hex(args.load_addr)))
-    print("Entry address: {}".format(hex(entry_addr)))
-    print("Creating ELF data: {}...".format(args.out_file))
-
-  elf.make(bin_file.data)
-
-  if args.verbose:
-    print("sections:")
+    print("sections created:")
     for section in elf.sections:
-      print("  " + section)
+      print(f'  {section}')
 
-  if args.verbose:
-    print(f'Writing ELF file: {args.out_file}...')
+  # if args.verbose:
+  #   print(f'Writing ELF file: {args.out_file}...')
 
   try:
-    with open(args.out_file, 'wb') as out_file:
-      out_file.write(elf._buf)
+    with open(args.out_file, 'wb') as f:
+      f.write(elf._buf)
   except:
     print(f'{PROG_NAME}: could not create output file {args.out_file}')
     sys.exit(1)

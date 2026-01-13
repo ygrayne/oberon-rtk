@@ -1,0 +1,20 @@
+MODULE NSC_S0;
+(* generated, do not edit *)
+IMPORT SYSTEM, Main;
+(*= NSC *) PROCEDURE* ToggleLED*(VAR leds: SET);
+BEGIN
+(* SYSTEM.EMIT(0E97FE97FH); *) (* SG *)
+(*= B 24 *) SYSTEM.EMITH(0E000H)
+END ToggleLED;
+(*= NSC *) PROCEDURE SetBits2*(pin, addr, twoBitValue: INTEGER);
+BEGIN
+(* SYSTEM.EMIT(0E97FE97FH); *) (* SG *)
+(*= B 56 *) SYSTEM.EMITH(0E000H)
+END SetBits2;
+(*= NSC *) PROCEDURE Test*(x, v: INTEGER);
+BEGIN
+(* SYSTEM.EMIT(0E97FE97FH); *) (* SG *)
+(*= B 148 *) SYSTEM.EMITH(0E000H)
+END Test;
+END NSC_S0.
+ 
