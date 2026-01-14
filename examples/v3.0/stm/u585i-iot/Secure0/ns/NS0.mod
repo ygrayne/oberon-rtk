@@ -2,12 +2,14 @@ MODULE NS0;
 (**
   Oberon RTK Framework v3.0
   --
-  Non-secure program code
+  Experimental program
+  https://oberon-rtk.org/docs/examples/v3/secure0/
+  Non-secure code
   --
   MCU: STM32U585
   Board: B-U585I-IOT02A
   --
-  Copyright (c) 2025 Gray gray@grayraven.org
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

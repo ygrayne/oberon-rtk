@@ -1,14 +1,16 @@
-(*= SEC *)
+(*! SEC *)
 MODULE S0;
 (**
   Oberon RTK Framework v3.0
   --
+  Experimental program
+  https://oberon-rtk.org/docs/examples/v3/secure0/
   Secure code
   --
   MCU: STM32U585
   Board: B-U585I-IOT02A
   --
-  Copyright (c) 2025 Gray gray@grayraven.org
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
@@ -24,15 +26,11 @@ MODULE S0;
     BX_LR = 04770H;
 
 
-  PROCEDURE NotNsc*;
-  END NotNsc;
-
-
   PROCEDURE testLR(x: INTEGER);
   END testLR;
 
 
-  (*= NSC *) PROCEDURE* ToggleLED*(VAR leds: SET);
+  PROCEDURE* ToggleLED*(VAR leds: SET);
     CONST Mask = {LEDred, LEDgreen, LEDred + 16, LEDgreen + 16};
   BEGIN
     SYSTEM.PUT(GPIOH_BSSR, leds);
@@ -45,7 +43,7 @@ MODULE S0;
   END ToggleLED;
 
 
-  (*= NSC *) PROCEDURE SetBits2*(pin, addr, twoBitValue: INTEGER);
+  PROCEDURE SetBits2*(pin, addr, twoBitValue: INTEGER);
     VAR val, mask: SET;
   BEGIN
     twoBitValue := twoBitValue MOD 04H;
@@ -63,9 +61,11 @@ MODULE S0;
     SYSTEM.EMITH(BX_LR)
   END SetBits2;
 
-  (*= NSC *) PROCEDURE Test*(x, v: INTEGER);
+
+  PROCEDURE Test*(x, v: INTEGER);
     VAR z: INTEGER;
   BEGIN
+    (* stuff *)
     (* manually inserted Secure epilogue *)
     SYSTEM.EMITH(0B003H); (* add sp,#12 *)
     SYSTEM.EMIT(POP_LR);
