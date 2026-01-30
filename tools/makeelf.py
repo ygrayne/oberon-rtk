@@ -493,7 +493,7 @@ def main():
         print(f'{PROG_NAME}: cannot find binary file {bin_f}')
         sys.exit(1)
       bin_file = BinFile(bin_f, load_addr)
-      bin_file.clean()
+      # bin_file.clean()
       if args.nxp:
         bin_file.make_nxp()
       bin_files.append(bin_file)

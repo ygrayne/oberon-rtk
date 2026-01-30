@@ -3,13 +3,13 @@ MODULE MPU;
   Oberon RTK Framework
   Version: v3.0
   --
-  Memory protection unit
+  Memory Protection Unit
   --
   Type: Cortex-M33
   --
   MCU: STM32U585AI
   --
-  Copyright (c) 2025 Gray gray@grayraven.org
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
@@ -91,7 +91,7 @@ MODULE MPU;
     SYSTEM.GET(MCU.PPB_MPU_RLAR, region.rlar);
     region.limit := (BFX(region.rlar, 31, 5) * 32) + 01FH;
     region.ai := BFX(region.rlar, 3, 1);
-    region.en := BFX(region.rlar, 0);
+    region.en := BFX(region.rlar, 0)
   END GetRegion;
 
 
@@ -103,14 +103,13 @@ MODULE MPU;
     rbar := rbar + LSL(cfg.ap, 1);
     rbar := rbar + cfg.xn;
 
-    rlar := LSL((cfg.limit) DIV 32, 5);
+    rlar := LSL(cfg.limit DIV 32, 5);
     rlar := rlar + LSL(cfg.ai, 1);
     rlar := rlar + 1;
 
     SYSTEM.PUT(MCU.PPB_MPU_RNR, rnr);
     SYSTEM.PUT(MCU.PPB_MPU_RBAR, rbar);
     SYSTEM.PUT(MCU.PPB_MPU_RLAR, rlar)
-
   END SetRegion;
 
 

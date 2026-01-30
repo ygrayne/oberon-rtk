@@ -111,11 +111,7 @@ MODULE MCU2;
     DMA2D_BASE*         = 04002B000H;
     ICACHE_BASE*        = 040030400H;
     DCACHE1_BASE*       = 040031400H;
-    GTZC1_TZSC_BASE*    = 040032400H;
-    GTZC1_TZIC_BASE*    = 040032800H;
-    GTZC1_MPCBB1_BASE*  = 040032C00H;
-    GTZC1_MPCBB2_BASE*  = 040033000H;
-    GTZC1_MPCBB3_BASE*  = 040034300H;
+    GTZC1_BASE*         = 040032400H;
     BKPSRAM_BASE*       = 040036400H;
 
     (* AHB2 *)
@@ -171,14 +167,13 @@ MODULE MCU2;
     ADC4_BASE*          = 046021000H;
     DAC1_BASE*          = 046021800H;
     EXTI_BASE*          = 046022000H;
-    GTZC2_TZSC_BASE*    = 046023000H;
-    GTZC2_TZIC_BASE*    = 046023400H;
-    GTZC2_MPCBB4_BASE*  = 046023800H;
+    GTZC2_BASE*         = 046023000H;
     ADF1_BASE*          = 046024000H;
     LPDMA1_BASE*        = 046025000H;
 
     (* PPB *)
     PPB_BASE*           = 0E0000000H;
+    PPB_NS_Offset*      = 020000H;
 
     (* -- TIM -- *)
     TIM_Offset* = 0400H;
@@ -229,7 +224,43 @@ MODULE MCU2;
     UART_AUTOCR_Offset* = 030H;
 
     (* -- FLASH -- *)
-    FLASH_ACR*    = FLASH_BASE + 000H;
+    FLASH_ACR*          = FLASH_BASE + 000H;
+    FLASH_NSKEYR*       = FLASH_BASE + 008H;
+    FLASH_SECKEYR*      = FLASH_BASE + 00CH;
+    FLASH_OPTKEYR*      = FLASH_BASE + 010H;
+    FLASH_PDKEY1R*      = FLASH_BASE + 018H;
+    FLASH_PDKEY2R*      = FLASH_BASE + 01CH;
+    FLASH_NSSR*         = FLASH_BASE + 020H;
+    FLASH_SECSR*        = FLASH_BASE + 024H;
+    FLASH_NSCR*         = FLASH_BASE + 028H;
+    FLASH_SECCR*        = FLASH_BASE + 02CH;
+    FLASH_ECCR*         = FLASH_BASE + 030H;
+    FLASH_OPSR*         = FLASH_BASE + 034H;
+    FLASH_OPTR*         = FLASH_BASE + 040H;
+    FLASH_NSBOOTADD0R*  = FLASH_BASE + 044H;
+    FLASH_NSBOOTADD1R*  = FLASH_BASE + 048H;
+    FLASH_SECBOOTADD0R* = FLASH_BASE + 04CH;
+    FLASH_SECWM1R1*     = FLASH_BASE + 050H;
+    FLASH_SECWM1R2*     = FLASH_BASE + 054H;
+    FLASH_WRP1AR*       = FLASH_BASE + 058H;
+    FLASH_WRP1BR*       = FLASH_BASE + 05CH;
+    FLASH_SECWM2R1*     = FLASH_BASE + 060H;
+    FLASH_SECWM2R2*     = FLASH_BASE + 064H;
+    FLASH_WRP2AR*       = FLASH_BASE + 068H;
+    FLASH_WRP2BR*       = FLASH_BASE + 06CH;
+    FLASH_OEM1KEYR1*    = FLASH_BASE + 070H;
+    FLASH_OEM1KEYR2*    = FLASH_BASE + 074H;
+    FLASH_OEM2KEYR1*    = FLASH_BASE + 078H;
+    FLASH_OEM2KEYR2*    = FLASH_BASE + 07CH;
+
+    FLASH_SECBB1R*      = FLASH_BASE + 080H; (* 0 .. 7, 4 bytes offset per page *)
+    FLASH_SECBB2R*      = FLASH_BASE + 0A0H; (* 0 .. 7, 4 bytes offset per page *)
+
+    FLASH_SECHDPCR*     = FLASH_BASE + 0C0H;
+    FLASH_PRIVCFGR*     = FLASH_BASE + 0C4H;
+
+    FLASH_PRIVBB1R*     = FLASH_BASE + 0D0H; (* 0 .. 7, 4 bytes offset per page *)
+    FLASH_PRIVBB2R*     = FLASH_BASE + 0F0H; (* 0 .. 7, 4 bytes offset per page *)
 
     (* -- RAMCFG -- *)
     (* SRAM1 *)
@@ -275,6 +306,49 @@ MODULE MCU2;
     RAMCFG_M5ERKEYR*    = RAMCFG_BASE + 0128H;
 
     RAMCFG_Offset* = 040H;
+
+    (* -- GTZC -- *)
+    GTZC1_TZSC*   = GTZC1_BASE;
+    GTZC1_TZIC*   = GTZC1_BASE + 00400H;
+    GTZC1_MPCBB1* = GTZC1_BASE + 00800H; (* SRAM1 *)
+    GTZC1_MPCBB2* = GTZC1_BASE + 00C00H; (* SRAM2 *)
+    GTZC1_MPCBB3* = GTZC1_BASE + 01000H; (* SRAM3 *)
+
+    GTZC2_TZSC*   = GTZC2_BASE;
+    GTZC2_TZIC*   = GTZC2_BASE + 00400H;
+    GTZC2_MPCBB4* = GTZC2_BASE + 00800H; (* SRAM4 *)
+
+    (* TZSC *)
+    TZSC_CR_Offset*         = 000H;
+    TZSC_SECCFGR1_Offset*   = 010H;
+    TZSC_SECCFGR2_Offset*   = 014H; (* GTZC1 only *)
+    TZSC_SECCFGR3_Offset*   = 018H; (* GTZC1 only *)
+    TZSC_PRIVCFGR1_Offset*  = 020H;
+    TZSC_PRIVCFGR2_Offset*  = 024H; (* GTZC1 only *)
+    TZSC_PRIVCFGR3_Offset*  = 028H; (* GTZC1 only *)
+
+    (* TZIC *)
+    TZIC_IER1_Offset*       = 000H;
+    TZIC_IER2_Offset*       = 004H;
+    TZIC_IER3_Offset*       = 008H; (* GTZC1 only *)
+    TZIC_IER4_Offset*       = 00CH; (* GTZC1 only *)
+    TZIC_SR1_Offset*        = 010H;
+    TZIC_SR2_Offset*        = 014H;
+    TZIC_SR3_Offset*        = 018H; (* GTZC1 only *)
+    TZIC_SR4_Offset*        = 01CH; (* GTZC1 only *)
+    TZIC_FCR1_Offset*       = 020H;
+    TZIC_FCR2_Offset*       = 024H;
+    TZIC_FCR3_Offset*       = 028H; (* GTZC1 only *)
+    TZIC_FCR4_Offset*       = 02CH; (* GTZC1 only *)
+
+    (* MPCBB *)
+    MPCBB_CR_Offset*        = 0000H;
+    MPCBB_CFGLOCKR1_Offset* = 0010H;
+    MPCBB_CFGLOCKR2_Offset* = 0014H; (* GTZC1 only *)
+    MPCBB_SECCFGR0_Offset*  = 0100H;
+      MPCBB_SECCFGR_Offset* = 04H;
+    MPCBB_PRIVCFGR0_Offset* = 0200H;
+      MPCBB_PRIVCFGR_Offset* = 04H;
 
 
     (* -- GPIO -- *)
@@ -415,6 +489,7 @@ MODULE MCU2;
     DEV_FMAC*     = 2;
     DEV_FLASH*    = 8;  (* no reset *)
     DEV_RAMCFG*   = 17;
+    DEV_GTZC1*    = 24; (* no reset *)
     DEV_BKPSRAM*  = 28; (* no reset *)
     DEV_DCACHE1*  = 30; (* no reset *)
     DEV_SRAM1*    = 31; (* no reset *)
@@ -437,8 +512,9 @@ MODULE MCU2;
 
     (* RCC_AHB3ENR, RCC_AHB3RSTR, RCC_AHB3SMENR *)
     DEV_LPGPIO1*  = 96 + 0;
-    DEV_PWR*      = 96 + 2;   (* no reset *)
-    DEV_SRAM4*    = 96 + 31;  (* no reset *)
+    DEV_PWR*      = 96 + 2;  (* no reset *)
+    DEV_GTZC2*    = 96 + 12; (* no reset *)
+    DEV_SRAM4*    = 96 + 31; (* no reset *)
 
     (* note the address gap here *)
 
@@ -754,9 +830,20 @@ MODULE MCU2;
     PPB_MPU_MAIR0*    = PPB_BASE + 0EDC0H;
     PPB_MPU_MAIR1*    = PPB_BASE + 0EDC4H;
 
+    (* -- SAU -- *)
+    PPB_SAU_CTRL*     = PPB_BASE + 0EDD0H;
+    PPB_SAU_TYPE*     = PPB_BASE + 0EDD4H;
+    PPB_SAU_RNR*      = PPB_BASE + 0EDD8H;
+    PPB_SAU_RBAR*     = PPB_BASE + 0EDDCH;
+    PPB_SAU_RLAR*     = PPB_BASE + 0EDE0H;
+    PPB_SAU_SFSR*     = PPB_BASE + 0EDE4H;
+    PPB_SAU_SFAR*     = PPB_BASE + 0EDE8H;
+
 
     (* -- sw interrupt generation -- *)
     PPB_STIR*         = PPB_BASE + 0EF00H;
+
+
 
     (* end of system control space *)
 
@@ -767,6 +854,13 @@ MODULE MCU2;
 
     (* -- assembly instructions -- *)
     NOP* = 046C0H;
+
+    BLXNS_R11* = 047DCH;
+    BLXNS_R12* = 047E4H;
+    POP_LR* = 0E8BD4000H;
+    BX_LR* = 04770H;
+    BXNS_LR* = 04774H;
+    ADD_SP* = 0B000H;
 
     (* read specical regs MRS *)
     (* 0F3EF8 B 09H r11(B) PSP(09) *)
@@ -801,6 +895,8 @@ MODULE MCU2;
     MSR_PSP_R11* = 0F38B8809H;  (* move r11 to PSP *)
     MSR_MSP_R11* = 0F38B8808H;  (* move r11 to MSP *)
     MSR_CTL_R11* = 0F38B8814H;  (* move r11 to CONTROL *)
+
+    MSR_MSPns_R11* = 0F38B8888H;  (* move r11 to MSPns *)
 
     MSR_BASEPRI_R02* = 0F3828811H; (* move r02 to BASEPRI *)
     MSR_BASEPRI_R03* = 0F3838811H; (* move r03 to BASEPRI *)

@@ -161,7 +161,7 @@ MODULE CLK;
   BEGIN
     SYSTEM.GET(MCU.RCC_PLL1CFGR, val);
     BFI(val, 15, 12, div);
-    SYSTEM.GET(MCU.RCC_PLL1CFGR, val)
+    SYSTEM.PUT(MCU.RCC_PLL1CFGR, val)
   END SetEPODboost;
 
 
@@ -265,7 +265,7 @@ MODULE CLK;
     VAR reg, devNo: INTEGER; val: SET;
   BEGIN
     reg := device DIV 32;
-    reg := MCU.RCC_AHB1ENR + (reg * 4);
+    reg := MCU.RCC_AHB1ENR + MCU.PERI_S_Offset + (reg * 4);
     devNo := device MOD 32;
     SYSTEM.GET(reg, val);
     INCL(val, devNo);

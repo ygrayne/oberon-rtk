@@ -102,6 +102,13 @@ MODULE GPIO;
   END SetFunction;
 
 
+  PROCEDURE* SetSecurePins*(port: INTEGER; pinMask: SET);
+  BEGIN
+    pinMask := pinMask * ValidBits;
+    SYSTEM.PUT(port + MCU.GPIO_SECCFGR_Offset, pinMask)
+  END SetSecurePins;
+
+
   (* GPIO control *)
   (* parameter 'gpio': MCU.GPIOx *)
 
