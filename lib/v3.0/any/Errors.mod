@@ -48,7 +48,7 @@ MODULE Errors;
     ProgError* = 37;
     BufferOverflow* = 38;
     BufferEmpty* = 39;
-    Timing* = 40;
+    TimingError* = 40;
     HeapOverflow* = 41;
     StackOverflow* = 42;
     StorageOverflow* = 43;
@@ -59,7 +59,10 @@ MODULE Errors;
     NotSupported* = 48;
     NotImplemented* = 49;
     NumThreads* = 50;
-    LastRTKcode = 50;
+    SecureError* = 51;
+    AlignmentError* = 52;
+    BootromError* = 53;
+    LastRTKcode = 53;
 
     Config* = ProgError; (* legacy *)
 
@@ -107,7 +110,7 @@ MODULE Errors;
           msg := "buffer overflow"
       | BufferEmpty:
           msg := "buffer empty"
-      | Timing:
+      | TimingError:
           msg := "timing error"
       | HeapOverflow:
           msg := "heap overflow"
@@ -127,6 +130,12 @@ MODULE Errors;
           msg := "functionality not (yet) implemented"
       | NumThreads:
           msg := "too many threads"
+      | SecureError:
+          msg := "secure violation"
+      | AlignmentError:
+          msg := "memory alignment error"
+      | BootromError:
+          msg := "bootrom error"
       END
     ELSIF (code >= FirstAstrobeCode) & (code <= LastAstrobeCode) & ~(code IN AstrobeUnused) THEN
       Error.Msg(code, msg)

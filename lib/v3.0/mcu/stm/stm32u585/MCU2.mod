@@ -173,7 +173,7 @@ MODULE MCU2;
 
     (* PPB *)
     PPB_BASE*           = 0E0000000H;
-    PPB_NS_Offset*      = 020000H;
+    PPB_NS_BASE*        = 0E0020000H;
 
     (* -- TIM -- *)
     TIM_Offset* = 0400H;
@@ -556,6 +556,10 @@ MODULE MCU2;
     DEV_LPTIM4*   = 256 + 13;
     DEV_OPAMP*    = 256 + 14;
     DEV_COMP*     = 256 + 15;
+
+
+    (* PPB *)
+    PPB_NS_Offset*    = PPB_NS_BASE - PPB_BASE;
 
     (* begin of SCS: System Control Space *)
 

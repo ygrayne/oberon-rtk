@@ -7,7 +7,7 @@ MODULE QMI;
   --
   Type: Cortex-M33
   --
-  MCU: STM32U585AI
+  MCU: RP2350
   --
   Copyright (c) 2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -46,24 +46,11 @@ MODULE QMI;
     ASSERT(size MOD SectorSize = 0, Errors.AlignmentError);
 
     pane := (codeBaseAddr - XIP_BASE) DIV PaneSize;
-    (*Out.String("pane"); Out.Hex(pane, 12); Out.Ln;*)
-
-    (*Out.String("code"); Out.Hex(codeBaseAddr, 12);*)
     codeBaseAddr := codeBaseAddr - XIP_BASE;
-    (*Out.Hex(codeBaseAddr, 12);*)
-
     codeBaseAddr := ORD(BITS(codeBaseAddr) - {22, 23});
-    (*Out.Hex(codeBaseAddr, 12); Out.Ln;*)
-
     base := physAddr - codeBaseAddr;
-    (*Out.String("base"); Out.Hex(base, 12);*)
     base := base DIV SectorSize;;
-    (*Out.Hex(base, 12); Out.Ln;*)
-
-    (*Out.String("size"); Out.Hex(size, 12);*)
     size := size DIV SectorSize;
-    (*Out.Hex(size, 12); Out.Ln;*)
-
     SetAtran(pane, size, base)
   END SetAddrTranslation;
 

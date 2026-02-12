@@ -7,7 +7,7 @@ MODULE SAU;
   --
   Type: Cortex-M33
   --
-  MCU: STM32U585AI
+  MCU: RP2350
   --
   Copyright (c) 2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

@@ -125,7 +125,7 @@ MODULE MCU2;
 
     (* PPB *)
     PPB_BASE*             = 0E0000000H;
-    PPB_NONSEC_BASE*      = 0E0020000H;
+    PPB_NS_BASE*          = 0E0020000H;
     EPPB_BASE*            = 0E0080000H;
 
     (* XIP *)
@@ -544,6 +544,7 @@ MODULE MCU2;
     ACCESSCTRL_CFGRESET*      = ACCESSCTRL_BASE + 008H;
     ACCESSCTRL_GPIO_NSMASK0*  = ACCESSCTRL_BASE + 00CH;
     ACCESSCTRL_GPIO_NSMASK1*  = ACCESSCTRL_BASE + 010H;
+
     ACCESSCTRL_ROM*           = ACCESSCTRL_BASE + 014H;
     ACCESSCTRL_XIP_MAIN*      = ACCESSCTRL_BASE + 018H;
     ACCESSCTRL_SRAM0*         = ACCESSCTRL_BASE + 01CH;
@@ -598,17 +599,6 @@ MODULE MCU2;
     ACCESSCTRL_XIP_CTRL*      = ACCESSCTRL_BASE + 0E0H;
     ACCESSCTRL_XIP_QMI*       = ACCESSCTRL_BASE + 0E4H;
     ACCESSCTRL_XIP_AUX*       = ACCESSCTRL_BASE + 0E8H;
-
-    (* bits in ACCESSCTRL_* registers *)
-    (* ACCESSCTRL_ROM to ACCESSCTRL_XIP_AUX *)
-    ACSCTRL_DBG*    = 7;
-    ACSCTRL_DMA*    = 6;
-    ACSCTRL_CORE1*  = 5;
-    ACSCTRL_CORE0*  = 4;
-    ACSCTRL_SP*     = 3;
-    ACSCTRL_SU*     = 2;
-    ACSCTRL_NSP*    = 1;
-    ACSCTRL_NSU*    = 0;
 
 
     (* -- BUSCTRL -- *)
@@ -832,7 +822,28 @@ MODULE MCU2;
     (* -- XIP_QMI -- *)
     (* datasheet 12.14.6, p1221 *)
     QMI_DIRECT_CSR*   = XIP_QMI_BASE;
-    (* .. *)
+    QMI_DIRECT_TX*    = XIP_QMI_BASE + 004H;
+    QMI_DIRECT_RX*    = XIP_QMI_BASE + 008H;
+    QMI_M0_TIMING*    = XIP_QMI_BASE + 00CH;
+    QMI_M0_RFMT*      = XIP_QMI_BASE + 010H;
+    QMI_M0_RCMD*      = XIP_QMI_BASE + 014H;
+    QMI_M0_WFMT*      = XIP_QMI_BASE + 018H;
+    QMI_M0_WCMD*      = XIP_QMI_BASE + 01CH;
+    QMI_M1_TIMING*    = XIP_QMI_BASE + 020H;
+    QMI_M1_RFMT*      = XIP_QMI_BASE + 024H;
+    QMI_M1_RCMD*      = XIP_QMI_BASE + 028H;
+    QMI_M1_WFMT*      = XIP_QMI_BASE + 02CH;
+    QMI_M1_WCMD*      = XIP_QMI_BASE + 030H;
+    QMI_ATRANS0*      = XIP_QMI_BASE + 034H;
+    QMI_ATRANS1*      = XIP_QMI_BASE + 038H;
+    QMI_ATRANS2*      = XIP_QMI_BASE + 03CH;
+    QMI_ATRANS3*      = XIP_QMI_BASE + 040H;
+    QMI_ATRANS4*      = XIP_QMI_BASE + 044H;
+    QMI_ATRANS5*      = XIP_QMI_BASE + 048H;
+    QMI_ATRANS6*      = XIP_QMI_BASE + 04CH;
+    QMI_ATRANS7*      = XIP_QMI_BASE + 050H;
+      QMI_ATRANS_Offset* = 4;
+
 
     (* -- WATCHDOG -- *)
     (* datasheet 12.9.7, p1181 *)
@@ -858,8 +869,18 @@ MODULE MCU2;
 
     (* -- BOOTRAM -- *)
     (* datasheet 4.3.1, p432 *)
-    BOOTRAM_WRITE_ONCE0*  = BOOTRAM_BASE + 0800H;
-    (* .. *)
+    BOOTRAM_WRITE_ONCE0*    = BOOTRAM_BASE + 0800H;
+    BOOTRAM_WRITE_ONCE1*    = BOOTRAM_BASE + 0804H;
+    BOOTRAM_BOOTLOCK_STAT*  = BOOTRAM_BASE + 0808H;
+    BOOTRAM_BOOTLOCK0*      = BOOTRAM_BASE + 080CH;
+    BOOTRAM_BOOTLOCK1*      = BOOTRAM_BASE + 0810H;
+    BOOTRAM_BOOTLOCK2*      = BOOTRAM_BASE + 0814H;
+    BOOTRAM_BOOTLOCK3*      = BOOTRAM_BASE + 0818H;
+    BOOTRAM_BOOTLOCK4*      = BOOTRAM_BASE + 081CH;
+    BOOTRAM_BOOTLOCK5*      = BOOTRAM_BASE + 0820H;
+    BOOTRAM_BOOTLOCK6*      = BOOTRAM_BASE + 0824H;
+    BOOTRAM_BOOTLOCK7*      = BOOTRAM_BASE + 0828H;
+
 
     (* -- ROSC -- *)
     (* datasheet 8.3.10. p553 *)
@@ -1266,7 +1287,8 @@ MODULE MCU2;
 
 
     (* datasheet 3.7.5, p141 *)
-    PPB_NONSEC_Offset*  = 020000H;
+    (* PPB *)
+    PPB_NS_Offset*      = PPB_NS_BASE - PPB_BASE;
 
     (* -- ITM: instrumentation trace macrocell -- *)
     PPB_ITM_STIM0*    = PPB_BASE;
@@ -1545,6 +1567,13 @@ MODULE MCU2;
     (* -- assembly instructions -- *)
     NOP* = 046C0H;
 
+    BLXNS_R11* = 047DCH;
+    BLXNS_R12* = 047E4H;
+    POP_LR* = 0E8BD4000H;
+    BX_LR* = 04770H;
+    BXNS_LR* = 04774H;
+    ADD_SP* = 0B000H;
+
     (* read specical regs MRS *)
     (* 0F3EF8 B 09H r11(B) PSP(09) *)
     (* [11:8] = register Rn *)
@@ -1578,6 +1607,8 @@ MODULE MCU2;
     MSR_PSP_R11* = 0F38B8809H;  (* move r11 to PSP *)
     MSR_MSP_R11* = 0F38B8808H;  (* move r11 to MSP *)
     MSR_CTL_R11* = 0F38B8814H;  (* move r11 to CONTROL *)
+
+    MSR_MSPns_R11* = 0F38B8888H;  (* move r11 to MSPns *)
 
     MSR_BASEPRI_R02* = 0F3828811H; (* move r02 to BASEPRI *)
     MSR_BASEPRI_R03* = 0F3838811H; (* move r03 to BASEPRI *)

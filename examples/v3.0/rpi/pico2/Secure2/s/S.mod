@@ -100,31 +100,11 @@ MODULE S;
     SAU.Enable
   END configSAU;
 
-(*
-  PROCEDURE readSAU(r: INTEGER);
-    VAR val: INTEGER;
-  BEGIN
-    SYSTEM.PUT(MCU.PPB_SAU_RNR, r);
-    SYSTEM.GET(MCU.PPB_SAU_RBAR, val);
-    Out.Hex(val, 12);
-    SYSTEM.GET(MCU.PPB_SAU_RLAR, val);
-    Out.Hex(LSL(LSR(val, 5), 5) + 01FH, 12);
-    Out.Int(BFX(val, 1), 4);
-    Out.Int(BFX(val, 0), 4);
-    Out.Ln
-  END readSAU;
-*)
 
 BEGIN
-  (*Out.String("run"); Out.Ln;*)
   enableFaults;
   configGPIO;
   configSAU;
-  (*
-  readSAU(0);
-  readSAU(1);
-  readSAU(7);
-  *)
   Secure.InstallHandler(Secure.Dispatch);
   NSC_S0.InstallProcs;
   Secure.InstallNonSecImage(NSimageAddr);

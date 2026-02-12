@@ -18,7 +18,7 @@ MODULE Bootrom;
     proc variables contain the actual proc address
     => adjust bootrom function addresses by -1
   --
-  Copyright (c) 2024-2025 Gray, gray@grayraven.org
+  Copyright (c) 2024-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
@@ -26,7 +26,7 @@ MODULE Bootrom;
 
   CONST
     MagicAddr = 010H;
-    TableAddrAddr = 014H; (* {31:16 DataAddr, 15:0 FuncAddr} *)
+    TableAddrAddr = 014H; (* [31:16]: DataAddr, [15:0]: FuncAddr *)
     HelperAddrAddr = 018H;
 
     Magic = 010000H + ORD("u") * 0100H + ORD("M");

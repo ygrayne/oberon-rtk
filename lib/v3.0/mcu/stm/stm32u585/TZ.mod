@@ -23,24 +23,6 @@ MODULE TZ;
     Ts = {0 .. 3};
 
 
-  PROCEDURE* StartNonSecure*(imageAddr: INTEGER);
-    CONST R11 = 11;
-    VAR val: INTEGER;
-  BEGIN
-    (* VTOR *)
-    SYSTEM.PUT(MCU.PPB_VTOR + MCU.PPB_NS_Offset, imageAddr);
-    (* stack pointer *)
-    SYSTEM.GET(imageAddr, val);
-    SYSTEM.LDREG(R11, val);
-    SYSTEM.EMIT(MCU.MSR_MSPns_R11);
-    (* branch to NS entry *)
-    SYSTEM.GET(imageAddr + 04H, val);
-    EXCL(SYSTEM.VAL(SET, val), 0);
-    SYSTEM.LDREG(R11, val);
-    SYSTEM.EMITH(MCU.BLXNS_R11)
-  END StartNonSecure;
-
-
   PROCEDURE TestTarget*(addr: INTEGER; tt: INTEGER; VAR result: INTEGER);
   (*
     E84 Rn F Rd A T 00 0

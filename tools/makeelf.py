@@ -452,7 +452,8 @@ def main():
   import argparse, os, re
   from pathlib import Path
 
-  file_pat = r'(.+)\:(.*)'
+  # file_pat = r'([\w\d\.\_\-]+)\:?(.*)'
+  file_pat = r'(.*)\:(.*)'
   # file_pat = r'(\w+\.\w+)\:*([0-9A-Fa-f]*)'
 
   parser = argparse.ArgumentParser(
@@ -460,7 +461,7 @@ def main():
     description =
     """Create an .elf file from binary files. The first binary defines the entry point as well
     as the name of the .elf file if option '-o' is not used. Each binary file is given as
-    'file_name:load_address', with 'load_address' defaulting to 0x0.""",
+    'file_name:load_address'.""",
     epilog = ''
   )
   parser.add_argument('bin_files', type=str, nargs='+', help="binary files (.bin), as 'bin_file:load_addr'")
@@ -476,19 +477,19 @@ def main():
   # print(args.bin_files)
   first = True
   for file in args.bin_files:
+    # print(file)
     m = file_re.match(file)
-    if m is not None:
+    if m is None:
+      print(f'{PROG_NAME}: specify each binary as \'bin_file:load_address\'')
+      sys.exit(1)
+    else:
       bin_f = Path(m.group(1)).resolve()
-      if m.group(2) != "":
-        try:
+      # print(bin_f)
+      try:
           load_addr = int(m.group(2), 16)
-        except:
+      except:
           print(f'{PROG_NAME}: enter addresses in hexadecimal format (with or without \'0x\' prefix)')
           sys.exit(1)
-      else:
-        load_addr = 0
-      # print(bin_f)
-      # print(hex(load_addr))
       if not bin_f.is_file():
         print(f'{PROG_NAME}: cannot find binary file {bin_f}')
         sys.exit(1)

@@ -6,13 +6,6 @@ MODULE NS_S0;
   CONST
     UserProcKey = 0C0000000H;
 
-  (*
-  PROCEDURE ToggleLED*(led, x, y, z: INTEGER): INTEGER;
-  BEGIN
-    RETURN Bootrom.SecureCall(led, x, y, z, UserProcKey + 42)
-  END ToggleLED;
-  *)
-
   PROCEDURE ToggleLED*(led: INTEGER): INTEGER;
     VAR s: SET; b: BOOLEAN; (* for testing *)
   BEGIN

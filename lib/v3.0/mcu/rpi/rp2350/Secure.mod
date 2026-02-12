@@ -66,13 +66,10 @@ MODULE Secure;
   BEGIN
     Bootrom.GetBootInfo(bi, res);
     (*ASSERT(res >= 0, Errors.BootromError);*)
-    (*Out.String("boot partition:"); Out.Int(bi.bootPart, 4); Out.Ln;*)
     Bootrom.GetOwnedPartition(bi.bootPart, nsPart, res);
     (*ASSERT(res >= 0, Errors.BootromError);*)
-    (*Out.String("owned NS partition:"); Out.Int(nsPart, 4); Out.Ln;*)
     Bootrom.GetPartitionSectors(nsPart, firstSect, lastSect, numSec, res);
     (*ASSERT(res >= 0, Errors.BootromError);*)
-    (*Out.String("NS partition sectors:"); Out.Hex(firstSect, 12); Out.Hex(lastSect, 12); Out.Int(numSec, 4); Out.Ln;*)
     QMI.SetAddrTranslation(addr, firstSect * FlashSectorSize, numSec * FlashSectorSize)
   END InstallNonSecImage;
 
@@ -86,8 +83,7 @@ MODULE Secure;
       slotFound := secProcs[i].proc = NIL;
       IF slotFound THEN
         secProcs[i].key := UserProcKey + procKey;
-        secProcs[i].proc := proc;
-        (*Out.Hex(secProcs[i].key, 12); Out.Hex(SYSTEM.VAL(INTEGER, secProcs[i].proc), 12); Out.Ln*)
+        secProcs[i].proc := proc
       END;
       INC(i)
     END;
@@ -105,7 +101,7 @@ MODULE Secure;
       procFound := secProcs[i].proc = proc;
       IF procFound THEN
         secProcs[i].proc := NIL;
-        secProcs[i].key := 0;
+        secProcs[i].key := 0
       END
     END
   END RemoveSecProc;
@@ -133,7 +129,7 @@ MODULE Secure;
     END;
     IF proc # NIL THEN
       SYSTEM.PUT(MCU.SIO_GPIO_OUT_SET, {LED3});
-      res := proc(p0, p1, p2, p3);
+      res := proc(p0, p1, p2, p3)
       (* if proc is not actually a function procedure, this will leave r0 with Secure data *)
     ELSE
       res := Err_InvalidArg (* error as per the ref manual *)
