@@ -2,8 +2,8 @@ MODULE S;
 (**
   Oberon RTK Framework v3.0
   --
-  Exploration program Secure2
-  https://oberon-rtk.org/docs/examples/v3/secure2/
+  Exploration program Secure3
+  https://oberon-rtk.org/docs/examples/v3/secure3/
   Secure program
   --
   MCU: RP2350
@@ -13,12 +13,12 @@ MODULE S;
   https://oberon-rtk.org/licences/
 **)
 
-
-  IMPORT SYSTEM, MCU := MCU2, Main, Secure, SAU, AccessCtrl, NSC_S0;
+  IMPORT SYSTEM, MCU := MCU2, Main, Secure, SAU, AccessCtrl, S0;
 
   CONST
     NSimageAddr = 010400000H;
-    VTORoffset = 0100H;
+    NSCimageAddr = 010800000H;
+    VTORoffset = 0000H;
     LEDpico = 25;
     LED0 = 27;
     LED1 = 28;
@@ -74,12 +74,7 @@ MODULE S;
 
 
   PROCEDURE configSAU;
-  (* Region 7 is used and reserved for the bootrom, set by the bootloader,
-     with baseAddr = 000046A0H limitAddr = 00007FFFH;
-     important here is that this region allows the IDAU configuration
-     of NSC for the SecureCall mechanism.
-  *)
-    CONST Disabled = 0;
+    CONST Disabled = 0; Enabled = 1;
     VAR cfg: SAU.RegionCfg; r: INTEGER;
   BEGIN
     (* SRAM *)
@@ -87,13 +82,19 @@ MODULE S;
     cfg.limitAddr := 020080000H - 1;
     cfg.nsc := Disabled;
     SAU.ConfigRegion(0, cfg);
-    (* code *)
+    (* NS code 512k *)
     cfg.baseAddr := 010400000H;
     cfg.limitAddr := 010480000H - 1;
     cfg.nsc := Disabled;
     SAU.ConfigRegion(1, cfg);
+    (* NSC code 32k *)
+    cfg.baseAddr := 010800000H;
+    cfg.limitAddr := 010808000H - 1;
+    cfg.nsc := Enabled;
+    SAU.ConfigRegion(2, cfg);
     (* make sure the unused regions are disabled *)
-    r := 2;
+    (* leave reserved region 7 alone, even though it's not used here *)
+    r := 3;
     WHILE r < 7 DO
       SAU.DisableRegion(r);
       INC(r)
@@ -106,8 +107,7 @@ BEGIN
   enableFaults;
   configGPIO;
   configSAU;
-  Secure.InstallHandler(Secure.Dispatch);
-  NSC_S0.InstallProcs;
   Secure.InstallNonSecImage(NSimageAddr);
-  Secure.StartNonSecure(NSimageAddr, VTORoffset)
+  Secure.InstallNonSecCallImage(NSCimageAddr);
+  Secure.StartNonSecProg(NSimageAddr, VTORoffset)
 END S.

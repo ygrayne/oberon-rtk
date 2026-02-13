@@ -1,0 +1,54 @@
+{
+    "$schema": "https://raw.githubusercontent.com/raspberrypi/picotool/master/json/schemas/partition-table-schema.json",
+    "version": [1, 0],
+    "unpartitioned": {
+        "families": ["absolute"],
+        "permissions": {
+            "secure": "rw",
+            "nonsecure": "rw",
+            "bootloader": "rw"
+        }
+    },
+    "partitions": [
+        {
+            "name": "Secure",
+            "id": "0",
+            "size": "64K",
+            "families": ["rp2350-arm-s"],
+            "permissions": {
+                "secure": "rw",
+                "bootloader": "rw"
+            }
+        },
+        {
+            "name": "Non-secure",
+            "id": "1",
+            "size": "512K",
+            "families": ["rp2350-arm-ns"],
+            "permissions": {
+                "secure": "rw",
+                "nonsecure": "rw",
+                "bootloader": "rw"
+            },
+            "link": ["owner", 0],
+            "no_reboot_on_uf2_download": true,
+            "ignored_during_arm_boot": true,
+            "ignored_during_riscv_boot": true
+        },
+        {
+            "name": "Non-secure Callable",
+            "id": "2",
+            "size": "32K",
+            "families": ["rp2350-arm-s"],
+            "permissions": {
+                "secure": "rw",
+                "nonsecure": "r",
+                "bootloader": "rw"
+            },
+            "link": ["owner", 0],
+            "no_reboot_on_uf2_download": true,
+            "ignored_during_arm_boot": true,
+            "ignored_during_riscv_boot": true
+        }
+    ]
+}

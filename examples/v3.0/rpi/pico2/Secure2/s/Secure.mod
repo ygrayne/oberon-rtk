@@ -4,6 +4,7 @@ MODULE Secure;
   Version: v3.0
   --
   Basic Secure
+  Program specific version
   --
   Type: MCU
   --
@@ -42,7 +43,7 @@ MODULE Secure;
     secProcs: ARRAY MaxSecProcs OF SecProcEntry;
 
 
-  PROCEDURE* StartNonSecProg*(imageAddr, vtorOffset: INTEGER);
+  PROCEDURE* StartNonSecure*(imageAddr, vtorOffset: INTEGER);
     CONST R11 = 11;
     VAR val: INTEGER;
   BEGIN
@@ -57,44 +58,24 @@ MODULE Secure;
     EXCL(SYSTEM.VAL(SET, val), 0);
     SYSTEM.LDREG(R11, val);
     SYSTEM.EMITH(MCU.BLXNS_R11)
-  END StartNonSecProg;
+  END StartNonSecure;
 
 
   PROCEDURE InstallNonSecImage*(addr: INTEGER);
-  (* Install the NS image in the first partition owned by the Secure program *)
-    CONST NSpartIndex = 0;
-    VAR
-      bi: Bootrom.BootInfo; res, firstSect, lastSect, numSec: INTEGER;
-      ownedParts: ARRAY 2 OF INTEGER;
+  (* Install the NS image found in the partition owned by the Secure program *)
+    VAR bi: Bootrom.BootInfo; res, nsPart, firstSect, lastSect, numSec: INTEGER;
   BEGIN
     Bootrom.GetBootInfo(bi, res);
-    ASSERT(res >= 0, Errors.BootromError);
-    Bootrom.GetOwnedPartitions(bi.bootPart, ownedParts, res);
-    ASSERT(res >= 0, Errors.BootromError);
-    Bootrom.GetPartitionSectors(ownedParts[NSpartIndex], firstSect, lastSect, numSec, res);
-    ASSERT(res >= 0, Errors.BootromError);
+    (*ASSERT(res >= 0, Errors.BootromError);*)
+    Bootrom.GetOwnedPartition(bi.bootPart, nsPart, res);
+    (*ASSERT(res >= 0, Errors.BootromError);*)
+    Bootrom.GetPartitionSectors(nsPart, firstSect, lastSect, numSec, res);
+    (*ASSERT(res >= 0, Errors.BootromError);*)
     QMI.SetAddrTranslation(addr, firstSect * FlashSectorSize, numSec * FlashSectorSize)
   END InstallNonSecImage;
 
 
-  PROCEDURE InstallNonSecCallImage*(addr: INTEGER);
-  (* Install the NSC image in the second partition owned by the Secure program *)
-    CONST NSCpartIndex = 1;
-    VAR
-      bi: Bootrom.BootInfo; res, firstSect, lastSect, numSect: INTEGER;
-      ownedParts: ARRAY 2 OF INTEGER;
-  BEGIN
-    Bootrom.GetBootInfo(bi, res);
-    ASSERT(res >= 0, Errors.BootromError);
-    Bootrom.GetOwnedPartitions(bi.bootPart, ownedParts, res);
-    ASSERT(res >= 0, Errors.BootromError);
-    Bootrom.GetPartitionSectors(ownedParts[NSCpartIndex], firstSect, lastSect, numSect, res);
-    ASSERT(res >= 0, Errors.BootromError);
-    QMI.SetAddrTranslation(addr, firstSect * FlashSectorSize, numSect * FlashSectorSize)
-  END InstallNonSecCallImage;
-
-
-  PROCEDURE* AddSecProc*(proc: SecProc; procKey: INTEGER; VAR res: INTEGER);
+  PROCEDURE AddSecProc*(proc: SecProc; procKey: INTEGER; VAR res: INTEGER);
     VAR i: INTEGER; slotFound: BOOLEAN;
   BEGIN
     res := OK;

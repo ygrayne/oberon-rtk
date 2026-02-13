@@ -291,7 +291,7 @@ MODULE Bootrom;
     RETURN LSR(ORD(BITS(permAndFlags) * PF_LinkValueBits), PF_LinkValueShift)
   END linkValue;
 
-  PROCEDURE GetOwnedPartition*(partNo: INTEGER; VAR ownedPartNum, res: INTEGER);
+  PROCEDURE GetOwnedPartition*(partNo: INTEGER; VAR ownedPartNo, res: INTEGER);
     CONST BufSize = (MaxPartitions * 2) + 1; (* max 16 partitions, plus 1 for the returned flags in resBuf[0] *)
     VAR
       resBuf: ARRAY BufSize OF INTEGER;
@@ -312,9 +312,53 @@ MODULE Bootrom;
       END
     END;
     IF res > 0 THEN
-      ownedPartNum := partitionIndex - 1
+      ownedPartNo := partitionIndex - 1
     END
   END GetOwnedPartition;
+
+
+(*
+  GetOwnedPartitions works for this simple partition table
+  without A/B partitions.
+    +-------------+             +-------------+
+    | partition 0 | is_owned_by | partition 1 |
+    | A           |<------------|             |
+    +-------------+             +-------------+
+           ^                    +-------------+
+           |     is_owned_by    | partition 2 |
+           +--------------------|             |
+                                +-------------+
+*)
+
+  PROCEDURE GetOwnedPartitions*(partNo: INTEGER; VAR ownedPartNo: ARRAY OF INTEGER; res: INTEGER);
+    CONST BufSize = (MaxPartitions * 2) + 1; (* max 16 partitions, plus 1 for the returned flags in resBuf[0] *)
+    VAR
+      resBuf: ARRAY BufSize OF INTEGER;
+      permAndFlags, numPartitions, partitionIndex, i: INTEGER;
+      ownerFound: BOOLEAN;
+  BEGIN
+    GetPartitionTableInfo(resBuf, PI_PartLocAndFlags, res);
+    IF res > 0 THEN
+      numPartitions := (res - 1) DIV 2;
+      partitionIndex := 0; ownerFound := FALSE; i := 0;
+      WHILE partitionIndex < numPartitions DO
+        permAndFlags := resBuf[(partitionIndex * 2) + 2];
+        IF (linkType(permAndFlags) = PF_LinkTypeOwner) & (linkValue(permAndFlags) = partNo) THEN
+          ownedPartNo[i] := partitionIndex;
+          INC(i);
+          ownerFound := TRUE
+        END;
+        INC(partitionIndex)
+      END;
+      WHILE i < LEN(ownedPartNo) DO
+        ownedPartNo[i] := -1;
+        INC(i)
+      END;
+      IF ~ownerFound THEN
+        res := Err_NotFound
+      END
+    END
+  END GetOwnedPartitions;
 
 
   PROCEDURE firstSector(permAndLoc: INTEGER): INTEGER;
