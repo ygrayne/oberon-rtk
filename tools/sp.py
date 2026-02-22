@@ -7,7 +7,7 @@
 # both regarding width and height, is cumbersone for more
 # complex definitions.
 # --
-# Copyright (c) 2024 Gray, gray@graraven.org
+# Copyright (c) 2024 Gray, gray@grayraven.org
 # https://oberon-rtk.org/licences/
 
 import sys

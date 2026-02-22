@@ -9,7 +9,7 @@
 # --
 # Supported platforms: Windows, macOS
 # --
-# Copyright (c) 2024-2025 Gray, gray@graraven.org
+# Copyright (c) 2024-2025 Gray, gray@grayraven.org
 # https://oberon-rtk.org/licences/
 
 import sys, json

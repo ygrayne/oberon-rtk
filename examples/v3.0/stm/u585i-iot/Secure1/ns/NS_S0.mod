@@ -1,6 +1,9 @@
 MODULE NS_S0;
 (* generated, do not edit *)
+(* Secure module: S0 *)
+(* NSC veneer address: 00C0FE000H *)
 IMPORT SYSTEM;
+
 
 PROCEDURE* ToggleLED*(VAR led: SET);
 BEGIN

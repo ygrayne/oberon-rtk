@@ -2,13 +2,13 @@
 
 # Create and update NSC and NS modules to call Secure code
 # from Non-secure code.
-# Proof-of-concept
+# Proof-of-concept, use 'makesec.py'now
 # --
 # Supported platforms: Windows, macOS
 # --
 # Run python -m makesec -h for help.
 # --
-# Copyright (c) 2025-2026 Gray, gray@graraven.org
+# Copyright (c) 2025-2026 Gray, gray@grayraven.org
 # https://oberon-rtk.org/licences/
 
 

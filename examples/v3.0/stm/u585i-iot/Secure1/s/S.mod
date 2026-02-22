@@ -14,7 +14,7 @@ MODULE S;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Main, MCU := MCU2, S0, GTZC, SAU, TZ;
+  IMPORT SYSTEM, Main, MCU := MCU2, S0, GTZC, SAU, Secure;
 
   CONST
     (* Secure GPIOH registers *)
@@ -114,5 +114,5 @@ BEGIN
   configSAU;
   cfgSRAM;
   cfgGPIO;
-  TZ.StartNonSecure(NSimageAddr)
+  Secure.StartNonSecure(NSimageAddr, 0)
 END S.

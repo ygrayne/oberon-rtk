@@ -6,7 +6,7 @@
 # --
 # Run python -m makelib -h for help.
 # --
-# Copyright (c) 2025 Gray, gray@graraven.org
+# Copyright (c) 2025 Gray, gray@grayraven.org
 # https://oberon-rtk.org/licences/
 
 

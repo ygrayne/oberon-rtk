@@ -16,18 +16,18 @@ MODULE Secure;
   IMPORT SYSTEM, MCU := MCU2;
 
 
-  PROCEDURE* StartNonSecure*(imageAddr: INTEGER);
+  PROCEDURE* StartNonSecure*(imageAddr, vtorOffset: INTEGER);
     CONST R11 = 11;
     VAR val: INTEGER;
   BEGIN
     (* VTOR *)
-    SYSTEM.PUT(MCU.PPB_VTOR + MCU.PPB_NS_Offset, imageAddr);
+    SYSTEM.PUT(MCU.PPB_VTOR + MCU.PPB_NS_Offset, imageAddr + vtorOffset);
     (* stack pointer *)
-    SYSTEM.GET(imageAddr, val);
+    SYSTEM.GET(imageAddr + vtorOffset, val);
     SYSTEM.LDREG(R11, val);
     SYSTEM.EMIT(MCU.MSR_MSPns_R11);
     (* branch to NS entry *)
-    SYSTEM.GET(imageAddr + 04H, val);
+    SYSTEM.GET(imageAddr  + vtorOffset + 04H, val);
     EXCL(SYSTEM.VAL(SET, val), 0);
     SYSTEM.LDREG(R11, val);
     SYSTEM.EMITH(MCU.BLXNS_R11)

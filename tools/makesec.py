@@ -6,7 +6,7 @@
 # --
 # Run python -m makesec -h for help.
 # --
-# Copyright (c) 2025-2026 Gray, gray@graraven.org
+# Copyright (c) 2025-2026 Gray, gray@grayraven.org
 # https://oberon-rtk.org/licences/
 
 
@@ -56,12 +56,16 @@ class MakeCmd(commands.Command):
     }
 
     def run(self, args):
-
+        # accept Oberon hex numbers, for easier copy & paste, I am lazy
+        if args.s_abs_addr[-1] == 'H':
+            args.s_abs_addr = args.s_abs_addr[0:-1]
+        if args.nsc_abs_addr[-1] == 'H':
+            args.nsc_abs_addr = args.nsc_abs_addr[0:-1]
         try:
             s_abs_addr = int(args.s_abs_addr, 16)
             nsc_abs_addr = int(args.nsc_abs_addr, 16)
         except:
-          print(f'{PROG_NAME}: enter addresses in hexadecimal format (without \'0x\' prefix or \'H\' suffix)')
+          print(f'{PROG_NAME}: enter addresses in hexadecimal format')
           sys.exit(1)
 
         files = Files(args.lst_file)
@@ -348,7 +352,7 @@ class NSCbin:
         self._buf = bytearray()
 
     def add_gateway(self):
-        # add halfword-wise
+        # add halfword-wise, since that's how the processor reads instructions
         self._buf.extend(struct.pack('<H', self.sg_instr_h))
         self._buf.extend(struct.pack('<H', self.sg_instr_l))
         self._buf.extend(struct.pack('<H', self.ldr_r11_instr_h))
@@ -465,6 +469,7 @@ class StripComments():
                 self._index += 1
             return token
         else:
+            # believe it or not, that's how you are supposed to terminate the iteration...
             raise StopIteration
 
 
