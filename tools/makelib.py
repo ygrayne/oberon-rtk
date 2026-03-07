@@ -1,14 +1,28 @@
 #!/usr/bin/env python3
 
-# Create and maintain a program-local framework library.
-# --
-# Supported platforms: Windows, macOS
-# --
-# Run python -m makelib -h for help.
-# --
-# Copyright (c) 2025 Gray, gray@grayraven.org
-# https://oberon-rtk.org/licences/
+"""
+gen-lib -- Create and maintain a program-local framework library.
+--
+Manages a project-local copy of the Oberon RTK framework library.
+Reads the Astrobe configuration file to resolve the library search
+path, traces the program's import dependencies, and copies the
+required framework modules into a local directory (default: rtk-lib).
 
+Commands:
+  update  Resolve imports and copy framework modules
+  clean   Remove compilation artifacts (.arm, .lst, .smb)
+--
+Usage:
+    python gen-lib.py update <cfg_file> <mod_file> [-f <avar>] [-l <libdir>] [-a] [-p <pat>] [-v]
+    python gen-lib.py clean <mod_file> [-l <libdir>] [-d] [-v]
+
+Example:
+    python gen-lib.py update Prog.ini Prog.mod -f C:\Astrobe\RP2350
+    python gen-lib.py clean Prog.mod
+--
+Copyright (c) 2025-2026 Gray, gray@grayraven.org
+https://oberon-rtk.org/licences/
+"""
 
 import sys, stat, re, os
 import shutil
@@ -19,14 +33,12 @@ import pylib.commands as commands
 WINDOWS = 'win32'
 MACOS = 'darwin'
 
-PROG_NAME = 'makelib'
+PROG_NAME = 'gen-lib'
 LIB_DIR = 'rtk-lib'
 SKIP_DIR = 'ignored'
 BUILD_MOD = 'Build.mod'
 BOOT2_BIN = 'boot2.bin'
 
-
-## commands
 class MainCmd(commands.Command):
 
     def run(self, args):

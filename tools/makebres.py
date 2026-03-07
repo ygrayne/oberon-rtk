@@ -1,27 +1,34 @@
 #!/usr/bin/env python3
 
-# Create a plain binary Astrobe resource file from a binary file.
-# --
-# Supported platforms: Windows, macOS
-# --
-# Run python -m makebres -h for help.
-# --
-# Copyright (c) 2025 Gray, gray@grayraven.org
-# https://oberon-rtk.org/licences/
+"""
+gen-bin-res -- Create a binary resource file from a binary file.
+--
+Converts any binary file into an Astrobe binary resource file that
+can be linked into an Oberon program and read at runtime using the
+BinRes library module. The output contains a 4-byte little-endian
+size header, the binary data, and zero-padding to 4-byte alignment.
+--
+Usage:
+    python gen-bin-res.py <bin_file> [-o <rsrc_file>]
 
+Example:
+    python gen-bin-res.py rgb_blink.bin
+    python gen-bin-res.py rgb_blink.bin -o IceData.res
+--
+Copyright (c) 2025-2026 Gray, gray@grayraven.org
+https://oberon-rtk.org/licences/
+"""
 
 import sys, struct
 from pathlib import Path
 import pylib.commands as commands
 
-## constants
 WINDOWS = 'win32'
 MACOS = 'darwin'
 
-PROG_NAME = 'makebres'
+PROG_NAME = 'gen-bin-res'
 DATA_FILE = 'bres.res'
 
-## commands
 class MainCmd(commands.Command):
     _defs = {
         'pargs': {
@@ -100,7 +107,6 @@ class RsrcFile:
             print(f'{PROG_NAME}: error writing resource file {self._file}')
             sys.exit(1)
 
-## main
 def main():
 
     platform = sys.platform

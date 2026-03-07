@@ -1,20 +1,31 @@
 #!/usr/bin/env python3
 
-# Translate an Astrobe .bin file to UF2 format for Pico or Pico2.
-# --
-# Supported platforms: Windows, macOS
-# --
-# Put into a directory on $PYTHONPATH
-# Run python -m makeuf2 -h for help.
-# Run python -m makeuf2 rp2040 -h for help with command 'rp2040'
-# Run python -m makeuf2 rp2350 -h for help with command 'rp2350'
-# --
-# Copyright (c) 2023-2026 Gray, gray@grayraven.org
-# https://oberon-rtk.org/licences/
+"""
+make-uf2 -- Convert Astrobe binaries to UF2 format for Raspberry Pi microcontrollers.
+--
+Two subcommands for each target family:
+  rp2040 -- prepends a checksummed boot2 block for QSPI flash initialisation
+  rp2350 -- prepends a picobin metadata block (IMAGE_DEF, vector table)
+The program binary is placed at 0x10000100 in both cases. The output is a
+.uf2 file that can be copied to a board in BOOTSEL mode or uploaded via picotool.
+Supported platforms: Windows and macOS.
+--
+Usage:
+    python make-uf2.py rp2040 <Prog.bin> [-v] [-b boot2_file]
+    python make-uf2.py rp2350 <Prog.bin> [-v] [--ns] [--no-meta]
 
-# The accompanying 'boot2.uf2' binary is
-# Copyright (c) 2019-2021 Raspberry Pi (Trading) Ltd.
-# SPDX-Licence-Identifier: BSD-3-Clause
+Example:
+    python make-uf2.py rp2040 SignalSync.bin
+    python make-uf2.py rp2350 SignalSync.bin
+    python make-uf2.py rp2350 SignalSync.bin --ns
+--
+Copyright (c) 2023-2026 Gray, gray@grayraven.org
+https://oberon-rtk.org/licences/
+
+The accompanying 'boot2.uf2' binary is
+Copyright (c) 2019-2021 Raspberry Pi (Trading) Ltd.
+SPDX-Licence-Identifier: BSD-3-Clause
+"""
 
 import sys
 import struct
@@ -24,7 +35,7 @@ import pylib.commands as commands
 WINDOWS = 'win32'
 MACOS = 'darwin'
 
-PROG_NAME = 'makeuf2'
+PROG_NAME = 'make-uf2'
 BOOT2_FILE_NAME = 'boot2.uf2'
 
 XIP_BASE = 0x10000000

@@ -1,28 +1,44 @@
 #!/usr/bin/env python3
-
 """
-Create an ELF file from several binaries
-Includes debug data extracted directly from listing files (.alst)
+make-elf -- Build ELF files with DWARF debug data from Oberon binaries.
 --
-Run with option -h for help.
+Creates ELF executables from compiled Oberon binaries (.bin) with
+embedded DWARF debug sections generated from listing files (.alst)
+in the rdb directory. Supports:
+  - Full DWARF 4 debug info (types, variables, line mapping, frames)
+  - RP2350 IMAGE_DEF picobin metadata block (--image-def)
+  - Auto-detection of code base and BSS range from .map file
+  - ARM ELF attributes (.ARM.attributes section)
 --
-Put into a directory on $PYTHONPATH, and run as
-'python -m  makeelf ...'
+Usage:
+    python make-elf.py <binary:address> [options]
+
+    --debug             Include DWARF debug sections
+    --bss START:END     BSS memory range (auto-detected from .map if omitted)
+    --image-def         Prepend RP2350 IMAGE_DEF block
+    --rdb-dir DIR       Listing directory (default: rdb)
+    --map FILE          Map file (default: auto-detect)
+
+Example:
+    python make-elf.py SignalSync.bin:0C000000 --debug
+    python make-elf.py SignalSync.bin:10000100 --debug --image-def
 --
 Copyright (c) 2024-2026 Gray, gray@grayraven.org
 https://oberon-rtk.org/licences/
 """
 
 import struct, sys, json
-import makedebug
 
-PROG_NAME = 'makeelf'
+PROG_NAME = 'make-elf'
+
+# import elfdata module
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent / 'pylib'))
+import elfdata
 
 # ARM attributes config file name (looked up in listing directory)
 ARM_ATTR_CFG = 'arm-attr.cfg'
 
-
-# ELF constants
+# --- ELF constants ---
 
 # e_ident
 ELFCLASS32      = 1         # 32-bit objects
@@ -44,9 +60,11 @@ EF_ARM_ABI_FLOAT_HARD = 0x00000400 # hard-float ABI
 SHT_PROGBITS        = 1
 SHT_SYMTAB          = 2
 SHT_STRTAB          = 3
+SHT_NOBITS          = 8         # no file data (e.g. .bss)
 SHT_ARM_ATTRIBUTES  = 0x70000003
 
 # section header flags (sh_flags)
+SHF_WRITE       = 0x01      # section is writable
 SHF_ALLOC       = 0x02      # section occupies memory during execution
 SHF_EXECINSTR   = 0x04      # section contains executable instructions
 
@@ -55,13 +73,102 @@ PT_LOAD         = 1         # loadable segment
 
 # program header flags (p_flags)
 PF_X            = 0x01      # executable
+PF_W            = 0x02      # writable
 PF_R            = 0x04      # readable
 
 # symbol binding (upper 4 bits of st_info)
+STB_LOCAL       = 0
 STB_GLOBAL      = 1
 
 # symbol type (lower 4 bits of st_info)
-STT_FUNC        = 2
+STT_NOTYPE      = 0         # type not specified (used for mapping symbols)
+STT_OBJECT      = 1         # data object (variable)
+STT_FUNC        = 2         # function or procedure
+
+# special section index: symbol value is an absolute address
+SHN_ABS         = 0xFFF1
+
+
+# --- RP2350 IMAGE_DEF (picobin metadata block) ---
+# Encapsulates all RP2350-specific boot metadata.  The rest of the ELF
+# generation code treats an ImageDef instance as an opaque section provider:
+# it asks for the load address, section data, section name, and description.
+
+class ImageDef:
+    """RP2350 IMAGE_DEF picobin metadata block.
+
+    The RP2350 boot ROM scans the first 256 bytes of flash for a picobin
+    metadata block to determine how to boot the program.  This class builds
+    the 256-byte block containing the IMAGE_DEF item (Secure, ARM, RP2350,
+    executable) and a vector-table pointer so the boot ROM can locate the
+    program's vector table.
+    """
+
+    BLOCK_SIZE    = 0x100       # 256 bytes
+    BLOCK_BEGIN   = 0xFFFFDED3
+    BLOCK_END     = 0xAB123579
+    IMAGE_DEF_S   = 0x10210142  # Secure, ARM, RP2350, executable
+    VECT_TABLE    = 0x00000203  # vector table item header
+    LAST_ITEM     = 0x000003FF
+    LINK_SELF     = 0x00000000
+
+    SECTION_NAME  = '.image_def'
+
+    def __init__(self, code_base):
+        """Create an IMAGE_DEF block placed immediately before code_base.
+        code_base: load address of the first binary (vector table address).
+        """
+        self._code_base = code_base
+        self._addr = code_base - self.BLOCK_SIZE
+        self._data = self._build(code_base)
+
+    def _build(self, vtab_addr):
+        """Build the 256-byte picobin metadata block."""
+        block = struct.pack('<7I',
+            self.BLOCK_BEGIN,
+            self.IMAGE_DEF_S,
+            self.VECT_TABLE,
+            vtab_addr,
+            self.LAST_ITEM,
+            self.LINK_SELF,
+            self.BLOCK_END,
+        )
+        return block + b'\x00' * (self.BLOCK_SIZE - len(block))
+
+    @property
+    def addr(self):
+        """Load address of the IMAGE_DEF block in flash."""
+        return self._addr
+
+    @property
+    def data(self):
+        """The 256-byte IMAGE_DEF block."""
+        return self._data
+
+    @property
+    def size(self):
+        return self.BLOCK_SIZE
+
+    @property
+    def section_name(self):
+        return self.SECTION_NAME
+
+    def verbose_line(self):
+        """Single-line description for -v output."""
+        return f'IMAGE_DEF: 0x{self._addr:08X} ({self.BLOCK_SIZE} bytes, vtab 0x{self._code_base:08X})'
+
+
+def _symtab_name(oberon_name):
+    """Convert an Oberon qualified name to a valid C identifier for .symtab.
+    Dots are replaced by underscores so that Ozone's Elf.GetExprValue()
+    can look up the symbol without the dot being parsed as a struct member
+    access operator.
+    Examples:
+        'SignalSync.run'   -> 'SignalSync_run'
+        'SignalSync..init' -> 'SignalSync__init'
+        'main'             -> 'main'  (unchanged)
+    """
+    return oberon_name.replace('.', '_')
 
 
 class Elf:
@@ -87,7 +194,8 @@ class Elf:
     def add_section(self, section, section_name):
         self._sections[section_name] = section
 
-    def make(self, bin_files, entry_addr, debug_data, include_debug=False):
+    def make(self, bin_files, entry_addr, debug_data, include_debug=False,
+             create_main=True, bss_range=None, image_def=None):
         # define file header
         self._fh.set_data_field('e_ident_magic', self._fh.magic)
         self._fh.set_data_field('e_ident_class', ELFCLASS32)
@@ -98,15 +206,57 @@ class Elf:
         self._fh.set_data_field('e_machine', EM_ARM)
         self._fh.set_data_field('e_version', EV_CURRENT)
         self._fh.set_data_field('e_entry', entry_addr)
-        self._fh.set_data_field('e_flags', EF_ARM_ABI_VER5 | EF_ARM_ABI_FLOAT_HARD)
+        self._fh.set_data_field('e_flags', EF_ARM_ABI_VER5)  # no hard-float: Oberon RTK uses soft-float ABI
         self._fh.set_data_field('e_ehsize', FileHeader.entry_size)
-        self._fh.set_data_field('e_phentsize', ProgramHeader.entry_size)
+        # e_phentsize: set whenever there will be any program headers
+        has_ph = bool(bin_files) or (bss_range is not None) or (image_def is not None)
+        if has_ph:
+            self._fh.set_data_field('e_phentsize', ProgramHeader.entry_size)
         self._fh.set_data_field('e_shentsize', SectionHeader.entry_size)
 
         # write file header
         self._fh.append_to_buf(self._buf)
 
+        # st_shndx for symbols: .text section index (1) with binary, SHN_ABS without
+        # When image_def is present, .image_def is section 1 and .text is section 2.
+        if bin_files:
+            sym_shndx = 2 if image_def is not None else 1
+        else:
+            sym_shndx = SHN_ABS
+
         text_sections = list()
+
+        # --- IMAGE_DEF section (RP2350 picobin metadata, before .text) ---
+        if image_def is not None:
+            idef_sec = Section()
+            idef_sec.put_data(image_def.data)
+            text_sections.append(idef_sec)
+            self.add_section(idef_sec, image_def.section_name)
+            self._shstr_tab.add_string(image_def.section_name)
+
+            idef_sh = SectionHeader()
+            idef_sh.set_data_field('sh_name', self._shstr_tab.index_of(image_def.section_name))
+            idef_sh.set_data_field('sh_type', SHT_PROGBITS)
+            idef_sh.set_data_field('sh_flags', SHF_ALLOC)
+            idef_sh.set_data_field('sh_addr', image_def.addr)
+            idef_sh.set_data_field('sh_size', image_def.size)
+            idef_sh.set_data_field('sh_addralign', 4)
+
+            self._sh_tab.add_entry(idef_sh, image_def.section_name)
+            idef_sec.set_section_header(idef_sh)
+
+            idef_ph = ProgramHeader()
+            idef_ph.set_data_field('p_type', PT_LOAD)
+            idef_ph.set_data_field('p_vaddr', image_def.addr)
+            idef_ph.set_data_field('p_paddr', image_def.addr)
+            idef_ph.set_data_field('p_filesz', image_def.size)
+            idef_ph.set_data_field('p_memsz', image_def.size)
+            idef_ph.set_data_field('p_flags', PF_R)
+            idef_ph.set_data_field('p_align', 0x1000)
+
+            self._ph_tab.add_entry(idef_ph, image_def.section_name)
+            idef_sec.set_program_header(idef_ph)
+
         for i, file in enumerate(bin_files):
             # create code section for 'file' image
             text = Section()
@@ -144,6 +294,36 @@ class Elf:
             self._ph_tab.add_entry(text_ph, section_name)
             text.set_program_header(text_ph)
 
+        # --- .bss section: declares a RAM region so Ozone can read variable values ---
+        # SHT_NOBITS contributes no bytes to the ELF file; it only declares the
+        # memory region in the section header table and program header table.
+        # Without this, Ozone shows blank values even when addresses are correct.
+        if bss_range is not None:
+            bss_start, bss_size = bss_range
+            self._shstr_tab.add_string('.bss')
+            self._sections['.bss'] = None  # NOBITS: no section data object
+
+            bss_sh = SectionHeader()
+            bss_sh.set_data_field('sh_name', self._shstr_tab.index_of('.bss'))
+            bss_sh.set_data_field('sh_type', SHT_NOBITS)
+            bss_sh.set_data_field('sh_flags', SHF_ALLOC | SHF_WRITE)
+            bss_sh.set_data_field('sh_addr', bss_start)
+            bss_sh.set_data_field('sh_size', bss_size)
+            bss_sh.set_data_field('sh_addralign', 4)
+            # sh_offset stays 0: NOBITS means no file bytes; value is "conceptual"
+            self._sh_tab.add_entry(bss_sh, '.bss')
+
+            bss_ph = ProgramHeader()
+            bss_ph.set_data_field('p_type', PT_LOAD)
+            bss_ph.set_data_field('p_vaddr', bss_start)
+            bss_ph.set_data_field('p_paddr', bss_start)
+            bss_ph.set_data_field('p_filesz', 0)       # no file content
+            bss_ph.set_data_field('p_memsz', bss_size) # RAM bytes mapped by OS/debugger
+            bss_ph.set_data_field('p_flags', PF_R | PF_W)
+            bss_ph.set_data_field('p_align', 0x1000)
+            # p_offset stays 0: no file bytes
+            self._ph_tab.add_entry(bss_ph, '.bss')
+
         # --- debug and metadata sections (non-loadable, before string/symbol tables) ---
         debug_sections = list()
         if debug_data is not None:
@@ -152,6 +332,8 @@ class Elf:
                 ('.debug_info',      debug_data.debug_info,      SHT_PROGBITS),
                 ('.debug_abbrev',    debug_data.debug_abbrev,    SHT_PROGBITS),
                 ('.debug_aranges',   debug_data.debug_aranges,   SHT_PROGBITS),
+                ('.debug_pubnames',  debug_data.debug_pubnames,  SHT_PROGBITS),
+                ('.debug_str',       debug_data.debug_str,       SHT_PROGBITS),
                 ('.debug_frame',     debug_data.debug_frame,     SHT_PROGBITS),
                 ('.ARM.attributes',  debug_data.arm_attributes,  SHT_ARM_ATTRIBUTES),
             ]:
@@ -207,30 +389,94 @@ class Elf:
         self._sh_tab.add_entry(symtab_hd, '.symtab')
         symtab.set_section_header(symtab_hd)
 
-        # add symbols from debug data
+        # --- LOCAL symbols: ARM $t mapping symbols ---
+        # A $t symbol at the physical entry address of each Thumb procedure tells
+        # disassemblers "Thumb-2 code starts here".  LOCAL symbols must come before
+        # globals in .symtab; SymbolTable.add_local_entry() tracks the count for sh_info.
+        if debug_data is not None:
+            self._str_tab.add_string('$t')
+            for proc in debug_data.procedures:
+                t_sym = SymbolTableEntry()
+                t_sym.set_data_field('st_name',  self._str_tab.index_of('$t'))
+                t_sym.set_data_field('st_value', proc.address)   # even (physical address)
+                t_sym.set_data_field('st_size',  0)
+                t_sym.set_data_field('st_info',  (STB_LOCAL << 4) | STT_NOTYPE)  # = 0
+                t_sym.set_data_field('st_other', 0)
+                t_sym.set_data_field('st_shndx', sym_shndx)
+                self._sym_tab.add_local_entry(t_sym, f'$t_{proc.address:08x}')
+
+        # --- GLOBAL symbols ---
+
+        # add 'main' symbol at entry point
+        # Bit 0 of st_value is set for Thumb functions (ARM IHI0044 ABI convention).
+        if create_main and entry_addr != 0:
+            main_sym = SymbolTableEntry()
+            self._str_tab.add_string('main')
+            main_sym.set_data_field('st_name', self._str_tab.index_of('main'))
+            main_sym.set_data_field('st_value', entry_addr | 1)   # Thumb bit
+            main_sym.set_data_field('st_size', 0)
+            main_sym.set_data_field('st_info', (STB_GLOBAL << 4) | STT_FUNC)
+            main_sym.set_data_field('st_other', 0)
+            main_sym.set_data_field('st_shndx', sym_shndx)
+            self._sym_tab.add_entry(main_sym, 'main')
+
+        # add procedure symbols from debug data
+        # Dots in Oberon qualified names are replaced by underscores in .symtab
+        # so that Ozone's Elf.GetExprValue() can look them up without the dot
+        # being misinterpreted as the C struct member-access operator.
+        # The DWARF DW_AT_name (generated by makedebug) retains the original name.
+        # Bit 0 of st_value is set for Thumb functions (ARM IHI0044 ABI convention).
         if debug_data is not None:
             for proc in debug_data.procedures:
                 sym = SymbolTableEntry()
-                self._str_tab.add_string(proc.name)
-                sym.set_data_field('st_name', self._str_tab.index_of(proc.name))
-                sym.set_data_field('st_value', proc.address)
+                sym_name = _symtab_name(proc.name)  # e.g. 'SignalSync_run'
+                self._str_tab.add_string(sym_name)
+                sym.set_data_field('st_name', self._str_tab.index_of(sym_name))
+                sym.set_data_field('st_value', proc.address | 1)  # Thumb bit
                 sym.set_data_field('st_size', proc.size)
                 sym.set_data_field('st_info', (STB_GLOBAL << 4) | STT_FUNC)
                 sym.set_data_field('st_other', 0)
-                sym.set_data_field('st_shndx', 1)  # .text section index
-                self._sym_tab.add_entry(sym, proc.name)
+                sym.set_data_field('st_shndx', sym_shndx)
+                self._sym_tab.add_entry(sym, sym_name)
 
-        # write program header table (right after file header, standard location)
-        self._ph_tab.append_to_buf(self._buf, len(self._buf))
+        # add global variable symbols as STT_OBJECT entries
+        # Use .bss section index (not SHN_ABS) so Ozone knows these are memory-mapped
+        # objects, not absolute constants.  SHN_ABS would tell Ozone the st_value IS
+        # the constant; a real section index tells it to read from target memory at
+        # that address.  GCC/SEGGER ELFs always point variable symbols at their BSS
+        # section.  If no .bss section exists, fall back to SHN_ABS.
+        if debug_data is not None:
+            var_shndx = self._sh_tab.index_of('.bss') if '.bss' in self._sections else SHN_ABS
+            for gsym in debug_data.global_symbols:
+                sym = SymbolTableEntry()
+                # Module-qualify the .symtab name (e.g. 'BasicTypes_i') to match the
+                # convention used for procedure symbols ('BasicTypes_p0').  This avoids
+                # .symtab name collisions when multiple modules declare the same variable
+                # name, and is consistent with how ESD/SEGGER debuggers expect symbols.
+                qual_name = f'{gsym.module_name}_{gsym.name}'
+                self._str_tab.add_string(qual_name)
+                sym.set_data_field('st_name',  self._str_tab.index_of(qual_name))
+                sym.set_data_field('st_value', gsym.address)
+                sym.set_data_field('st_size',  gsym.byte_size)
+                sym.set_data_field('st_info',  (STB_GLOBAL << 4) | STT_OBJECT)
+                sym.set_data_field('st_other', 0)
+                sym.set_data_field('st_shndx', var_shndx)  # .bss section, not SHN_ABS
+                self._sym_tab.add_entry(sym, qual_name)  # unique across all modules
+
+        # write program header table (when there are any loadable segments)
+        if has_ph:
+            self._ph_tab.append_to_buf(self._buf, len(self._buf))
 
         # add .shstrtab to section header table
         self._sh_tab.add_entry(self._shstr_tab_hd, '.shstrtab')
 
         # --- write all section data ---
 
-        # write code sections
+        # write code sections (includes .image_def if present, then .text)
         for text in text_sections:
             text.append_to_buf(self._buf, len(self._buf))
+
+        # .bss: SHT_NOBITS — no bytes written to file
 
         # write debug sections
         for dbg in debug_sections:
@@ -250,7 +496,7 @@ class Elf:
 
         # --- fix-up all section headers with correct file offsets ---
 
-        # fix-up code sections
+        # fix-up code sections (includes .image_def and .text)
         for text in text_sections:
             text.section_header().set_buf_field("sh_offset", text.offset())
             text.program_header().set_buf_field("p_offset", text.offset())
@@ -272,11 +518,15 @@ class Elf:
         symtab.section_header().set_buf_field('sh_size', symtab.size())
         symtab.section_header().set_buf_field('sh_info', symtab.index_of_first_global())
 
+        # .bss: sh_offset stays 0 (NOBITS — no file content); p_offset stays 0
+
         # fix-up file header entries
         self._fh.set_buf_field('e_shnum', self._sh_tab.num_entries())
         self._fh.set_buf_field('e_phnum', self._ph_tab.num_entries())
         self._fh.set_buf_field('e_shoff', self._sh_tab.offset())
-        self._fh.set_buf_field('e_phoff', self._ph_tab.offset())
+        # e_phoff: only set when there is a program header table
+        if has_ph:
+            self._fh.set_buf_field('e_phoff', self._ph_tab.offset())
         self._fh.set_buf_field('e_shstrndx', self._sh_tab.index_of('.shstrtab'))
 
     @property
@@ -517,6 +767,7 @@ class SymbolTable(Table): # a section
         super().__init__()
         # null entry at index 0 is the only local symbol; all others are global
         self.add_entry(SymbolTableEntry(), 'zero') # empty/zeroed entry as per specs
+        self._num_locals = 1  # null entry is the first (and only initial) local
 
     def set_section_header(self, section_header):
         self._section_header = section_header
@@ -524,8 +775,13 @@ class SymbolTable(Table): # a section
     def section_header(self) -> SectionHeader:
         return self._section_header
 
+    def add_local_entry(self, entry, key):
+        """Add a LOCAL symbol.  Must be called before any global symbol is added."""
+        self._num_locals += 1
+        self.add_entry(entry, key)
+
     def index_of_first_global(self) -> int:
-        return 1  # index 0 is null (local), all others are global
+        return self._num_locals
 
 
 class BinFile:
@@ -568,6 +824,39 @@ class BinFile:
         return self._binbuf
 
 
+def parse_hex(s):
+    """Parse a hex string accepting three forms: naked '20000000', '0x' prefix, 'H' postfix."""
+    s = s.strip()
+    if s.upper().endswith('H'):
+        s = s[:-1]
+    return int(s, 16)
+
+
+def parse_map_ranges(map_path):
+    """Extract Code Range and Data Range from .map file.
+
+    Returns dict with keys code_base, data_start, data_end (int or None).
+    """
+    import re
+    code_re = re.compile(r'^Code Range:\s+([0-9A-F]+)H', re.IGNORECASE)
+    data_re = re.compile(r'^Data Range:\s+([0-9A-F]+)H\s+([0-9A-F]+)H', re.IGNORECASE)
+    result = {'code_base': None, 'data_start': None, 'data_end': None}
+    try:
+        text = map_path.read_text(encoding='utf-8', errors='replace')
+    except OSError:
+        return result
+    for line in text.splitlines():
+        m = code_re.match(line)
+        if m:
+            result['code_base'] = int(m.group(1), 16)
+            continue
+        m = data_re.match(line)
+        if m:
+            result['data_start'] = int(m.group(1), 16)
+            result['data_end'] = int(m.group(2), 16)
+    return result
+
+
 def main():
     import argparse, os, re
     from pathlib import Path
@@ -582,15 +871,22 @@ def main():
     parser = argparse.ArgumentParser(
         prog = 'makeelf',
         description =
-        """Create an .elf file from binary files. The first binary defines the entry point as well
-        as the name of the .elf file if option '-o' is not used. Each binary file is given as
-        'file_name:load_address'.""",
+        """Create an .elf file from binary files, with optional DWARF debug data.
+        Each binary file is given as 'file_name:load_address'.
+        When no binary files are given, a debug-only ELF is created (no loadable
+        sections): Ozone will use it for symbols and DWARF only and will not write
+        to flash.
+        By default a 'main' symbol is added at the entry address; this allows
+        Ozone to root the Call Graph and use Run-to-Main.
+        Procedure symbol names in .symtab use underscores instead of dots
+        (e.g. 'SignalSync_run') so that Ozone scripts can look them up via
+        Elf.GetExprValue() without the dot being parsed as a C operator.""",
         epilog = ''
     )
-    parser.add_argument('bin_files', type=str, nargs='+', help="binary files (.bin), as 'bin_file:load_addr'")
+    parser.add_argument('bin_files', type=str, nargs='*', help="binary files (.bin), as 'bin_file:load_addr'")
     parser.add_argument('-v', action='store_true', dest='verbose', help="print feedback")
-    parser.add_argument('-o', type=str, dest='out_file', help="output file (.elf), default: first bin_file.elf")
-    parser.add_argument('-d', type=str, dest='db_dir', default='rdb',
+    parser.add_argument('-o', type=str, dest='out_file', help="output file (.elf), default: first bin_file.elf or <rdb-parent>.elf")
+    parser.add_argument('--rdb-dir', type=str, dest='rdb_dir', default='rdb',
                         help="directory with listing files (default: rdb)")
     parser.add_argument('-e', type=str, dest='src_ext', default=None,
                         help="source file extension including dot (default: .alst)")
@@ -598,47 +894,179 @@ def main():
                         help="map addresses to Oberon source lines instead of assembly lines (requires --debug)")
     parser.add_argument('--debug', action='store_true', dest='include_debug',
                         help="include .debug_* sections (line numbers, frame info, etc.)")
+    parser.add_argument('--bss', type=str, dest='bss_range', default=None,
+                        help="RAM data region: 'start_addr:end_addr' (hex; accepts 0x prefix or H postfix). "
+                             "Adds a SHT_NOBITS .bss section and PT_LOAD segment so the debugger "
+                             "can read variable values from that address range. "
+                             "Use DataStart:DataEnd from your Astrobe linker config (.ini). "
+                             "Example: --bss=20000000:20030000")
+    parser.add_argument('--map', type=str, dest='map_file', default=None,
+                        help="path to .map file for global variable addresses "
+                             "(auto-detected as <binary>.map if not given)")
+    parser.add_argument('--no-main', action='store_true', dest='no_main',
+                        help="do not add a 'main' symbol at the entry point")
+    parser.add_argument('--entry', type=str, dest='entry_addr', default=None,
+                        help="entry address (hex) for 'main' symbol and e_entry; "
+                             "needed in no-binary mode when --no-main is not set")
+    parser.add_argument('--image-def', action='store_true', dest='image_def',
+                        help="prepend a 256-byte RP2350 IMAGE_DEF metadata block "
+                             "at code_base - 0x100 (enables standalone boot after "
+                             "GDB/OpenOCD flash programming)")
     parser.add_argument('--nxp', action='store_true', dest='nxp',
                                             help="make NXP-specific modifications")
     args = parser.parse_args()
 
     file_re = re.compile(_file_pat0)
 
-    bin_files = list()
+    # Pass 1: collect binary file paths and optional addresses
+    bin_specs = []  # list of (resolved_path, load_addr_int_or_None)
+    first_bin_f = None
     for i, f in enumerate(args.bin_files):
         m = file_re.match(f)
         if m:
             file = m.group(1)
-            load_addr = m.group(2)
+            addr_str = m.group(2)
             bin_f = Path(file).resolve()
             if not bin_f.is_file():
                 print(f'{PROG_NAME}: cannot find file {bin_f}')
                 sys.exit(1)
-            if load_addr[-1] == 'H': # accept Oberon hex numbers, for easier copy & paste, I am lazy
-                load_addr = load_addr[0:-1]
-            try:
-                load_addr = int(load_addr, 16)
-            except:
-                print(f'{PROG_NAME}: {file} enter addresses in hexadecimal format')
-                sys.exit(1)
-            bin_file = BinFile(bin_f, load_addr)
-            if args.nxp:
-                bin_file.make_nxp()
-            bin_files.append(bin_file)
+            if addr_str is not None:
+                try:
+                    load_addr = parse_hex(addr_str)
+                except:
+                    print(f'{PROG_NAME}: {file} enter addresses in hexadecimal format')
+                    sys.exit(1)
+            else:
+                load_addr = None
+            bin_specs.append((bin_f, load_addr))
             if i == 0:
-                if args.out_file == None:
+                first_bin_f = bin_f
+                if args.out_file is None:
                     args.out_file = bin_f.with_suffix('.elf')
                 else:
                     args.out_file = Path(args.out_file).resolve()
-                entry_addr = bin_file.entry_addr
         else:
             print(f'{PROG_NAME}: specify image files as \'file_name:load_addr\' (in hex): \'{f}\'')
             sys.exit(1)
 
+    # Resolve .map file early (needed for code base and BSS auto-detect)
+    map_file = None
+    if args.map_file:
+        map_file = Path(args.map_file).resolve()
+        if not map_file.is_file():
+            print(f'{PROG_NAME}: map file not found: {map_file}')
+            sys.exit(1)
+    elif first_bin_f is not None:
+        auto_map = first_bin_f.with_suffix('.map')
+        if auto_map.is_file():
+            map_file = auto_map
+
+    # Parse .map ranges (code base + data range) if available
+    map_ranges = None
+    if map_file is not None:
+        map_ranges = parse_map_ranges(map_file)
+
+    # Pass 2: resolve missing addresses and create BinFile objects
+    addr_from_map = False
+    if bin_specs:
+        missing = [i for i, (_, a) in enumerate(bin_specs) if a is None]
+        if missing:
+            if len(bin_specs) > 1:
+                print(f'{PROG_NAME}: multiple binaries require explicit load addresses for all files')
+                sys.exit(1)
+            # Single binary, no address — try .map
+            if map_ranges is not None and map_ranges['code_base'] is not None:
+                bin_specs[0] = (bin_specs[0][0], map_ranges['code_base'])
+                addr_from_map = True
+            else:
+                print(f'{PROG_NAME}: no load address for {bin_specs[0][0].name} and '
+                      f'no Code Range in .map file; '
+                      f'use \'file:addr\' or provide a .map file')
+                sys.exit(1)
+
+    bin_files = []
+    entry_addr = 0
+    for i, (bin_f, load_addr) in enumerate(bin_specs):
+        bin_file = BinFile(bin_f, load_addr)
+        if args.nxp:
+            bin_file.make_nxp()
+        bin_files.append(bin_file)
+        if i == 0:
+            entry_addr = bin_file.entry_addr
+
+    # no-binary mode: debug-only ELF
+    if not bin_files:
+        if args.entry_addr is not None:
+            try:
+                entry_addr = parse_hex(args.entry_addr)
+            except:
+                print(f'{PROG_NAME}: --entry: invalid hex address \'{args.entry_addr}\'')
+                sys.exit(1)
+        else:
+            entry_addr = 0
+            if not args.no_main and args.verbose:
+                print(f'{PROG_NAME}: no binary and no --entry: main symbol will not be added; '
+                      f'use --entry=<hex> to specify the entry address')
+
+        if args.out_file is None:
+            # derive output name from rdb directory's parent directory name
+            db_path = Path(args.rdb_dir).resolve()
+            if db_path.is_dir():
+                args.out_file = db_path.parent / (db_path.parent.name + '.elf')
+            else:
+                print(f'{PROG_NAME}: no binary given and listing directory \'{args.rdb_dir}\' not found; '
+                      f'use -o to specify output file')
+                sys.exit(1)
+        else:
+            args.out_file = Path(args.out_file).resolve()
+        if not args.include_debug:
+            # debug sections are the primary purpose of no-binary mode; auto-enable
+            args.include_debug = True
+            if args.verbose:
+                print(f'no binary: --debug auto-enabled')
+
+    # --- validate --image-def ---
+    image_def = None
+    if args.image_def:
+        if not bin_files:
+            print(f'{PROG_NAME}: --image-def requires at least one binary file '
+                  f'(need code base address for vector table pointer)')
+            sys.exit(1)
+        image_def = ImageDef(bin_files[0].load_addr)
+
+    create_main = not args.no_main
+
+    # --- parse --bss range ---
+    bss_range = None
+    if args.bss_range is not None:
+        parts = args.bss_range.split(':')
+        if len(parts) != 2:
+            print(f'{PROG_NAME}: --bss: expected start:end (hex), got \'{args.bss_range}\'')
+            sys.exit(1)
+        try:
+            bss_start = parse_hex(parts[0])
+            bss_end   = parse_hex(parts[1])
+        except ValueError:
+            print(f'{PROG_NAME}: --bss: invalid hex address in \'{args.bss_range}\'')
+            sys.exit(1)
+        if bss_end <= bss_start:
+            print(f'{PROG_NAME}: --bss: end address must be greater than start address')
+            sys.exit(1)
+        bss_range = (bss_start, bss_end - bss_start)
+
+    # --- auto-detect BSS from .map ---
+    bss_from_map = False
+    if bss_range is None and map_ranges is not None:
+        ds = map_ranges['data_start']
+        de = map_ranges['data_end']
+        if ds is not None and de is not None and de > ds:
+            bss_range = (ds, de - ds)
+            bss_from_map = True
+
     # --- locate listing files ---
     debug_data = None
-    db_dir = Path(args.db_dir).resolve()
-    src_subdir = Path(args.db_dir).name
+    db_dir = Path(args.rdb_dir).resolve()
+    src_subdir = Path(args.rdb_dir).name
 
     if db_dir.is_dir():
         # auto-detect ARM attributes config file
@@ -651,10 +1079,17 @@ def main():
             if args.verbose:
                 print(f'ARM attributes: no {ARM_ATTR_CFG} in {src_subdir}/')
 
+        if args.verbose:
+            if map_file:
+                print(f'map file: {map_file}')
+            elif args.include_debug:
+                print(f'map file: none (global variable addresses not available)')
+
         # listing directory exists — extract symbols (always)
-        debug_data = makedebug.extract(db_dir, src_subdir, args.src_ext,
+        debug_data = elfdata.extract(db_dir, src_subdir, args.src_ext,
                                        source_lines=(args.source_lines and args.include_debug),
-                                       arm_attr_cfg=arm_attr_cfg)
+                                       arm_attr_cfg=arm_attr_cfg,
+                                       map_file=map_file)
 
         if args.verbose:
             print(f'debug: {len(debug_data.procedures)} symbols from {src_subdir}/')
@@ -663,24 +1098,45 @@ def main():
                 print(f'  {n_lines} line entries')
                 if args.source_lines:
                     print(f'  line mapping: source-level (Oberon source lines)')
+            print(f'  symtab names: dots replaced by underscores '
+                  f'(e.g. SignalSync.run => SignalSync_run)')
     else:
         # listing directory not found
         if args.include_debug:
             print(f'{PROG_NAME}: --debug requires listing files, '
-                  f'but directory \'{args.db_dir}\' not found')
+                  f'but directory \'{args.rdb_dir}\' not found')
             sys.exit(1)
         if args.verbose:
-            print(f'no listing files (directory \'{args.db_dir}\' not found)')
+            print(f'no listing files (directory \'{args.rdb_dir}\' not found)')
 
     if args.verbose:
         print(f'ELF file: {args.out_file}')
-        print('binary files:')
-        for file in bin_files:
-            print(f'  {file.name} {hex(file.load_addr)}')
-        print(f'entry address: {hex(entry_addr)}')
+        if bin_files:
+            print('binary files:')
+            for file in bin_files:
+                src = ' (from .map Code Range)' if addr_from_map else ''
+                print(f'  {file.name} {hex(file.load_addr)}{src}')
+            print(f'entry address: {hex(entry_addr)}')
+        else:
+            print('mode: debug-only (no binary, no loadable sections)')
+            if entry_addr:
+                print(f'entry address: {hex(entry_addr)}')
+        if create_main and entry_addr:
+            print(f'main symbol: {hex(entry_addr)}')
+        elif not create_main:
+            print('main symbol: suppressed (--no-main)')
+        else:
+            print('main symbol: not added (no entry address)')
+        if bss_range is not None:
+            bss_start, bss_size = bss_range
+            src = ' (from .map Data Range)' if bss_from_map else ''
+            print(f'BSS region: 0x{bss_start:08x}\u20130x{bss_start + bss_size:08x} ({bss_size} bytes){src}')
+        if image_def is not None:
+            print(image_def.verbose_line())
 
     elf = Elf()
-    elf.make(bin_files, entry_addr, debug_data, include_debug=args.include_debug)
+    elf.make(bin_files, entry_addr, debug_data, include_debug=args.include_debug,
+             create_main=create_main, bss_range=bss_range, image_def=image_def)
 
     if args.verbose:
         print('sections:')

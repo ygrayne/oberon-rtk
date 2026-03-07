@@ -1,16 +1,26 @@
 #!/usr/bin/env python3
 
-# Create an Oberon source module for PIO assembly code
-# --
-# Run with option -h for help.
-# --
-# Binary 'pioasm' must be on the $PATH.
-# 'pioasm' must be v2.x
-# --
-# Supported platforms: Windows, macOS
-# --
-# Copyright (c) 2024-2025 Gray, gray@grayraven.org
-# https://oberon-rtk.org/licences/
+"""
+gen-pio-oberon -- Generate an Oberon module from PIO assembly code.
+--
+Converts PIO assembly code into an Oberon source module for RP2040
+and RP2350. Runs the pioasm assembler (must be on PATH, v2.x) to
+produce JSON output, then generates a module with a GetCode procedure
+that populates a PIO.Program record with instructions and metadata.
+
+Input: .mod file with PIOBEGIN/PIOEND block, or standalone .pio file.
+Output: Oberon module (default name: <stem>Pio.mod).
+--
+Usage:
+    python gen-pio-oberon.py <input_file> [-o <module_name>] [-v <version>] [--verbose]
+
+Example:
+    python gen-pio-oberon.py PIOsquare.mod
+    python gen-pio-oberon.py PIOsquare.mod -o SquareWavePio
+--
+Copyright (c) 2024-2025 Gray, gray@grayraven.org
+https://oberon-rtk.org/licences/
+"""
 
 import sys, json
 import subprocess
@@ -185,7 +195,7 @@ def main():
     # arguments
     import argparse
     parser = argparse.ArgumentParser(
-        prog = 'pio2o',
+        prog = 'gen-pio-oberon',
         description = """Create an Oberon module for PIO assembly code. 'pioasm' is used to assemble the
             PIO code, which then can be accessed from the Oberon module.""" ,
         epilog = f"""PIO source code can be extracted from an Oberon module (.mod),

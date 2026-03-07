@@ -2,7 +2,7 @@
 
 # Program configuration management
 # --
-# Copyright (c) 2024 Gray, gray@graraven.org
+# Copyright (c) 2024 Gray, gray@grayraven.org
 # https://oberon-rtk.org/licences/
 
 import configparser

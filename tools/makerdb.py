@@ -1,559 +1,741 @@
 #!/usr/bin/env python3
-
 """
-Create the rdb directory with .alst debug listing files.
+gen-rdb -- Generate the rdb directory with debug data files.
 --
-Reads the Astrobe linker .map and .bin files produced after linking, together
-with the per-module .lst files produced by the compiler, and creates a
-subdirectory (default: rdb/) containing one .alst file per linked module.
+Reads the Astrobe linker .map file, derives .bin and per-module .lst files,
+and generates the rdb/ subdirectory containing:
+  - One .alst file per linked module (assembly listing with absolute addresses)
+  - _startup.alst (init call sequence pseudo-listing)
+  - arm-attr.cfg (ARM ELF attributes for the target MCU)
 
-The .alst files are consumed by makeelf to build a debug-ready ELF file.
+WARNING: gen-rdb deletes all existing files in the target rdb directory
+before generating new ones. Do not store hand-edited files there.
 --
-Run with option -h for help.
---
-Put into a directory on $PYTHONPATH, and run as
-'python -m  makerdb ...
+Usage:
+    python gen-rdb.py <Prog.map> [--mcu MCU] [--rdb-dir NAME] [--attr-cfg PATH] [-v]
+
+Example:
+    python gen-rdb.py SignalSync.map
+    python gen-rdb.py SignalSync.map --mcu STM32U585
+    python gen-rdb.py SignalSync.map --attr-cfg ../../targets/arm/arm-elf-attr.cfg
 --
 Copyright (c) 2026 Gray, gray@grayraven.org
 https://oberon-rtk.org/licences/
 """
 
 import sys
+import os
 import re
 import argparse
+import configparser
 import struct
 from pathlib import Path
 
 
-ELST = '.alst'
+ALST = '.alst'
 DEFAULT_RDB_DIR = 'rdb'
 
+# Map file patterns
 
-class ARMinstrDecoder:
-    """ARM Thumb-2 instruction decoder"""
+_MAP_DATA_RE = re.compile(
+    r'^(\w+)\s*([0-9A-F]+)H\s+(\d+)\s+([0-9A-F]+)H\s+(\d+)\s+([0-9A-F]+)H\s+([0-9A-F]+)H'
+)
+_MAP_FILE_RE = re.compile(r'^(\w+)\s*([C-Z][:].+|/.+)')
+_MAP_CODE_RE = re.compile(r'^Code Range:\s+([0-9A-F]+)H')
+_MAP_END_RE = re.compile(
+    r'^End Addr / Total\s+'
+    r'[0-9A-Fa-f]+H\s+'
+    r'\d+\s+'
+    r'([0-9A-Fa-f]+)H'
+)
+_MAP_CONFIG_RE = re.compile(r'^Configuration:\s+(.+)')
 
-    @staticmethod
-    def decode_bl_instr(instr_hex_str):
-        """Decode ARM Thumb-2 bl.w instruction to extract signed halfword offset."""
-        try:
-            instr = int(instr_hex_str, 16)
-            first_half  = (instr >> 16) & 0xFFFF
-            second_half =  instr        & 0xFFFF
+# Listing file patterns
 
-            # bl.w: 11110 S imm10 | 11 J1 1 J2 imm11
-            if (first_half  & 0xF800) != 0xF000:
-                return None
-            if (second_half & 0xD000) != 0xD000:
-                return None
+_ASM_RE = re.compile(
+    r'^\.\s+(\d+)\s+[0-9A-F]+H\s+([0-9A-F]+)H\s+([\w\.]+)\s*(.*)'
+)
+_ANN_RE = re.compile(r'^\.\s+(\d+)\s+(<\w+:)(\s+.+)(>)')
+_LINENO_RE = re.compile(r'^\.\s+(\d+)\s+(<LineNo:)\s+(\d+)(>)')
+_CASE_RE = re.compile(r'^\.\s+(\d+)\s+(<Case:)\s+(\d+)(>)')
+_TYPE_RE = re.compile(r'^\.\s+(\d+)\s+(<Type:)\s+(.+)(>)')
+_CONST_RE = re.compile(r'^\.\s+(\d+)\s+(<Const:)\s+([0-9A-F]+)H\s+.+(>)')
+_GLOBAL_RE = re.compile(r'^\.\s+(\d+)\s+(<Global:)\s+([0-9A-F]+)H\s+.+(>)')
+_STRING_RE = re.compile(r'^\.\s+(\d+)\s+(<String:)\s+(.+)(>)')
 
-            S     = (first_half  >> 10) & 1
-            imm10 =  first_half         & 0x3FF
-            J1    = (second_half >> 13) & 1
-            J2    = (second_half >> 11) & 1
-            imm11 =  second_half        & 0x7FF
+# Proc/BL patching patterns
 
-            I1 = 1 if (J1 ^ S) == 0 else 0
-            I2 = 1 if (J2 ^ S) == 0 else 0
+_ASM_LINE_RE = re.compile(
+    r'^\.\s+(\d+)\s+([0-9A-F]+)\s+([0-9A-F]+)\s+(.*)', re.IGNORECASE
+)
+_MODULE_RE = re.compile(r'^MODULE\s+(\w+)')
+_PROCEDURE_RE = re.compile(r'^\s*PROCEDURE\*?\s+(\w+)')
+_BL_LINE_RE = re.compile(
+    r'^\.\s+(\d+)\s+([0-9A-F]+)\s+([0-9A-F]+)\s+(bl\.w\s+)(.*)', re.IGNORECASE
+)
 
-            offset = (S << 23) | (I1 << 22) | (I2 << 21) | (imm10 << 11) | imm11
-            if offset & 0x800000:       # sign-extend to 32 bits
-                offset |= 0xFF000000
-            if offset >= 0x80000000:    # convert to Python signed int
-                offset -= 0x100000000
 
-            return offset
+# --- Map file parsing ---
 
-        except (ValueError, TypeError):
+def parse_map(map_path):
+    """Parse .map file. Returns dict with all extracted data."""
+    text = map_path.read_text(encoding='utf-8', errors='replace')
+
+    modules = {}
+    code_start = 0
+    code_end = None
+    config_str = None
+
+    first_line = text.split('\n')[0].strip()
+    idx = first_line.find(' Linker')
+    tool_name = first_line[:idx] if idx > 0 else first_line
+
+    for line in text.splitlines():
+        m = _MAP_DATA_RE.match(line)
+        if m:
+            mod_name = m.group(1)
+            modules[mod_name] = {
+                'data_addr': int(m.group(2), 16) - 4,
+                'data_size': int(m.group(3)),
+                'code_addr': int(m.group(4), 16),
+                'code_size': int(m.group(5)),
+                'entry_addr': int(m.group(6), 16),
+            }
+            continue
+        m = _MAP_FILE_RE.match(line)
+        if m:
+            mod_name = m.group(1)
+            if mod_name in modules:
+                mod_file = Path(m.group(2)).with_suffix('.mod')
+                modules[mod_name]['file'] = str(mod_file)
+            continue
+        m = _MAP_CODE_RE.match(line)
+        if m:
+            code_start = int(m.group(1), 16)
+            continue
+        m = _MAP_END_RE.match(line)
+        if m:
+            code_end = int(m.group(1), 16)
+            continue
+        m = _MAP_CONFIG_RE.match(line)
+        if m:
+            config_str = m.group(1).strip()
+
+    return {
+        'modules': modules,
+        'code_start': code_start,
+        'code_end': code_end,
+        'config_str': config_str,
+        'tool_name': tool_name,
+        'prog_name': list(modules)[-1] if modules else map_path.stem,
+    }
+
+
+# --- Binary file access ---
+
+def read_binary(bin_path):
+    """Read .bin file. Returns bytes."""
+    return bin_path.read_bytes()
+
+
+def lookup_u32(bin_data, code_start, addr):
+    """Read 32-bit LE word from binary at memory address."""
+    pos = addr - code_start
+    return struct.unpack('<L', bin_data[pos:pos + 4])[0]
+
+
+def lookup_u16(bin_data, code_start, addr):
+    """Read 16-bit LE halfword from binary at memory address."""
+    pos = addr - code_start
+    return struct.unpack('<H', bin_data[pos:pos + 2])[0]
+
+
+# --- Module name lookup ---
+
+def get_mod_name(modules, addr):
+    """Look up which module owns the given address."""
+    for mod, data in modules.items():
+        if addr in range(data['data_addr'], data['data_addr'] - data['data_size'], -1):
+            return mod, 'data'
+        if addr in range(data['code_addr'], data['code_addr'] + data['code_size']):
+            return mod, 'code'
+    return 'Unknown', ''
+
+
+# --- Formatting helpers ---
+
+def _hs(n):
+    """Format a number as hex string for listing columns."""
+    if n <= 0xffff:
+        return f"{'':<6s}{n:0>5X}"
+    else:
+        return f"{'':<2s}{n:0>9X}"
+
+
+def _twoc(n, word_length):
+    """Convert unsigned to signed (two's complement)."""
+    if n & (1 << (word_length - 1)):
+        n = n - (1 << word_length)
+    return n
+
+
+# --- .alst generation ---
+
+def make_alst(lst_path, code_addr, bin_data, code_start, modules,
+              rdb_dir, tool_name, prog_name, mcu_str):
+    """Transform one .lst file into an .alst file. Returns output Path."""
+    text = lst_path.read_text(encoding='utf-8')
+    out_path = rdb_dir / lst_path.with_suffix(ALST).name
+
+    elines = []
+    elines.append('. <tool: ' + tool_name + '>')
+    elines.append('. <prog: ' + prog_name + '.mod>')
+    elines.append('. <mcu: ' + mcu_str + '>\n')
+
+    for line in text.splitlines():
+        ln = ['.']
+
+        m = _ASM_RE.match(line)
+        if m:
+            rel_addr = int(m.group(1))
+            op_code = int(m.group(2), 16)
+            asm_mnemonic = m.group(3)
+            rol = m.group(4)
+            abs_addr = rel_addr + code_addr
+            ln.append(f'{rel_addr:>6}')
+            ln.append(f"{'':<2s}{abs_addr:0>9X}")
+            if rol.startswith('Ext Proc'):
+                op_code = (lookup_u16(bin_data, code_start, abs_addr) << 16) + \
+                          lookup_u16(bin_data, code_start, abs_addr + 2)
+            ln.append(_hs(op_code))
+            ln.append(f"{'':<2s}{asm_mnemonic:<10s}")
+            ln.append(rol)
+            elines.append(''.join(ln))
+            continue
+
+        m = _TYPE_RE.match(line)
+        if m:
+            rel_addr = int(m.group(1))
+            ann_begin = m.group(2)
+            ann_data = m.group(3)
+            ann_end = m.group(4)
+            abs_addr = rel_addr + code_addr
+            bin_val = lookup_u32(bin_data, code_start, abs_addr)
+            ln.append(f'{rel_addr:>6}')
+            ln.append(f"{'':<2s}{abs_addr:0>9X}")
+            ln.append(_hs(bin_val))
+            ln.append(f"{'':<2s}{ann_begin:<9s}")
+            ln.append(str(ann_data))
+            ln.append(ann_end)
+            elines.append(''.join(ln))
+            continue
+
+        m = _LINENO_RE.match(line)
+        if m:
+            rel_addr = int(m.group(1))
+            ann_begin = m.group(2)
+            ann_data = int(m.group(3))
+            ann_end = m.group(4)
+            abs_addr = rel_addr + code_addr
+            ln.append(f'{rel_addr:>6}')
+            ln.append(f"{'':<2s}{abs_addr:0>9X}")
+            ln.append(_hs(ann_data))
+            ln.append(f"{'':<2s}{ann_begin:<9s}")
+            ln.append(str(ann_data))
+            ln.append(ann_end)
+            elines.append(''.join(ln))
+            continue
+
+        m = _CASE_RE.match(line)
+        if m:
+            rel_addr = int(m.group(1))
+            ann_begin = m.group(2)
+            ann_data = int(m.group(3))
+            ann_end = m.group(4)
+            abs_addr = rel_addr + code_addr
+            ln.append(f'{rel_addr:>6}')
+            ln.append(f"{'':<2s}{abs_addr:0>9X}")
+            ln.append(_hs(ann_data))
+            ln.append(f"{'':<2s}{ann_begin:<9s}")
+            ln.append(str(ann_data))
+            ln.append(ann_end)
+            elines.append(''.join(ln))
+            continue
+
+        m = _CONST_RE.match(line)
+        if m:
+            rel_addr = int(m.group(1))
+            ann_begin = m.group(2)
+            ann_data = int(m.group(3), 16)
+            ann_end = m.group(4)
+            abs_addr = rel_addr + code_addr
+            ln.append(f'{rel_addr:>6}')
+            ln.append(f"{'':<2s}{abs_addr:0>9X}")
+            ln.append(_hs(ann_data))
+            ln.append(f"{'':<2s}{ann_begin:<9s}")
+            ln.append(str(_twoc(ann_data, 32)))
+            ln.append(ann_end)
+            elines.append(''.join(ln))
+            continue
+
+        m = _GLOBAL_RE.match(line)
+        if m:
+            rel_addr = int(m.group(1))
+            ann_begin = m.group(2)
+            ann_data = int(m.group(3), 16)
+            ann_end = m.group(4)
+            abs_addr = rel_addr + code_addr
+            bin_val = lookup_u32(bin_data, code_start, abs_addr)
+            mod_name, type_str = get_mod_name(modules, bin_val)
+            ln.append(f'{rel_addr:>6}')
+            ln.append(f"{'':<2s}{abs_addr:0>9X}")
+            ln.append(_hs(bin_val))
+            ln.append(f"{'':<2s}{ann_begin:<9s}")
+            ln.append(f'{mod_name} {type_str}')
+            ln.append(ann_end)
+            elines.append(''.join(ln))
+            continue
+
+        m = _STRING_RE.match(line)
+        if m:
+            rel_addr = int(m.group(1))
+            ann_begin = m.group(2)
+            ann_data = m.group(3)
+            ann_end = m.group(4)
+            abs_addr = rel_addr + code_addr
+            bin_val = lookup_u32(bin_data, code_start, abs_addr)
+            ln.append(f'{rel_addr:>6}')
+            ln.append(f"{'':<2s}{abs_addr:0>9X}")
+            ln.append(f"{'':<2s}{bin_val:0>9X}")
+            ln.append(f"{'':<2s}{ann_begin:<9s}")
+            ln.append(ann_data)
+            ln.append(ann_end)
+            elines.append(''.join(ln))
+            continue
+
+        m = _ANN_RE.match(line)
+        if m:
+            rel_addr = int(m.group(1))
+            ann_begin = m.group(2)
+            ann_data = m.group(3)
+            ann_end = m.group(4)
+            abs_addr = rel_addr + code_addr
+            ln.append(f'{rel_addr:>6}')
+            ln.append(f"{'':<2s}{abs_addr:0>9X}")
+            ln.append(f"{'':<14s}{ann_begin}")
+            ln.append(ann_data)
+            ln.append(ann_end)
+            elines.append(''.join(ln))
+            continue
+
+        elines.append(line)
+
+    elines.append(' ')
+    with out_path.open('w', encoding='utf-8') as f:
+        f.write('\n'.join(elines))
+
+    return out_path
+
+
+# --- BL instruction codec ---
+
+def decode_bl(instr_hex_str):
+    """Decode Thumb-2 BL instruction. Returns signed offset or None."""
+    try:
+        instr = int(instr_hex_str, 16)
+        first_half = (instr >> 16) & 0xFFFF
+        second_half = instr & 0xFFFF
+
+        # bl.w: 11110 S imm10 | 11 J1 1 J2 imm11
+        if (first_half & 0xF800) != 0xF000:
+            return None
+        if (second_half & 0xD000) != 0xD000:
             return None
 
-class MapFile:
+        S = (first_half >> 10) & 1
+        imm10 = first_half & 0x3FF
+        J1 = (second_half >> 13) & 1
+        J2 = (second_half >> 11) & 1
+        imm11 = second_half & 0x7FF
 
-    data_pat = r'^(\w+)\s*([0-9A-F]+)H\s+(\d+)\s+([0-9A-F]+)H\s+(\d+)\s+([0-9A-F]+)H\s+([0-9A-F]+)H'
-    file_pat = r'^(\w+)\s*([C-Z][:].+|/.+)'
-    res_pat  = r'^\.ref\s+([0-9A-F]+)H\s+(\d+)'
-    code_pat = r'^Code Range:\s+([0-9A-F]+)H'
+        I1 = 1 if (J1 ^ S) == 0 else 0
+        I2 = 1 if (J2 ^ S) == 0 else 0
 
-    def __init__(self, file_path):
-        self._file = Path(file_path)
+        offset = (S << 23) | (I1 << 22) | (I2 << 21) | (imm10 << 11) | imm11
+        if offset & 0x800000:
+            offset |= 0xFF000000
+        if offset >= 0x80000000:
+            offset -= 0x100000000
 
-    def read(self):
-        with self._file.open('r', encoding='utf-8') as f:
-            self._text = f.read()
+        return offset
 
-    def extract(self):
-        mod_re  = re.compile(self.data_pat)
-        file_re = re.compile(self.file_pat)
-        res_re  = re.compile(self.res_pat)
-        code_re = re.compile(self.code_pat)
-
-        modules   = dict()
-        prog_data = {}
-        code_start = 0
-
-        for l in self._text.splitlines():
-            m = mod_re.match(l)
-            if m is not None:
-                mod_name   = m.group(1)
-                data_addr  = int(m.group(2), 16)
-                data_size  = int(m.group(3))
-                code_addr  = int(m.group(4), 16)
-                code_size  = int(m.group(5))
-                entry_addr = int(m.group(6), 16)
-                modules[mod_name] = {
-                    'data_addr':  data_addr - 4,
-                    'data_size':  data_size,
-                    'code_addr':  code_addr,
-                    'code_size':  code_size,
-                    'entry_addr': entry_addr,
-                }
-                continue
-            m = file_re.match(l)
-            if m is not None:
-                mod_name  = m.group(1)
-                file_path = m.group(2)
-                if mod_name in modules:
-                    mod_file = Path(file_path).with_suffix('.mod')
-                    modules[mod_name]['file'] = str(mod_file)
-                continue
-            m = res_re.match(l)
-            if m is not None:
-                prog_data = {
-                    'res_addr': int(m.group(1), 16),
-                    'res_size': int(m.group(2)),
-                }
-                continue
-            m = code_re.match(l)
-            if m is not None:
-                code_start = int(m.group(1), 16)
-
-        self._modules   = modules
-        self._prog_data = prog_data
-        self._code_start = code_start
-
-    def get_mod_data(self):
-        """Return list of {file, code_addr} for each module that has a file entry."""
-        return [
-            {'file': md['file'], 'code_addr': md['code_addr']}
-            for md in self._modules.values()
-            if 'file' in md
-        ]
-
-    def get_code_start(self):
-        return self._code_start
-
-    def get_mod_name(self, addr):
-        for mod, data in self._modules.items():
-            if addr in range(data['data_addr'], data['data_addr'] - data['data_size'], -1):
-                return mod, 'data'
-            if addr in range(data['code_addr'], data['code_addr'] + data['code_size']):
-                return mod, 'code'
-        return 'Unknown', ''
-
-    def get_prog_module(self):
-        """Return path to main program .mod file (same stem as .map file)."""
-        return str(self._file.with_suffix('.mod'))
-
-    def get_tool_name(self):
-        """Extract tool name from map header, e.g. 'Astrobe for RP2350'."""
-        first_line = self._text.split('\n')[0].strip()
-        idx = first_line.find(' Linker')
-        return first_line[:idx] if idx > 0 else first_line
+    except (ValueError, TypeError):
+        return None
 
 
-class BinFile:
-
-    def __init__(self, file_path, code_start):
-        self._file       = Path(file_path)
-        self._code_start = code_start
-
-    def read(self):
-        with self._file.open('rb') as f:
-            self._data = f.read()
-
-    def lookup(self, mem_addr):
-        """Read a 32-bit LE word at the given memory address."""
-        pos = mem_addr - self._code_start
-        return struct.unpack('<L', self._data[pos:pos + 4])[0]
-
-    def lookup2(self, mem_addr):
-        """Read a 16-bit LE halfword at the given memory address."""
-        pos = mem_addr - self._code_start
-        return struct.unpack('<H', self._data[pos:pos + 2])[0]
+def encode_bl(pc, target):
+    """Encode Thumb-2 BL instruction. Returns 4 bytes (little-endian halfwords)."""
+    offset = target - (pc + 4)
+    if not (-(1 << 24) <= offset < (1 << 24)):
+        raise ValueError(f'BL offset out of range: {offset:#x}')
+    uoff = offset & 0x1FFFFFF
+    s = (uoff >> 24) & 1
+    i1 = (uoff >> 23) & 1
+    i2 = (uoff >> 22) & 1
+    imm10 = (uoff >> 12) & 0x3FF
+    imm11 = (uoff >> 1) & 0x7FF
+    j1 = (i1 ^ s ^ 1) & 1
+    j2 = (i2 ^ s ^ 1) & 1
+    hw1 = 0xF000 | (s << 10) | imm10
+    hw2 = 0xD000 | (j1 << 13) | (j2 << 11) | imm11
+    return struct.pack('<HH', hw1, hw2)
 
 
-class LstFile:
+# --- Procedure database and BL patching ---
 
-    asm_pat    = r'^\.\s+(\d+)\s+[0-9A-F]+H\s+([0-9A-F]+)H\s+([\w\.]+)\s*(.*)'
-    ann_pat    = r'^\.\s+(\d+)\s+(<\w+:)(\s+.+)(>)'
-    lineno_pat = r'^\.\s+(\d+)\s+(<LineNo:)\s+(\d+)(>)'
-    case_pat   = r'^\.\s+(\d+)\s+(<Case:)\s+(\d+)(>)'
-    type_pat   = r'^\.\s+(\d+)\s+(<Type:)\s+(.+)(>)'
-    const_pat  = r'^\.\s+(\d+)\s+(<Const:)\s+([0-9A-F]+)H\s+.+(>)'
-    global_pat = r'^\.\s+(\d+)\s+(<Global:)\s+([0-9A-F]+)H\s+.+(>)'
-    string_pat = r'^\.\s+(\d+)\s+(<String:)\s+(.+)(>)'
-
-    def __init__(self, mod_file_path):
-        self._file = Path(mod_file_path).with_suffix('.lst')
-
-    def exists(self):
-        return self._file.exists()
-
-    def read(self):
-        with self._file.open('r', encoding='utf-8') as f:
-            self._text = f.read()
-
-    def hs(self, n):
-        if n <= 0xffff:
-            return f"{'':<6s}{n:0>5X}"
-        else:
-            return f"{'':<2s}{n:0>9X}"
-
-    def twoc(self, n, word_length):
-        if n & (1 << (word_length - 1)):
-            n = n - (1 << word_length)
-        return n
-
-    def make_elst_file(self, code_addr, bin_file, map_file, rdb_dir, tool_name):
-        asm_re    = re.compile(self.asm_pat)
-        ann_re    = re.compile(self.ann_pat)
-        lineno_re = re.compile(self.lineno_pat)
-        case_re   = re.compile(self.case_pat)
-        type_re   = re.compile(self.type_pat)
-        const_re  = re.compile(self.const_pat)
-        global_re = re.compile(self.global_pat)
-        string_re = re.compile(self.string_pat)
-
-        self._efile = rdb_dir.joinpath(self._file.name).with_suffix(ELST)
-
-        elines = []
-        elines.append('. <tool: ' + tool_name + '>')
-        elines.append('. <prog: ' + map_file.get_prog_module() + '>\n')
-
-        for l in self._text.splitlines():
-            ln = ['.']
-            m = asm_re.match(l)
-            if m is not None:
-                rel_addr     = int(m.group(1))
-                op_code      = int(m.group(2), 16)
-                asm_mnemonic = m.group(3)
-                rol          = m.group(4)
-                abs_addr     = rel_addr + code_addr
-                ln.append(f'{rel_addr:>6}')
-                ln.append(f"{'':<2s}{abs_addr:0>9X}")
-                if rol.startswith('Ext Proc'):
-                    op_code = (bin_file.lookup2(abs_addr) << 16) + bin_file.lookup2(abs_addr + 2)
-                ln.append(self.hs(op_code))
-                ln.append(f"{'':<2s}{asm_mnemonic:<10s}")
-                ln.append(rol)
-                elines.append(''.join(ln))
-                continue
-            m = type_re.match(l)
-            if m is not None:
-                rel_addr  = int(m.group(1))
-                ann_begin = m.group(2)
-                ann_data  = m.group(3)
-                ann_end   = m.group(4)
-                abs_addr  = rel_addr + code_addr
-                bin_data  = bin_file.lookup(abs_addr)
-                ln.append(f'{rel_addr:>6}')
-                ln.append(f"{'':<2s}{abs_addr:0>9X}")
-                ln.append(self.hs(abs_addr))
-                ln.append(self.hs(bin_data))
-                ln.append(f"{'':<2s}{ann_begin:<9s}")
-                ln.append(str(ann_data))
-                ln.append(ann_end)
-                elines.append(''.join(ln))
-                continue
-            m = lineno_re.match(l)
-            if m is not None:
-                rel_addr  = int(m.group(1))
-                ann_begin = m.group(2)
-                ann_data  = int(m.group(3))
-                ann_end   = m.group(4)
-                abs_addr  = rel_addr + code_addr
-                ln.append(f'{rel_addr:>6}')
-                ln.append(f"{'':<2s}{abs_addr:0>9X}")
-                ln.append(self.hs(ann_data))
-                ln.append(f"{'':<2s}{ann_begin:<9s}")
-                ln.append(str(ann_data))
-                ln.append(ann_end)
-                elines.append(''.join(ln))
-                continue
-            m = case_re.match(l)
-            if m is not None:
-                rel_addr  = int(m.group(1))
-                ann_begin = m.group(2)
-                ann_data  = int(m.group(3))
-                ann_end   = m.group(4)
-                abs_addr  = rel_addr + code_addr
-                ln.append(f'{rel_addr:>6}')
-                ln.append(f"{'':<2s}{abs_addr:0>9X}")
-                ln.append(self.hs(ann_data))
-                ln.append(f"{'':<2s}{ann_begin:<9s}")
-                ln.append(str(ann_data))
-                ln.append(ann_end)
-                elines.append(''.join(ln))
-                continue
-            m = const_re.match(l)
-            if m is not None:
-                rel_addr  = int(m.group(1))
-                ann_begin = m.group(2)
-                ann_data  = int(m.group(3), 16)
-                ann_end   = m.group(4)
-                abs_addr  = rel_addr + code_addr
-                ln.append(f'{rel_addr:>6}')
-                ln.append(f"{'':<2s}{abs_addr:0>9X}")
-                ln.append(self.hs(ann_data))
-                ln.append(f"{'':<2s}{ann_begin:<9s}")
-                ln.append(str(self.twoc(ann_data, 32)))
-                ln.append(ann_end)
-                elines.append(''.join(ln))
-                continue
-            m = global_re.match(l)
-            if m is not None:
-                rel_addr  = int(m.group(1))
-                ann_begin = m.group(2)
-                ann_data  = int(m.group(3), 16)
-                ann_end   = m.group(4)
-                abs_addr  = rel_addr + code_addr
-                bin_data  = bin_file.lookup(abs_addr)
-                mod_name, type_str = map_file.get_mod_name(bin_data)
-                ln.append(f'{rel_addr:>6}')
-                ln.append(f"{'':<2s}{abs_addr:0>9X}")
-                ln.append(self.hs(bin_data))
-                ln.append(f"{'':<2s}{ann_begin:<9s}")
-                ln.append(f'{mod_name} {type_str}')
-                ln.append(ann_end)
-                elines.append(''.join(ln))
-                continue
-            m = string_re.match(l)
-            if m is not None:
-                rel_addr  = int(m.group(1))
-                ann_begin = m.group(2)
-                ann_data  = m.group(3)
-                ann_end   = m.group(4)
-                abs_addr  = rel_addr + code_addr
-                bin_data  = bin_file.lookup(abs_addr)
-                ln.append(f'{rel_addr:>6}')
-                ln.append(f"{'':<2s}{abs_addr:0>9X}")
-                ln.append(f"{'':<2s}{bin_data:0>9X}")
-                ln.append(f"{'':<2s}{ann_begin:<9s}")
-                ln.append(ann_data)
-                ln.append(ann_end)
-                elines.append(''.join(ln))
-                continue
-            m = ann_re.match(l)
-            if m is not None:
-                rel_addr  = int(m.group(1))
-                ann_begin = m.group(2)
-                ann_data  = m.group(3)
-                ann_end   = m.group(4)
-                abs_addr  = rel_addr + code_addr
-                ln.append(f'{rel_addr:>6}')
-                ln.append(f"{'':<2s}{abs_addr:0>9X}")
-                ln.append(f"{'':<14s}{ann_begin}")
-                ln.append(ann_data)
-                ln.append(ann_end)
-                elines.append(''.join(ln))
-                continue
-            elines.append(l)
-
-        elines.append(' ')
-        with self._efile.open('w', encoding='utf-8') as f:
-            f.write('\n'.join(elines))
-
-        return self._efile
-
-
-class ProcData:
-    """Database of all procedures in all program modules.
-
-    Key = absolute entry address as 8-character uppercase hex string.
-    Value = (module_name, proc_name).
-    """
-    asm_line_pat = r'^\.\s+(\d+)\s+([0-9A-F]+)\s+([0-9A-F]+)\s+(.*)'
-    module_pat = r'^MODULE\s+(\w+)'
-    procedure_pat = r'^\s*PROCEDURE\*?\s+(\w+)'
-
-    def __init__(self, debug_dir):
-        self._dir  = Path(debug_dir)
-        self._data = {}
-
-    def build(self):
-        for f in self._dir.iterdir():
-            if f.is_file() and f.suffix == ELST:
-                self._extract_procs(f)
-
-    def _extract_procs(self, elst_file):
-
-        asm_line_re = re.compile(self.asm_line_pat, re.IGNORECASE)
-        module_re = re.compile(self.module_pat)
-        procedure_re = re.compile(self.procedure_pat)
-
-        lines    = elst_file.read_text(encoding='utf-8').splitlines()
+def build_proc_db(rdb_dir):
+    """Build procedure address database from all .alst files.
+    Returns dict: addr_hex_str -> (module_name, proc_name)."""
+    proc_db = {}
+    for f in rdb_dir.iterdir():
+        if not (f.is_file() and f.suffix == ALST):
+            continue
+        lines = f.read_text(encoding='utf-8').splitlines()
         mod_name = None
-        pending  = None   # pending procedure name
-
+        pending = None
         for line in lines:
-            m = module_re.match(line)
+            m = _MODULE_RE.match(line)
             if m:
                 mod_name = m.group(1)
-                pending  = None
+                pending = None
                 continue
-            m = procedure_re.match(line)
+            m = _PROCEDURE_RE.match(line)
             if m:
                 pending = m.group(1)
                 continue
             if pending is not None:
-                m = asm_line_re.match(line)
+                m = _ASM_LINE_RE.match(line)
                 if m:
                     abs_addr = int(m.group(2), 16)
                     key = f'{abs_addr:08X}'
                     if mod_name is not None:
-                        self._data[key] = (mod_name, pending)
+                        proc_db[key] = (mod_name, pending)
                     pending = None
-
-    def lookup(self, abs_addr_str):
-        return self._data[abs_addr_str]
+    return proc_db
 
 
-class ElstFiles:
+def patch_bl_calls(rdb_dir, proc_db):
+    """Patch bl.w targets with procedure names in all .alst files."""
+    for efile in rdb_dir.iterdir():
+        if not (efile.is_file() and efile.suffix == ALST):
+            continue
+        lines = efile.read_text(encoding='utf-8').splitlines()
+        mod_name = None
+        elines = []
 
-    module_pat = r'^MODULE\s+(\w+)'
-    bl_pat = r'^\.\s+(\d+)\s+([0-9A-F]+)\s+([0-9A-F]+)\s+(bl\.w\s+)(.*)'
-
-    def __init__(self, debug_dir):
-        self._dir = Path(debug_dir)
-
-    def patch_calls(self, proc_data):
-
-        bl_re = re.compile(self.bl_pat, re.IGNORECASE)
-        module_re = re.compile(self.module_pat)
-
-        decoder = ARMinstrDecoder()
-        for efile in self._dir.iterdir():
-            if not (efile.is_file() and efile.suffix == ELST):
+        for line in lines:
+            m = _MODULE_RE.match(line)
+            if m:
+                mod_name = m.group(1)
+                elines.append(line)
                 continue
-            lines    = efile.read_text(encoding='utf-8').splitlines()
-            mod_name = None
-            elines   = []
 
-            for l in lines:
-                m = module_re.match(l)
-                if m:
-                    mod_name = m.group(1)
-                    elines.append(l)
-                    continue
-                m = bl_re.match(l)
-                if m:
-                    abs_addr_str = m.group(2)
-                    instr_str = m.group(3)
-                    rol = m.group(5)
-                    offset = decoder.decode_bl_instr(instr_str)
-                    if offset is not None:
-                        abs_addr    = int(abs_addr_str, 16)
-                        target_addr = abs_addr + 4 + (offset * 2)
-                        target_key  = f'{target_addr:08X}'
-                        try:
-                            module, proc = proc_data.lookup(target_key)
-                            if module == mod_name:
-                                l = l.replace(rol, f'{proc} [{offset} -> {target_key}]')
-                            else:
-                                l = l.replace(rol, f'{module}.{proc} [{offset} -> {target_key}]')
-                        except KeyError:
-                            pass  # leave line unchanged if target not in database
-                    elines.append(l)
-                    continue
+            m = _BL_LINE_RE.match(line)
+            if m:
+                abs_addr_str = m.group(2)
+                instr_str = m.group(3)
+                rol = m.group(5)
+                offset = decode_bl(instr_str)
+                if offset is not None:
+                    abs_addr = int(abs_addr_str, 16)
+                    target_addr = abs_addr + 4 + (offset * 2)
+                    target_key = f'{target_addr:08X}'
+                    if target_key in proc_db:
+                        module, proc = proc_db[target_key]
+                        if module == mod_name:
+                            line = line.replace(
+                                rol, f'{proc} [{offset} -> {target_key}]')
+                        else:
+                            line = line.replace(
+                                rol, f'{module}.{proc} [{offset} -> {target_key}]')
+                elines.append(line)
+                continue
 
-                elines.append(l)
+            elines.append(line)
 
-            elines.append(' ')
-            with efile.open('w', encoding='utf-8') as f:
-                f.write('\n'.join(elines))
+        elines.append(' ')
+        with efile.open('w', encoding='utf-8') as f:
+            f.write('\n'.join(elines))
 
+
+# --- Startup listing ---
+
+_STARTUP_HEADER_LINES = 6  # tool, prog, mcu, blank, MODULE, blank
+
+
+def generate_startup(modules, code_end, prog_name, mcu_str):
+    """Generate _startup.alst content."""
+    lines = []
+    lines.append('. <tool: gen-rdb>')
+    lines.append(f'. <prog: {prog_name}.mod>')
+    lines.append(f'. <mcu: {mcu_str}>')
+    lines.append('')
+    lines.append('MODULE _startup;')
+    lines.append('')
+
+    pc = code_end
+    mod_list = list(modules.items())
+    for i, (name, data) in enumerate(mod_list):
+        file_line = _STARTUP_HEADER_LINES + i + 1
+        raw = encode_bl(pc, data['entry_addr'])
+        hw1, hw2 = struct.unpack('<HH', raw)
+        instr = f'{hw1:04X}{hw2:04X}'
+        lines.append(
+            f'.{file_line:6d}  {pc:08X}  {instr}  bl.w  {name}..init'
+        )
+        pc += 4
+
+    # Terminal self-loop
+    file_line = _STARTUP_HEADER_LINES + len(mod_list) + 1
+    raw = encode_bl(pc, pc)
+    hw1, hw2 = struct.unpack('<HH', raw)
+    instr = f'{hw1:04X}{hw2:04X}'
+    lines.append(
+        f'.{file_line:6d}  {pc:08X}  {instr}  bl.w  {pc:08X}'
+    )
+
+    lines.append('')
+    lines.append('END _startup.')
+    lines.append('')
+    return '\n'.join(lines)
+
+
+# --- MCU resolution ---
+
+def resolve_mcu(config_str, mcu_override, attr_sections):
+    """Determine MCU from --mcu argument or .map Configuration line.
+    Returns (mcu_name, core_name) or (None, None) if unresolved."""
+    if mcu_override:
+        if attr_sections and mcu_override in attr_sections:
+            section = attr_sections[mcu_override]
+            if 'CPU' in section:
+                return mcu_override, section['CPU']
+        return mcu_override, None
+
+    if not config_str:
+        return None, None
+
+    tokens = config_str.split()
+    if attr_sections:
+        for token in tokens:
+            if token in attr_sections:
+                section = attr_sections[token]
+                if 'CPU' in section:
+                    return token, section['CPU']
+                # It's a core section (has Tag_* lines)
+                return token, token
+
+    # No cfg or no match -- use second token as MCU name
+    if len(tokens) >= 2:
+        return tokens[1], None
+    return None, None
+
+
+# --- Attribute config ---
+
+def load_attr_cfg(attr_cfg_path):
+    """Parse master arm-elf-attr.cfg. Returns {section: {key: value}}."""
+    cp = configparser.ConfigParser()
+    cp.optionxform = str
+    cp.read(str(attr_cfg_path), encoding='utf-8')
+    sections = {}
+    for sec in cp.sections():
+        sections[sec] = dict(cp.items(sec))
+    return sections
+
+
+
+def write_arm_attr(rdb_dir, mcu_name, core_name, attr_sections, attr_cfg_path):
+    """Write rdb/arm-attr.cfg for the given MCU.
+    MCU sections inherit all tags from their core section, then any
+    Tag_* lines in the MCU section override individual core defaults."""
+    if mcu_name in attr_sections:
+        mcu_section = attr_sections[mcu_name]
+        if 'CPU' in mcu_section:
+            core = mcu_section['CPU']
+            if core not in attr_sections:
+                return False
+            # Start with core tags, apply MCU overrides
+            tags = dict(attr_sections[core])
+            for key, val in mcu_section.items():
+                if key.startswith('Tag_'):
+                    tags[key] = val
+        else:
+            tags = mcu_section
+    elif core_name and core_name in attr_sections:
+        tags = attr_sections[core_name]
+    else:
+        return False
+
+    label = f'{mcu_name} ({core_name})' if core_name else mcu_name
+    lines = []
+    lines.append(f'# ARM ELF Attributes for {label}')
+    lines.append(f'# Generated by gen-rdb from {attr_cfg_path.name}')
+    lines.append('')
+    for key, val in tags.items():
+        if key.startswith('Tag_'):
+            lines.append(f'{key} = {val}')
+    lines.append('')
+
+    out_path = rdb_dir / 'arm-attr.cfg'
+    out_path.write_text('\n'.join(lines), encoding='utf-8')
+    return True
+
+
+# --- Main ---
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Create the rdb directory with .alst debug listing files.'
+        description='Generate the rdb directory with debug data files.'
     )
     parser.add_argument(
-        'mod_file',
-        help='Program module file (.mod)'
+        'map_file',
+        type=Path,
+        help='Linker .map file'
     )
     parser.add_argument(
-        '-d',
+        '--mcu',
+        metavar='MCU',
+        help='Override MCU identifier (skips .map Configuration lookup)'
+    )
+    parser.add_argument(
+        '--rdb-dir',
         default=DEFAULT_RDB_DIR,
-        dest='rdb_dir',
-        help=f'Name of the output subdirectory (default: {DEFAULT_RDB_DIR})'
+        metavar='NAME',
+        help=f'Output subdirectory name (default: {DEFAULT_RDB_DIR})'
+    )
+    parser.add_argument(
+        '--attr-cfg',
+        type=Path,
+        metavar='PATH',
+        help='Path to master arm-elf-attr.cfg'
     )
     parser.add_argument(
         '-v', '--verbose',
         action='store_true',
-        help='Print each .alst file as it is created'
+        help='Verbose output'
     )
     args = parser.parse_args()
 
-    mod_path = Path(args.mod_file)
-    map_path = mod_path.with_suffix('.map')
-    bin_path = mod_path.with_suffix('.bin')
-
-    if not mod_path.exists():
-        print(f'Error: module file not found: {mod_path}', file=sys.stderr)
-        sys.exit(1)
+    map_path = args.map_file
     if not map_path.exists():
         print(f'Error: map file not found: {map_path}', file=sys.stderr)
         sys.exit(1)
+
+    bin_path = map_path.with_suffix('.bin')
     if not bin_path.exists():
         print(f'Error: binary file not found: {bin_path}', file=sys.stderr)
         sys.exit(1)
 
-    rdb_dir = mod_path.parent / args.rdb_dir
+    # Parse .map file
+    map_data = parse_map(map_path)
 
-    # Clear existing .alst files before creating new ones
+    # Read .bin file
+    bin_data = read_binary(bin_path)
+    code_start = map_data['code_start']
+
+    # Load attr cfg (--attr-cfg or RTK_ARM_ATTR_CFG env var)
+    attr_sections = None
+    attr_cfg_path = None
+    if args.attr_cfg:
+        attr_cfg_path = args.attr_cfg
+    else:
+        env_val = os.environ.get('RTK_ARM_ATTR_CFG')
+        if env_val:
+            attr_cfg_path = Path(env_val)
+    if attr_cfg_path is not None:
+        if not attr_cfg_path.exists():
+            print(f'Error: attr-cfg not found: {attr_cfg_path}', file=sys.stderr)
+            sys.exit(1)
+        attr_sections = load_attr_cfg(attr_cfg_path)
+
+    # Resolve MCU
+    mcu_name, core_name = resolve_mcu(
+        map_data['config_str'], args.mcu, attr_sections)
+    if mcu_name and core_name:
+        mcu_str = f'{mcu_name}/{core_name}'
+    elif mcu_name:
+        mcu_str = mcu_name
+    else:
+        mcu_str = 'unknown'
+
+    if mcu_str == 'unknown':
+        print('Warning: MCU not resolved from Configuration line',
+              file=sys.stderr)
+
+    # Clear + create rdb dir
+    rdb_dir = map_path.parent / args.rdb_dir
     if rdb_dir.exists():
         for f in rdb_dir.iterdir():
-            if not f.is_dir() and f.suffix == ELST:
+            if not f.is_dir():
                 f.unlink()
-
-    # Read map and binary
-    map_file = MapFile(map_path)
-    map_file.read()
-    map_file.extract()
-    tool_name  = map_file.get_tool_name()
-    code_start = map_file.get_code_start()
-
-    bin_file = BinFile(bin_path, code_start)
-    bin_file.read()
-
     rdb_dir.mkdir(exist_ok=True)
 
-    # Pass 1: create .alst files from .lst files
+    # Pass 1: generate .alst files from .lst files
+    tool_name = map_data['tool_name']
+    prog_name = map_data['prog_name']
+    modules = map_data['modules']
+
     n_created = 0
     n_skipped = 0
-    for md in map_file.get_mod_data():
-        lst = LstFile(md['file'])
-        if not lst.exists():
+    for mod_name, mod in modules.items():
+        if 'file' not in mod:
+            continue
+        lst_path = Path(mod['file']).with_suffix('.lst')
+        if not lst_path.exists():
             if args.verbose:
-                print(f'  skip (no .lst): {Path(md["file"]).stem}')
+                print(f'  skip (no .lst): {lst_path.stem}')
             n_skipped += 1
             continue
-        lst.read()
-        efile = lst.make_elst_file(md['code_addr'], bin_file, map_file, rdb_dir, tool_name)
+        make_alst(lst_path, mod['code_addr'], bin_data, code_start,
+                  modules, rdb_dir, tool_name, prog_name, mcu_str)
         if args.verbose:
-            print(f'  created: {efile.name}')
+            print(f'  created: {lst_path.stem}{ALST}')
         n_created += 1
 
-    # Pass 2: resolve bl.w call targets in all .alst files
-    proc_data = ProcData(rdb_dir)
-    proc_data.build()
+    # Pass 2: build proc db, patch bl.w calls
+    proc_db = build_proc_db(rdb_dir)
+    patch_bl_calls(rdb_dir, proc_db)
 
-    elst_files = ElstFiles(rdb_dir)
-    elst_files.patch_calls(proc_data)
+    # Generate _startup.alst
+    if map_data['code_end'] is not None:
+        startup_content = generate_startup(
+            modules, map_data['code_end'], prog_name, mcu_str)
+        startup_path = rdb_dir / '_startup.alst'
+        startup_path.write_text(startup_content, encoding='utf-8')
+        if args.verbose:
+            n_mods = len(modules)
+            print(f'  created: _startup.alst ({n_mods} modules)')
+    else:
+        print('Warning: no "End Addr / Total" in .map, skipping _startup.alst',
+              file=sys.stderr)
 
+    # Generate arm-attr.cfg
+    attr_written = False
+    if mcu_str != 'unknown' and attr_sections:
+        attr_written = write_arm_attr(
+            rdb_dir, mcu_name, core_name, attr_sections, attr_cfg_path)
+        if args.verbose and attr_written:
+            print(f'  created: arm-attr.cfg ({mcu_str})')
 
-    print(f'makerdb: {n_created} .alst files created in {rdb_dir}')
+    if not attr_written and mcu_str != 'unknown' and not attr_sections:
+        print('Warning: arm-elf-attr.cfg not found, skipping arm-attr.cfg',
+              file=sys.stderr)
+
+    # Summary
+    print(f'gen-rdb: {n_created} .alst files created in {rdb_dir}')
     if n_skipped:
-        print(f'makerdb: {n_skipped} module(s) skipped (no .lst file)')
+        print(f'gen-rdb: {n_skipped} module(s) skipped (no .lst file)')
 
 
 if __name__ == '__main__':

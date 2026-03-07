@@ -1,16 +1,27 @@
 #!/usr/bin/env python3
 
-# Load a binary (RP2040) or one or more binaries (RP2350) on to the device.
-# --
-# Supported platforms: Windows, macOS
-# --
-# Put into a directory on $PYTHONPATH
-# Run python -m picoload -h for help.
-# Run python -m picoload rp2040 -h for help with command 'rp2040'
-# Run python -m picoload rp2350 -h for help with command 'rp2350'
-# --
-# Copyright (c) 2023-2026 Gray, gray@grayraven.org
-# https://oberon-rtk.org/licences/
+"""
+picoload -- Load binaries onto Raspberry Pi microcontrollers via picotool.
+--
+Convenience wrapper around picotool for loading Astrobe-compiled programs.
+Two subcommands:
+  rp2040 -- upload a single binary file to a Pico board
+  rp2350 -- upload one or more binary files to a Pico2 board, with optional
+            partition targeting (file:partition syntax)
+Requires picotool on PATH and the board in BOOTSEL mode.
+--
+Usage:
+    python picoload.py rp2040 <file> [-v] [-x] [--quiet]
+    python picoload.py rp2350 <file>[:<part>] ... [-v] [-x] [--quiet]
+
+Example:
+    python picoload.py rp2040 SignalSync.uf2
+    python picoload.py rp2350 SignalSync.uf2
+    python picoload.py rp2350 app.uf2:0 data.bin:1
+--
+Copyright (c) 2023-2026 Gray, gray@grayraven.org
+https://oberon-rtk.org/licences/
+"""
 
 import sys, re, subprocess
 from pathlib import Path
@@ -152,10 +163,10 @@ class RP2350(commands.Command):
                         print(f'{PROG_NAME}: specify a partition as decimal number: \'{part}\'')
                         sys.exit(1)
                     cmd = cmd + ['-p'] + [part]
-                if file.suffix != '.uf2':
-                    if not part:
-                        print(f'{PROG_NAME}: you must specify a partition with files other than \'.uf2\': {f}')
-                        sys.exit(1)
+                # if file.suffix != '.uf2':
+                #     if not part:
+                #         print(f'{PROG_NAME}: you must specify a partition with files other than \'.uf2\': {f}')
+                #         sys.exit(1)
                 if args.verify:
                     cmd = cmd + ['-v']
                 cmd = cmd + [str(file)]
