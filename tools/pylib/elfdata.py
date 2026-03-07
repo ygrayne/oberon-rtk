@@ -910,10 +910,24 @@ def parse_listing(filepath, source_lines=False):
     lines = filepath.read_text(errors='replace').splitlines()
     module_name = None
     asm_lines = []
+    module_accum = None
     for i, line in enumerate(lines):
-        m = MODULE_RE.match(line)
-        if m:
-            module_name = m.group(1)
+        if module_name is None:
+            if module_accum is not None:
+                if ASM_LINE_RE.match(line):
+                    module_accum = None
+                else:
+                    module_accum += " " + line.strip()
+                    mm = MODULE_RE.match(module_accum)
+                    if mm:
+                        module_name = mm.group(1)
+                        module_accum = None
+            else:
+                mm = MODULE_RE.match(line)
+                if mm:
+                    module_name = mm.group(1)
+                elif re.match(r'^MODULE\b', line):
+                    module_accum = line.strip()
         m = ASM_LINE_RE.match(line)
         if m:
             asm_lines.append((
@@ -928,6 +942,7 @@ def parse_listing(filepath, source_lines=False):
     addr_to_idx = {abs_addr: idx for idx, (_, _, abs_addr, _, _) in enumerate(asm_lines)}
     procedures = []
     pending_proc_name = None
+    proc_accum = None
     comment_depth = 0
     for i, line in enumerate(lines):
         if not ASM_LINE_RE.match(line):
@@ -940,11 +955,25 @@ def parse_listing(filepath, source_lines=False):
             continue
         if MODULE_RE.match(line):
             continue
+        is_asm = bool(ASM_LINE_RE.match(line))
+        if proc_accum is not None:
+            if is_asm:
+                proc_accum = None
+            else:
+                proc_accum += " " + line.strip()
+                m = PROCEDURE_RE.match(proc_accum)
+                if m:
+                    pending_proc_name = m.group(1)
+                    proc_accum = None
+                continue
         m = PROCEDURE_RE.match(line)
         if m:
             pending_proc_name = m.group(1)
             continue
-        if pending_proc_name is not None:
+        if not is_asm and re.match(r'^\s*PROCEDURE\b', line):
+            proc_accum = line.strip()
+            continue
+        if pending_proc_name is not None and is_asm:
             am = ASM_LINE_RE.match(line)
             if am:
                 addr = int(am.group(2), 16)
@@ -1027,8 +1056,10 @@ def parse_listing(filepath, source_lines=False):
     type_sizes = {}
     pending_type_name = None
     record_depth = 0
+    type_decl_accum = None
     for line in lines:
         if ASM_LINE_RE.match(line):
+            type_decl_accum = None
             if pending_type_name and record_depth == 0:
                 tm = TYPE_ANNOT_RE.search(line)
                 if tm:
@@ -1037,8 +1068,12 @@ def parse_listing(filepath, source_lines=False):
                         type_sizes[pending_type_name] = size
                     pending_type_name = None
         else:
-            tdm = TYPE_DECL_RE.match(line)
-            if tdm:
+            check_line = line
+            if type_decl_accum is not None:
+                check_line = type_decl_accum + " " + line.strip()
+                type_decl_accum = None
+            tdm = TYPE_DECL_RE.match(check_line)
+            if tdm and not pending_type_name:
                 pending_type_name = tdm.group(1)
                 record_depth = 1
             elif pending_type_name:
@@ -1047,6 +1082,8 @@ def parse_listing(filepath, source_lines=False):
                     record_depth += 1
                 for word in re.findall(r'\bEND\b', stripped):
                     record_depth -= 1
+            elif not pending_type_name and re.match(r'^\s*\w+\s*=\s*$', line):
+                type_decl_accum = line.strip()
     module_src = None
     try:
         tokens = tokenize_alst(filepath)
