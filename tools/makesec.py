@@ -1,14 +1,26 @@
 #!/usr/bin/env python3
 
-# For a Secure module, create NSC veneer binary and NS interface module.
-# --
-# Supported platforms: Windows, macOS
-# --
-# Run python -m makesec -h for help.
-# --
-# Copyright (c) 2025-2026 Gray, gray@grayraven.org
-# https://oberon-rtk.org/licences/
+"""
+gen-secure -- Generate NSC veneer binary and NS interface module.
+--
+Reads the Astrobe listing file of a Secure module and generates the
+two files needed to call its exported procedures from Non-secure code:
+  - NSC veneer binary (NSC_<Module>.bin) with SG gateway sequences
+  - NS interface module (NS_<Module>.mod) with stub procedures
 
+Implements the ARM TrustZone calling convention for Cortex-M processors
+with the Security Extension (ARMv8-M).
+--
+Usage:
+    python gen-secure.py make <lst_file> <s_abs_addr> <nsc_abs_addr> [-v]
+
+Example:
+    python gen-secure.py make s/S0.lst C000250 C0FE000
+    python gen-secure.py make s/S0.lst 10000100 10800000
+--
+Copyright (c) 2025-2026 Gray, gray@grayraven.org
+https://oberon-rtk.org/licences/
+"""
 
 import sys, struct, re
 from pathlib import Path
@@ -17,7 +29,7 @@ import pylib.commands as commands
 WINDOWS = 'win32'
 MACOS = 'darwin'
 
-PROG_NAME = 'makesec'
+PROG_NAME = 'gen-secure'
 NSC = 'NSC'
 NS = 'NS'
 NSC_dir = 's'
@@ -225,12 +237,6 @@ class Smod:
         except:
             print(f'{PROG_NAME}: cannot read secure listing file {files.s_lst_file}')
             sys.exit(1)
-        # try:
-        #     with files.s_mod_file.open('r') as f:
-        #         mod_txt = f.read()
-        # except:
-        #     print(f'{PROG_NAME}: cannot read secure listing file {files.s_lst_file}')
-        #     sys.exit(1)
         self._lst_txt = lst_txt
         # self._mod_txt = mod_txt
 
