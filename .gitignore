@@ -21,6 +21,7 @@ _*
 !/targets/
 !/targets/arm/
 !/targets/arm/*.cfg
+!/targets/svd/*.xml
 !/tools/
 !/tools/*.py
 !/tools/*.uf2
