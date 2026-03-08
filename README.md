@@ -1,11 +1,10 @@
 # Oberon RTK
 
-**Oberon RTK is a framework for writing dual-core, multi-threaded embedded [control programs](https://oberon-rtk.org/concepts/basics/about-rts/) in Oberon for the RP-series of micro-controllers of Raspberry Pi, using Astrobe's cross-compiling IDEs.**
+**Oberon RTK is a framework for writing multi-threaded embedded [control programs](https://oberon-rtk.org/concepts/basics/about-rts/) in Oberon for Cortex-M series of microcontrollers, using Astrobe's cross-compilers and linkers.**
 
-* [RP2040](https://www.raspberrypi.com/documentation/microcontrollers/silicon.html#rp2040): Cortex-M0+, ARMv6-M, Pico 1 board
-* [RP2350](https://www.raspberrypi.com/documentation/microcontrollers/silicon.html#rp2350): Cortex-M33, ARMv8-M, Pico 2 board
+Oberon RTK provides embedded multi-threading kernels allowing to program the controller program as set of separate [control processes](https://oberon-rtk.org/concepts/basics/control-processes/).
 
-Oberon RTK provides embedded multi-threading kernels allowing to divide, and program, the controller program as set of separate [control processes](https://oberon-rtk.org/concepts/basics/control-processes/).
+The framework and tools currently support the RP2350 and RP2350 of Raspberry Pi, as well as the STM32U585 and STM32H573 of ST Microelectronics. There is some support for microcontrollers of NXP Semiconductors.
 
 # More Information
 
@@ -18,4 +17,6 @@ Cf. [oberon-rtk.org](https://oberon-rtk.org)
 + config: configuration files
 + examples: example and test programs
 + lib: module library
++ targets: configuration files for targets
++ tools: development tools
 ```
