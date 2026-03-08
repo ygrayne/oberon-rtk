@@ -33,7 +33,8 @@ _*
 !/tools/scripts/*.cmd
 !/tools/scripts/*.sh
 !/tools/config/
-!/tools/config/*.cfg
+!/tools/config/OpenOCD/
+!/tools/config/OpenOCD/*.cfg
 !/changes/
 
 !/examples/v3.0/nxp/any/SignalSync/rdb/*.elst
