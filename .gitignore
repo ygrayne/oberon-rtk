@@ -18,6 +18,9 @@ _*
 !/libv2/
 !/examples/
 !/config/
+!/targets/
+!/targets/arm/
+!/targets/arm/*.cfg
 !/tools/
 !/tools/*.py
 !/tools/*.uf2
@@ -25,6 +28,11 @@ _*
 !/tools/*.elf
 !/tools/pylib/
 !/tools/pylib/*.py
+!/tools/scripts/
+!/tools/scripts/*.cmd
+!/tools/scripts/*.sh
+!/tools/config/
+!/tools/config/*.cfg
 !/changes/
 
 !/examples/v3.0/nxp/any/SignalSync/rdb/*.elst

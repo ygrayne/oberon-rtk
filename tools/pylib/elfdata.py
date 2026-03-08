@@ -105,6 +105,7 @@ class ModuleSource:
     procedures: list
     imports: dict = field(default_factory=dict)
     consts: dict = field(default_factory=dict)
+    record_decl_lines: dict = field(default_factory=dict)
 def type_size_ext(typeref, type_sizes=None):
     if typeref is None:
         return 4
@@ -302,6 +303,7 @@ class OberonParser:
         type_defs = {}
         imports = {}
         procedures = []
+        record_decl_lines = {}
         while self._cur().kind != TK.EOF:
             if self._is('IMPORT'):
                 imports.update(self._parse_imports())
@@ -309,7 +311,7 @@ class OberonParser:
                 self._consume()
                 self._parse_const_section()
             elif self._is('TYPE'):
-                self._parse_type_decl(type_defs)
+                self._parse_type_decl(type_defs, record_decl_lines)
             elif self._is('VAR'):
                 self._parse_var_decl(global_vars)
             elif self._is('PROCEDURE'):
@@ -327,6 +329,7 @@ class OberonParser:
             type_sizes={},
             procedures=procedures,
             imports=imports,
+            record_decl_lines=record_decl_lines,
         )
     def _parse_imports(self):
         self._consume()
@@ -376,11 +379,13 @@ class OberonParser:
                 self._consume()
             if self._cur().kind == TK.SEMI:
                 self._consume()
-    def _parse_type_decl(self, type_defs):
+    def _parse_type_decl(self, type_defs, record_decl_lines=None):
         self._consume()
         while (self._cur().kind == TK.IDENT and
                self._cur().text not in _SECTION_KEYWORDS):
-            name = self._consume().text
+            name_tok = self._consume()
+            name = name_tok.text
+            name_line = name_tok.line
             if self._cur().kind == TK.STAR:
                 self._consume()
             if self._cur().kind != TK.EQ:
@@ -391,6 +396,8 @@ class OberonParser:
             if typeref.name == 'RECORD':
                 typeref = TypeRef(name=name, fields=typeref.fields, base=typeref.base)
                 _name_anonymous_records(typeref, name)
+                if record_decl_lines is not None:
+                    record_decl_lines[name] = name_line
             elif typeref.pointer_to is not None:
                 typeref = TypeRef(name=name, pointer_to=typeref.pointer_to)
             elif typeref.is_proc_type:
@@ -827,14 +834,11 @@ def compute_leaf_locations(proc_src, type_sizes=None):
 ASM_LINE_RE = re.compile(
     r'^\.\s+(\d+)\s+([0-9A-Fa-f]+)\s+([0-9A-Fa-f]+)\s+(.*)'
 )
-MODULE_RE = re.compile(r'^MODULE\s+(\w+)\s*;')
-PROCEDURE_RE = re.compile(r'^\s*PROCEDURE(?:\*|\[\s*-?\d+\s*\])?\s+(\w+)')
 PUSH_LR_RE   = re.compile(r'push(?:\.w)?\s+\{.*lr.*\}',  re.IGNORECASE)
 POP_PC_RE    = re.compile(r'pop(?:\.w)?\s+\{.*pc.*\}',   re.IGNORECASE)
 PUSH_REGS_RE = re.compile(r'push(?:\.w)?\s+\{([^}]+)\}', re.IGNORECASE)
 SUB_SP_RE    = re.compile(r'sub\s+sp,\s*#(\d+)',          re.IGNORECASE)
 DATA_ANNOTATION_RE = re.compile(r'<(Const|Global|String|Case|Type|LineNo|Pad):')
-TYPE_DECL_RE  = re.compile(r'^\s*(\w+)\s*=\s*RECORD\b')
 TYPE_ANNOT_RE = re.compile(r'<Type:\s*(\d+)>')
 @dataclass
 class ProcSymbol:
@@ -908,26 +912,24 @@ def parse_push_regs(mnemonic_args):
     return regs if regs else None
 def parse_listing(filepath, source_lines=False):
     lines = filepath.read_text(errors='replace').splitlines()
+    module_src = None
     module_name = None
+    try:
+        tokens = tokenize_alst(filepath)
+        for ti, tok in enumerate(tokens):
+            if tok.text == 'MODULE' and ti + 1 < len(tokens):
+                module_name = tokens[ti + 1].text
+                break
+        parser = OberonParser(tokens)
+        module_src = parser.parse_module()
+        if module_src is not None:
+            module_src.consts = dict(parser.const_defs)
+    except Exception:
+        pass
+    if module_name is None:
+        return None
     asm_lines = []
-    module_accum = None
     for i, line in enumerate(lines):
-        if module_name is None:
-            if module_accum is not None:
-                if ASM_LINE_RE.match(line):
-                    module_accum = None
-                else:
-                    module_accum += " " + line.strip()
-                    mm = MODULE_RE.match(module_accum)
-                    if mm:
-                        module_name = mm.group(1)
-                        module_accum = None
-            else:
-                mm = MODULE_RE.match(line)
-                if mm:
-                    module_name = mm.group(1)
-                elif re.match(r'^MODULE\b', line):
-                    module_accum = line.strip()
         m = ASM_LINE_RE.match(line)
         if m:
             asm_lines.append((
@@ -937,48 +939,21 @@ def parse_listing(filepath, source_lines=False):
                 m.group(3),
                 m.group(4).strip(),
             ))
-    if module_name is None or not asm_lines:
+    if not asm_lines:
         return None
     addr_to_idx = {abs_addr: idx for idx, (_, _, abs_addr, _, _) in enumerate(asm_lines)}
     procedures = []
-    pending_proc_name = None
-    proc_accum = None
-    comment_depth = 0
-    for i, line in enumerate(lines):
-        if not ASM_LINE_RE.match(line):
-            for j in range(len(line) - 1):
-                if line[j] == '(' and line[j + 1] == '*':
-                    comment_depth += 1
-                elif line[j] == '*' and line[j + 1] == ')':
-                    comment_depth = max(0, comment_depth - 1)
-        if comment_depth > 0:
-            continue
-        if MODULE_RE.match(line):
-            continue
-        is_asm = bool(ASM_LINE_RE.match(line))
-        if proc_accum is not None:
-            if is_asm:
-                proc_accum = None
-            else:
-                proc_accum += " " + line.strip()
-                m = PROCEDURE_RE.match(proc_accum)
-                if m:
-                    pending_proc_name = m.group(1)
-                    proc_accum = None
+    if module_src is not None:
+        for proc_src in module_src.procedures:
+            decl_line = proc_src.decl_line
+            if decl_line <= 0:
                 continue
-        m = PROCEDURE_RE.match(line)
-        if m:
-            pending_proc_name = m.group(1)
-            continue
-        if not is_asm and re.match(r'^\s*PROCEDURE\b', line):
-            proc_accum = line.strip()
-            continue
-        if pending_proc_name is not None and is_asm:
-            am = ASM_LINE_RE.match(line)
-            if am:
-                addr = int(am.group(2), 16)
-                procedures.append((pending_proc_name, addr))
-                pending_proc_name = None
+            for k in range(decl_line - 1, len(lines)):
+                am = ASM_LINE_RE.match(lines[k])
+                if am:
+                    addr = int(am.group(2), 16)
+                    procedures.append((proc_src.name, addr))
+                    break
     init_addr = None
     last_pop_idx = None
     for j in range(len(asm_lines) - 1, -1, -1):
@@ -1054,46 +1029,28 @@ def parse_listing(filepath, source_lines=False):
     low_pc  = asm_lines[0][2]
     high_pc = file_end_addr
     type_sizes = {}
-    pending_type_name = None
-    record_depth = 0
-    type_decl_accum = None
-    for line in lines:
-        if ASM_LINE_RE.match(line):
-            type_decl_accum = None
-            if pending_type_name and record_depth == 0:
-                tm = TYPE_ANNOT_RE.search(line)
-                if tm:
-                    size = int(tm.group(1))
-                    if size > 0 and pending_type_name not in type_sizes:
-                        type_sizes[pending_type_name] = size
-                    pending_type_name = None
-        else:
-            check_line = line
-            if type_decl_accum is not None:
-                check_line = type_decl_accum + " " + line.strip()
-                type_decl_accum = None
-            tdm = TYPE_DECL_RE.match(check_line)
-            if tdm and not pending_type_name:
-                pending_type_name = tdm.group(1)
-                record_depth = 1
-            elif pending_type_name:
-                stripped = line.strip()
-                for word in re.findall(r'\bRECORD\b', stripped):
-                    record_depth += 1
-                for word in re.findall(r'\bEND\b', stripped):
-                    record_depth -= 1
-            elif not pending_type_name and re.match(r'^\s*\w+\s*=\s*$', line):
-                type_decl_accum = line.strip()
-    module_src = None
-    try:
-        tokens = tokenize_alst(filepath)
-        parser = OberonParser(tokens)
-        module_src = parser.parse_module()
-        if module_src is not None:
-            module_src.type_sizes = type_sizes
-            module_src.consts = dict(parser.const_defs)
-    except Exception:
-        pass
+    if module_src is not None:
+        for type_name, decl_line in module_src.record_decl_lines.items():
+            record_depth = 0
+            found_record = False
+            for k in range(decl_line - 1, len(lines)):
+                line = lines[k]
+                if ASM_LINE_RE.match(line):
+                    if found_record and record_depth <= 0:
+                        tm = TYPE_ANNOT_RE.search(line)
+                        if tm:
+                            size = int(tm.group(1))
+                            if size > 0:
+                                type_sizes[type_name] = size
+                    break
+                else:
+                    stripped = line.strip()
+                    for _ in re.findall(r'\bRECORD\b', stripped):
+                        record_depth += 1
+                        found_record = True
+                    for _ in re.findall(r'\bEND\b', stripped):
+                        record_depth -= 1
+        module_src.type_sizes = type_sizes
     return ModuleDebug(
         name=module_name,
         filename=filepath.name,
