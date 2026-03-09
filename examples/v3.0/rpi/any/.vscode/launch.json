@@ -1,0 +1,59 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Attach OpenOCD (CMSIS-DAP)",
+            "type": "cortex-debug",
+            "request": "attach",
+            "cwd": "${fileDirname}",
+            "executable": "${fileBasenameNoExtension}.elf",
+            "servertype": "openocd",
+            "device": "RP2350",
+            "gdbPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-gdb-py3.exe",
+            "objdumpPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-objdump.exe",
+            "openOCDLaunchCommands": [
+                "adapter speed 5000"
+            ],
+            "configFiles": [
+                "interface/cmsis-dap.cfg",
+                "target/rp2350.cfg"
+            ],
+            "searchDir": [
+                "C:/RPI/openocd/scripts"
+            ],
+            "serverpath": "C:/RPI/openocd/openocd.exe",
+            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk-claude/targets/svd/rp2350-merged.svd.xml",
+            "postAttachCommands": [
+                "monitor reset halt"
+            ],
+            "runToEntryPoint": "main"
+        },
+        {
+            "name": "Load OpenOCD (CMSIS-DAP)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "cwd": "${fileDirname}",
+            "executable": "${fileBasenameNoExtension}.elf",
+            "servertype": "openocd",
+            "device": "RP2350",
+            "gdbPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-gdb-py3.exe",
+            "objdumpPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-objdump.exe",
+            "openOCDLaunchCommands": [
+                "adapter speed 5000"
+            ],
+            "configFiles": [
+                "interface/cmsis-dap.cfg",
+                "target/rp2350.cfg"
+            ],
+            "searchDir": [
+                "C:/RPI/openocd/scripts"
+            ],
+            "serverpath": "C:/RPI/openocd/openocd.exe",
+            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk-claude/targets/svd/rp2350-merged.svd.xml",
+            "runToEntryPoint": "main",
+            "postLaunchCommands": [
+                "monitor reset halt"
+            ]
+        }
+    ]
+}
