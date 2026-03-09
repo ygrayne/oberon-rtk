@@ -22,7 +22,7 @@
                 "C:/RPI/openocd/scripts"
             ],
             "serverpath": "C:/RPI/openocd/openocd.exe",
-            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk-claude/targets/svd/rp2350-merged.svd.xml",
+            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk/targets/svd/rp2350-merged.svd.xml",
             "postAttachCommands": [
                 "monitor reset halt"
             ],
@@ -49,7 +49,7 @@
                 "C:/RPI/openocd/scripts"
             ],
             "serverpath": "C:/RPI/openocd/openocd.exe",
-            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk-claude/targets/svd/rp2350-merged.svd.xml",
+            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk/targets/svd/rp2350-merged.svd.xml",
             "runToEntryPoint": "main",
             "postLaunchCommands": [
                 "monitor reset halt"

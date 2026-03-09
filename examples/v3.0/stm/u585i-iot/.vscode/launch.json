@@ -12,14 +12,14 @@
             "gdbPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-gdb-py3.exe",
             "objdumpPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-objdump.exe",
             "configFiles": [
-                "C:/Users/gray/Projects/oberon/dev/oberon-rtk-claude/tools/config/OpenOCD/jlink-swd.cfg",
+                "C:/Users/gray/Projects/oberon/dev/oberon-rtk/tools/config/OpenOCD/jlink-swd.cfg",
                 "target/stm32u5x.cfg"
             ],
             "openOCDLaunchCommands": [
                 "adapter speed 5000"
             ],
             "serverpath": "C:/xPack/xpack-openocd-0.12.0-7/bin/openocd.exe",
-            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk-claude/targets/svd/STM32U585-merged.svd.xml",
+            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk/targets/svd/STM32U585-merged.svd.xml",
             "postAttachCommands": [
                 "monitor reset halt",
                 "monitor adapter speed 5000"
@@ -37,14 +37,14 @@
             "gdbPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-gdb-py3.exe",
             "objdumpPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-objdump.exe",
             "configFiles": [
-                "C:/Users/gray/Projects/oberon/dev/oberon-rtk-claude/tools/config/OpenOCD/jlink-swd.cfg",
+                "C:/Users/gray/Projects/oberon/dev/oberon-rtk/tools/config/OpenOCD/jlink-swd.cfg",
                 "target/stm32u5x.cfg"
             ],
             "openOCDLaunchCommands": [
                 "adapter speed 5000"
             ],
             "serverpath": "C:/xPack/xpack-openocd-0.12.0-7/bin/openocd.exe",
-            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk-claude/targets/svd/STM32U585-merged.svd.xml",
+            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk/targets/svd/STM32U585-merged.svd.xml",
             "postLaunchCommands": [
                 "monitor reset halt",
                 "monitor adapter speed 5000"
@@ -62,14 +62,14 @@
             "gdbPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-gdb-py3.exe",
             "objdumpPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-objdump.exe",
             "configFiles": [
-                "C:/Users/gray/Projects/oberon/dev/oberon-rtk-claude/tools/config/OpenOCD/stlink-swd.cfg",
+                "C:/Users/gray/Projects/oberon/dev/oberon-rtk/tools/config/OpenOCD/stlink-swd.cfg",
                 "target/stm32u5x.cfg"
             ],
             "openOCDLaunchCommands": [
                 "adapter speed 3300"
             ],
             "serverpath": "C:/xPack/xpack-openocd-0.12.0-7/bin/openocd.exe",
-            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk-claude/targets/svd/STM32U585-merged.svd.xml",
+            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtke/targets/svd/STM32U585-merged.svd.xml",
             "postAttachCommands": [
                 "monitor reset halt",
                 "monitor adapter speed 3300"
@@ -87,14 +87,14 @@
             "gdbPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-gdb-py3.exe",
             "objdumpPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-objdump.exe",
             "configFiles": [
-                "C:/Users/gray/Projects/oberon/dev/oberon-rtk-claude/tools/config/OpenOCD/stlink-swd.cfg",
+                "C:/Users/gray/Projects/oberon/dev/oberon-rtk/tools/config/OpenOCD/stlink-swd.cfg",
                 "target/stm32u5x.cfg"
             ],
             "openOCDLaunchCommands": [
                 "adapter speed 3300"
             ],
             "serverpath": "C:/xPack/xpack-openocd-0.12.0-7/bin/openocd.exe",
-            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk-claude/targets/svd/STM32U585-merged.svd.xml",
+            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk/targets/svd/STM32U585-merged.svd.xml",
             "postLaunchCommands": [
                 "monitor reset halt",
                 "monitor adapter speed 3300"
@@ -114,7 +114,7 @@
             "gdbPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-gdb-py3.exe",
             "objdumpPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-objdump.exe",
             "serverpath": "C:/Program Files/SEGGER/JLink_V876/JLinkGDBServerCL.exe",
-            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk-claude/targets/svd/STM32U585-merged.svd.xml",
+            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk/targets/svd/STM32U585-merged.svd.xml",
             "postAttachCommands": [
                 "monitor reset",
                 "monitor halt"
@@ -134,7 +134,7 @@
             "gdbPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-gdb-py3.exe",
             "objdumpPath": "C:/xPack/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-objdump.exe",
             "serverpath": "C:/Program Files/SEGGER/JLink_V876/JLinkGDBServerCL.exe",
-            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk-claude/targets/svd/STM32U585-merged.svd.xml",
+            "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk/targets/svd/STM32U585-merged.svd.xml",
             "postLaunchCommands": [
                 "monitor reset",
                 "monitor halt"
