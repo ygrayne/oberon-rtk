@@ -39,7 +39,7 @@ Versions lib/v1.0, lib/v2.0, lib/2.1, lib/v3.0
         + any
         + rp2040: RP2040
         + rp2350: RP2350
-  + v3.0:
+  + v3.0, v3.1:
     + any: generic, hardware independent
     + board: board-specific, possibly with external components and wiring
       + rpi: raspberry pi
