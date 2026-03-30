@@ -1,0 +1,59 @@
+================================================================
+Code Test Report
+================================================================
+  Spec:  phase6-test.spec
+  ELF:   SignalSync.elf
+  Date:  2026-03-28 11:49:12
+  Hits:  1
+  Stop:  timeout: stopped at SYST.Tick 0C004E78H, module offset 4
+  PASS:  14
+  FAIL:  0
+  TRACE: 5
+  ERROR: 0
+
+TIMELINE
+----------------------------------------
+    1 [UART.Configure at entry] TRACE arg dev = 3004044CH
+    1 [UART.Configure at entry] PASS  mem [arg dev + 00H] = 0H
+    1 [UART.Configure at entry] PASS  mem [arg dev + 18H] = 50013800H
+    1 [UART.Configure at entry] PASS  mem [arg dev + 1CH] = 50013804H
+    1 [UART.Configure at entry] PASS  mem [arg dev + 24H] = 5001380CH
+    1 [UART.Configure at entry] PASS  mem [arg dev + 34H] = 5001381CH
+    1 [UART.Configure at entry] TRACE arg dev = 3004044CH
+    1 [UART.Configure at entry] PASS  arg dev.uartId = 0H
+    1 [UART.Configure at entry] PASS  arg dev.CR1 = 50013800H
+    1 [UART.Configure at entry] PASS  arg dev.CR2 = 50013804H
+    1 [UART.Configure at entry] PASS  arg dev.BRR = 5001380CH
+    1 [UART.Configure at entry] PASS  arg dev.ISR = 5001381CH
+    1 [UART.Configure at entry] TRACE mem [arg dev.CR1] = 0H
+    1 [UART.Configure at entry] TRACE dev = 3004044CH
+    1 [UART.Configure at entry] PASS  dev.uartId = 0H
+    1 [UART.Configure at entry] PASS  dev.CR1 = 50013800H
+    1 [UART.Configure at entry] PASS  dev.BRR = 5001380CH
+    1 [UART.Configure at entry] PASS  mem [dev + 18H] = 50013800H
+    1 [UART.Configure at entry] TRACE mem [dev.CR1] = 0H
+
+TRACES
+----------------------------------------
+    1 [UART.Configure at entry] TRACE arg dev = 3004044CH
+    1 [UART.Configure at entry] TRACE arg dev = 3004044CH
+    1 [UART.Configure at entry] TRACE mem [arg dev.CR1] = 0H
+    1 [UART.Configure at entry] TRACE dev = 3004044CH
+    1 [UART.Configure at entry] TRACE mem [dev.CR1] = 0H
+
+PASSED
+----------------------------------------
+    1 [UART.Configure at entry] PASS  mem [arg dev + 00H] = 0H
+    1 [UART.Configure at entry] PASS  mem [arg dev + 18H] = 50013800H
+    1 [UART.Configure at entry] PASS  mem [arg dev + 1CH] = 50013804H
+    1 [UART.Configure at entry] PASS  mem [arg dev + 24H] = 5001380CH
+    1 [UART.Configure at entry] PASS  mem [arg dev + 34H] = 5001381CH
+    1 [UART.Configure at entry] PASS  arg dev.uartId = 0H
+    1 [UART.Configure at entry] PASS  arg dev.CR1 = 50013800H
+    1 [UART.Configure at entry] PASS  arg dev.CR2 = 50013804H
+    1 [UART.Configure at entry] PASS  arg dev.BRR = 5001380CH
+    1 [UART.Configure at entry] PASS  arg dev.ISR = 5001381CH
+    1 [UART.Configure at entry] PASS  dev.uartId = 0H
+    1 [UART.Configure at entry] PASS  dev.CR1 = 50013800H
+    1 [UART.Configure at entry] PASS  dev.BRR = 5001380CH
+    1 [UART.Configure at entry] PASS  mem [dev + 18H] = 50013800H

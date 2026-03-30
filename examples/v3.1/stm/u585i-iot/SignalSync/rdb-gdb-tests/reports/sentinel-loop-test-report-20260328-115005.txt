@@ -1,0 +1,22 @@
+================================================================
+Code Test Report
+================================================================
+  Spec:  sentinel-loop-test.spec
+  ELF:   SignalSync.elf
+  Date:  2026-03-28 11:50:05
+  Hits:  153
+  Stop:  stop: Kernel.loopc 0C00547CH, module offset 1280
+  PASS:  0
+  FAIL:  0
+  TRACE: 2
+  ERROR: 0
+
+TIMELINE
+----------------------------------------
+    3 [SignalSync.t3c at line 216] TRACE local cnt = 1
+  104 [SignalSync.t3c at line 216] TRACE local cnt = 2
+
+TRACES
+----------------------------------------
+    3 [SignalSync.t3c at line 216] TRACE local cnt = 1
+  104 [SignalSync.t3c at line 216] TRACE local cnt = 2

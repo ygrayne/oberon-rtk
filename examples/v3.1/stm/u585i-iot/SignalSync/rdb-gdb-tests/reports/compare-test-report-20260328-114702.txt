@@ -1,0 +1,40 @@
+================================================================
+Code Test Report
+================================================================
+  Spec:  compare-test.spec
+  ELF:   SignalSync.elf
+  Date:  2026-03-28 11:47:02
+  Hits:  1
+  Stop:  timeout: stopped at SYST.Tick 0C004E88H, module offset 20
+  PASS:  11
+  FAIL:  0
+  TRACE: 0
+  ERROR: 0
+
+TIMELINE
+----------------------------------------
+    1 [UART.Configure at entry] PASS  mem [arg dev + 00H] = 0H
+    1 [UART.Configure at entry] PASS  mem [arg dev + 18H] = 50013800H
+    1 [UART.Configure at entry] PASS  mem [arg dev + 18H] # 0 (actual 50013800H)
+    1 [UART.Configure at entry] PASS  arg dev # NIL (actual 3004044CH)
+    1 [UART.Configure at entry] PASS  mem [arg dev + 18H] > 050000000H (actual 50013800H)
+    1 [UART.Configure at entry] PASS  mem [arg dev + 00H] < 10 (actual 0H)
+    1 [UART.Configure at entry] PASS  mem [arg dev + 18H] >= 050013800H (actual 50013800H)
+    1 [UART.Configure at entry] PASS  mem [arg dev + 00H] >= 0 (actual 0H)
+    1 [UART.Configure at entry] PASS  mem [arg dev + 18H] <= 050013800H (actual 50013800H)
+    1 [UART.Configure at entry] PASS  mem [arg dev + 00H] <= 0 (actual 0H)
+    1 [UART.Configure at entry] PASS  arg dev # NIL (actual 3004044CH)
+
+PASSED
+----------------------------------------
+    1 [UART.Configure at entry] PASS  mem [arg dev + 00H] = 0H
+    1 [UART.Configure at entry] PASS  mem [arg dev + 18H] = 50013800H
+    1 [UART.Configure at entry] PASS  mem [arg dev + 18H] # 0 (actual 50013800H)
+    1 [UART.Configure at entry] PASS  arg dev # NIL (actual 3004044CH)
+    1 [UART.Configure at entry] PASS  mem [arg dev + 18H] > 050000000H (actual 50013800H)
+    1 [UART.Configure at entry] PASS  mem [arg dev + 00H] < 10 (actual 0H)
+    1 [UART.Configure at entry] PASS  mem [arg dev + 18H] >= 050013800H (actual 50013800H)
+    1 [UART.Configure at entry] PASS  mem [arg dev + 00H] >= 0 (actual 0H)
+    1 [UART.Configure at entry] PASS  mem [arg dev + 18H] <= 050013800H (actual 50013800H)
+    1 [UART.Configure at entry] PASS  mem [arg dev + 00H] <= 0 (actual 0H)
+    1 [UART.Configure at entry] PASS  arg dev # NIL (actual 3004044CH)

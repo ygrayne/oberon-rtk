@@ -1,0 +1,43 @@
+================================================================
+Code Test Report
+================================================================
+  Spec:  const-test.spec
+  ELF:   SignalSync.elf
+  Date:  2026-03-28 11:47:43
+  Hits:  2
+  Stop:  timeout: stopped at SysTick.Tick 0C004F60H, module offset 52
+  PASS:  9
+  FAIL:  0
+  TRACE: 2
+  ERROR: 0
+
+TIMELINE
+----------------------------------------
+    1 [CLK.ConfigPLL at entry] PASS  arg pllId = 0
+    1 [CLK.ConfigPLL at entry] PASS  arg pllId = 0
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.src = 2H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.range = 1H
+    1 [CLK.ConfigPLL at entry] PASS  mem MCU.FLASH_ACR [3:0] = 0H
+    1 [CLK.ConfigPLL at entry] TRACE mem MCU.RCC_CFGR1 = 0H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.ndiv # FLASH.KEY_val0 (actual 9H)
+    1 [CLK.ConfigPLL at entry] PASS  arg pllId # FLASH.KEY_val1 (actual 0)
+    2 [UART.Configure at entry] PASS  mem [arg dev + UARTdef.USART1] = 0H
+    2 [UART.Configure at entry] TRACE mem [arg dev + UARTdef.USART2] = 0A4000000H
+    2 [UART.Configure at entry] PASS  arg dev.uartId = 0H
+
+TRACES
+----------------------------------------
+    1 [CLK.ConfigPLL at entry] TRACE mem MCU.RCC_CFGR1 = 0H
+    2 [UART.Configure at entry] TRACE mem [arg dev + UARTdef.USART2] = 0A4000000H
+
+PASSED
+----------------------------------------
+    1 [CLK.ConfigPLL at entry] PASS  arg pllId = 0
+    1 [CLK.ConfigPLL at entry] PASS  arg pllId = 0
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.src = 2H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.range = 1H
+    1 [CLK.ConfigPLL at entry] PASS  mem MCU.FLASH_ACR [3:0] = 0H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.ndiv # FLASH.KEY_val0 (actual 9H)
+    1 [CLK.ConfigPLL at entry] PASS  arg pllId # FLASH.KEY_val1 (actual 0)
+    2 [UART.Configure at entry] PASS  mem [arg dev + UARTdef.USART1] = 0H
+    2 [UART.Configure at entry] PASS  arg dev.uartId = 0H

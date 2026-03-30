@@ -1,0 +1,37 @@
+================================================================
+Code Test Report
+================================================================
+  Spec:  init-test.spec
+  ELF:   SignalSync.elf
+  Date:  2026-03-28 11:48:16
+  Hits:  6
+  Stop:  timeout: stopped at SYST.Tick 0C004E88H, module offset 20
+  PASS:  1
+  FAIL:  0
+  TRACE: 7
+  ERROR: 0
+
+TIMELINE
+----------------------------------------
+    1 [LED.Set at entry] PASS  arg leds = 128
+    2 [Kernel.SetPeriod at entry] TRACE arg period = 50
+    2 [Kernel.SetPeriod at entry] TRACE arg startAfter = 0
+    3 [Cores.CoreId at entry] TRACE local cid = 1
+    4 [Cores.CoreId at entry] TRACE local cid = 2
+    5 [Kernel.SetPeriod at entry] TRACE arg period = 100
+    5 [Kernel.SetPeriod at entry] TRACE arg startAfter = 100
+    6 [Cores.CoreId at entry] TRACE local cid = 805570096
+
+TRACES
+----------------------------------------
+    2 [Kernel.SetPeriod at entry] TRACE arg period = 50
+    2 [Kernel.SetPeriod at entry] TRACE arg startAfter = 0
+    3 [Cores.CoreId at entry] TRACE local cid = 1
+    4 [Cores.CoreId at entry] TRACE local cid = 2
+    5 [Kernel.SetPeriod at entry] TRACE arg period = 100
+    5 [Kernel.SetPeriod at entry] TRACE arg startAfter = 100
+    6 [Cores.CoreId at entry] TRACE local cid = 805570096
+
+PASSED
+----------------------------------------
+    1 [LED.Set at entry] PASS  arg leds = 128

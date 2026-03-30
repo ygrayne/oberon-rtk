@@ -1,0 +1,63 @@
+================================================================
+Code Test Report
+================================================================
+  Spec:  composable-test.spec
+  ELF:   SignalSync.elf
+  Date:  2026-03-28 11:47:23
+  Hits:  3
+  Stop:  timeout: stopped at Kernel.loopc 0C005472H, module offset 1270
+  PASS:  11
+  FAIL:  0
+  TRACE: 10
+  ERROR: 0
+
+TIMELINE
+----------------------------------------
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.src = 2H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.range = 1H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.ren = 1H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.pen = 0H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.qen = 0H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.ndiv = 9H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.mdiv = 0H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.pdiv = 0H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.qdiv = 0H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.rdiv = 0H
+    1 [CLK.ConfigPLL at entry] PASS  arg pllId = 0
+    1 [CLK.ConfigPLL at entry] TRACE MemCfg.DataMem = 30040000H
+    1 [CLK.ConfigPLL at entry] TRACE MemCfg.HeapMem = 30040400H
+    2 [GPIO.ConfigurePin at entry] TRACE arg cfg.mode = 2H
+    2 [GPIO.ConfigurePin at entry] TRACE arg cfg.type = 0H
+    2 [GPIO.ConfigurePin at entry] TRACE arg cfg.speed = 2H
+    2 [GPIO.ConfigurePin at entry] TRACE arg cfg.pulls = 1H
+    3 [GPIO.ConfigurePin at entry] TRACE arg cfg.mode = 2H
+    3 [GPIO.ConfigurePin at entry] TRACE arg cfg.type = 0H
+    3 [GPIO.ConfigurePin at entry] TRACE arg cfg.speed = 2H
+    3 [GPIO.ConfigurePin at entry] TRACE arg cfg.pulls = 1H
+
+TRACES
+----------------------------------------
+    1 [CLK.ConfigPLL at entry] TRACE MemCfg.DataMem = 30040000H
+    1 [CLK.ConfigPLL at entry] TRACE MemCfg.HeapMem = 30040400H
+    2 [GPIO.ConfigurePin at entry] TRACE arg cfg.mode = 2H
+    2 [GPIO.ConfigurePin at entry] TRACE arg cfg.type = 0H
+    2 [GPIO.ConfigurePin at entry] TRACE arg cfg.speed = 2H
+    2 [GPIO.ConfigurePin at entry] TRACE arg cfg.pulls = 1H
+    3 [GPIO.ConfigurePin at entry] TRACE arg cfg.mode = 2H
+    3 [GPIO.ConfigurePin at entry] TRACE arg cfg.type = 0H
+    3 [GPIO.ConfigurePin at entry] TRACE arg cfg.speed = 2H
+    3 [GPIO.ConfigurePin at entry] TRACE arg cfg.pulls = 1H
+
+PASSED
+----------------------------------------
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.src = 2H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.range = 1H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.ren = 1H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.pen = 0H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.qen = 0H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.ndiv = 9H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.mdiv = 0H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.pdiv = 0H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.qdiv = 0H
+    1 [CLK.ConfigPLL at entry] PASS  arg cfg.rdiv = 0H
+    1 [CLK.ConfigPLL at entry] PASS  arg pllId = 0

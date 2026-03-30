@@ -1,0 +1,30 @@
+================================================================
+Code Test Report
+================================================================
+  Spec:  global-test.spec
+  ELF:   SignalSync.elf
+  Date:  2026-03-28 11:47:49
+  Hits:  3
+  Stop:  max_hits: last at Kernel.SetPeriod 0C00534CH, module offset 976
+  PASS:  0
+  FAIL:  0
+  TRACE: 6
+  ERROR: 0
+
+TIMELINE
+----------------------------------------
+    1 [Out.Open at entry] TRACE W0 = 30040488H
+    1 [Out.Open at entry] TRACE Out.W = 0H
+    2 [Kernel.SetPeriod at entry] TRACE Kernel.Done = 0C0051B0H
+    2 [Kernel.SetPeriod at entry] TRACE Kernel.Yield = 0C005140H
+    3 [Kernel.SetPeriod at entry] TRACE Kernel.Done = 0C0051B0H
+    3 [Kernel.SetPeriod at entry] TRACE Kernel.Yield = 0C005140H
+
+TRACES
+----------------------------------------
+    1 [Out.Open at entry] TRACE W0 = 30040488H
+    1 [Out.Open at entry] TRACE Out.W = 0H
+    2 [Kernel.SetPeriod at entry] TRACE Kernel.Done = 0C0051B0H
+    2 [Kernel.SetPeriod at entry] TRACE Kernel.Yield = 0C005140H
+    3 [Kernel.SetPeriod at entry] TRACE Kernel.Done = 0C0051B0H
+    3 [Kernel.SetPeriod at entry] TRACE Kernel.Yield = 0C005140H

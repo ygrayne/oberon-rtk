@@ -1,0 +1,20 @@
+================================================================
+Code Test Report
+================================================================
+  Spec:  dev0-test.spec
+  ELF:   SignalSync.elf
+  Date:  2026-03-28 11:42:27
+  Hits:  1
+  Stop:  max_hits: last at CLK.ConfigPLL 0C000FEEH, module offset 86
+  PASS:  0
+  FAIL:  0
+  TRACE: 1
+  ERROR: 0
+
+TIMELINE
+----------------------------------------
+    1 [CLK.ConfigPLL at entry] TRACE mem MCU.FLASH_ACR = 0H
+
+TRACES
+----------------------------------------
+    1 [CLK.ConfigPLL at entry] TRACE mem MCU.FLASH_ACR = 0H

@@ -1,0 +1,25 @@
+================================================================
+Code Test Report
+================================================================
+  Spec:  sentinel-test.spec
+  ELF:   SignalSync.elf
+  Date:  2026-03-28 11:50:10
+  Hits:  2
+  Stop:  all checks evaluated
+  PASS:  1
+  FAIL:  0
+  TRACE: 1
+  ERROR: 0
+
+TIMELINE
+----------------------------------------
+    2 [Kernel.SetPeriod at entry] PASS  arg period = 50
+    2 [Kernel.SetPeriod at entry] TRACE arg startAfter = 0
+
+TRACES
+----------------------------------------
+    2 [Kernel.SetPeriod at entry] TRACE arg startAfter = 0
+
+PASSED
+----------------------------------------
+    2 [Kernel.SetPeriod at entry] PASS  arg period = 50

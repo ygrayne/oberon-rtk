@@ -1,0 +1,41 @@
+================================================================
+Code Test Report
+================================================================
+  Spec:  phase5-test.spec
+  ELF:   SignalSync.elf
+  Date:  2026-03-28 11:48:51
+  Hits:  2
+  Stop:  timeout: stopped at SysTick.Tick 0C004F60H, module offset 52
+  PASS:  4
+  FAIL:  0
+  TRACE: 6
+  ERROR: 0
+
+TIMELINE
+----------------------------------------
+    1 [Kernel.SetPeriod at entry] TRACE arg period = 50
+    1 [Kernel.SetPeriod at entry] TRACE mem 046020C00H = 3003535H
+    1 [Kernel.SetPeriod at entry] PASS  mem 046020C00H [25:24] = 3H
+    1 [Kernel.SetPeriod at entry] TRACE mem 046020C1CH = 0FH
+    1 [Kernel.SetPeriod at entry] PASS  mem 046020C1CH [3:2] = 3H
+    2 [Kernel.SetPeriod at entry] TRACE arg period = 100
+    2 [Kernel.SetPeriod at entry] TRACE mem 046020C00H = 3003535H
+    2 [Kernel.SetPeriod at entry] PASS  mem 046020C00H [25:24] = 3H
+    2 [Kernel.SetPeriod at entry] TRACE mem 046020C1CH = 0FH
+    2 [Kernel.SetPeriod at entry] PASS  mem 046020C1CH [3:2] = 3H
+
+TRACES
+----------------------------------------
+    1 [Kernel.SetPeriod at entry] TRACE arg period = 50
+    1 [Kernel.SetPeriod at entry] TRACE mem 046020C00H = 3003535H
+    1 [Kernel.SetPeriod at entry] TRACE mem 046020C1CH = 0FH
+    2 [Kernel.SetPeriod at entry] TRACE arg period = 100
+    2 [Kernel.SetPeriod at entry] TRACE mem 046020C00H = 3003535H
+    2 [Kernel.SetPeriod at entry] TRACE mem 046020C1CH = 0FH
+
+PASSED
+----------------------------------------
+    1 [Kernel.SetPeriod at entry] PASS  mem 046020C00H [25:24] = 3H
+    1 [Kernel.SetPeriod at entry] PASS  mem 046020C1CH [3:2] = 3H
+    2 [Kernel.SetPeriod at entry] PASS  mem 046020C00H [25:24] = 3H
+    2 [Kernel.SetPeriod at entry] PASS  mem 046020C1CH [3:2] = 3H

@@ -1,0 +1,93 @@
+================================================================
+Code Test Report
+================================================================
+  Spec:  phase4-test.spec
+  ELF:   SignalSync.elf
+  Date:  2026-03-28 11:48:30
+  Hits:  20
+  Stop:  max_hits: last at SignalSync.writeThreadInfo 0C0059A6H, module offset 38
+  PASS:  1
+  FAIL:  0
+  TRACE: 35
+  ERROR: 0
+
+TIMELINE
+----------------------------------------
+    1 [LED.Set at entry] PASS  arg leds = 128
+    2 [Kernel.SetPeriod at entry] TRACE arg period = 50
+    2 [Kernel.SetPeriod at entry] TRACE arg startAfter = 0
+    3 [Cores.CoreId at exit] TRACE return = 0H
+    4 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 1
+    4 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+    5 [Cores.CoreId at exit] TRACE return = 0H
+    6 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 2
+    6 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+    7 [Kernel.SetPeriod at entry] TRACE arg period = 100
+    7 [Kernel.SetPeriod at entry] TRACE arg startAfter = 100
+    8 [Cores.CoreId at exit] TRACE return = 0H
+    9 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 3
+    9 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   10 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 1
+   10 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   11 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 1
+   11 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   12 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 3
+   12 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   13 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 2
+   13 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   14 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 2
+   14 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   15 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 3
+   15 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   16 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 1
+   16 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   17 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 1
+   17 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   18 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 3
+   18 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   19 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 2
+   19 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   20 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 2
+   20 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+
+TRACES
+----------------------------------------
+    2 [Kernel.SetPeriod at entry] TRACE arg period = 50
+    2 [Kernel.SetPeriod at entry] TRACE arg startAfter = 0
+    3 [Cores.CoreId at exit] TRACE return = 0H
+    4 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 1
+    4 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+    5 [Cores.CoreId at exit] TRACE return = 0H
+    6 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 2
+    6 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+    7 [Kernel.SetPeriod at entry] TRACE arg period = 100
+    7 [Kernel.SetPeriod at entry] TRACE arg startAfter = 100
+    8 [Cores.CoreId at exit] TRACE return = 0H
+    9 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 3
+    9 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   10 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 1
+   10 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   11 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 1
+   11 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   12 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 3
+   12 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   13 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 2
+   13 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   14 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 2
+   14 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   15 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 3
+   15 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   16 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 1
+   16 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   17 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 1
+   17 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   18 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 3
+   18 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   19 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 2
+   19 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+   20 [SignalSync.writeThreadInfo at line 54] TRACE arg tid = 2
+   20 [SignalSync.writeThreadInfo at line 54] TRACE arg cid = 0
+
+PASSED
+----------------------------------------
+    1 [LED.Set at entry] PASS  arg leds = 128

@@ -1,0 +1,33 @@
+================================================================
+Code Test Report
+================================================================
+  Spec:  halt-test.spec
+  ELF:   SignalSync.elf
+  Date:  2026-03-28 11:47:54
+  Hits:  1
+  Stop:  halt: UART.Configure 0x0C002614, module offset 336, FAIL mem [arg dev + 0x1C]
+  PASS:  2
+  FAIL:  1
+  TRACE: 1
+  ERROR: 0
+  HALT:  halt: UART.Configure 0x0C002614, module offset 336, FAIL mem [arg dev + 0x1C]
+
+FAILURES
+----------------------------------------
+    1 [UART.Configure at entry] FAIL  mem [arg dev + 0x1C] = 0x50013804 (expected 0x50013803)
+
+TIMELINE
+----------------------------------------
+    1 [UART.Configure at entry] TRACE arg dev = 0x3004044c
+    1 [UART.Configure at entry] PASS  mem [arg dev + 0x00] = 0x0
+    1 [UART.Configure at entry] PASS  mem [arg dev + 0x18] = 0x50013800
+    1 [UART.Configure at entry] FAIL  mem [arg dev + 0x1C] = 0x50013804 (expected 0x50013803)
+
+TRACES
+----------------------------------------
+    1 [UART.Configure at entry] TRACE arg dev = 0x3004044c
+
+PASSED
+----------------------------------------
+    1 [UART.Configure at entry] PASS  mem [arg dev + 0x00] = 0x0
+    1 [UART.Configure at entry] PASS  mem [arg dev + 0x18] = 0x50013800
