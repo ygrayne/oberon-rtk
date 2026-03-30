@@ -1533,9 +1533,11 @@ def _emit_formal_parameter_die(content, name, type_off, loc_expr, str_table, dec
     content.append(1)
     content += struct.pack('<H', decl_line)
 def build_debug_info_unit(module, abbrev_offset, stmt_list_offset, src_subdir,
-                           data_addr_top=None, str_table=None, all_module_srcs=None):
+                           data_addr_top=None, str_table=None, all_module_srcs=None,
+                           comp_dir='.', symbol_prefix=''):
     if str_table is None:
         str_table = DebugStrTable()
+    _pfx = f'{symbol_prefix}_' if symbol_prefix else ''
     content = bytearray()
     global_die_positions = []
     content += b'\x00\x00\x00\x00'
@@ -1545,7 +1547,7 @@ def build_debug_info_unit(module, abbrev_offset, stmt_list_offset, src_subdir,
     content += uleb128(1)
     cu_name = f'{src_subdir}/{module.filename}'
     content += struct.pack('<I', str_table.intern(cu_name))
-    content += struct.pack('<I', str_table.intern('.'))
+    content += struct.pack('<I', str_table.intern(comp_dir))
     content += struct.pack('<I', module.low_pc)
     content += struct.pack('<I', module.high_pc - module.low_pc)
     content += struct.pack('<I', stmt_list_offset)
@@ -1718,7 +1720,7 @@ def build_debug_info_unit(module, abbrev_offset, stmt_list_offset, src_subdir,
                     addr = global_addrs.get(name)
                     if addr is None:
                         continue
-                    symtab_name = f'{module_src.name}_{name}'
+                    symtab_name = f'{_pfx}{module_src.name}_{name}'
                     if name in var.exported_names:
                         global_die_positions.append((symtab_name, len(content)))
                     _emit_global_variable_die(content, symtab_name, type_off, _loc_addr(addr),
@@ -1737,7 +1739,7 @@ def build_debug_info_unit(module, abbrev_offset, stmt_list_offset, src_subdir,
         local_size = fi.sp_adjust if fi else 0
         sp_decl_line = proc_src.decl_line if proc_src is not None else 0
         content += uleb128(2)
-        content += struct.pack('<I', str_table.intern(proc.name))
+        content += struct.pack('<I', str_table.intern(f'{_pfx}{proc.name}'))
         content += struct.pack('<I', proc.address)
         content += struct.pack('<I', proc.size)
         content += uleb128(2)
@@ -1968,7 +1970,7 @@ def build_arm_attributes(attrs):
     vendor_content = vendor_name + file_subsec
     vendor = struct.pack('<I', 4 + len(vendor_content)) + vendor_content
     return bytes(b'\x41' + vendor)
-def generate_dwarf(modules, src_subdir, module_data_tops=None):
+def generate_dwarf(modules, src_subdir, module_data_tops=None, comp_dir='.', symbol_prefix=''):
     str_table = DebugStrTable()
     debug_abbrev = build_debug_abbrev()
     all_module_srcs = {}
@@ -1999,7 +2001,8 @@ def generate_dwarf(modules, src_subdir, module_data_tops=None):
         info_unit, global_die_positions = build_debug_info_unit(
             module, 0, stmt_list_offset, src_subdir,
             data_addr_top=data_top, str_table=str_table,
-            all_module_srcs=all_module_srcs
+            all_module_srcs=all_module_srcs, comp_dir=comp_dir,
+            symbol_prefix=symbol_prefix
         )
         debug_info += info_unit
         info_unit_sizes.append(len(info_unit))
@@ -2010,7 +2013,7 @@ def generate_dwarf(modules, src_subdir, module_data_tops=None):
     debug_str = str_table.build()
     return bytes(debug_line), bytes(debug_info), debug_abbrev, debug_aranges, debug_pubnames, debug_str
 def extract(src_dir, src_subdir='rdb', src_ext=None, source_lines=False,
-            arm_attr_cfg=None, map_file=None):
+            arm_attr_cfg=None, map_file=None, comp_dir='.', symbol_prefix=''):
     if src_ext is None:
         src_ext = SOURCE_EXT
     src_dir = Path(src_dir)
@@ -2035,7 +2038,8 @@ def extract(src_dir, src_subdir='rdb', src_ext=None, source_lines=False,
         except Exception as e:
             print(f'warning: could not read map file {map_file}: {e}')
     debug_line, debug_info, debug_abbrev, debug_aranges, debug_pubnames, debug_str = generate_dwarf(
-        modules, src_subdir, module_data_tops=module_data_tops
+        modules, src_subdir, module_data_tops=module_data_tops, comp_dir=comp_dir,
+        symbol_prefix=symbol_prefix
     )
     global_symbols = []
     if module_data_tops is not None:

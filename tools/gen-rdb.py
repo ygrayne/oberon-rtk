@@ -7,17 +7,19 @@ and generates the rdb/ subdirectory containing:
   - One .alst file per linked module (assembly listing with absolute addresses)
   - _startup.alst (init call sequence pseudo-listing)
   - arm-attr.cfg (ARM ELF attributes for the target MCU)
+  - NSC.alst (if --nsc is given, copied from gen-secure output)
 
 WARNING: gen-rdb deletes all existing files in the target rdb directory
 before generating new ones. Do not store hand-edited files there.
 --
 Usage:
-    python gen-rdb.py <Prog.map> [--mcu MCU] [--rdb-dir NAME] [--attr-cfg PATH] [-v]
+    python gen-rdb.py <Prog.map> [--mcu MCU] [--rdb-dir DIR] [--attr-cfg PATH] [-v]
 
 Example:
     python gen-rdb.py SignalSync.map
     python gen-rdb.py SignalSync.map --mcu STM32U585
-    python gen-rdb.py SignalSync.map --attr-cfg ../../targets/arm/arm-elf-attr.cfg
+    python gen-rdb.py s/S.map --rdb-dir s/rdb
+    python gen-rdb.py s/S.map --rdb-dir s/rdb --nsc-dir s
 --
 Copyright (c) 2026 Gray, gray@grayraven.org
 https://oberon-rtk.org/licences/
@@ -28,6 +30,7 @@ import os
 import re
 import argparse
 import configparser
+import shutil
 import struct
 from pathlib import Path
 
@@ -611,14 +614,20 @@ def main():
     parser.add_argument(
         '--rdb-dir',
         default=DEFAULT_RDB_DIR,
-        metavar='NAME',
-        help=f'Output subdirectory name (default: {DEFAULT_RDB_DIR})'
+        metavar='DIR',
+        help=f'Output directory path relative to cwd (default: {DEFAULT_RDB_DIR})'
     )
     parser.add_argument(
         '--attr-cfg',
         type=Path,
         metavar='PATH',
         help='Path to master arm-elf-attr.cfg'
+    )
+    parser.add_argument(
+        '--nsc-dir',
+        type=Path,
+        metavar='DIR',
+        help='Directory containing NSC.alst to copy into rdb directory'
     )
     parser.add_argument(
         '-v', '--verbose',
@@ -673,8 +682,8 @@ def main():
         print('Warning: MCU not resolved from Configuration line',
               file=sys.stderr)
 
-    # Clear + create rdb dir
-    rdb_dir = map_path.parent / args.rdb_dir
+    # Clear + create rdb dir (path relative to cwd)
+    rdb_dir = Path(args.rdb_dir)
     if rdb_dir.exists():
         for f in rdb_dir.iterdir():
             if not f.is_dir():
@@ -731,6 +740,17 @@ def main():
     if not attr_written and mcu_str != 'unknown' and not attr_sections:
         print('Warning: arm-elf-attr.cfg not found, skipping arm-attr.cfg',
               file=sys.stderr)
+
+    # Copy NSC.alst if requested
+    if args.nsc_dir:
+        nsc_src = args.nsc_dir / 'NSC.alst'
+        if nsc_src.exists():
+            shutil.copy2(nsc_src, rdb_dir / 'NSC.alst')
+            if args.verbose:
+                print('  copied: NSC.alst')
+        else:
+            print(f'Warning: NSC.alst not found in: {args.nsc_dir}',
+                  file=sys.stderr)
 
     # Summary
     print(f'gen-rdb: {n_created} .alst files created in {rdb_dir}')

@@ -17,7 +17,7 @@ Usage:
     python gen-lib.py clean <mod_file> [-l <libdir>] [-d] [-v]
 
 Example:
-    python gen-lib.py update Prog.ini Prog.mod -f C:\Astrobe\RP2350
+    python gen-lib.py update Prog.ini Prog.mod -f C:\\Astrobe\\RP2350
     python gen-lib.py clean Prog.mod
 --
 Copyright (c) 2025-2026 Gray, gray@grayraven.org

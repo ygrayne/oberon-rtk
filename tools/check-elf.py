@@ -11,6 +11,7 @@ Usage:
 
     --rdb-dir DIR         Directory with .alst files (default: rdb)
     --map FILE            Linker .map file (default: auto-detect in cwd)
+    --sym-prefix P        Expected symbol prefix (e.g. S for Secure)
     -v, --verbose         Show all checks including PASS
     --readelf PATH        Path to readelf (env: RTK_READELF;
                           default: arm-none-eabi-readelf)
@@ -18,6 +19,7 @@ Usage:
 Example:
     python check-elf.py SignalSync.elf
     python check-elf.py SignalSync.elf --map SignalSync.map -v
+    python check-elf.py S.elf --sym-prefix S -v
 --
 Copyright (c) 2026 Gray, gray@grayraven.org
 https://oberon-rtk.org/licences/
@@ -338,7 +340,8 @@ class Results:
 
 # Check implementations
 
-def check_sections(sections, has_debug, has_bss, has_image_def, has_arm_attr, r):
+def check_sections(sections, has_debug, has_bss, has_image_def, has_arm_attr,
+                    has_global_vars, r):
     """Check that all expected sections are present."""
     cat = 'sections'
 
@@ -363,13 +366,20 @@ def check_sections(sections, has_debug, has_bss, has_image_def, has_arm_attr, r)
 
     if has_debug:
         debug_sects = ['.debug_line', '.debug_info', '.debug_abbrev',
-                       '.debug_aranges', '.debug_pubnames', '.debug_str',
-                       '.debug_frame']
+                       '.debug_aranges', '.debug_str', '.debug_frame']
         for name in debug_sects:
             if name in sections:
                 r.ok(cat, f'{name} present')
             else:
                 r.fail(cat, f'{name} missing')
+
+        # .debug_pubnames only expected when global variables exist
+        if '.debug_pubnames' in sections:
+            r.ok(cat, '.debug_pubnames present')
+        elif has_global_vars:
+            r.fail(cat, '.debug_pubnames missing')
+        else:
+            r.skip(cat, '.debug_pubnames absent (no global variables)')
 
         if has_arm_attr:
             if '.ARM.attributes' in sections:
@@ -378,16 +388,17 @@ def check_sections(sections, has_debug, has_bss, has_image_def, has_arm_attr, r)
                 r.fail(cat, '.ARM.attributes missing')
 
 
-def check_symbols(sym_list, debug_data, r):
+def check_symbols(sym_list, debug_data, r, symbol_prefix=''):
     """Check symbol table against elfdata ground truth."""
     cat = 'symbols'
+    pfx = f'{symbol_prefix}_' if symbol_prefix else ''
     sym_by_name = {}
     for s in sym_list:
         sym_by_name[s['name']] = s
 
     # Check procedure symbols
     for proc in debug_data.procedures:
-        sym_name = proc.name.replace('.', '_')
+        sym_name = f'{pfx}{proc.name.replace(".", "_")}'
         if sym_name in sym_by_name:
             s = sym_by_name[sym_name]
             # Mask off Thumb bit (bit 0) for address comparison
@@ -415,7 +426,7 @@ def check_symbols(sym_list, debug_data, r):
 
     # Check global variable symbols
     for gs in debug_data.global_symbols:
-        sym_name = f'{gs.module_name}_{gs.name}'
+        sym_name = f'{pfx}{gs.module_name}_{gs.name}'
         if sym_name in sym_by_name:
             s = sym_by_name[sym_name]
             if s['address'] == gs.address:
@@ -472,22 +483,23 @@ def check_compilation_units(dwarf_cus, debug_data, r):
             r.fail(cat, f'{mod.name} CU missing (expected {expected_name})')
 
 
-def check_procedures(dwarf_cus, debug_data, r):
+def check_procedures(dwarf_cus, debug_data, r, symbol_prefix=''):
     """Check subprogram DIEs against elfdata procedures."""
     cat = 'procs'
+    pfx = f'{symbol_prefix}_' if symbol_prefix else ''
 
-    # Build ProcSymbol lookup (what's actually in the ELF)
+    # Build ProcSymbol lookup keyed by prefixed name (matching DWARF DW_AT_name)
     proc_by_name = {}
     for ps in debug_data.procedures:
-        proc_by_name[ps.name] = ps
+        proc_by_name[f'{pfx}{ps.name}'] = ps
 
-    # Build ProcSource lookup for param/local counts
+    # Build ProcSource lookup keyed by prefixed name
     procsrc_by_name = {}
     for mod in debug_data.modules:
         if mod.module_src is None:
             continue
         for proc_src in mod.module_src.procedures:
-            qual_name = f'{mod.name}.{proc_src.name}'
+            qual_name = f'{pfx}{mod.name}.{proc_src.name}'
             procsrc_by_name[qual_name] = proc_src
 
     # Walk DWARF CUs and match subprograms
@@ -544,8 +556,9 @@ def check_procedures(dwarf_cus, debug_data, r):
 
     # Check that every ProcSymbol has a matching DWARF subprogram
     for ps in debug_data.procedures:
-        if ps.name not in found:
-            r.fail(cat, f'{ps.name} subprogram DIE missing')
+        expected = f'{pfx}{ps.name}'
+        if expected not in found:
+            r.fail(cat, f'{expected} subprogram DIE missing')
 
 
 def check_variables(dwarf_cus, r):
@@ -716,6 +729,9 @@ def main():
                         help='Directory containing .alst files (default: rdb)')
     parser.add_argument('--map', dest='map_file', default=None,
                         help='Path to .map file for global variable addresses')
+    parser.add_argument('--sym-prefix', '--symbol-prefix',
+                        dest='symbol_prefix', default='',
+                        help='Expected symbol prefix (e.g. S for Secure, NS for Non-Secure)')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Show all checks including PASS')
     parser.add_argument('--readelf', default=None,
@@ -758,6 +774,8 @@ def main():
     print(f"  {len(debug_data.modules)} modules, "
           f"{len(debug_data.procedures)} procedures, "
           f"{len(debug_data.global_symbols)} global variables")
+    if args.symbol_prefix:
+        print(f"  symbol prefix: {args.symbol_prefix}_")
 
     # Parse ELF
     print(f"Parsing {elf_path} ...")
@@ -781,18 +799,21 @@ def main():
     # Run checks
     r = Results(verbose=args.verbose)
 
+    has_global_vars = len(debug_data.global_symbols) > 0
+
     print("\nChecking sections ...")
-    check_sections(sections, has_debug, has_bss, has_image_def, has_arm_attr, r)
+    check_sections(sections, has_debug, has_bss, has_image_def, has_arm_attr,
+                   has_global_vars, r)
 
     print("Checking symbols ...")
-    check_symbols(sym_list, debug_data, r)
+    check_symbols(sym_list, debug_data, r, symbol_prefix=args.symbol_prefix)
 
     if has_debug:
         print("Checking compilation units ...")
         check_compilation_units(dwarf_cus, debug_data, r)
 
         print("Checking procedures ...")
-        check_procedures(dwarf_cus, debug_data, r)
+        check_procedures(dwarf_cus, debug_data, r, symbol_prefix=args.symbol_prefix)
 
         print("Checking variables ...")
         check_variables(dwarf_cus, r)
