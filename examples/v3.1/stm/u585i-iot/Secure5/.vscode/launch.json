@@ -1,0 +1,69 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Load S+NS (ST-LINK)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "executable": "sec/S.elf",
+            "servertype": "openocd",
+            "device": "STM32U585AI",
+            "gdbPath": "${env:RTK_GDB}",
+            "objdumpPath": "${env:RTK_OBJDUMP}",
+            "configFiles": [
+                "${env:RTK_OPENOCD_CFG_STLINK}",
+                "target/stm32u5x.cfg"
+            ],
+            "openOCDLaunchCommands": [
+                "adapter speed 3300"
+            ],
+            "serverpath": "${env:RTK_OPENOCD_XPACK}",
+            "svdFile": "${env:RTK_SVD_STM32U585}",
+            "loadFiles": [
+                "${workspaceFolder}/sec/S.elf",
+                "${workspaceFolder}/nonsec/NS.elf"
+            ],
+            "symbolFiles": [
+                { "file": "${workspaceFolder}/sec/S.elf" },
+                { "file": "${workspaceFolder}/nonsec/NS.elf" }
+            ],
+            "postLaunchCommands": [
+                "stepi",
+                "monitor reset halt",
+                "monitor adapter speed 3300"
+            ],
+            "runToEntryPoint": "S_startup"
+        },
+        {
+            "name": "Attach S+NS (ST-LINK)",
+            "type": "cortex-debug",
+            "request": "attach",
+            "cwd": "${workspaceFolder}",
+            "executable": "sec/S.elf",
+            "servertype": "openocd",
+            "device": "STM32U585AI",
+            "gdbPath": "${env:RTK_GDB}",
+            "objdumpPath": "${env:RTK_OBJDUMP}",
+            "configFiles": [
+                "${env:RTK_OPENOCD_CFG_STLINK}",
+                "target/stm32u5x.cfg"
+            ],
+            "openOCDLaunchCommands": [
+                "adapter speed 3300"
+            ],
+            "serverpath": "${env:RTK_OPENOCD_XPACK}",
+            "svdFile": "${env:RTK_SVD_STM32U585}",
+            "symbolFiles": [
+                { "file": "${workspaceFolder}/sec/S.elf" },
+                { "file": "${workspaceFolder}/nonsec/NS.elf" }
+            ],
+            "postAttachCommands": [
+                "stepi",
+                "monitor reset halt",
+                "monitor adapter speed 3300"
+            ],
+            "runToEntryPoint": "S_startup"
+        }
+    ]
+}

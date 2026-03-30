@@ -21,6 +21,7 @@
             "serverpath": "C:/xPack/xpack-openocd-0.12.0-7/bin/openocd.exe",
             "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk/targets/svd/STM32U585-merged.svd.xml",
             "postAttachCommands": [
+                "stepi",
                 "monitor reset halt",
                 "monitor adapter speed 5000"
             ],
@@ -46,6 +47,7 @@
             "serverpath": "C:/xPack/xpack-openocd-0.12.0-7/bin/openocd.exe",
             "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk/targets/svd/STM32U585-merged.svd.xml",
             "postLaunchCommands": [
+                "stepi",
                 "monitor reset halt",
                 "monitor adapter speed 5000"
             ],
@@ -71,6 +73,7 @@
             "serverpath": "C:/xPack/xpack-openocd-0.12.0-7/bin/openocd.exe",
             "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtke/targets/svd/STM32U585-merged.svd.xml",
             "postAttachCommands": [
+                "stepi",
                 "monitor reset halt",
                 "monitor adapter speed 3300"
             ],
@@ -96,6 +99,7 @@
             "serverpath": "C:/xPack/xpack-openocd-0.12.0-7/bin/openocd.exe",
             "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk/targets/svd/STM32U585-merged.svd.xml",
             "postLaunchCommands": [
+                "stepi",
                 "monitor reset halt",
                 "monitor adapter speed 3300"
             ],
@@ -116,6 +120,7 @@
             "serverpath": "C:/Program Files/SEGGER/JLink_V876/JLinkGDBServerCL.exe",
             "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk/targets/svd/STM32U585-merged.svd.xml",
             "postAttachCommands": [
+                "stepi",
                 "monitor reset",
                 "monitor halt"
             ],
@@ -136,6 +141,7 @@
             "serverpath": "C:/Program Files/SEGGER/JLink_V876/JLinkGDBServerCL.exe",
             "svdFile": "C:/Users/gray/Projects/oberon/dev/oberon-rtk/targets/svd/STM32U585-merged.svd.xml",
             "postLaunchCommands": [
+                "stepi",
                 "monitor reset",
                 "monitor halt"
             ],

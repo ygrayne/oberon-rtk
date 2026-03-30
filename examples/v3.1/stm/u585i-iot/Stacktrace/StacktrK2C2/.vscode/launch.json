@@ -1,0 +1,57 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Load (ST-LINK)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "executable": "StacktrK2C2.elf",
+            "servertype": "openocd",
+            "device": "STM32U585AI",
+            "gdbPath": "${env:RTK_GDB}",
+            "objdumpPath": "${env:RTK_OBJDUMP}",
+            "configFiles": [
+                "${env:RTK_OPENOCD_CFG_STLINK}",
+                "target/stm32u5x.cfg"
+            ],
+            "openOCDLaunchCommands": [
+                "adapter speed 3300"
+            ],
+            "serverpath": "${env:RTK_OPENOCD_XPACK}",
+            "svdFile": "${env:RTK_SVD_STM32U585}",
+            "postLaunchCommands": [
+                "stepi",
+                "monitor reset halt",
+                "monitor adapter speed 3300"
+            ],
+            "runToEntryPoint": "main"
+        },
+        {
+            "name": "Attach (ST-LINK)",
+            "type": "cortex-debug",
+            "request": "attach",
+            "cwd": "${workspaceFolder}",
+            "executable": "StacktrK2C2.elf",
+            "servertype": "openocd",
+            "device": "STM32U585AI",
+            "gdbPath": "${env:RTK_GDB}",
+            "objdumpPath": "${env:RTK_OBJDUMP}",
+            "configFiles": [
+                "${env:RTK_OPENOCD_CFG_STLINK}",
+                "target/stm32u5x.cfg"
+            ],
+            "openOCDLaunchCommands": [
+                "adapter speed 3300"
+            ],
+            "serverpath": "${env:RTK_OPENOCD_XPACK}",
+            "svdFile": "${env:RTK_SVD_STM32U585}",
+            "postAttachCommands": [
+                "stepi",
+                "monitor reset halt",
+                "monitor adapter speed 3300"
+            ],
+            "runToEntryPoint": "main"
+        }
+    ]
+}
