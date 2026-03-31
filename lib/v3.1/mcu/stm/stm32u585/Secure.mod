@@ -1,7 +1,7 @@
 MODULE Secure;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Secure/Non-secure support
   --
@@ -13,24 +13,42 @@ MODULE Secure;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2;
+  IMPORT SYSTEM, PPB;
 
-
-  PROCEDURE* StartNonSecure*(imageAddr, vtorOffset: INTEGER);
-    CONST R11 = 11;
+  PROCEDURE* StartNonSecProg*(imageAddr, vtorOffset: INTEGER);
     VAR val: INTEGER;
   BEGIN
     (* VTOR *)
-    SYSTEM.PUT(MCU.PPB_VTOR + MCU.PPB_NS_Offset, imageAddr + vtorOffset);
+    SYSTEM.PUT(PPB.VTOR + PPB.PPB_NS_Offset, imageAddr + vtorOffset);
     (* stack pointer *)
     SYSTEM.GET(imageAddr + vtorOffset, val);
-    SYSTEM.LDREG(R11, val);
-    SYSTEM.EMIT(MCU.MSR_MSPns_R11);
+    (* asm
+      val -> msr msp_ns, r11
+    end asm *)
+    (* +asm *)
+    SYSTEM.LDREG(11, val);  (* val -> r11 *)
+    SYSTEM.EMIT(0F38B8888H);  (* msr MSP_NS, r11 *)
+    (* -asm *)
     (* branch to NS entry *)
     SYSTEM.GET(imageAddr  + vtorOffset + 04H, val);
     EXCL(SYSTEM.VAL(SET, val), 0);
-    SYSTEM.LDREG(R11, val);
-    SYSTEM.EMITH(MCU.BLXNS_R11)
-  END StartNonSecure;
+    (* asm
+      val -> blxns r11
+    end asm *)
+    (* +asm *)
+    SYSTEM.LDREG(11, val);  (* val -> r11 *)
+    SYSTEM.EMITH(047DCH);  (* blxns r11 *)
+    (* -asm *)
+  END StartNonSecProg;
+
+  (* #todo *)
+  PROCEDURE IsNonSecMemory*(addr, size: INTEGER): BOOLEAN;
+  RETURN FALSE
+  END IsNonSecMemory;
+
+  (* #todo *)
+  PROCEDURE IsNonSecProc*(addr: INTEGER): BOOLEAN;
+  RETURN FALSE
+  END IsNonSecProc;
 
 END Secure.

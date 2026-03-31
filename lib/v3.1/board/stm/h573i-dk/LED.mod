@@ -1,7 +1,7 @@
 MODULE LED;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Red, blue, orange and green user LEDs
   --

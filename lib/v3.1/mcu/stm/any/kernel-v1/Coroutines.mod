@@ -1,13 +1,13 @@
 MODULE Coroutines;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Simple coroutines
   --
   MCU: STM32U585AI, STM32H573II
   --
-  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  Copyright (c) 2020-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

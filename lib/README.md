@@ -1,6 +1,6 @@
 # Oberon RTK Modules Library
 
-Versions lib/v1.0, lib/v2.0, lib/2.1, lib/v3.0
+Versions lib/v1.0, lib/v2.0, lib/2.1, lib/v3.0, lib/v3.1
 
 ```
 + lib
@@ -39,7 +39,7 @@ Versions lib/v1.0, lib/v2.0, lib/2.1, lib/v3.0
         + any
         + rp2040: RP2040
         + rp2350: RP2350
-  + v3.0, v3.1:
+  + v3.0:
     + any: generic, hardware independent
     + board: board-specific, possibly with external components and wiring
       + rpi: raspberry pi
@@ -67,6 +67,33 @@ Versions lib/v1.0, lib/v2.0, lib/2.1, lib/v3.0
         + any
         + stm32h573: STM32H573
         + stm32u585: STM32U585
+  + v3.1:
+    + any: generic, hardware independent
+    + board: board-specific, possibly with external components and wiring
+      + rpi: raspberry pi
+        + any
+        + pico: Pico/RP2040
+        + pico2: Pico2/RP2350
+      + tvi: tiny vision
+        + pico2-ice
+      + nxp: nxp semi
+        + frdm-mcxa436
+        + frdm-mcxn947
+      + stm: st micro
+        + h573-dk
+        + u585i-iot
+    + mcu: MCU-specific
+      + m33: cortex-m33 definitions
+      + rpi: raspberry pi
+        + any
+        + rp2040: RP2040
+        + rp2350: RP2350
+      + nxp: nxp semi
+        + any
+        + mcxa346: MCXA346
+        + mcxn947: MCXN947
+      + stm: st micro
+        + any
+        + stm32h573: STM32H573
+        + stm32u585: STM32U585
 ```
-
-[https://oberon-rtk.org/docs/lib/](https://oberon-rtk.org/docs/lib/)

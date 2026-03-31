@@ -678,8 +678,13 @@ def ensure_system_import(lines):
             indent = m.group(1)
             keyword = m.group(2)
             rest = m.group(3)
-            # check if SYSTEM is already imported (as a whole word)
-            if re.search(r'\bSYSTEM\b', rest):
+            # scan all lines of the IMPORT statement (until semicolon)
+            import_text = rest
+            for j in range(i + 1, len(lines)):
+                import_text += lines[j]
+                if ';' in lines[j]:
+                    break
+            if re.search(r'\bSYSTEM\b', import_text):
                 return False
             # insert SYSTEM after IMPORT keyword
             lines[i] = f'{indent}{keyword} SYSTEM,{rest}'

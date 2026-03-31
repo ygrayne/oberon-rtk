@@ -1,9 +1,9 @@
 MODULE TZ;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
-  TrustZone Support
+  TrustZone Support (will possibly be integrated into Secure.mod)
   --
   Type: MCU
   --
@@ -13,7 +13,7 @@ MODULE TZ;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2;
+  IMPORT SYSTEM;
 
   CONST
     TT* = 0;

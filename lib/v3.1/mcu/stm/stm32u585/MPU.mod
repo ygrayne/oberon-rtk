@@ -1,7 +1,7 @@
 MODULE MPU;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Memory Protection Unit
   --
@@ -13,7 +13,7 @@ MODULE MPU;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2;
+  IMPORT SYSTEM, PPB;
 
   CONST
     (* MAIR0, MAIR1 *)
@@ -75,20 +75,20 @@ MODULE MPU;
 
   PROCEDURE* GetNumRegions*(VAR num: INTEGER);
   BEGIN
-    SYSTEM.GET(MCU.PPB_MPU_TYPE, num);
+    SYSTEM.GET(PPB.PPB_MPU_TYPE, num);
     num := BFX(num, 15, 8)
   END GetNumRegions;
 
 
   PROCEDURE* GetRegion*(ri: INTEGER; VAR region: Region);
   BEGIN
-    SYSTEM.PUT(MCU.PPB_MPU_RNR, ri);
-    SYSTEM.GET(MCU.PPB_MPU_RBAR, region.rbar);
+    SYSTEM.PUT(PPB.PPB_MPU_RNR, ri);
+    SYSTEM.GET(PPB.PPB_MPU_RBAR, region.rbar);
     region.base := BFX(region.rbar, 31, 5) * 32;
     region.sh := BFX(region.rbar, 4, 3);
     region.ap := BFX(region.rbar, 2, 1);
     region.xn := BFX(region.rbar, 0);
-    SYSTEM.GET(MCU.PPB_MPU_RLAR, region.rlar);
+    SYSTEM.GET(PPB.PPB_MPU_RLAR, region.rlar);
     region.limit := (BFX(region.rlar, 31, 5) * 32) + 01FH;
     region.ai := BFX(region.rlar, 3, 1);
     region.en := BFX(region.rlar, 0)
@@ -107,16 +107,16 @@ MODULE MPU;
     rlar := rlar + LSL(cfg.ai, 1);
     rlar := rlar + 1;
 
-    SYSTEM.PUT(MCU.PPB_MPU_RNR, rnr);
-    SYSTEM.PUT(MCU.PPB_MPU_RBAR, rbar);
-    SYSTEM.PUT(MCU.PPB_MPU_RLAR, rlar)
+    SYSTEM.PUT(PPB.PPB_MPU_RNR, rnr);
+    SYSTEM.PUT(PPB.PPB_MPU_RBAR, rbar);
+    SYSTEM.PUT(PPB.PPB_MPU_RLAR, rlar)
   END SetRegion;
 
 
   PROCEDURE* SetAttribute*(ai: INTEGER; outer, inner: SET);
     VAR addr: INTEGER; val, attr: INTEGER;
   BEGIN
-    addr := MCU.PPB_MPU_MAIR0 + (ai DIV 4) * 4;
+    addr := PPB.PPB_MPU_MAIR0 + (ai DIV 4) * 4;
     attr := LSL(ORD(outer), 4) + ORD(inner);
     SYSTEM.GET(addr, val);
     SYSTEM.PUT(addr, val + LSL(attr, (ai MOD 4) * 8))
@@ -125,7 +125,7 @@ MODULE MPU;
 
   PROCEDURE* Enable*;
   BEGIN
-    SYSTEM.PUT(MCU.PPB_MPU_CTRL, {0})
+    SYSTEM.PUT(PPB.PPB_MPU_CTRL, {0})
   END Enable;
 
 END MPU.

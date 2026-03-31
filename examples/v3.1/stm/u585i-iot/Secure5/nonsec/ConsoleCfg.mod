@@ -1,0 +1,61 @@
+MODULE ConsoleCfg;
+(**
+  Oberon RTK Framework
+  Version: v3.1
+  --
+  Program Secure5
+  Program-specific console configuration, NS program.
+  Since S has set up the UART, NS simply creates a UART device "cloak" RECORD
+  to access the UART hardware with NS addresses;
+  --
+  MCU: STM32U585AI
+  Board: B-U585I-IOT02A
+  --
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT UART, UARTdef, UARTstr, TextIO, Out, In, Errors;
+
+  CONST
+    SYSTERM0* = 0;
+    NumSysTerms* = 1;
+    UART0 = UARTdef.USART1;
+
+  TYPE
+    Ws* = ARRAY NumSysTerms OF TextIO.Writer;
+    Rs* = ARRAY NumSysTerms OF TextIO.Reader;
+
+  VAR
+    Wsys*, Werr*: Ws;
+    Rsys*: Rs;
+
+  (* terminal *)
+  PROCEDURE installTerm(termNo: INTEGER; dev: TextIO.Device; pspStd, pspErr: TextIO.PutStringProc; gspStd: TextIO.GetStringProc);
+  BEGIN
+    NEW(Wsys[termNo]); ASSERT(Wsys[termNo] # NIL, Errors.HeapOverflow);
+    NEW(Rsys[termNo]); ASSERT(Rsys[termNo] # NIL, Errors.HeapOverflow);
+    NEW(Werr[termNo]); ASSERT(Werr[termNo] # NIL, Errors.HeapOverflow);
+    TextIO.OpenWriter(Wsys[termNo], dev, pspStd);
+    TextIO.OpenReader(Rsys[termNo], dev, gspStd);
+    TextIO.OpenWriter(Werr[termNo], Wsys[termNo].dev, pspErr)
+  END installTerm;
+
+
+  PROCEDURE Init*;
+    VAR uartDev: UART.Device;
+  BEGIN
+    NEW(uartDev); ASSERT(uartDev # NIL, Errors.HeapOverflow);
+    UART.Init(uartDev, UART0);
+
+    (* install one system terminal *)
+    installTerm(SYSTERM0, uartDev, UARTstr.PutString, UARTstr.PutString, UARTstr.GetString);
+
+    (* Out/In wrappers *)
+    Out.Open(Wsys[SYSTERM0]);
+    In.Open(Rsys[SYSTERM0])
+  END Init;
+
+BEGIN
+  Wsys[0] := NIL; Rsys[0] := NIL; Werr[0] := NIL
+END ConsoleCfg.

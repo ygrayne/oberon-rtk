@@ -1,7 +1,7 @@
 MODULE SysTick;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   System tick for kernel-v4
   --
@@ -11,19 +11,18 @@ MODULE SysTick;
   HCLK/8 with HCLK at 160 MHz, this limits the maximum achievable SysTick interval to
   about 800 ms.
   --
-  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  Copyright (c) 2020-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYST, CLK, Clocks;
+  IMPORT SYST, RST, CFG := DEV2, ClockCfg;
 
 
   PROCEDURE Config*(msPerTick: INTEGER; handler: PROCEDURE; prio: INTEGER);
-    CONST TwoBits = 2;
   BEGIN
-    CLK.ConfigDevClock(SYST.CLK_HCLK, CLK.CLK_SYST_REG, CLK.CLK_SYST_POS, TwoBits);
+    RST.ConfigDevClock(SYST.CLK_HCLK, CFG.SYSTICK_FC_reg, CFG.SYSTICK_FC_pos, CFG.SYSTICK_FC_width);
     SYST.InstallExcHandler(handler, prio);
-    SYST.Configure(Clocks.HCLK_FRQ DIV 8, msPerTick)
+    SYST.Configure(ClockCfg.HCLK_FRQ DIV 8, msPerTick)
   END Config;
 
 

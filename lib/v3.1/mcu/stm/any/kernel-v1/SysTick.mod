@@ -1,24 +1,23 @@
 MODULE SysTick;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   System tick for kernel-v1
   --
   MCU: STM32U585AI, STM32H573II
   --
-  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  Copyright (c) 2020-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYST, CLK, Clocks;
+  IMPORT SYST, RST, CFG := DEV2, ClockCfg;
 
 
   PROCEDURE Config*(msPerTick: INTEGER);
-    CONST TwoBits = 2;
   BEGIN
-    CLK.ConfigDevClock(SYST.CLK_HCLK, CLK.CLK_SYST_REG, CLK.CLK_SYST_POS, TwoBits);
-    SYST.Configure(Clocks.HCLK_FRQ DIV 8, msPerTick)
+    RST.ConfigDevClock(SYST.CLK_HCLK, CFG.SYSTICK_FC_reg, CFG.SYSTICK_FC_pos, CFG.SYSTICK_FC_width);
+    SYST.Configure(ClockCfg.HCLK_FRQ DIV 8, msPerTick)
   END Config;
 
 

@@ -1,7 +1,7 @@
 MODULE Kernel;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Multi-threading kernel v1
   --
@@ -12,15 +12,15 @@ MODULE Kernel;
   --
   MCU: STM32U585AI, STM32H573II
   --
-  Copyright (c) 2020-2025 Gray gray@grayraven.org
+  Copyright (c) 2020-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Config, Coroutines, Memory, SysTick, Cores, MCU := MCU2, Errors;
+  IMPORT SYSTEM, PPB, ASM, MemCfg, Coroutines, Memory, SysTick, Cores, Errors;
 
   CONST
     MaxNumThreads* = 16;
-    NumCores = Config.NumCoresUsed;
+    NumCores = MemCfg.NumCoresUsed;
 
     (* result codes *)
     OK* = 0;
@@ -274,7 +274,7 @@ MODULE Kernel;
     VAR tid, cid: INTEGER; t, t0: Thread; ctx: CoreContext; devFlags: SET;
   BEGIN
     Cores.GetCoreId(cid);;
-    Memory.ResetMainStack; (* for clean stack traces in main stack *)
+    Memory.ResetMainStack;
     ctx := coreCon[cid];
     ctx.Ct := NIL;
     REPEAT
@@ -358,11 +358,11 @@ MODULE Kernel;
     Cores.GetCoreId(cid);
     (* set PSP to current MSP *)
     SYSTEM.LDREG(R11, SYSTEM.REG(SP));
-    SYSTEM.EMIT(MCU.MSR_PSP_R11);
+    SYSTEM.EMIT(ASM.MSR_PSP_R11);
     (* enable PSP use *)
-    SYSTEM.LDREG(R11, ORD({MCU.CONTROL_SPSEL}));
-    SYSTEM.EMIT(MCU.MSR_CTL_R11);
-    SYSTEM.EMIT(MCU.ISB);
+    SYSTEM.LDREG(R11, ORD({PPB.CONTROL_SPSEL}));
+    SYSTEM.EMIT(ASM.MSR_CTL_R11);
+    SYSTEM.EMIT(ASM.ISB);
     (* from here, we use the PSP *)
     (* still in main stack memory *)
     SysTick.Enable;
