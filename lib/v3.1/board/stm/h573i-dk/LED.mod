@@ -5,8 +5,6 @@ MODULE LED;
   --
   Red, blue, orange and green user LEDs
   --
-  Type: Board
-  --
   MCU: STM32H573II
   Board: STM32H573I-DK
   --
@@ -22,18 +20,17 @@ MODULE LED;
     SYSTEM.PUT(LED.LCLR, {LED.Red})
     (* no XOR in hardware *)
   --
-  Copyright (c) 2023-2025 Gray gray@grayraven.org
+  Copyright (c) 2023-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, CLK, GPIO;
+  IMPORT SYSTEM, GPIO, DEV := GPIO_DEV;
 
   CONST
     LEDredPinNo = 1; (* port F *)
     LEDbluePinNo = 4; (* port F *)
     LEDorangePinNo = 8; (* port I *)
     LEDgreenPinNo = 9;  (* port I *)
-
 
     Pico* = LEDgreenPinNo;
     Red* = LEDredPinNo;
@@ -43,13 +40,13 @@ MODULE LED;
 
     LEDx = {LEDredPinNo, LEDbluePinNo, LEDorangePinNo, LEDgreenPinNo};
 
+    (* note: active low *)
     (* red and blue *)
-    LSET0* = MCU.GPIOF_BASE + MCU.GPIO_BRR_Offset;
-    LCLR0* = MCU.GPIOF_BASE + MCU.GPIO_BSRR_Offset;
-
+    LSET0* = DEV.GPIOF_BASE + DEV.GPIO_BRR_Offset;
+    LCLR0* = DEV.GPIOF_BASE + DEV.GPIO_BSRR_Offset;
     (* orange and green *)
-    LSET1* = MCU.GPIOI_BASE + MCU.GPIO_BRR_Offset;
-    LCLR1* = MCU.GPIOI_BASE + MCU.GPIO_BSRR_Offset;
+    LSET1* = DEV.GPIOI_BASE + DEV.GPIO_BRR_Offset;
+    LCLR1* = DEV.GPIOI_BASE + DEV.GPIO_BSRR_Offset;
 
     LED0 = {LEDredPinNo, LEDbluePinNo};
     LED1 = {LEDorangePinNo, LEDgreenPinNo};
@@ -75,46 +72,30 @@ MODULE LED;
   END Clear;
 
 
-  PROCEDURE* Toggle*(leds: SET);
-    VAR led0, led1, val, rst, set: SET;
+  PROCEDURE Toggle*(leds: SET);
+    VAR led0, led1: SET;
   BEGIN
     led0 := leds * LED0;
     IF led0 # {} THEN
-      SYSTEM.GET(MCU.GPIOF_BASE + MCU.GPIO_ODR_Offset, val);
-      val := val * led0;
-      rst := BITS(LSL(ORD(val), 16));
-      set := val / led0;
-      val := set + rst;
-      SYSTEM.PUT(MCU.GPIOF_BASE + MCU.GPIO_BSRR_Offset, val)
+      GPIO.Toggle(GPIO.PORTF, led0)
     END;
     led1 := leds * LED1;
     IF led1 # {} THEN
-      SYSTEM.GET(MCU.GPIOI_BASE + MCU.GPIO_ODR_Offset, val);
-      val := val * led1;
-      rst := BITS(LSL(ORD(val), 16));
-      set := val / led1;
-      val := set + rst;
-      SYSTEM.PUT(MCU.GPIOI_BASE + MCU.GPIO_BSRR_Offset, val)
+      GPIO.Toggle(GPIO.PORTI, led1)
     END
   END Toggle;
 
 
-  PROCEDURE init;
-    VAR cfg: GPIO.PadCfg;
+  PROCEDURE Config*;
+    VAR cfg: GPIO.PinCfg;
   BEGIN
+    GPIO.GetPinBaseCfg(cfg);
     cfg.mode := GPIO.ModeOut;
-    cfg.type := GPIO.TypePushPull;
-    cfg.speed := GPIO.SpeedLow;
-    cfg.pulls := GPIO.PullNone;
-    CLK.EnableBusClock(MCU.DEV_GPIOF);
-    GPIO.ConfigurePad(MCU.PORTF, LEDredPinNo, cfg);
-    GPIO.ConfigurePad(MCU.PORTF, LEDbluePinNo, cfg);
-    CLK.EnableBusClock(MCU.DEV_GPIOI);
-    GPIO.ConfigurePad(MCU.PORTI, LEDorangePinNo, cfg);
-    GPIO.ConfigurePad(MCU.PORTI, LEDgreenPinNo, cfg);
+    GPIO.ConfigurePin(GPIO.PORTF, LEDredPinNo, cfg);
+    GPIO.ConfigurePin(GPIO.PORTF, LEDbluePinNo, cfg);
+    GPIO.ConfigurePin(GPIO.PORTI, LEDorangePinNo, cfg);
+    GPIO.ConfigurePin(GPIO.PORTI, LEDgreenPinNo, cfg);
     Clear(LEDx)
-  END init;
+  END Config;
 
-BEGIN
-  init
 END LED.

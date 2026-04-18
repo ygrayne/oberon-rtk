@@ -11,19 +11,27 @@ in the rdb directory. Supports:
   - ARM ELF attributes (.ARM.attributes section)
 --
 Usage:
-    python make-elf.py <binary:address> [options]
+    python make-elf.py [binary:address ...] [options]
 
-    --debug             Include DWARF debug sections
-    --bss START:END     BSS memory range (auto-detected from .map if omitted)
+    --debug             Include DWARF debug sections (implies --symbols)
+    --symbols           Include procedure/variable symbols (requires rdb/)
+    --sym-prefix P      Prefix all symbols with P_ (e.g. S for Secure)
     --image-def         Prepend RP2350 IMAGE_DEF block
     --rdb-dir DIR       Listing directory (default: rdb)
+    --bss START:END     BSS memory range (auto-detected from .map if omitted)
     --map FILE          Map file (default: auto-detect)
-    --sym-prefix P      Prefix all symbols with P_ (e.g. S for Secure)
+    --entry ADDR        Override entry address (hex)
+    --no-main           Suppress main/startup symbols
+    -o FILE             Output file (default: <binary>.elf)
+    -e EXT              Source file extension (default: .alst)
+    --nxp               NXP-specific modifications
+    -l, --source-lines  Map to Oberon source lines (experimental)
 
 Example:
-    python make-elf.py SignalSync.bin:0C000000 --debug
+    python make-elf.py SignalSync.bin
+    python make-elf.py SignalSync.bin --debug
     python make-elf.py SignalSync.bin:10000100 --debug --image-def
-    python make-elf.py SignalSync.bin:0C000000 --debug --sym-prefix S
+    python make-elf.py S.bin:C000000 NSC.bin:C0FE000 --debug --sym-prefix S
 --
 Copyright (c) 2024-2026 Gray, gray@grayraven.org
 https://oberon-rtk.org/licences/
@@ -883,7 +891,7 @@ def main():
                                         r'|[^/:]+)(?::(.+))?$')
 
     parser = argparse.ArgumentParser(
-        prog = 'makeelf',
+        prog = 'make-elf',
         description =
         """Create an .elf file from binary files, with optional DWARF debug data.
         Each binary file is given as 'file_name:load_address'.
@@ -899,15 +907,22 @@ def main():
     )
     parser.add_argument('bin_files', type=str, nargs='*', help="binary files (.bin), as 'bin_file:load_addr'")
     parser.add_argument('-v', action='store_true', dest='verbose', help="print feedback")
-    parser.add_argument('-o', type=str, dest='out_file', help="output file (.elf), default: first bin_file.elf or <rdb-parent>.elf")
+    parser.add_argument('--debug', action='store_true', dest='include_debug',
+                        help="include .debug_* sections (line numbers, frame info, etc.); "
+                             "implies --symbols")
+    parser.add_argument('--symbols', action='store_true', dest='include_symbols',
+                        help="include procedure and variable symbols from listing files "
+                             "(requires rdb/ directory from gen-rdb)")
+    parser.add_argument('--sym-prefix', type=str,
+                        dest='symbol_prefix', default='',
+                        help="prefix all symbol names with PREFIX_ (e.g. S for Secure, "
+                             "NS for Non-Secure) for TrustZone dual-image debugging")
+    parser.add_argument('--image-def', action='store_true', dest='image_def',
+                        help="prepend a 256-byte RP2350 IMAGE_DEF metadata block "
+                             "at code_base - 0x100 (enables standalone boot after "
+                             "GDB/OpenOCD flash programming)")
     parser.add_argument('--rdb-dir', type=str, dest='rdb_dir', default='rdb',
                         help="directory with listing files (default: rdb)")
-    parser.add_argument('-e', type=str, dest='src_ext', default=None,
-                        help="source file extension including dot (default: .alst)")
-    parser.add_argument('-l', '--source-lines', action='store_true', dest='source_lines',
-                        help="map addresses to Oberon source lines instead of assembly lines (requires --debug)")
-    parser.add_argument('--debug', action='store_true', dest='include_debug',
-                        help="include .debug_* sections (line numbers, frame info, etc.)")
     parser.add_argument('--bss', type=str, dest='bss_range', default=None,
                         help="RAM data region: 'start_addr:end_addr' (hex; accepts 0x prefix or H postfix). "
                              "Adds a SHT_NOBITS .bss section and PT_LOAD segment so the debugger "
@@ -917,22 +932,23 @@ def main():
     parser.add_argument('--map', type=str, dest='map_file', default=None,
                         help="path to .map file for global variable addresses "
                              "(auto-detected as <binary>.map if not given)")
-    parser.add_argument('--no-main', action='store_true', dest='no_main',
-                        help="do not add 'main' and 'startup' symbols at the entry point")
     parser.add_argument('--entry', type=str, dest='entry_addr', default=None,
                         help="entry address (hex) for 'main'/'startup' symbols and e_entry; "
                              "needed in no-binary mode when --no-main is not set")
-    parser.add_argument('--image-def', action='store_true', dest='image_def',
-                        help="prepend a 256-byte RP2350 IMAGE_DEF metadata block "
-                             "at code_base - 0x100 (enables standalone boot after "
-                             "GDB/OpenOCD flash programming)")
-    parser.add_argument('--sym-prefix', '--symbol-prefix', type=str,
-                        dest='symbol_prefix', default='',
-                        help="prefix all symbol names with PREFIX_ (e.g. S for Secure, "
-                             "NS for Non-Secure) for TrustZone dual-image debugging")
+    parser.add_argument('--no-main', action='store_true', dest='no_main',
+                        help="do not add 'main' and 'startup' symbols at the entry point")
+    parser.add_argument('-o', type=str, dest='out_file', help="output file (.elf), default: first bin_file.elf or <rdb-parent>.elf")
+    parser.add_argument('-e', type=str, dest='src_ext', default=None,
+                        help="source file extension including dot (default: .alst)")
     parser.add_argument('--nxp', action='store_true', dest='nxp',
-                                            help="make NXP-specific modifications")
+                        help="make NXP-specific modifications")
+    parser.add_argument('-l', '--source-lines', action='store_true', dest='source_lines',
+                        help="map addresses to Oberon source lines instead of assembly lines (requires --debug)")
     args = parser.parse_args()
+
+    # --debug implies --symbols
+    if args.include_debug:
+        args.include_symbols = True
 
     file_re = re.compile(_file_pat0)
 
@@ -953,6 +969,9 @@ def main():
                     load_addr = parse_hex(addr_str)
                 except:
                     print(f'{PROG_NAME}: {file} enter addresses in hexadecimal format')
+                    sys.exit(1)
+                if load_addr > 0xFFFFFFFF:
+                    print(f'{PROG_NAME}: {file} address {addr_str} exceeds 32-bit range')
                     sys.exit(1)
             else:
                 load_addr = None
@@ -1012,16 +1031,20 @@ def main():
         if i == 0:
             entry_addr = bin_file.entry_addr
 
+    # --entry overrides entry address from binary (or sets it in no-binary mode)
+    if args.entry_addr is not None:
+        try:
+            entry_addr = parse_hex(args.entry_addr)
+        except:
+            print(f'{PROG_NAME}: --entry: invalid hex address \'{args.entry_addr}\'')
+            sys.exit(1)
+        if entry_addr > 0xFFFFFFFF:
+            print(f'{PROG_NAME}: --entry: address {args.entry_addr} exceeds 32-bit range')
+            sys.exit(1)
+
     # no-binary mode: debug-only ELF
     if not bin_files:
-        if args.entry_addr is not None:
-            try:
-                entry_addr = parse_hex(args.entry_addr)
-            except:
-                print(f'{PROG_NAME}: --entry: invalid hex address \'{args.entry_addr}\'')
-                sys.exit(1)
-        else:
-            entry_addr = 0
+        if entry_addr == 0:
             if not args.no_main and args.verbose:
                 print(f'{PROG_NAME}: no binary and no --entry: main symbol will not be added; '
                       f'use --entry=<hex> to specify the entry address')
@@ -1040,6 +1063,7 @@ def main():
         if not args.include_debug:
             # debug sections are the primary purpose of no-binary mode; auto-enable
             args.include_debug = True
+            args.include_symbols = True
             if args.verbose:
                 print(f'no binary: --debug auto-enabled')
 
@@ -1081,54 +1105,54 @@ def main():
             bss_range = (ds, de - ds)
             bss_from_map = True
 
-    # --- locate listing files ---
+    # --- locate listing files and extract symbols ---
     debug_data = None
     db_dir = Path(args.rdb_dir).resolve()
     rdb_path = Path(args.rdb_dir)
     src_subdir = rdb_path.name
     comp_dir = str(rdb_path.parent)
 
-    if db_dir.is_dir():
-        # auto-detect ARM attributes config file
-        arm_attr_cfg = db_dir / ARM_ATTR_CFG
-        if arm_attr_cfg.is_file():
+    if args.include_symbols:
+        # --symbols or --debug: extract symbols from listing files
+        if db_dir.is_dir():
+            # auto-detect ARM attributes config file
+            arm_attr_cfg = db_dir / ARM_ATTR_CFG
+            if arm_attr_cfg.is_file():
+                if args.verbose:
+                    print(f'ARM attributes: {arm_attr_cfg}')
+            else:
+                arm_attr_cfg = None
+                if args.verbose:
+                    print(f'ARM attributes: no {ARM_ATTR_CFG} in {src_subdir}/')
+
             if args.verbose:
-                print(f'ARM attributes: {arm_attr_cfg}')
+                if map_file:
+                    print(f'map file: {map_file}')
+                elif args.include_debug:
+                    print(f'map file: none (global variable addresses not available)')
+
+            debug_data = elfdata.extract(db_dir, src_subdir, args.src_ext,
+                                           source_lines=(args.source_lines and args.include_debug),
+                                           arm_attr_cfg=arm_attr_cfg,
+                                           map_file=map_file, comp_dir=comp_dir,
+                                           symbol_prefix=args.symbol_prefix)
+
+            if args.verbose:
+                print(f'debug: {len(debug_data.procedures)} symbols from {src_subdir}/')
+                if args.include_debug:
+                    n_lines = sum(len(m.line_entries) for m in debug_data.modules)
+                    print(f'  {n_lines} line entries')
+                    if args.source_lines:
+                        print(f'  line mapping: source-level (Oberon source lines)')
+                print(f'  symtab names: dots replaced by underscores '
+                      f'(e.g. SignalSync.run => SignalSync_run)')
         else:
-            arm_attr_cfg = None
-            if args.verbose:
-                print(f'ARM attributes: no {ARM_ATTR_CFG} in {src_subdir}/')
-
-        if args.verbose:
-            if map_file:
-                print(f'map file: {map_file}')
-            elif args.include_debug:
-                print(f'map file: none (global variable addresses not available)')
-
-        # listing directory exists — extract symbols (always)
-        debug_data = elfdata.extract(db_dir, src_subdir, args.src_ext,
-                                       source_lines=(args.source_lines and args.include_debug),
-                                       arm_attr_cfg=arm_attr_cfg,
-                                       map_file=map_file, comp_dir=comp_dir,
-                                       symbol_prefix=args.symbol_prefix)
-
-        if args.verbose:
-            print(f'debug: {len(debug_data.procedures)} symbols from {src_subdir}/')
-            if args.include_debug:
-                n_lines = sum(len(m.line_entries) for m in debug_data.modules)
-                print(f'  {n_lines} line entries')
-                if args.source_lines:
-                    print(f'  line mapping: source-level (Oberon source lines)')
-            print(f'  symtab names: dots replaced by underscores '
-                  f'(e.g. SignalSync.run => SignalSync_run)')
-    else:
-        # listing directory not found
-        if args.include_debug:
-            print(f'{PROG_NAME}: --debug requires listing files, '
-                  f'but directory \'{args.rdb_dir}\' not found')
+            print(f'{PROG_NAME}: --{"debug" if args.include_debug else "symbols"} '
+                  f'requires listing files, but directory \'{args.rdb_dir}\' not found')
             sys.exit(1)
+    else:
         if args.verbose:
-            print(f'no listing files (directory \'{args.rdb_dir}\' not found)')
+            print(f'symbols: none (use --symbols or --debug with gen-rdb listing files)')
 
     if args.verbose:
         print(f'ELF file: {args.out_file}')

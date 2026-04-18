@@ -5,9 +5,7 @@ MODULE SAU;
   --
   Security Attribution Unit
   --
-  Type: Cortex-M33
-  --
-  MCU: STM32U585AI
+  MCU: STM32U585AI, STM32H573II
   --
   Copyright (c) 2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

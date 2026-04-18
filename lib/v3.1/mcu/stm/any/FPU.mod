@@ -5,13 +5,11 @@ MODULE FPU;
   --
   FPU control/mgmt
   --
-  Type: Cortex-M33
+  - Single-image Main: FPU.Enable
+  - S-image Main: FPU.Enable; FPU.EnableNSaccess; FPU.SetSecure
+  - NS-image Main: FPU.Enable (NSACR already set by S)
   --
-  - Single-image Main: FPU.Init
-  - S-image Main: FPU.Init; FPU.EnableNSaccess; FPU.SetSecure
-  - NS-image Main: FPU.Init (NSACR already set by S)
-  --
-  MCU: STM32U585AI
+  MCU: STM32U585AI, STM32H573II
   --
   Copyright (c) 2024-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -19,7 +17,7 @@ MODULE FPU;
 
   IMPORT SYSTEM, PPB;
 
-  PROCEDURE* Init*;
+  PROCEDURE* Enable*;
   (* Enable FPU: full access. Called from every image (S, NS, single). Per-core. *)
     CONST CP10 = {20, 21}; CP11 = {22, 23};
     VAR val: SET;
@@ -34,7 +32,7 @@ MODULE FPU;
     SYSTEM.EMIT(0F3BF8F4FH);  (* dsb *)
     SYSTEM.EMIT(0F3BF8F6FH);  (* isb *)
     (* -asm *)
-  END Init;
+  END Enable;
 
 
   PROCEDURE* EnableNSaccess*;

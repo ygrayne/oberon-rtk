@@ -14,7 +14,7 @@ MODULE Stacktrace;
   Please refer to the licensing conditions as defined at the end of this file.
 **)
 
-  IMPORT SYSTEM, ProgData, RuntimeErrors;
+  IMPORT SYSTEM, PPB, ProgData, RuntimeErrors;
 
   CONST
     TraceDepth* = 16;
@@ -40,6 +40,15 @@ MODULE Stacktrace;
     SubT2rdMask = 08F00H;
     SubT2rdVal  = 00D00H;
 
+    (* movw (MOVW T3) identification — for register-based sub *)
+    MovwT3mask  = 0FBF0H;
+    MovwT3val   = 0F240H;
+
+    (* sub.w sp, sp, rN (SUB register) identification *)
+    SubRegHw1    = 0EBADH;
+    SubRegRdMask = 0FF00H;
+    SubRegRdVal  = 00D00H;
+
 
     (* trace capturing *)
     ExcRetPattern = 01FFFFFFH; (* [31:7] *)
@@ -54,8 +63,8 @@ MODULE Stacktrace;
     (*ExtStateContextSize = 10 * 4;*) (* already accounted for by RuntimeErrors.excHandler *)
     FPcontextSize = 18 * 4;
     FPadditionalSize = 16 * 4;
-    EXC_RET_DCRS  = 5;      (* = 0: all CPU regs stacked by hardware, extended state context *)
-    EXC_RET_FType = 4;      (* = 0: all FPU regs stacked by hardware, extended FPU context *)
+    (*EXC_RET_DCRS  = 5;*)  (* = 0: all CPU regs stacked by hardware, extended state context *)
+    EXC_RET_FType = 4;      (* = 0: caller FPU regs stacked by hardware *)
 
     (* register offsets from stacked r0 *)
     PSRoffset = 28;
@@ -74,8 +83,7 @@ MODULE Stacktrace;
     Trace* = RECORD
       tp*: ARRAY TraceDepth OF TracePoint;
       count*: INTEGER;
-      more*: BOOLEAN;
-      error*: BOOLEAN
+      more*: BOOLEAN
     END;
 
     StackedRegs* = RECORD
@@ -148,6 +156,15 @@ MODULE Stacktrace;
   END decodeThumbModImm;
 
 
+  PROCEDURE* decodeMovwImm(hw1, hw2: INTEGER): INTEGER;
+  (* decode 16-bit immediate from MOVW T3 encoding *)
+  (* hw1: first halfword, hw2: second halfword *)
+  (* imm16 = imm4:i:imm3:imm8 *)
+    RETURN LSL(BFX(hw1, 3, 0), 12) + LSL(BFX(hw1, 10, 10), 11)
+         + LSL(BFX(hw2, 14, 12), 8) + BFX(hw2, 7, 0)
+  END decodeMovwImm;
+
+
   PROCEDURE getFrameSize(addr: INTEGER; VAR frameSize: INTEGER);
   (* addr: procedure entry address (from ProgData)
      frameSize: total frame size in bytes (push + sub)
@@ -183,6 +200,19 @@ MODULE Stacktrace;
         getHalfWord(subAddr + 2, hw2);
         IF BITS(hw2) * BITS(SubT2rdMask) = BITS(SubT2rdVal) THEN
           nSub := decodeThumbModImm(hw1, hw2) DIV 4
+        END
+      ELSIF BITS(hw1) * BITS(MovwT3mask) = BITS(MovwT3val) THEN
+        (* movw rN, #imm16: check if followed by sub.w sp, sp, rN *)
+        getHalfWord(subAddr + 2, hw2);
+        getHalfWord(subAddr + 4, hw1);
+        IF hw1 = SubRegHw1 THEN
+          getHalfWord(subAddr + 6, hw2);
+          IF BITS(hw2) * BITS(SubRegRdMask) = BITS(SubRegRdVal) THEN
+            (* verified: movw + sub.w sp, sp, rN sequence *)
+            getHalfWord(subAddr, hw1);
+            getHalfWord(subAddr + 2, hw2);
+            nSub := decodeMovwImm(hw1, hw2) DIV 4
+          END
         END
       END
     END;
@@ -225,13 +255,13 @@ MODULE Stacktrace;
 
   PROCEDURE* traceStart(stackframeBase, excRetVal: INTEGER): INTEGER;
   (* calculate the start/re-start addr for tracing above an exc stack frame *)
-    CONST StackAlign = 9; (* in stacked PSR *)
+    CONST StackAlign = 9; (* in stacked PSR *) TS = 26;
     VAR startAddr: INTEGER;
   BEGIN
     startAddr := stackframeBase + StateContextSize;
     IF ~(EXC_RET_FType IN BITS(excRetVal)) THEN (* FP context *)
       startAddr := startAddr + FPcontextSize;
-      IF ~(EXC_RET_DCRS IN (BITS(excRetVal))) THEN (* additional FP context *)
+      IF SYSTEM.BIT(PPB.FPCCR, TS) THEN (* additional FP context: callee saved regs *)
         startAddr := startAddr + FPadditionalSize;
       END
     END;
@@ -242,19 +272,19 @@ MODULE Stacktrace;
   END traceStart;
 
 
-  PROCEDURE stacktrace(frameBaseAddr, frameSize: INTEGER; VAR trace: Trace);
+  PROCEDURE trace(frameBaseAddr, frameSize: INTEGER; VAR trace: Trace);
     VAR
       savedLR, excFrameBase, codeAddr, lineNo: INTEGER;
       procEntry, aboveWord: INTEGER;
-      done, error: BOOLEAN;
+      done: BOOLEAN;
   BEGIN
-    done := FALSE; error := FALSE;
-    WHILE ~done & ~error & (trace.count < TraceDepth) DO
+    done := FALSE;
+    WHILE ~done & (trace.count < TraceDepth) DO
       (* each iteration starts with sp = base addr of a procedure stack frame *)
       (* and frameSize = size of that stack frame *)
 
       (* read saved LR from current frame *)
-      (* LR is always on top of the frame *)
+      (* LR is always at top of the frame *)
       SYSTEM.GET(frameBaseAddr + frameSize - 4, savedLR);
 
       IF isExcReturn(savedLR) THEN
@@ -264,9 +294,9 @@ MODULE Stacktrace;
         (* check for MSP to PSP transition *)
         SYSTEM.GET(excFrameBase, aboveWord);
         IF aboveWord = StackSeal THEN (* MSP exhausted, exception frame is on PSP *)
-          (* ASM
+          (* asm
             mrs r11, psp -> excFrameBase
-          END ASM *)
+          end asm *)
           (* +asm *)
           SYSTEM.EMIT(0F3EF8B09H);  (* mrs r11, PSP *)
           excFrameBase := SYSTEM.REG(11);  (* r11 -> excFrameBase *)
@@ -276,23 +306,20 @@ MODULE Stacktrace;
         (* to calculate frameSize to prep the next iteration *)
         SYSTEM.GET(excFrameBase + PCoffset, codeAddr);
         ProgData.FindEntry(codeAddr, procEntry);
-        error := procEntry = 0;
-        IF ~error THEN
+        done := procEntry = 0;
+        IF ~done THEN
           ProgData.GetCodeAddr(procEntry, codeAddr);
           frameBaseAddr := traceStart(excFrameBase, savedLR); (* base SP of interrupted proc *)
           getFrameSize(codeAddr, frameSize);
-          error := frameSize = 0;
-          IF ~error THEN
-            addTP(trace, codeAddr, 0, frameBaseAddr, frameSize, AnnStackframe);
-          END
+          addTP(trace, codeAddr, 0, frameBaseAddr, frameSize, AnnStackframe)
         END
 
       ELSE
         (* saved LR is normal code address *)
         (* while in frame defined by frameBaseAddr and frameSize *)
-        (* we create the TP for the caller *)
-        error := ~ODD(savedLR); (* LR must be thumb code *)
-        IF ~error THEN
+        (* we create the TP for the *caller* *)
+        done := ~ODD(savedLR); (* valid LR must be thumb code, else we have reached end of trace *)
+        IF ~done THEN
           DEC(savedLR);
           (* check for stack seal above - end of call chain *)
           SYSTEM.GET(frameBaseAddr + frameSize, aboveWord);
@@ -305,19 +332,15 @@ MODULE Stacktrace;
               ProgData.GetCodeAddr(procEntry, codeAddr);
               frameBaseAddr := frameBaseAddr + frameSize;
               getFrameSize(codeAddr, frameSize);
-              error := frameSize = 0;
-              IF ~error THEN
-                getLineNo(savedLR, lineNo);
-                addTP(trace, savedLR - 4, lineNo, frameBaseAddr, frameSize, AnnNone)
-              END
+              getLineNo(savedLR, lineNo);
+              addTP(trace, savedLR - 4, lineNo, frameBaseAddr, frameSize, AnnNone)
             END
           END
         END
       END
     END;
-    trace.more := ~(done OR error);
-    trace.error := error
-  END stacktrace;
+    trace.more := ~done
+  END trace;
 
 
   PROCEDURE CreateTrace*(er: RuntimeErrors.ErrorDesc; VAR tr: Trace);
@@ -326,7 +349,6 @@ MODULE Stacktrace;
     (* first trace point: the faulting location *)
     tr.count := 0;
     tr.more := FALSE;
-    tr.error := FALSE;
     addTP(tr, er.errAddr, er.errLineNo, 0, 0, AnnNone);
 
     (* find faulting procedure and read its prologue *)
@@ -338,7 +360,7 @@ MODULE Stacktrace;
         (* skip error exception frame *)
         sp := traceStart(er.stackframeBase, er.excRetVal);
         (* walk the stack *)
-        stacktrace(sp, frameSize, tr)
+        trace(sp, frameSize, tr)
       END
     END
   END CreateTrace;

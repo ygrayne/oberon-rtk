@@ -1,6 +1,6 @@
 MODULE Stacktr1;
 (**
-  Oberon RTK Framework v3.0
+  Oberon RTK Framework v3.1
   --
   Example/test program
   https://oberon-rtk.org/docs/examples/v2/stacktrace
@@ -8,7 +8,7 @@ MODULE Stacktr1;
   MCU: STM32U585AI
   Board: B-U585I-IOT02A
   --
-  Copyright (c) 2025 Gray gray@grayraven.org
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

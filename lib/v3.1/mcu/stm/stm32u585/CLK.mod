@@ -3,10 +3,8 @@ MODULE CLK;
   Oberon RTK Framework
   Version: v3.1
   --
-  RCC clocks device driver (RCC)
+  RCC clocks device driver.
   Bus clock is enabled after reset.
-  --
-  Type: MCU
   --
   MCU: STM32U585AI
   --
@@ -14,28 +12,30 @@ MODULE CLK;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, CFG := DEV0;
+  IMPORT SYSTEM, SYS := RCC_SYS;
 
   CONST
-    PLL1* = 0;
-    PLL2* = 1;
-    PLL3* = 2;
-    PLL = {0 .. 2};
+    (* handles *)
+    (* do  not assume any specific value for these handles *)
+    PLL1* = SYS.PLL1;
+    PLL2* = SYS.PLL2;
+    PLL3* = SYS.PLL3;
+
 
     (* for 'PLLcfg' *)
-    PLLsrc_None* = 0;
-    PLLsrc_MSIS* = 1;
+    PLLsrc_None*  = 0;
+    PLLsrc_MSIS*  = 1;
     PLLsrc_HSI16* = 2;
-    PLLsrc_HSE* = 3;
+    PLLsrc_HSE*   = 3;
 
     PLLsrc_Frq_4_8* = 0;   (* 4 to 8 MHz *)
     PLLsrc_Frq_8_16* = 1;  (* 8 to 16 MHz *)
 
     (* for 'SetSysClk' *)
-    SysClk_MSIS* = 0;
+    SysClk_MSIS*  = 0;
     SysClk_HSI16* = 1;
-    SysClk_HSE* = 2;
-    SysClk_PLL* = 3; (* PLL1, output R *)
+    SysClk_HSE*   = 2;
+    SysClk_PLL*   = 3; (* PLL1, output R *)
 
     (* for 'BusPrescCfg' *)
     AHBpresc_1* = 7; (* divide by 1 *)
@@ -55,7 +55,6 @@ MODULE CLK;
     ABPpresc_16* = 7; (* divide by 16 *)
 
     (* MCO clock out *)
-    (* for 'SetClkOut' *)
     MCOsel_None* = 0;
     MCOsel_SYSCLK* = 1;
     MCOsel_MSIS* = 2;
@@ -112,8 +111,8 @@ MODULE CLK;
   PROCEDURE* ConfigPLL*(pllId: INTEGER; cfg: PLLcfg);
     VAR addr, val: INTEGER;
   BEGIN
-    ASSERT(pllId IN PLL);
-    addr := CFG.RCC_PLL1CFGR + (pllId * 4);
+    ASSERT(pllId IN SYS.PLL_all);
+    addr := SYS.RCC_PLL1CFGR + (pllId * 4);
     SYSTEM.GET(addr, val);
     BFI(val, 18, cfg.ren);
     BFI(val, 17, cfg.qen);
@@ -122,7 +121,7 @@ MODULE CLK;
     BFI(val, 3, 2, cfg.range);
     BFI(val, 1, 0, cfg.src);
     SYSTEM.PUT(addr, val);
-    addr := CFG.RCC_PLL1DIVR + (pllId * 8);
+    addr := SYS.RCC_PLL1DIVR + (pllId * 8);
     SYSTEM.GET(addr, val);
     BFI(val, 30, 24, cfg.rdiv);
     BFI(val, 22, 16, cfg.qdiv);
@@ -135,7 +134,7 @@ MODULE CLK;
   PROCEDURE* GetPLLcfg*(pllId: INTEGER; VAR cfg: PLLcfg);
     VAR addr, val: INTEGER;
   BEGIN
-    addr := CFG.RCC_PLL1CFGR + (pllId * 4);
+    addr := SYS.RCC_PLL1CFGR + (pllId * 4);
     SYSTEM.GET(addr, val);
     cfg.ren := BFX(val, 18);
     cfg.qen := BFX(val, 17);
@@ -143,7 +142,7 @@ MODULE CLK;
     cfg.mdiv := BFX(val, 11, 8);
     cfg.range := BFX(val, 3, 2);
     cfg.src := BFX(val, 1, 0);
-    addr := CFG.RCC_PLL1DIVR + (pllId * 8);
+    addr := SYS.RCC_PLL1DIVR + (pllId * 8);
     SYSTEM.GET(addr, val);
     cfg.rdiv := BFX(val, 30, 24);
     cfg.qdiv := BFX(val, 22, 16);
@@ -155,7 +154,7 @@ MODULE CLK;
   PROCEDURE* StartPLL*(pllId: INTEGER);
     VAR val: SET; en, lk, RCC_CR: INTEGER;
   BEGIN
-    RCC_CR := CFG.RCC_CR;
+    RCC_CR := SYS.RCC_CR;
     en := 24 + pllId * 2;
     lk := 25 + pllId * 2;
     SYSTEM.GET(RCC_CR, val);
@@ -168,24 +167,17 @@ MODULE CLK;
   PROCEDURE* SetEPODboost*(div: INTEGER);
     VAR val: INTEGER;
   BEGIN
-    SYSTEM.GET(CFG.RCC_PLL1CFGR, val);
+    SYSTEM.GET(SYS.RCC_PLL1CFGR, val);
     BFI(val, 15, 12, div);
-    SYSTEM.PUT(CFG.RCC_PLL1CFGR, val)
+    SYSTEM.PUT(SYS.RCC_PLL1CFGR, val)
   END SetEPODboost;
-
-(*
-  PROCEDURE* GetPLLsec*(pllId: INTEGER; VAR secCfg: SET);
-  BEGIN
-    secCfg := {LSL(1, pllId + CFG.RCC_SEC_PLL1_pos)}
-  END GetPLLsec;
-*)
 
   (* -- system clock -- *)
 
   PROCEDURE* ConfigSysClk*(sysClk: INTEGER);
     VAR val, RCC_CFGR1: INTEGER;
   BEGIN
-    RCC_CFGR1 := CFG.RCC_CFGR1;
+    RCC_CFGR1 := SYS.RCC_CFGR1;
     SYSTEM.GET(RCC_CFGR1, val);
     BFI(val, 1, 0, sysClk);
     SYSTEM.PUT(RCC_CFGR1, val);
@@ -194,20 +186,13 @@ MODULE CLK;
     UNTIL BFX(val, 3, 2) = sysClk
   END ConfigSysClk;
 
-(*
-  PROCEDURE* GetSysClkSec*(VAR secCfg: SET);
-  BEGIN
-    secCfg := {CFG.RCC_SEC_SYSCLK_pos}
-  END GetSysClkSec;
-*)
-
   (* -- bus prescalers -- *)
 
   PROCEDURE* ConfigBusPresc*(cfg: BusPrescCfg);
     VAR val, RCC_CFGR2, RCC_CFGR3: INTEGER;
   BEGIN
-    RCC_CFGR2 := CFG.RCC_CFGR2;
-    RCC_CFGR3 := CFG.RCC_CFGR3;
+    RCC_CFGR2 := SYS.RCC_CFGR2;
+    RCC_CFGR3 := SYS.RCC_CFGR3;
     SYSTEM.GET(RCC_CFGR2, val);
     BFI(val, 10, 8, cfg.apb2Presc);
     BFI(val, 6, 4, cfg.apb1Presc);
@@ -222,20 +207,13 @@ MODULE CLK;
   PROCEDURE* GetBusPresc*(VAR cfg: BusPrescCfg);
     VAR val: INTEGER;
   BEGIN
-    SYSTEM.GET(CFG.RCC_CFGR2, val);
+    SYSTEM.GET(SYS.RCC_CFGR2, val);
     cfg.apb2Presc := BFX(val, 10, 8);
     cfg.apb1Presc := BFX(val, 6, 4);
     cfg.ahbPresc := BFX(val, 3, 0);
-    SYSTEM.GET(CFG.RCC_CFGR3, val);
+    SYSTEM.GET(SYS.RCC_CFGR3, val);
     cfg.apb3Presc := BFX(val, 6, 4)
   END GetBusPresc;
-
-(*
-  PROCEDURE* GetBusPrescSec*(VAR secCfg: SET);
-  BEGIN
-    secCfg := {CFG.RCC_SEC_PRESC_pos}
-  END GetBusPrescSec;
-*)
 
   (* -- oscillators -- *)
 
@@ -245,7 +223,7 @@ MODULE CLK;
       MaskEn2 = {0, 8}; MaskEn1 = {4, 12, 17};
     VAR oscMask, RCC_CR: INTEGER; val, rdyMask: SET;
   BEGIN
-    RCC_CR := CFG.RCC_CR;
+    RCC_CR := SYS.RCC_CR;
     oscMask := 0;
     BFI(oscMask, 0, cfg.msisEn);
     BFI(oscMask, 4, cfg.msikEn);
@@ -261,18 +239,6 @@ MODULE CLK;
     UNTIL val * MaskRdy = rdyMask
   END ConfigOsc;
 
-(*
-  PROCEDURE* GetOscSec*(cfg: OscCfg; VAR secCfg: SET);
-  BEGIN
-    secCfg := {};
-    secCfg := secCfg + {LSL(ORD(BITS(cfg.msisEn) * {0}), CFG.RCC_SEC_MSI_pos)};
-    secCfg := secCfg + {LSL(ORD(BITS(cfg.msikEn) * {0}), CFG.RCC_SEC_MSI_pos)};
-    secCfg := secCfg + {LSL(ORD(BITS(cfg.hsiEn) * {0}), CFG.RCC_SEC_HSI_pos)};
-    secCfg := secCfg + {LSL(ORD(BITS(cfg.hsi48En) * {0}), CFG.RCC_SEC_HSI48_pos)};
-    secCfg := secCfg + {LSL(ORD(BITS(cfg.hseEn) * {0}), CFG.RCC_SEC_HSE_pos)}
-  END GetOscSec;
-*)
-
   (* -- LS oscillators -- *)
 
   PROCEDURE* ConfigLsOsc*(cfg: LsOscCfg);
@@ -280,8 +246,8 @@ MODULE CLK;
     CONST LsMaskRdy = {1, 27};
     VAR oscMask, RCC_BDCR, PWR_DBPR: INTEGER; val, rdyMask: SET;
   BEGIN
-    RCC_BDCR := CFG.RCC_BDCR;
-    PWR_DBPR := CFG.PWR_DBPR;
+    RCC_BDCR := SYS.RCC_BDCR;
+    PWR_DBPR := SYS.RCC_PWR_DBPR;
     oscMask := 0;
     BFI(oscMask, 0, cfg.lseEn);
     BFI(oscMask, 26, cfg.lsiEn);
@@ -296,15 +262,6 @@ MODULE CLK;
       UNTIL val * LsMaskRdy = rdyMask
     END
   END ConfigLsOsc;
-
-(*
-  PROCEDURE* GetLsOscSec*(cfg: LsOscCfg; VAR secCfg: SET);
-  BEGIN
-    secCfg := {};
-    secCfg := secCfg + {LSL(ORD(BITS(cfg.lseEn) * {0}), CFG.RCC_SEC_LSE_pos)};
-    secCfg := secCfg + {LSL(ORD(BITS(cfg.lsiEn) * {0}), CFG.RCC_SEC_LSI_pos)}
-  END GetLsOscSec;
-*)
 
 
 END CLK.

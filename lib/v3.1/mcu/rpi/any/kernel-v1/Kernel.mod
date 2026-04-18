@@ -1,7 +1,7 @@
 MODULE Kernel;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Multi-threading kernel v1
   --
@@ -13,15 +13,15 @@ MODULE Kernel;
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2020-2025 Gray gray@grayraven.org
+  Copyright (c) 2020-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Coroutines, Config, Memory, SysTick, Cores, MCU := MCU2, Errors;
+  IMPORT SYSTEM, PPB, ASM, Coroutines, MemMap, Memory, SysTick, Cores, Errors;
 
   CONST
     MaxNumThreads* = 16;
-    NumCores = Config.NumCoresUsed;
+    NumCores = MemMap.NumCoresUsed;
 
     (* result codes *)
     OK* = 0;
@@ -359,11 +359,11 @@ MODULE Kernel;
     Cores.GetCoreId(cid);
     (* set PSP to current MSP *)
     SYSTEM.LDREG(R11, SYSTEM.REG(SP));
-    SYSTEM.EMIT(MCU.MSR_PSP_R11);
+    SYSTEM.EMIT(ASM.MSR_PSP_R11);
     (* enable PSP use *)
-    SYSTEM.LDREG(R11, ORD({MCU.CONTROL_SPSEL}));
-    SYSTEM.EMIT(MCU.MSR_CTL_R11);
-    SYSTEM.EMIT(MCU.ISB);
+    SYSTEM.LDREG(R11, ORD({PPB.CONTROL_SPSEL}));
+    SYSTEM.EMIT(ASM.MSR_CTL_R11);
+    SYSTEM.EMIT(ASM.ISB);
     (* from here, we use the PSP *)
     (* still in main stack memory *)
     SysTick.Enable;

@@ -5,22 +5,27 @@ MODULE GTZC;
   --
   Global TrustZone Controller
   --
-  Type: MCU
-  --
   MCU: STM32U585AI
   --
   Copyright (c) 2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, CFG := DEV0, RST;
+  IMPORT SYSTEM, SYS := GTZC_SYS, RST;
 
   CONST
-    SRAM1* = 0; (* 192k,  384 blocks, 12 super-blocks *)
-    SRAM2* = 1; (*  64k,  128 blocks,  4 super-blocks *)
-    SRAM3* = 2; (* 512k, 1024 blocks, 32 super-blocks *)
-    SRAM4* = 3; (*  16k,   32 blocks,  1 super-block  *)
-    SRAM* = {SRAM1 .. SRAM4};
+    (* handles *)
+    (* do  not assume any specific value for these handles *)
+    SRAM1* = SYS.GTZC_SRAM1; (* 192k,  384 blocks, 12 super-blocks *)
+    SRAM2* = SYS.GTZC_SRAM2; (*  64k,  128 blocks,  4 super-blocks *)
+    SRAM3* = SYS.GTZC_SRAM3; (* 512k, 1024 blocks, 32 super-blocks *)
+    SRAM4* = SYS.GTZC_SRAM4; (*  16k,   32 blocks,  1 super-block  *)
+
+    (* number of blocks and super-blocks *)
+    SRAM1_blk* = 384;  SRAM1_sblk* = 12;
+    SRAM2_blk* = 128;  SRAM2_sblk* = 4;
+    SRAM3_blk* = 1024; SRAM3_sblk* = 32;
+    SRAM4_blk* = 32;   SRAM4_sblk* = 1;
 
     AllBlocksSecure* = {0 .. 31};
     AllBlocksNonSecure* = {};
@@ -30,18 +35,18 @@ MODULE GTZC;
   (* configure Secure protection of SRAM from super-block 'sbStart' for 'numSb' super-blocks *)
     VAR addr, cnt: INTEGER;
   BEGIN
-    IF sram IN SRAM THEN
+    IF sram IN SYS.GTZC_SRAM_all THEN
       CASE sram OF
-        SRAM1: addr := CFG.GTZC1_MPCBB1
-      | SRAM2: addr := CFG.GTZC1_MPCBB2
-      | SRAM3: addr := CFG.GTZC1_MPCBB3
-      | SRAM4: addr := CFG.GTZC2_MPCBB4
+        SRAM1: addr := SYS.GTZC1_MPCBB1
+      | SRAM2: addr := SYS.GTZC1_MPCBB2
+      | SRAM3: addr := SYS.GTZC1_MPCBB3
+      | SRAM4: addr := SYS.GTZC2_MPCBB4
       END;
-      addr := addr + CFG.MPCBB_SECCFGR0_Offset + (CFG.MPCBB_SECCFGR_Offset * sbStart);
+      addr := addr + SYS.MPCBB_SECCFGR0_Offset + (SYS.MPCBB_SECCFGR_Offset * sbStart);
       cnt := 0;
       WHILE cnt < numSb DO
         SYSTEM.PUT(addr, blockMap);
-        addr := addr + CFG.MPCBB_SECCFGR_Offset;
+        addr := addr + SYS.MPCBB_SECCFGR_Offset;
         INC(cnt)
       END
     END
@@ -53,14 +58,14 @@ MODULE GTZC;
   (* flag SRWILADIS *)
     VAR addr, val: INTEGER;
   BEGIN
-    IF sram IN SRAM THEN
+    IF sram IN SYS.GTZC_SRAM_all THEN
       CASE sram OF
-        SRAM1: addr := CFG.GTZC1_MPCBB1
-      | SRAM2: addr := CFG.GTZC1_MPCBB2
-      | SRAM3: addr := CFG.GTZC1_MPCBB3
-      | SRAM4: addr := CFG.GTZC2_MPCBB4
+        SRAM1: addr := SYS.GTZC1_MPCBB1
+      | SRAM2: addr := SYS.GTZC1_MPCBB2
+      | SRAM3: addr := SYS.GTZC1_MPCBB3
+      | SRAM4: addr := SYS.GTZC2_MPCBB4
       END;
-      addr := addr + CFG.MPCBB_CR_Offset;
+      addr := addr + SYS.MPCBB_CR_Offset;
       SYSTEM.GET(addr, val);
       BFI(val, 31, enabled); (* SRWILADIS *)
       SYSTEM.PUT(addr, val)
@@ -70,10 +75,10 @@ MODULE GTZC;
 
   PROCEDURE* SetDevSecAll*;
   BEGIN
-    SYSTEM.PUT(CFG.GTZC1_TZSC + CFG.TZSC_SECCFGR1_Offset, CFG.GTZC1_TZSC_SECCFGR1_ALL);
-    SYSTEM.PUT(CFG.GTZC1_TZSC + CFG.TZSC_SECCFGR2_Offset, CFG.GTZC1_TZSC_SECCFGR2_ALL);
-    SYSTEM.PUT(CFG.GTZC1_TZSC + CFG.TZSC_SECCFGR3_Offset, CFG.GTZC1_TZSC_SECCFGR3_ALL);
-    SYSTEM.PUT(CFG.GTZC2_TZSC + CFG.TZSC_SECCFGR1_Offset, CFG.GTZC2_TZSC_SECCFGR1_ALL)
+    SYSTEM.PUT(SYS.GTZC1_TZSC + SYS.TZSC_SECCFGR1_Offset, SYS.GTZC1_TZSC_SECCFGR1_ALL);
+    SYSTEM.PUT(SYS.GTZC1_TZSC + SYS.TZSC_SECCFGR2_Offset, SYS.GTZC1_TZSC_SECCFGR2_ALL);
+    SYSTEM.PUT(SYS.GTZC1_TZSC + SYS.TZSC_SECCFGR3_Offset, SYS.GTZC1_TZSC_SECCFGR3_ALL);
+    SYSTEM.PUT(SYS.GTZC2_TZSC + SYS.TZSC_SECCFGR1_Offset, SYS.GTZC2_TZSC_SECCFGR1_ALL)
   END SetDevSecAll;
 
 
@@ -85,20 +90,20 @@ MODULE GTZC;
   END SetDevSec;
 
 
-  PROCEDURE* ReleaseDevSec*(secReg, secPos: INTEGER);
+  PROCEDURE* SetDevNonsec*(secReg, secPos: INTEGER);
     VAR val: SET;
   BEGIN
     SYSTEM.GET(secReg, val);
     SYSTEM.PUT(secReg, val - {secPos})
-  END ReleaseDevSec;
+  END SetDevNonsec;
 
 
-  PROCEDURE init;
+  PROCEDURE enable;
   BEGIN
-    RST.EnableBusClock(CFG.GTZC1_BC_reg, CFG.GTZC1_BC_pos);
-    RST.EnableBusClock(CFG.GTZC2_BC_reg, CFG.GTZC2_BC_pos)
-  END init;
+    RST.EnableBusClock(SYS.GTZC1_BC_reg, SYS.GTZC1_BC_pos);
+    RST.EnableBusClock(SYS.GTZC2_BC_reg, SYS.GTZC2_BC_pos)
+  END enable;
 
 BEGIN
-  init
+  enable
 END GTZC.

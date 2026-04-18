@@ -1,21 +1,22 @@
 MODULE RuntimeErrorsOut;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Human-readable output for run-time errors.
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  Copyright (c) 2020-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
   IMPORT
-    RuntimeErrors, Stacktrace, Cores, TextIO, Texts, Errors, ProgData, Config;
+    MemMap, RuntimeErrors, Stacktrace, Cores, TextIO, Texts, Errors, ProgData;
 
   CONST
-    NumCores = Config.NumCoresUsed;
+    NumCores = MemMap.NumCoresUsed;
+    DataCol = 36;
 
   TYPE
     Name = ProgData.EntryString;
@@ -33,13 +34,13 @@ MODULE RuntimeErrorsOut;
   END nameLength;
 
 
-  PROCEDURE printTraceLine(W: TextIO.Writer; modName, procName: Name; addr, lineNo, stkAddr: INTEGER);
+  PROCEDURE printTraceLine(W: TextIO.Writer; modName, procName: Name; addr, lineNo, stkAddr, frameSize: INTEGER);
     VAR l: INTEGER;
   BEGIN
     Texts.WriteString(W, "  "); Texts.WriteString(W, modName);
     Texts.WriteString(W, "."); Texts.WriteString(W, procName);
     l := nameLength(modName) + nameLength(procName) + 1;
-    Texts.WriteHex(W, addr, 36 - l);
+    Texts.WriteHex(W, addr, DataCol - l);
     IF lineNo > 0 THEN
       Texts.WriteInt(W, lineNo, 6);
     ELSE
@@ -47,6 +48,9 @@ MODULE RuntimeErrorsOut;
     END;
     IF stkAddr > 0 THEN
       Texts.WriteHex(W, stkAddr, 12);
+    END;
+    IF frameSize > 0 THEN
+      Texts.WriteInt(W, frameSize, 6);
     END;
     Texts.WriteLn(W)
   END printTraceLine;
@@ -62,33 +66,33 @@ MODULE RuntimeErrorsOut;
 
   PROCEDURE PrintStacktrace*(tr: Stacktrace.Trace);
     VAR
-      i, modEntryAddr, procEntryAddr, startSeqAddr: INTEGER;
+      i, modEntryAddr, procEntryAddr: INTEGER;
       moduleName, procName: Name;
       tp: Stacktrace.TracePoint;
       We: TextIO.Writer;
   BEGIN
     We := W[Cores.CoreId()];
-    startSeqAddr := Config.ResMem.start - 8;
     IF tr.count > 1 THEN
-      Texts.WriteString(We, "trace:"); Texts.WriteLn(We);
+      Texts.WriteString(We, "trace:                       ");
+      Texts.WriteString(We, "code addr    ");
+      Texts.WriteString(We, "ln   ");
+      Texts.WriteString(We, "frame addr  ");
+      Texts.WriteString(We, "fsz ");
+      Texts.WriteLn(We);
       i := 0;
       WHILE i < tr.count DO
         tp := tr.tp[i];
         printAnnotation(We, tp.annotation);
-        IF tp.address # startSeqAddr THEN
-          ProgData.FindProcEntries(tp.address, modEntryAddr, procEntryAddr);
-          ProgData.GetNames(modEntryAddr, procEntryAddr, moduleName, procName);
-        ELSE
-          moduleName := "start"; procName := "sequence";
-        END;
-        printTraceLine(We, moduleName, procName, tp.address, tp.lineNo, tp.stackAddr);
+        ProgData.FindProcEntries(tp.address, modEntryAddr, procEntryAddr);
+        ProgData.GetNames(modEntryAddr, procEntryAddr, moduleName, procName);
+        printTraceLine(We, moduleName, procName, tp.address, tp.lineNo, tp.stackAddr, tp.frameSize);
         INC(i)
       END;
       IF tr.more THEN
         Texts.WriteString(We, "  --- more ---"); Texts.WriteLn(We)
       END
     ELSE
-      Texts.WriteString(We, "no trace"); Texts.WriteLn(We)
+      Texts.WriteString(We, "trace: not captured"); Texts.WriteLn(We)
     END
   END PrintStacktrace;
 
@@ -167,7 +171,7 @@ MODULE RuntimeErrorsOut;
     VAR cid: INTEGER; trace: Stacktrace.Trace; regs: Stacktrace.StackedRegs;
   BEGIN
     Cores.GetCoreId(cid);
-    PrintLogEntry(RuntimeErrors.ErrorRec[cid]);
+    (*PrintLogEntry(RuntimeErrors.ErrorRec[cid]);*)
     Stacktrace.CreateTrace(RuntimeErrors.ErrorRec[cid], trace);
     Stacktrace.ReadRegisters(RuntimeErrors.ErrorRec[cid], regs);
     PrintError(RuntimeErrors.ErrorRec[cid]);
@@ -179,10 +183,9 @@ MODULE RuntimeErrorsOut;
 
   (* plug a writer to use for error output *)
 
-  PROCEDURE* SetWriter*(cid: INTEGER; Wr: TextIO.Writer);
+  PROCEDURE SetWriter*(Wr: TextIO.Writer);
   BEGIN
-    ASSERT(cid < NumCores, Errors.PreCond);
-    W[cid] := Wr
+    W[Cores.CoreId()] := Wr
   END SetWriter;
 
 END RuntimeErrorsOut.

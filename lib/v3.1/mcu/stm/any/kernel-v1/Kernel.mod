@@ -16,11 +16,11 @@ MODULE Kernel;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, PPB, ASM, MemCfg, Coroutines, Memory, SysTick, Cores, Errors;
+  IMPORT SYSTEM, PPB, ASM, MemMap, Coroutines, Memory, SysTick, Cores, Errors;
 
   CONST
     MaxNumThreads* = 16;
-    NumCores = MemCfg.NumCoresUsed;
+    NumCores = MemMap.NumCoresUsed;
 
     (* result codes *)
     OK* = 0;
@@ -352,7 +352,7 @@ MODULE Kernel;
 
   PROCEDURE Run*;
     CONST SP = 13; R11 = 11;
-    VAR cid: INTEGER;
+    VAR cid, ctl: INTEGER;
   BEGIN
     (* MSP is used here *)
     Cores.GetCoreId(cid);
@@ -360,9 +360,31 @@ MODULE Kernel;
     SYSTEM.LDREG(R11, SYSTEM.REG(SP));
     SYSTEM.EMIT(ASM.MSR_PSP_R11);
     (* enable PSP use *)
+
+    (* OLD
     SYSTEM.LDREG(R11, ORD({PPB.CONTROL_SPSEL}));
     SYSTEM.EMIT(ASM.MSR_CTL_R11);
     SYSTEM.EMIT(ASM.ISB);
+    END OLD *)
+
+    (* asm
+      mrs r7, control -> ctl
+    end asm *)
+    (* +asm *)
+    SYSTEM.EMIT(0F3EF8714H);  (* mrs r7, CONTROL *)
+    ctl := SYSTEM.REG(7);  (* r7 -> ctl *)
+    (* -asm *)
+    ctl := ORD(BITS(ctl) + {PPB.CONTROL_SPSEL});
+    (* asm
+      ctl -> msr control, r7
+      isb
+    end asm *)
+    (* +asm *)
+    SYSTEM.LDREG(7, ctl);  (* ctl -> r7 *)
+    SYSTEM.EMIT(0F3878814H);  (* msr CONTROL, r7 *)
+    SYSTEM.EMIT(0F3BF8F6FH);  (* isb *)
+    (* -asm *)
+
     (* from here, we use the PSP *)
     (* still in main stack memory *)
     SysTick.Enable;

@@ -1,6 +1,6 @@
 MODULE StacktrK2C0;
 (**
-  Oberon RTK Framework v3.0
+  Oberon RTK Framework v3.1
   --
   Example/test program
   https://oberon-rtk.org/docs/examples/v2/stacktrace
@@ -10,7 +10,7 @@ MODULE StacktrK2C0;
    --
   Kernel-v1
   --
-  Copyright (c) 2025 Gray gray@grayraven.org
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

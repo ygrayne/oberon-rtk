@@ -3,9 +3,7 @@ MODULE Exceptions;
   Oberon RTK Framework
   Version: v3.1
   --
-  Exception management
-  --
-  Type: Cortex-M33
+  Exception managements
   --
   MCU: STM32U585AI, STM32H573II
   --

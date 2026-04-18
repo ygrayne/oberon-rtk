@@ -19,7 +19,7 @@
                 "target/rp2350.cfg"
             ],
             "searchDir": [
-                "C:/RPI/openocd/scripts"
+                "${env:RTK_OPENOCD_RPI_SCRIPTS}"
             ],
             "serverpath": "${env:RTK_OPENOCD_RPI}",
             "svdFile": "${env:RTK_SVD_RP2350}",
@@ -47,7 +47,7 @@
                 "target/rp2350.cfg"
             ],
             "searchDir": [
-                "C:/RPI/openocd/scripts"
+                "${env:RTK_OPENOCD_RPI_SCRIPTS}"
             ],
             "serverpath": "${env:RTK_OPENOCD_RPI}",
             "svdFile": "${env:RTK_SVD_RP2350}",

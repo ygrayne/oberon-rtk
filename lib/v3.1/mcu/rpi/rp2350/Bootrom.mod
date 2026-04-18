@@ -1,12 +1,10 @@
 MODULE Bootrom;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
-  Access to the functions ond data in bootrom.
+  Access to the functions and data in bootrom.
   Additional derived functionality using the raw bootrom API.
-  --
-  Type: MCU
   --
   MCU: RP2350
   --
@@ -25,7 +23,7 @@ MODULE Bootrom;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2;
+  IMPORT SYSTEM, PPB;
 
   CONST
     MagicAddr = 010H;
@@ -158,7 +156,7 @@ MODULE Bootrom;
 
 
   PROCEDURE* isNonSec(): BOOLEAN;
-    CONST CPUID_NS = MCU.PPB_CPUID + MCU.PPB_NS_Offset;
+    CONST CPUID_NS = PPB.CPUID + PPB.PPB_NS_Offset;
     VAR val: INTEGER;
   BEGIN
     SYSTEM.GET(CPUID_NS, val)
@@ -393,8 +391,8 @@ MODULE Bootrom;
     VAR val: SET;
   BEGIN
     (* enable RCP *)
-    SYSTEM.GET(MCU.PPB_CPACR, val);
-    SYSTEM.PUT(MCU.PPB_CPACR, val + {14, 15})
+    SYSTEM.GET(PPB.CPACR, val);
+    SYSTEM.PUT(PPB.CPACR, val + {14, 15})
   END init;
 
 BEGIN

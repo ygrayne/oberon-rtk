@@ -1,7 +1,7 @@
 MODULE PIO;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   PIO devices
   First-cut implementation, to get the example program running.
@@ -11,24 +11,22 @@ MODULE PIO;
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2024-2025 Gray gray@grayraven.org
+  Copyright (c) 2024-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Errors, StartUp;
+  IMPORT SYSTEM, BASE, DEV := PIO_DEV, RST, Errors;
 
   CONST
-    PIO0* = 0;
-    PIO1* = 1;
-    PIO2* = 1;
-    SM0* = 0;
-    SM1* = 1;
-    SM2* = 2;
-    SM3* = 3;
-    NumPIO* = MCU.NumPIO;
-    PIOs = {PIO0 .. NumPIO - 1};
-    NumStateMachines = 4;
-    MaxNumInstr* = 32;
+    PIO0* = DEV.PIO0;
+    PIO1* = DEV.PIO1;
+    PIO2* = DEV.PIO1;
+    SM0* = DEV.SM0;
+    SM1* = DEV.SM1;
+    SM2* = DEV.SM2;
+    SM3* = DEV.SM3;
+
+
 
     StateMachines = {SM0 .. SM3};
 
@@ -83,9 +81,9 @@ MODULE PIO;
     Device* = POINTER TO DeviceDesc;
     DeviceDesc* = RECORD
       pioNo: INTEGER;
-      mcuDevNo: INTEGER;
+      rstReg, rstPos: INTEGER;
       CTRL, INSTR_MEM: INTEGER;
-      SM: ARRAY NumStateMachines OF StateMachineRegs
+      SM: ARRAY DEV.PIO_NumStateMachines OF StateMachineRegs
     END;
 
     (* PIO program data *)
@@ -113,7 +111,7 @@ MODULE PIO;
         optional*: BOOLEAN;
         pindirs*: BOOLEAN
       END;
-      instr*: ARRAY MaxNumInstr OF INTEGER;
+      instr*: ARRAY DEV.PIO_MaxNumInstr OF INTEGER;
       numInstr*: INTEGER;
       pubLabels*: ARRAY NumDefs OF PublicLabel; (* only valid of numPubLabels > 0 *)
       numPubLabels*: INTEGER;
@@ -127,47 +125,49 @@ MODULE PIO;
 
 
   PROCEDURE* Init*(dev: Device; pioNo: INTEGER);
-    VAR pioBase, i: INTEGER; smBase: ARRAY NumStateMachines OF INTEGER;
+    VAR pioBase, i: INTEGER; smBase: ARRAY DEV.PIO_NumStateMachines OF INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.HeapOverflow);
-    ASSERT(pioNo IN PIOs);
+    ASSERT(pioNo IN DEV.PIO_all);
     dev.pioNo := pioNo;
-    dev.mcuDevNo := MCU.RESETS_PIO0 + pioNo;
-    pioBase := MCU.PIO0_BASE + (pioNo * MCU.PIO_Offset);
-    dev.CTRL := pioBase + MCU.PIO_CTRL_Offset;
-    dev.INSTR_MEM := pioBase + MCU.PIO_INSTR_MEM0_Offset;
-    smBase[0] := pioBase + MCU.PIO_SM0_Offset;
-    smBase[1] := smBase[0] + MCU.PIO_SM_Offset;
-    smBase[2] := smBase[1] + MCU.PIO_SM_Offset;;
-    smBase[3] := smBase[2] + MCU.PIO_SM_Offset;
+    dev.rstReg := DEV.PIO_RST_reg;
+    dev.rstPos := DEV.PIO0_RST_pos + pioNo;
+
+    pioBase := DEV.PIO0_BASE + (pioNo * DEV.PIO_Offset);
+    dev.CTRL := pioBase + DEV.PIO_CTRL_Offset;
+    dev.INSTR_MEM := pioBase + DEV.PIO_INSTR_MEM0_Offset;
+    smBase[0] := pioBase + DEV.PIO_SM0_Offset;
+    smBase[1] := smBase[0] + DEV.PIO_SM_Offset;
+    smBase[2] := smBase[1] + DEV.PIO_SM_Offset;;
+    smBase[3] := smBase[2] + DEV.PIO_SM_Offset;
     i := 0;
-    WHILE i < NumStateMachines DO
-      dev.SM[i].CLKDIV := smBase[i] + MCU.PIO_SM_CLKDIV_Offset;
-      dev.SM[i].EXECCTRL := smBase[i] + MCU.PIO_SM_EXECCTRL_Offset;
-      dev.SM[i].SHIFTCTRL := smBase[i] + MCU.PIO_SM_SHIFTCTRL_Offset;
-      dev.SM[i].ADDR := smBase[i] + MCU.PIO_SM_ADDR_Offset;
-      dev.SM[i].INSTR := smBase[i] + MCU.PIO_SM_INSTR_Offset;
-      dev.SM[i].PINCTRL := smBase[i] + MCU.PIO_SM_PINCTRL_Offset;
+    WHILE i < DEV.PIO_NumStateMachines DO
+      dev.SM[i].CLKDIV := smBase[i] + DEV.PIO_SM_CLKDIV_Offset;
+      dev.SM[i].EXECCTRL := smBase[i] + DEV.PIO_SM_EXECCTRL_Offset;
+      dev.SM[i].SHIFTCTRL := smBase[i] + DEV.PIO_SM_SHIFTCTRL_Offset;
+      dev.SM[i].ADDR := smBase[i] + DEV.PIO_SM_ADDR_Offset;
+      dev.SM[i].INSTR := smBase[i] + DEV.PIO_SM_INSTR_Offset;
+      dev.SM[i].PINCTRL := smBase[i] + DEV.PIO_SM_PINCTRL_Offset;
       INC(i)
     END
   END Init;
 
 
-  PROCEDURE Configure*(dev: Device);
+  PROCEDURE Enable*(dev: Device);
   BEGIN
-    StartUp.ReleaseReset(dev.mcuDevNo)
-  END Configure;
+    RST.ReleaseReset(dev.rstReg, dev.rstPos)
+  END Enable;
 
 
   PROCEDURE* EnableStateMachines*(dev: Device; mask: SET);
   BEGIN
-    SYSTEM.PUT(dev.CTRL + MCU.ASET, mask * StateMachines)
+    SYSTEM.PUT(dev.CTRL + BASE.ASET, mask * StateMachines)
   END EnableStateMachines;
 
 
   PROCEDURE* DisableStateMachines*(dev: Device; mask: SET);
   BEGIN
-    SYSTEM.PUT(dev.CTRL + MCU.ACLR, mask * StateMachines)
+    SYSTEM.PUT(dev.CTRL + BASE.ACLR, mask * StateMachines)
   END DisableStateMachines;
 
 
@@ -175,7 +175,7 @@ MODULE PIO;
   BEGIN
     mask := mask * StateMachines;
     mask := BITS(LSL(ORD(mask), CTRL_SM_RESTART0));
-    SYSTEM.PUT(dev.CTRL + MCU.ASET, mask)
+    SYSTEM.PUT(dev.CTRL + BASE.ASET, mask)
   END RestartStateMachines;
 
 
@@ -183,19 +183,19 @@ MODULE PIO;
   BEGIN
     mask := mask * StateMachines;
     mask := BITS(LSL(ORD(mask), CTRL_CLKDIV_RESTART0));
-    SYSTEM.PUT(dev.CTRL + MCU.ASET, mask)
+    SYSTEM.PUT(dev.CTRL + BASE.ASET, mask)
   END RestartClockDivs;
 
 
   PROCEDURE* PutCode*(dev: Device; code: ARRAY OF INTEGER; offset, numInstr: INTEGER);
     VAR i, regAddr: INTEGER;
   BEGIN
-    ASSERT(offset + numInstr <= MaxNumInstr, Errors.ProgError);
-    regAddr := dev.INSTR_MEM + (offset * MCU.PIO_INSTR_MEM_Offset);
+    ASSERT(offset + numInstr <= DEV.PIO_MaxNumInstr, Errors.ProgError);
+    regAddr := dev.INSTR_MEM + (offset * DEV.PIO_INSTR_MEM_Offset);
     i := 0;
     WHILE i < numInstr DO
       SYSTEM.PUT(regAddr, code[i]);
-      INC(i); INC(regAddr, MCU.PIO_INSTR_MEM_Offset)
+      INC(i); INC(regAddr, DEV.PIO_INSTR_MEM_Offset)
     END
   END PutCode;
 
@@ -205,8 +205,8 @@ MODULE PIO;
     VAR x: INTEGER;
   BEGIN
     x := LSL(basePinNo, SM_PINCTRL_SET_BASE0) + LSL(count, SM_PINCTRL_SET_COUNT0);
-    SYSTEM.PUT(dev.SM[smNo].PINCTRL + MCU.ACLR, ClearMask);
-    SYSTEM.PUT(dev.SM[smNo].PINCTRL + MCU.ASET, x)
+    SYSTEM.PUT(dev.SM[smNo].PINCTRL + BASE.ACLR, ClearMask);
+    SYSTEM.PUT(dev.SM[smNo].PINCTRL + BASE.ASET, x)
   END ConfigPinsSet;
 
 
@@ -224,8 +224,8 @@ MODULE PIO;
     VAR x: INTEGER;
   BEGIN
     x := LSL(wrapBottom, SM_EXECCTRL_WRAP_BOTTOM0) + LSL(wrapTop, SM_EXECCTRL_WRAP_TOP0);
-    SYSTEM.PUT(dev.SM[smNo].EXECCTRL + MCU.ACLR, ClearMask);
-    SYSTEM.PUT(dev.SM[smNo].EXECCTRL + MCU.ASET, x)
+    SYSTEM.PUT(dev.SM[smNo].EXECCTRL + BASE.ACLR, ClearMask);
+    SYSTEM.PUT(dev.SM[smNo].EXECCTRL + BASE.ASET, x)
   END ConfigWrap;
 
 
@@ -233,5 +233,16 @@ MODULE PIO;
   BEGIN
     SYSTEM.PUT(dev.SM[smNo].INSTR, addr) (* JMP to addr *)
   END SetStartAddr;
+
+
+  (* Secure/Non-secure, RP2350 only *)
+
+  PROCEDURE GetDevSec*(pioNo: INTEGER; VAR reg: INTEGER);
+  BEGIN
+    ASSERT(pioNo IN DEV.PIO_all);
+    reg := DEV.PIO0_SEC_reg + (pioNo * 4)
+  END GetDevSec;
+
+
 
 END PIO.

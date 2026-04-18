@@ -5,8 +5,6 @@ MODULE SYST;
   --
   System tick driver
   --
-  Type: Cortex-M33
-  --
   MCU: STM32U585AI, STM32H573II
   --
   Copyright (c) 2020-2026 Gray, gray@grayraven.org

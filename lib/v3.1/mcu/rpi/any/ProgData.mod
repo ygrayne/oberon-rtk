@@ -1,14 +1,14 @@
 MODULE ProgData;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Get data about the program from the '.ref' resource data block
   at the end of the program.
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2024-2025 Gray, gray@grayraven.org
+  Copyright (c) 2024-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
   --
   Structure:
@@ -75,7 +75,7 @@ MODULE ProgData;
     .inits code address cannot be identified, namely in the start-up sequence.
 **)
 
-  IMPORT SYSTEM, Config;
+  IMPORT SYSTEM, MemMap;
 
   CONST
     ProgResName = ".ref";
@@ -219,7 +219,7 @@ MODULE ProgData;
     VAR resAddr, resSize, resId, resVersion: INTEGER; found: BOOLEAN; resName: ResName;
   BEGIN
     CLEAR(res);
-    resAddr := Config.ResMem.start;
+    resAddr := MemMap.ResMem.start;
     SYSTEM.GET(resAddr, resId);
     SYSTEM.GET(resAddr + ResVersionOffset, resVersion);
     IF (resId = ResId) & (resVersion = ResVersion) THEN

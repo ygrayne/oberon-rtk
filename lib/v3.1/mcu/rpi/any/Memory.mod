@@ -1,23 +1,23 @@
 MODULE Memory;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   * heap memory allocation
   * stacks allocation
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2023-2025 Gray, gray@grayraven.org
+  Copyright (c) 2023-2026 Gray, gray@grayraven.org
   Portions copyright (c) 2012-2021 CFB Software, https://www.astrobe.com
   Used with permission.
   Please refer to the licensing conditions as defined at the end of this file.
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Config, MAU, Cores;
+  IMPORT SYSTEM, MemMap, MAU, Cores;
 
   CONST
-    NumCores = Config.NumCoresUsed;
+    NumCores = MemMap.NumCoresUsed;
     NumThreadStacks = 16;
     MainStackSize* = 2048; (* default, see SetMainStackSize below *)
 
@@ -44,6 +44,7 @@ MODULE Memory;
   VAR
     heaps: ARRAY NumCores OF CoreHeap;
     stacks: ARRAY NumCores OF CoreStacks;
+    Done*: BOOLEAN;
 
   (* === heap memory === *)
 
@@ -205,13 +206,17 @@ MODULE Memory;
   PROCEDURE ResetMainStack*;
   (* set MSP to top of stack memory from kernel loopc *)
   (* clear out the top of the main stack to get clean stack traces *)
-    CONST R11 = 11;
     VAR cid, addr: INTEGER;
   BEGIN
     Cores.GetCoreId(cid);
-    addr := Config.StackMem[cid].start;
-    SYSTEM.LDREG(R11, addr);
-    SYSTEM.EMIT(MCU.MSR_MSP_R11) (* move r11 to msp *)
+    addr := MemMap.StackMem[cid].start;
+    (* asm
+      addr -> msr msp, r11
+    end asm *)
+    (* +asm *)
+    SYSTEM.LDREG(11, addr);  (* addr -> r11 *)
+    SYSTEM.EMIT(0F38B8808H);  (* msr MSP, r11 *)
+    (* -asm *)
   END ResetMainStack;
 
   (* === init and config === *)
@@ -222,30 +227,32 @@ MODULE Memory;
   BEGIN
     cid := 0;
     WHILE cid < NumCores DO
-      stacks[cid].stacksBottom := Config.StackMem[cid].start - mainStackSize[cid];
+      stacks[cid].stacksBottom := MemMap.StackMem[cid].start - mainStackSize[cid];
       INC(cid)
     END
   END SetMainStackSize;
 
 
-  PROCEDURE Init*;
+  PROCEDURE init;
     VAR cid: INTEGER;
   BEGIN
     MAU.SetNew(Allocate); MAU.SetDispose(Deallocate);
     cid := 0;
     WHILE cid < NumCores DO
-      heaps[cid].heapTop := Config.HeapMem[cid].start;
-      heaps[cid].heapLimit := Config.HeapMem[cid].limit;
-      stacks[cid].stacksBottom := Config.StackMem[cid].start - MainStackSize;
-      stacks[cid].stacksTop := Config.StackMem[cid].start;
+      heaps[cid].heapTop := MemMap.HeapMem[cid].start;
+      heaps[cid].heapLimit := MemMap.HeapMem[cid].limit;
+      stacks[cid].stacksBottom := MemMap.StackMem[cid].start - MainStackSize;
+      stacks[cid].stacksTop := MemMap.StackMem[cid].start;
       stacks[cid].stackCheckEnabled := FALSE;
-      SYSTEM.PUT(Config.StackMem[cid].start, StackSeal);
+      SYSTEM.PUT(MemMap.StackMem[cid].start, StackSeal);
       INC(cid)
     END
-  END Init;
+  END init;
 
 BEGIN
-  Init
+  Done := FALSE;
+  init;
+  Done := TRUE
 END Memory.
 
 (**

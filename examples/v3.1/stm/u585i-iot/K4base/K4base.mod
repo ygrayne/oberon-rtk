@@ -2,7 +2,7 @@ MODULE K4base;
 (**
   Oberon RTK Framework v3.1
   --
-  Base test program for kernel-v4 prototype.
+  Base test program for kernel-v4.
   https://oberon-rtk.org/docs/examples/v2/k4tests/
   --
   MCU: STM32U585
@@ -10,12 +10,12 @@ MODULE K4base;
   --
   Kernel-v4
   --
-  Copyright (c) 2025 Gray gray@grayraven.org
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
   IMPORT
-    Main, EXC, TIM, TIMdef, Kernel, Out, Errors;
+    Main, EXC, TIM, Kernel, Out, Errors;
 
   CONST
     RunPrio = EXC.ExcPrio40;
@@ -104,7 +104,7 @@ MODULE K4base;
 
     (* 32 bit timer, PCLK1 = 160 MHz, divided to 1 MHz (usec) *)
     NEW(tim); ASSERT(tim # NIL, Errors.HeapOverflow);
-    TIM.Init(tim, TIMdef.TIM2);
+    TIM.Init(tim, TIM.TIM2);
     cfg.presc := 160 - 1;
     cfg.reload := ARR32;
     TIM.Configure(tim, cfg);

@@ -1,7 +1,7 @@
 MODULE MemoryExt;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   * extended memory allocation for two cores
   * two 4k blocks,
@@ -21,14 +21,14 @@ MODULE MemoryExt;
   MCU: RP2040, RP2350
   Boards: Pico, Pico2
   --
-  Copyright (c) 2024-2025 Gray, gray@grayraven.org
+  Copyright (c) 2024-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Config, ProgData;
+  IMPORT SYSTEM, MemMap, ProgData, SIO_DEV;
 
   CONST
-    NumCores = Config.NumCoresUsed;
+    NumCores = MemMap.NumCoresUsed;
 
   TYPE
     CoreContext = RECORD
@@ -44,7 +44,7 @@ MODULE MemoryExt;
   (* parameter order as in Memory.mod for consistency *)
     VAR cid, h: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid);
+    SYSTEM.GET(SIO_DEV.SIO_CPUID, cid);
     h := coreCon[cid].memTop + blockSize;
     IF h < coreCon[cid].memLimit THEN
       addr :=  coreCon[cid].memTop;
@@ -98,10 +98,10 @@ MODULE MemoryExt;
   PROCEDURE init;
     CONST Core0 = 0; Core1 = 1;
   BEGIN
-    coreCon[Core0].memTop := Config.ExtMem[Core0].start;
-    coreCon[Core0].memLimit := Config.ExtMem[Core0].end;
-    coreCon[Core1].memTop := Config.ExtMem[Core1].start;
-    coreCon[Core1].memLimit := Config.ExtMem[Core1].end
+    coreCon[Core0].memTop := MemMap.ExtMem[Core0].start;
+    coreCon[Core0].memLimit := MemMap.ExtMem[Core0].end;
+    coreCon[Core1].memTop := MemMap.ExtMem[Core1].start;
+    coreCon[Core1].memLimit := MemMap.ExtMem[Core1].end
   END init;
 
 BEGIN

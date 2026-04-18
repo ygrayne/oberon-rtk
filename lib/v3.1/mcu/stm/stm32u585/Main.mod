@@ -14,25 +14,23 @@ MODULE Main;
 **)
 
   IMPORT (* keep first three imports in this order  *)
-    StartupCfg, MemCfg, Memory, DevCfg, ClockCfg, ConsoleCfg,
-    RuntimeErrors, RuntimeErrorsOut, FPUcfg;
+    Startup, MemMap, Memory, Devices, Clocks, Console,
+    RuntimeErrors, RuntimeErrorsOut;
 
-  PROCEDURE init;
+  PROCEDURE run;
   BEGIN
-    ASSERT(StartupCfg.Initialised);
-    ASSERT(MemCfg.Initialised);
-    ASSERT(Memory.Initialised);
-    DevCfg.Init;
-    ClockCfg.Init;
-    ConsoleCfg.Init(ClockCfg.SYSCLK_FRQ);
+    ASSERT(Startup.Done);
+    ASSERT(MemMap.Done);
+    ASSERT(Memory.Done);
+    Devices.Config;
+    Clocks.Config;
     RuntimeErrors.Install;
-    RuntimeErrorsOut.SetWriter(ConsoleCfg.Werr[0]);
+    Console.Install(Clocks.SYSCLK_FRQ);
     RuntimeErrors.InstallErrorHandler(RuntimeErrorsOut.ErrorHandler);
     RuntimeErrors.EnableFaults;
-    FPUcfg.Init;
-    (*SecureCfg.Init, for S/NS programs, import SecureCfg if used *)
-  END init;
+    (*Security.Config *) (* for S/NS programs, import Security is used *)
+  END run;
 
 BEGIN
-  init
+  run
 END Main.

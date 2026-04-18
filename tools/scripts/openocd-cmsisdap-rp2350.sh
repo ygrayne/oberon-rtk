@@ -3,8 +3,9 @@
 # Raspberry Pi OpenOCD fork
 # GDB port: 3333
 : "${RTK_OPENOCD_RPI:?RTK_OPENOCD_RPI not set}"
+: "${RTK_OPENOCD_RPI_SCRIPTS:?RTK_OPENOCD_RPI_SCRIPTS not set}"
 "$RTK_OPENOCD_RPI" \
-  -s "$(dirname "$RTK_OPENOCD_RPI")/scripts" \
+  -s "$RTK_OPENOCD_RPI_SCRIPTS" \
   -f interface/cmsis-dap.cfg \
   -f target/rp2350.cfg \
   -c "adapter speed 5000"

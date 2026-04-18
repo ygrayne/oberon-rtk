@@ -1,7 +1,7 @@
 MODULE Kernel;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Multi-threading kernel-v4.
   Interrupt-driven asynchronous tasks and synchronous background tasks.
@@ -9,16 +9,16 @@ MODULE Kernel;
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2025 Gray gray@grayraven.org
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
   IMPORT
-    SYSTEM, MCU := MCU2, Config, Cores, Exceptions, SysTick, Errors, LED;
+    SYSTEM, PPB, EXC, ASM, MemMap, Cores, Exceptions, SysTick, Errors, LED;
 
   CONST
-    ExcPrioBlock = MCU.ExcPrioHigh;
-    NumCores = Config.NumCoresUsed;
+    ExcPrioBlock = EXC.ExcPrioHigh;
+    NumCores = MemMap.NumCoresUsed;
 
   TYPE
     Actor* = POINTER TO ActorDesc;
@@ -140,7 +140,7 @@ MODULE Kernel;
   PROCEDURE InstallRdyQ*(rq: ReadyQ; rh: RunHandler; intNo, prio: INTEGER);
   BEGIN
     rq.intNo := intNo;
-    rq.ispr := MCU.PPB_NVIC_ISPR0 + ((intNo DIV 32) * 4);
+    rq.ispr := PPB.NVIC_ISPR0 + ((intNo DIV 32) * 4);
     rq.intMask := intNo MOD 32;
     Exceptions.InstallIntHandler(intNo, rh);
     Exceptions.SetIntPrio(intNo, prio);
@@ -150,9 +150,9 @@ MODULE Kernel;
   PROCEDURE* PutToRdyQ*(rq: ReadyQ; act: Actor);
     CONST R03 = 3;
   BEGIN
-    SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
+    SYSTEM.EMIT(ASM.MRS_R07_BASEPRI);
     SYSTEM.LDREG(R03, ExcPrioBlock);
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R03);
     IF rq.head = NIL THEN
       rq.head := act
     ELSE
@@ -164,20 +164,20 @@ MODULE Kernel;
       SYSTEM.PUT(rq.ispr, {rq.intMask});
       (*SYSTEM.PUT(MCU.PPB_STIR, rq.intNo); *)
     END;
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R07)
   END PutToRdyQ;
 
   PROCEDURE* GetFromRdyQ*(rq: ReadyQ; VAR act: Actor);
     CONST R03  = 3;
   BEGIN
-    SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
+    SYSTEM.EMIT(ASM.MRS_R07_BASEPRI);
     SYSTEM.LDREG(R03, ExcPrioBlock);
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R03);
     act := rq.head;
     IF rq.head # NIL THEN
       rq.head := rq.head.next
     END;
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R07)
   END GetFromRdyQ;
 
 
@@ -193,9 +193,9 @@ MODULE Kernel;
   PROCEDURE* PutToActQ*(aq: ActorQ; act: Actor);
     CONST R03 = 3;
   BEGIN
-    SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
+    SYSTEM.EMIT(ASM.MRS_R07_BASEPRI);
     SYSTEM.LDREG(R03, ExcPrioBlock);
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R03);
     IF aq.head = NIL THEN
       aq.head := act
     ELSE
@@ -203,30 +203,30 @@ MODULE Kernel;
     END;
     aq.tail := act;
     act.next := NIL;
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R07)
   END PutToActQ;
 
   PROCEDURE* GetFromActQ*(aq: ActorQ; VAR act: Actor);
     CONST R03 = 3;
   BEGIN
-    SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
+    SYSTEM.EMIT(ASM.MRS_R07_BASEPRI);
     SYSTEM.LDREG(R03, ExcPrioBlock);
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R03);
     act := aq.head;
     IF aq.head # NIL THEN
       aq.head := aq.head.next
     END;
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R07)
   END GetFromActQ;
 
   PROCEDURE* GetTailFromActQ*(aq: ActorQ; VAR tail: Actor);
     CONST R03 = 3;
   BEGIN
-    SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
+    SYSTEM.EMIT(ASM.MRS_R07_BASEPRI);
     SYSTEM.LDREG(R03, ExcPrioBlock);
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R03);
     tail := aq.tail;
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R07)
   END GetTailFromActQ;
 
 
@@ -242,9 +242,9 @@ MODULE Kernel;
   PROCEDURE* PutToMsgQ*(mq: MessageQ; msg: Message);
     CONST R03 = 3;
   BEGIN
-    SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
+    SYSTEM.EMIT(ASM.MRS_R07_BASEPRI);
     SYSTEM.LDREG(R03, ExcPrioBlock);
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R03);
     IF mq.head = NIL THEN
       mq.head := msg
     ELSE
@@ -252,20 +252,20 @@ MODULE Kernel;
     END;
     mq.tail := msg;
     msg.next := NIL;
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R07)
   END PutToMsgQ;
 
   PROCEDURE* GetFromMsgQ*(mq: MessageQ; VAR msg: Message);
     CONST R03 = 3;
   BEGIN
-    SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
+    SYSTEM.EMIT(ASM.MRS_R07_BASEPRI);
     SYSTEM.LDREG(R03, ExcPrioBlock);
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R03);
     msg := mq.head;
     IF mq.head # NIL THEN
       mq.head := mq.head.next
     END;
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R07)
   END GetFromMsgQ;
 
 
@@ -311,24 +311,24 @@ MODULE Kernel;
   PROCEDURE* PutToMsgPool*(mp: MessagePool; msg: Message);
     CONST R03 = 3;
   BEGIN
-    SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
+    SYSTEM.EMIT(ASM.MRS_R07_BASEPRI);
     SYSTEM.LDREG(R03, ExcPrioBlock);
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R03);
     IF msg.pool # NIL THEN
       msg.next := mp.head;
       mp.head := msg;
       INC(mp.cnt)
     END;
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R07)
   END PutToMsgPool;
 
 
   PROCEDURE* GetFromMsgPool*(mp: MessagePool; VAR msg: Message);
     CONST R03 = 3;
   BEGIN
-    SYSTEM.EMIT(MCU.MRS_R07_BASEPRI);
+    SYSTEM.EMIT(ASM.MRS_R07_BASEPRI);
     SYSTEM.LDREG(R03, ExcPrioBlock);
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R03);
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R03);
     msg := mp.head;
     IF msg # NIL THEN
       IF mp.head.next # NIL THEN
@@ -338,7 +338,7 @@ MODULE Kernel;
       END;
       DEC(mp.cnt)
     END;
-    SYSTEM.EMIT(MCU.MSR_BASEPRI_R07)
+    SYSTEM.EMIT(ASM.MSR_BASEPRI_R07)
   END GetFromMsgPool;
 
 
@@ -456,7 +456,7 @@ MODULE Kernel;
     Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     REPEAT
-      SYSTEM.EMITH(MCU.WFI);
+      SYSTEM.EMITH(ASM.WFI);
       IF SysTick.Tick() THEN
         GetFromActQ(ctx.loopActQ, act);
         GetTailFromActQ(ctx.loopActQ, tail);

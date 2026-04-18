@@ -1,65 +1,82 @@
 MODULE Stacktrace;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
-  Create stack trace amd read stack registers based on error data
+  Create stack trace and read stack registers based on error data
   collected by run-time error handling RuntimeErrors.
   --
   MCU: RP2350
   --
-  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  Copyright (c) 2020-2026 Gray, gray@grayraven.org
   Portions copyright (c) 2008-2024 CFB Software, https://www.astrobe.com
   Used with permission.
   Please refer to the licensing conditions as defined at the end of this file.
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Config, RuntimeErrors;
+  IMPORT SYSTEM, PPB, ProgData, RuntimeErrors;
 
   CONST
-    TraceDepth = 16;
+    TraceDepth* = 16;
 
-    ExcRetMask = 0FFFFFF82H;
-    ExcRetVal = 0FFFFFF80H;
+    (* procedure prolog handling *)
+    (* push (PUSH T1) identification *)
+    PushT2mask  = 0FE00H;
+    PushT2val   = 0B400H;
+
+    (* push.w (STMDB T1) identification *)
+    PushWstmdb  = 0E92DH;
+
+    (* push.w (STR T4) identification *)
+    PushWstr    = 0F84DH;
+
+    (* sub (SUB(SP) T1) identification *)
+    SubT1mask   = 0FF80H;
+    SubT1val    = 0B080H;
+
+    (* sub.w (SUB(SP) T2) identification *)
+    SubT2mask   = 0FBEFH;
+    SubT2val    = 0F1ADH;
+    SubT2rdMask = 08F00H;
+    SubT2rdVal  = 00D00H;
+
+    (* movw (MOVW T3) identification — for register-based sub *)
+    MovwT3mask  = 0FBF0H;
+    MovwT3val   = 0F240H;
+
+    (* sub.w sp, sp, rN (SUB register) identification *)
+    SubRegHw1    = 0EBADH;
+    SubRegRdMask = 0FF00H;
+    SubRegRdVal  = 00D00H;
+
+
+    (* trace capturing *)
+    ExcRetPattern = 01FFFFFFH; (* [31:7] *)
+    LineNoBranch = 0E000H; (* B,0 instruction before line number *)
+    StackSeal = 0FEF5EDA5H;
 
     AnnNone* = 0;
     AnnStackframe* = -1;
 
-    StackTraceNotLR = 0;
-    StackTraceLineNo = 1;
-    StackTraceNoLineNo = 2;
-
-    (* stack context sizes *)
+    (* stack context sizes and EXC_RETURN flags *)
     StateContextSize = 8 * 4;
-    (* unused
-    ExtStateContextSize = 10 * 4;
-    *)
+    (*ExtStateContextSize = 10 * 4;*) (* already accounted for by RuntimeErrors.excHandler *)
     FPcontextSize = 18 * 4;
-    ExtFPcontextSize = 16 * 4;
+    FPadditionalSize = 16 * 4;
+    (*EXC_RET_DCRS  = 5;*)  (* = 0: all CPU regs stacked by hardware, extended state context *)
+    EXC_RET_FType = 4;      (* = 0: caller FPU regs stacked by hardware *)
 
     (* register offsets from stacked r0 *)
     PSRoffset = 28;
     PCoffset = 24;
-    LRoffset = 20;
 
-    StackSeal = 0FEF5EDA5H;
-
-    (* PPB_FPCCR bits *)
-    FPCCR_TS  = 26;
-
-    (* EXC_RETURN bits *)
-    (*EXC_RET_S     = 6;*)  (* = 1: secure stack frame, faulty code was running in secure domain *)
-    (*EXC_RET_DCRS  = 5;*)  (* = 0: all CPU regs stacked by hardware, extended state context *)
-    EXC_RET_FType = 4;  (* = 0: all FPU regs stacked by hardware, extended FPU context *)
-    (*EXC_RET_Mode  = 3; *) (* = 1: thread mode, faulty code was running in thread mode *)
-    (*EXC_RET_SPSEL = 2; *) (* = 1: PSP used for stacking *)
-    (*EXC_RET_ES    = 0;*)  (* = 1: exception running in secure domain *)
 
   TYPE
     TracePoint* = RECORD
       address*: INTEGER;
       lineNo*: INTEGER;
       stackAddr*: INTEGER;
+      frameSize*: INTEGER;
       annotation*: INTEGER
     END;
 
@@ -87,74 +104,165 @@ MODULE Stacktrace;
     value := LSL(b1, 8) + b2
   END getHalfWord;
 
-  PROCEDURE isBL(codeAddr: INTEGER): BOOLEAN;
-  (* from Astrobe library *)
-  (* check if the instruction at 'codeAddr' is a BL instruction: [31:27] = 11110 *)
-  (* note how the 32 bit code is stored as two 16 bit values:
-      addr[x]   = [31:16]
-      addr[x+2] = [15:0]
-    since we have little endian encoding, it's physically:
-      addr[x]   = [23:16][31:24]
-      addr[x+2] = [7:0][15:8]
-    but the load instruction takes care of *that* conversion.
-  *)
-    VAR instr: INTEGER;
-  BEGIN
-    getHalfWord(codeAddr, instr);
-    RETURN BFX(instr, 15, 11) = 01EH
-  END isBL;
+  (* --- Astrobe code end --- *)
 
-  PROCEDURE isBLX(codeAddr: INTEGER): BOOLEAN;
-  (* from Astrobe library, modified *)
-  (* check if the instruction at 'codeAddr' is a BLX instruction: 010001111rrrr000 *)
-    CONST
-      BLXmask = 0FF87H; (* 1111 1111 1000 0111 *)
-      BLXval  = 04780H; (* 0100 0111 1000 0000 *)
-    VAR instr: INTEGER;
-  BEGIN
-    getHalfWord(codeAddr, instr);
-    RETURN BITS(instr) * BITS(BLXmask) = BITS(BLXval)
-    (*RETURN (BFX(instr, 15, 7) = 08FH) & (BFX(instr, 2, 0) = 0)*)
-  END isBLX;
 
-  PROCEDURE getLR(stackAddr: INTEGER; VAR lr, res: INTEGER);
-  (* from Astrobe library, modified *)
-  (* Check if the value at 'stackAddr' on the stack is a link register address.
-  If yes, it will point to a code address (+1 for thumb mode) which
-  is preceded by a BL or BLX instruction. *)
-    VAR nextInstr: INTEGER;
+  PROCEDURE* bitCount(val, n: INTEGER): INTEGER;
+  (* count set bits in the lowest n bits of val *)
+    VAR count, i: INTEGER;
   BEGIN
-    res := StackTraceNotLR;
-    SYSTEM.GET(stackAddr, lr);
-    (* must be Thumb mode *)
-    IF ODD(lr) THEN
-      DEC(lr);
-      IF (lr >= Config.CodeMem.start) & (lr < Config.CodeMem.end) THEN
-        IF isBL(lr - 4) OR isBLX(lr - 2) THEN
-          getHalfWord(lr, nextInstr);
-          (* if stack trace is enabled there is a B,0 instruction (0E0000H)
-          that skips the line number after the BL or BLX instruction *)
-          IF nextInstr = 0E000H THEN
-            res := StackTraceLineNo
-          ELSE
-            res := StackTraceNoLineNo
+    count := 0; i := 0;
+    WHILE i < n DO
+      IF ODD(val) THEN INC(count) END;
+      val := LSR(val, 1);
+      INC(i)
+    END
+    RETURN count
+  END bitCount;
+
+
+  PROCEDURE* decodeThumbModImm(hw1, hw2: INTEGER): INTEGER;
+  (* decode Thumb32 modified immediate from SUB(SP) T2 *)
+  (* hw1: first halfword, hw2: second halfword *)
+  (* extracts i:imm3:imm8 and decodes per ARM T32ExpandImm *)
+    VAR imm12, base, rot, result: INTEGER;
+  BEGIN
+    imm12 := LSL(BFX(hw1, 10, 10), 11) + LSL(BFX(hw2, 14, 12), 8) + BFX(hw2, 7, 0);
+
+    IF BFX(imm12, 11, 10) = 0 THEN
+      (* non-rotated forms, sub-selected by imm12[9:8] *)
+      base := BFX(imm12, 7, 0);
+      IF BFX(imm12, 9, 8) = 0 THEN
+        (* 00 00: plain 8-bit value *)
+        result := base
+      ELSIF BFX(imm12, 9, 8) = 1 THEN
+        (* 00 01: 00XY00XY *)
+        result := LSL(base, 16) + base
+      ELSIF BFX(imm12, 9, 8) = 2 THEN
+        (* 00 10: XY00XY00 *)
+        base := LSL(base, 8);
+        result := LSL(base, 16) + base
+      ELSE
+        (* 00 11: XYXYXYXY *)
+        result := LSL(base, 24) + LSL(base, 16) + LSL(base, 8) + base
+      END
+    ELSE
+      (* imm12[11:10] != 00: rotated 1:imm12[6:0] by imm12[11:7] *)
+      rot := BFX(imm12, 11, 7);
+      base := 80H + BFX(imm12, 6, 0);
+      result := ROR(base, rot)
+    END
+    RETURN result
+  END decodeThumbModImm;
+
+
+  PROCEDURE* decodeMovwImm(hw1, hw2: INTEGER): INTEGER;
+  (* decode 16-bit immediate from MOVW T3 encoding *)
+  (* hw1: first halfword, hw2: second halfword *)
+  (* imm16 = imm4:i:imm3:imm8 *)
+    RETURN LSL(BFX(hw1, 3, 0), 12) + LSL(BFX(hw1, 10, 10), 11)
+         + LSL(BFX(hw2, 14, 12), 8) + BFX(hw2, 7, 0)
+  END decodeMovwImm;
+
+
+  PROCEDURE getFrameSize(addr: INTEGER; VAR frameSize: INTEGER);
+  (* addr: procedure entry address (from ProgData)
+     frameSize: total frame size in bytes (push + sub)
+     saved LR is always at sp + frameSize - 4 *)
+    VAR hw1, hw2, nPush, nSub, subAddr: INTEGER;
+  BEGIN
+    nPush := 0; nSub := 0; subAddr := 0;
+    getHalfWord(addr, hw1);
+    IF BITS(hw1) * BITS(PushT2mask) = BITS(PushT2val) THEN
+      (* push(PUSH T2): 16-bit, bits [8:0] = register list *)
+      nPush := bitCount(hw1, 9);
+      subAddr := addr + 2
+    ELSIF hw1 = PushWstmdb THEN
+      (* push.w(STMDB T1): 32-bit, register list in second halfword *)
+      getHalfWord(addr + 2, hw2);
+      IF BITS(hw2) * BITS(0A000H) = {} THEN (* bits 15 and 13 must be (0) *)
+        nPush := bitCount(hw2, 15);
+        subAddr := addr + 4
+      END
+    ELSIF hw1 = PushWstr THEN
+      (* push.w(STR T4): 32-bit, single register *)
+      nPush := 1;
+      subAddr := addr + 4
+    END;
+    IF nPush > 0 THEN
+      (* check for sub/sub.w immediately after push *)
+      getHalfWord(subAddr, hw1);
+      IF BITS(hw1) * BITS(SubT1mask) = BITS(SubT1val) THEN
+        (* sub (SUB(SP) T1): 16-bit, bits [6:0] = immediate / 4 *)
+        nSub := BFX(hw1, 6, 0)
+      ELSIF BITS(hw1) * BITS(SubT2mask) = BITS(SubT2val) THEN
+        (* sub.w (SUB(SP) T2): 32-bit, check Rd = SP *)
+        getHalfWord(subAddr + 2, hw2);
+        IF BITS(hw2) * BITS(SubT2rdMask) = BITS(SubT2rdVal) THEN
+          nSub := decodeThumbModImm(hw1, hw2) DIV 4
+        END
+      ELSIF BITS(hw1) * BITS(MovwT3mask) = BITS(MovwT3val) THEN
+        (* movw rN, #imm16: check if followed by sub.w sp, sp, rN *)
+        getHalfWord(subAddr + 2, hw2);
+        getHalfWord(subAddr + 4, hw1);
+        IF hw1 = SubRegHw1 THEN
+          getHalfWord(subAddr + 6, hw2);
+          IF BITS(hw2) * BITS(SubRegRdMask) = BITS(SubRegRdVal) THEN
+            (* verified: movw + sub.w sp, sp, rN sequence *)
+            getHalfWord(subAddr, hw1);
+            getHalfWord(subAddr + 2, hw2);
+            nSub := decodeMovwImm(hw1, hw2) DIV 4
           END
         END
       END
-    END
-  END getLR;
+    END;
+    frameSize := (nPush + nSub) * 4
+  END getFrameSize;
 
-  (* --- Astrobe code end --- *)
+
+  PROCEDURE* isExcReturn(val: INTEGER): BOOLEAN;
+    RETURN BFX(val, 31, 7) = ExcRetPattern
+  END isExcReturn;
+
+
+  PROCEDURE getLineNo(addr: INTEGER; VAR lineNo: INTEGER);
+  (* check if instruction at addr is B,0 (line number follows) *)
+    VAR instr: INTEGER;
+  BEGIN
+    lineNo := 0;
+    getHalfWord(addr, instr);
+    IF instr = LineNoBranch THEN
+      getHalfWord(addr + 2, lineNo)
+    END
+  END getLineNo;
+
+
+  PROCEDURE* addTP(VAR tr: Trace; addr, lineNo, sAddr, fSize, ann: INTEGER);
+  (* add a trace point if space available *)
+    VAR tp: TracePoint;
+  BEGIN
+    IF tr.count < TraceDepth THEN
+      tp.address := addr;
+      tp.lineNo := lineNo;
+      tp.stackAddr := sAddr;
+      tp.frameSize := fSize;
+      tp.annotation := ann;
+      tr.tp[tr.count] := tp;
+      INC(tr.count)
+    END
+  END addTP;
+
 
   PROCEDURE* traceStart(stackframeBase, excRetVal: INTEGER): INTEGER;
-    CONST StackAlign = 9; (* in stacked PSR *)
+  (* calculate the start/re-start addr for tracing above an exc stack frame *)
+    CONST StackAlign = 9; (* in stacked PSR *) TS = 26;
     VAR startAddr: INTEGER;
   BEGIN
     startAddr := stackframeBase + StateContextSize;
     IF ~(EXC_RET_FType IN BITS(excRetVal)) THEN (* FP context *)
       startAddr := startAddr + FPcontextSize;
-      IF SYSTEM.BIT(MCU.PPB_FPCCR, FPCCR_TS) THEN
-        startAddr := startAddr + ExtFPcontextSize (* extended FP context *)
+      IF SYSTEM.BIT(PPB.FPCCR, TS) THEN (* additional FP context: callee saved regs *)
+        startAddr := startAddr + FPadditionalSize;
       END
     END;
     IF SYSTEM.BIT(stackframeBase + PSRoffset, StackAlign) THEN
@@ -164,106 +272,97 @@ MODULE Stacktrace;
   END traceStart;
 
 
-  PROCEDURE getAddr(VAR stackAddr, excRetVal: INTEGER; VAR isStackFrame: BOOLEAN);
-    CONST R11 = 11;
-    VAR stackVal, lr, res: INTEGER;
+  PROCEDURE trace(frameBaseAddr, frameSize: INTEGER; VAR trace: Trace);
+    VAR
+      savedLR, excFrameBase, codeAddr, lineNo: INTEGER;
+      procEntry, aboveWord: INTEGER;
+      done: BOOLEAN;
   BEGIN
-    isStackFrame := FALSE;
-    SYSTEM.GET(stackAddr, stackVal);
-    IF BITS(stackVal) * BITS(ExcRetMask) = BITS(ExcRetVal) THEN
-      (* if a potential EXC_RETURN value *)
-      excRetVal := stackVal; (* only valid if 'isStackFrame' *)
-      SYSTEM.GET(stackAddr + 4, stackVal);
-      IF stackVal = StackSeal THEN
-        (* at top of main stack: we have an EXC_RETURN value with 'PSP used for stacking' *)
-        (* switch stacks, point to stacked regs on process stack *)
-        SYSTEM.EMIT(MCU.MRS_R11_PSP);
-        stackAddr := SYSTEM.REG(R11);
-        isStackFrame := TRUE
+    done := FALSE;
+    WHILE ~done & (trace.count < TraceDepth) DO
+      (* each iteration starts with sp = base addr of a procedure stack frame *)
+      (* and frameSize = size of that stack frame *)
+
+      (* read saved LR from current frame *)
+      (* LR is always at top of the frame *)
+      SYSTEM.GET(frameBaseAddr + frameSize - 4, savedLR);
+
+      IF isExcReturn(savedLR) THEN
+        (* savedLR is EXC_RETURN: hw exception frame above current proc frame *)
+        excFrameBase := frameBaseAddr + frameSize;
+
+        (* check for MSP to PSP transition *)
+        SYSTEM.GET(excFrameBase, aboveWord);
+        IF aboveWord = StackSeal THEN (* MSP exhausted, exception frame is on PSP *)
+          (* asm
+            mrs r11, psp -> excFrameBase
+          end asm *)
+          (* +asm *)
+          SYSTEM.EMIT(0F3EF8B09H);  (* mrs r11, PSP *)
+          excFrameBase := SYSTEM.REG(11);  (* r11 -> excFrameBase *)
+          (* -asm *)
+        END;
+        (* look up interrupted procedure via codeAddr *)
+        (* to calculate frameSize to prep the next iteration *)
+        SYSTEM.GET(excFrameBase + PCoffset, codeAddr);
+        ProgData.FindEntry(codeAddr, procEntry);
+        done := procEntry = 0;
+        IF ~done THEN
+          ProgData.GetCodeAddr(procEntry, codeAddr);
+          frameBaseAddr := traceStart(excFrameBase, savedLR); (* base SP of interrupted proc *)
+          getFrameSize(codeAddr, frameSize);
+          addTP(trace, codeAddr, 0, frameBaseAddr, frameSize, AnnStackframe)
+        END
+
       ELSE
-        (* point to potential stack frame on main stack*)
-        INC(stackAddr, 4);
-        (* stacked value at LRoffset must be either a valid LR value... *)
-        getLR(stackAddr + LRoffset, lr, res);
-        isStackFrame := res > StackTraceNotLR;
-        (* ... or an EXC_RETURN value *)
-        IF ~isStackFrame THEN
-          SYSTEM.GET(stackAddr + LRoffset, stackVal);
-          isStackFrame := BITS(stackVal) * BITS(ExcRetMask) = BITS(ExcRetVal)
+        (* saved LR is normal code address *)
+        (* while in frame defined by frameBaseAddr and frameSize *)
+        (* we create the TP for the *caller* *)
+        done := ~ODD(savedLR); (* valid LR must be thumb code, else we have reached end of trace *)
+        IF ~done THEN
+          DEC(savedLR);
+          (* check for stack seal above - end of call chain *)
+          SYSTEM.GET(frameBaseAddr + frameSize, aboveWord);
+          done := aboveWord = StackSeal;
+          IF ~done THEN (* no stack seal yet, continue *)
+            (* look up caller procedure via savedLR *)
+            ProgData.FindEntry(savedLR, procEntry);
+            done := procEntry = 0;
+            IF ~done THEN (* still in address range of procs in .res meta data *)
+              ProgData.GetCodeAddr(procEntry, codeAddr);
+              frameBaseAddr := frameBaseAddr + frameSize;
+              getFrameSize(codeAddr, frameSize);
+              getLineNo(savedLR, lineNo);
+              addTP(trace, savedLR - 4, lineNo, frameBaseAddr, frameSize, AnnNone)
+            END
+          END
         END
       END
-    END
-  END getAddr;
-
-
-  PROCEDURE stacktrace(stackAddr: INTEGER; VAR trace: Trace);
-    VAR
-      stackVal, retAddr, excRetVal, res, lr, traceDepth: INTEGER;
-      (* addr, val: INTEGER; (* debug *) *)
-      tp: TracePoint; isStackFrame: BOOLEAN;
-  BEGIN
-    CLEAR(tp);
-    traceDepth := LEN(trace.tp);
-    SYSTEM.GET(stackAddr, stackVal);
-    WHILE (stackVal # StackSeal) & (trace.count <= traceDepth) DO
-      (* debug *)
-      (*
-      Out.Hex(stackAddr, 13); Out.Hex(stackVal, 13); Out.Ln;
-      *)
-      (* debug end *)
-      getAddr(stackAddr, excRetVal, isStackFrame);
-      IF isStackFrame THEN
-        SYSTEM.GET(stackAddr + PCoffset, retAddr);
-        tp.address := retAddr;
-        tp.annotation := AnnStackframe;
-        tp.stackAddr := stackAddr;
-        (* addr := stackAddr; (* debug *) *)
-        stackAddr := traceStart(stackAddr, excRetVal);
-        (* debug: print stack dump *)
-        (*
-        WHILE addr < stackAddr DO
-          SYSTEM.GET(addr, val);
-          Out.String("> "); Out.Hex(addr, 13); Out.Hex(val, 13); Out.Ln;
-          INC(addr, 4)
-        END
-        *)
-        (* debug end *)
-      ELSE
-        getLR(stackAddr, lr, res);
-        IF res > StackTraceNotLR THEN
-          tp.address := lr - 4;
-          tp.stackAddr := stackAddr;
-          IF res = StackTraceLineNo THEN
-            getHalfWord(lr + 2, tp.lineNo)
-          END
-        END;
-        INC(stackAddr, 4)
-      END;
-      IF tp.address # 0 THEN (* tp is valid *)
-        IF trace.count < TraceDepth THEN
-          trace.tp[trace.count] := tp;
-          INC(trace.count);
-          CLEAR(tp)
-        ELSE
-          trace.more := TRUE
-        END
-      END;
-      SYSTEM.GET(stackAddr, stackVal)
-    END
-  END stacktrace;
+    END;
+    trace.more := ~done
+  END trace;
 
 
   PROCEDURE CreateTrace*(er: RuntimeErrors.ErrorDesc; VAR tr: Trace);
-    VAR tp: TracePoint;
+    VAR procEntry, codeAddr, frameSize, sp: INTEGER;
   BEGIN
-    tp.address := er.errAddr;
-    tp.lineNo := er.errLineNo;
-    tp.stackAddr := 0;
-    tp.annotation := 0;
-    tr.tp[0] := tp;
-    tr.count := 1;
+    (* first trace point: the faulting location *)
+    tr.count := 0;
     tr.more := FALSE;
-    stacktrace(traceStart(er.stackframeBase, er.excRetVal), tr)
+    addTP(tr, er.errAddr, er.errLineNo, 0, 0, AnnNone);
+
+    (* find faulting procedure and read its prologue *)
+    ProgData.FindEntry(er.errAddr, procEntry);
+    IF procEntry # 0 THEN
+      ProgData.GetCodeAddr(procEntry, codeAddr);
+      getFrameSize(codeAddr, frameSize);
+      IF frameSize > 0 THEN
+        (* skip error exception frame *)
+        sp := traceStart(er.stackframeBase, er.excRetVal);
+        (* walk the stack *)
+        trace(sp, frameSize, tr)
+      END
+    END
   END CreateTrace;
 
 
@@ -282,31 +381,5 @@ MODULE Stacktrace;
     sr.sp := stackframeBase
   END ReadRegisters;
 
+
 END Stacktrace.
-
-(**
-  Copyright (c) 2020-2025 Gray, gray@grayraven.org
-  Copyright (c) 2008-2024 CFB Software, https://www.astrobe.com
-
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions are met:
-
-  1. Redistributions of source code must retain the above copyright notice,
-     this list of conditions and the following disclaimer.
-
-  2. Redistributions in binary form must reproduce the above copyright notice,
-     this list of conditions and the following disclaimer in the documentation
-     and/or other materials provided with the distribution.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
-  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-**)
-

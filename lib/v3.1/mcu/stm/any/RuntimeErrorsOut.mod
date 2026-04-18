@@ -12,10 +12,10 @@ MODULE RuntimeErrorsOut;
 **)
 
   IMPORT
-    MemCfg, RuntimeErrors, Stacktrace, Cores, TextIO, Texts, Errors, ProgData;
+    MemMap, RuntimeErrors, Stacktrace, Cores, TextIO, Texts, Errors, ProgData;
 
   CONST
-    NumCores = MemCfg.NumCoresUsed;
+    NumCores = MemMap.NumCoresUsed;
     DataCol = 36;
 
   TYPE
@@ -72,31 +72,27 @@ MODULE RuntimeErrorsOut;
       We: TextIO.Writer;
   BEGIN
     We := W[Cores.CoreId()];
-    IF ~tr.error THEN
-      IF tr.count > 1 THEN
-        Texts.WriteString(We, "trace:                       ");
-        Texts.WriteString(We, "code addr    ");
-        Texts.WriteString(We, "ln   ");
-        Texts.WriteString(We, "frame addr  ");
-        Texts.WriteString(We, "fsz ");
-        Texts.WriteLn(We);
-        i := 0;
-        WHILE i < tr.count DO
-          tp := tr.tp[i];
-          printAnnotation(We, tp.annotation);
-          ProgData.FindProcEntries(tp.address, modEntryAddr, procEntryAddr);
-          ProgData.GetNames(modEntryAddr, procEntryAddr, moduleName, procName);
-          printTraceLine(We, moduleName, procName, tp.address, tp.lineNo, tp.stackAddr, tp.frameSize);
-          INC(i)
-        END;
-        IF tr.more THEN
-          Texts.WriteString(We, "  --- more ---"); Texts.WriteLn(We)
-        END
-      ELSE
-        Texts.WriteString(We, "trace: not captured"); Texts.WriteLn(We)
+    IF tr.count > 1 THEN
+      Texts.WriteString(We, "trace:                       ");
+      Texts.WriteString(We, "code addr    ");
+      Texts.WriteString(We, "ln   ");
+      Texts.WriteString(We, "frame addr  ");
+      Texts.WriteString(We, "fsz ");
+      Texts.WriteLn(We);
+      i := 0;
+      WHILE i < tr.count DO
+        tp := tr.tp[i];
+        printAnnotation(We, tp.annotation);
+        ProgData.FindProcEntries(tp.address, modEntryAddr, procEntryAddr);
+        ProgData.GetNames(modEntryAddr, procEntryAddr, moduleName, procName);
+        printTraceLine(We, moduleName, procName, tp.address, tp.lineNo, tp.stackAddr, tp.frameSize);
+        INC(i)
+      END;
+      IF tr.more THEN
+        Texts.WriteString(We, "  --- more ---"); Texts.WriteLn(We)
       END
     ELSE
-      Texts.WriteString(We, "trace: error while capturing"); Texts.WriteLn(We)
+      Texts.WriteString(We, "trace: not captured"); Texts.WriteLn(We)
     END
   END PrintStacktrace;
 

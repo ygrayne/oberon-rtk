@@ -1,26 +1,21 @@
 MODULE RST;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Resets controller
   Power-on state machine
   --
-  Type: MCU
-  --
   MCU: RP2350
   --
-  See
-  * 'RESETS_*' values in MCU2.mod for subsytems to reset
-  * 'PSM_*' values in MCU2.mod for components to reset
-  --
-  Copyright (c) 2023-2025 Gray gray@grayraven.org
+  Copyright (c) 2023-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2;
+  IMPORT SYSTEM, BASE, SYS := RESETS_SYS;
 
   CONST
+  (*
     (* POWMAN_WDSEL bits *)
     (* for 'SetPowmanWatchdogReset' *)
     POWMAN_WDSEL_RST_PSM*          = 12;
@@ -30,37 +25,34 @@ MODULE RST;
 
     (* POWMAN [31:16] passcode *)
     POWMAN_PASSCODE = 05AFE0000H;
+*)
 
-  (* -- RESETS controller -- *)
-
-  PROCEDURE* ReleaseResets*(devices: SET);
-  (* release the reset of a set of device out of start-up *)
-    VAR done: SET;
+  PROCEDURE ReleaseReset*(reg, pos: INTEGER);
+    CONST DoneOffset = 4;
+    VAR val: SET;
   BEGIN
-    SYSTEM.GET(MCU.RESETS_DONE, done);
-    devices := devices - done;
-    SYSTEM.PUT(MCU.RESETS_RESET + MCU.ACLR, devices);
-    WHILE done * devices # devices DO
-      SYSTEM.GET(MCU.RESETS_DONE, done)
-    END
-  END ReleaseResets;
-
-
-  PROCEDURE ReleaseReset*(devNo: INTEGER);
-  BEGIN
-    ReleaseResets({devNo})
+    SYSTEM.PUT(reg + BASE.ACLR, {pos});
+    REPEAT
+      SYSTEM.GET(reg + DoneOffset, val)
+    UNTIL ~(pos IN val)
   END ReleaseReset;
 
 
-  (* -- PSM: power on state machine -- *)
-
-  PROCEDURE* AwaitPowerOnResetDone*(component: INTEGER);
-    VAR x: SET;
+  PROCEDURE ApplyReset*(reg, pos: INTEGER);
+    CONST DoneOffset = 4;
+    VAR val: SET;
   BEGIN
+    SYSTEM.PUT(reg + BASE.ASET, {pos});
     REPEAT
-      SYSTEM.GET(MCU.PSM_DONE, x)
-    UNTIL component IN x
-  END AwaitPowerOnResetDone;
+      SYSTEM.GET(reg + DoneOffset, val)
+    UNTIL pos IN val
+  END ApplyReset;
+
+
+  PROCEDURE* GetDevSec*(VAR reg: INTEGER);
+  BEGIN
+    reg := SYS.RESETS_SEC_reg
+  END GetDevSec;
 
 
   (* -- watchdog resets -- *)
@@ -68,21 +60,23 @@ MODULE RST;
   PROCEDURE* SetPowerOnWatchdogResets*(components: SET);
   (* system resets *)
   BEGIN
-    SYSTEM.PUT(MCU.PSM_WDSEL, components)
+    SYSTEM.PUT(SYS.PSM_WDSEL, components)
   END SetPowerOnWatchdogResets;
 
 
   PROCEDURE* SetResetWatchdogResets*(devices: SET);
   (* sub-system resets *)
   BEGIN
-    SYSTEM.PUT(MCU.RESETS_WDSEL, devices)
+    SYSTEM.PUT(SYS.RESETS_WDSEL, devices)
   END SetResetWatchdogResets;
 
-
+(*
+  #todo
   PROCEDURE* SetPowmanWatchdogReset*(reset: INTEGER);
   (* chip resets *)
   BEGIN
-    SYSTEM.PUT(MCU.POWMAN_WDSEL, POWMAN_PASSCODE + reset)
+    SYSTEM.PUT(SYS_2.POWMAN_WDSEL, POWMAN_PASSCODE + reset)
   END SetPowmanWatchdogReset;
+*)
 
 END RST.

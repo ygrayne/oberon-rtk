@@ -1,13 +1,13 @@
 MODULE Semaphores;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Semaphores for exclusive access to resources shared among threads
   --
   Based on signals
   --
-  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  Copyright (c) 2020-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

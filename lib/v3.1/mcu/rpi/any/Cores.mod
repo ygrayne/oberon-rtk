@@ -1,11 +1,9 @@
 MODULE Cores;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Multi-core handling
-  --
-  Type: MCU
   --
   MCU: RP2040, RP2350
   --
@@ -13,7 +11,7 @@ MODULE Cores;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, Config;
+  IMPORT SYSTEM, DEV := SIO_DEV, MemMap;
 
   CONST
     (* fifo bits *)
@@ -33,37 +31,37 @@ MODULE Cores;
 
   PROCEDURE* GetCoreId*(VAR cid: INTEGER);
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid)
+    SYSTEM.GET(DEV.SIO_CPUID, cid)
   END GetCoreId;
 
 
   PROCEDURE* CoreId*(): INTEGER;
     VAR cid: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.SIO_CPUID, cid)
+    SYSTEM.GET(DEV.SIO_CPUID, cid)
     RETURN cid
   END CoreId;
 
 
   PROCEDURE* Send*(value: FifoValue);
   BEGIN
-    SYSTEM.PUT(MCU.SIO_FIFO_WR, value)
+    SYSTEM.PUT(DEV.SIO_FIFO_WR, value)
   END Send;
 
 
   PROCEDURE* Receive*(VAR value: FifoValue);
   BEGIN
-    SYSTEM.GET(MCU.SIO_FIFO_RD, value)
+    SYSTEM.GET(DEV.SIO_FIFO_RD, value)
   END Receive;
 
 
   PROCEDURE* Valid*(): BOOLEAN;
-    RETURN SYSTEM.BIT(MCU.SIO_FIFO_ST, ST_VLD)
+    RETURN SYSTEM.BIT(DEV.SIO_FIFO_ST, ST_VLD)
   END Valid;
 
 
   PROCEDURE* Ready*(): BOOLEAN;
-    RETURN SYSTEM.BIT(MCU.SIO_FIFO_ST, ST_RDY)
+    RETURN SYSTEM.BIT(DEV.SIO_FIFO_ST, ST_RDY)
   END Ready;
 
 
@@ -71,8 +69,8 @@ MODULE Cores;
   (* flush read channel *)
     VAR x: INTEGER;
   BEGIN
-    WHILE SYSTEM.BIT(MCU.SIO_FIFO_ST, ST_VLD) DO
-      SYSTEM.GET(MCU.SIO_FIFO_RD, x)
+    WHILE SYSTEM.BIT(DEV.SIO_FIFO_ST, ST_VLD) DO
+      SYSTEM.GET(DEV.SIO_FIFO_RD, x)
     END
   END Flush;
 
@@ -121,7 +119,7 @@ MODULE Cores;
   BEGIN
     runInit := initProc;
     runStart := startProc;
-    InitCoreOne(init, Config.StackMem[Core1].start, Config.VectMem[Core1].start)
+    InitCoreOne(init, MemMap.StackMem[Core1].start, MemMap.VectMem[Core1].start)
   END StartCoreOne;
 
 END Cores.

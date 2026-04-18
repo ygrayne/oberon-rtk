@@ -44,10 +44,6 @@ Versions lib/v1.0, lib/v2.0, lib/2.1, lib/v3.0, lib/v3.1
     + board: board-specific, possibly with external components and wiring
       + rpi: raspberry pi
         + any
-        + pico: Pico/RP2040
-        + pico2: Pico2/RP2350
-      + tvi: tiny vision
-        + pico2-ice
       + nxp: nxp semi
         + frdm-mcxa436
         + frdm-mcxn947
@@ -72,13 +68,6 @@ Versions lib/v1.0, lib/v2.0, lib/2.1, lib/v3.0, lib/v3.1
     + board: board-specific, possibly with external components and wiring
       + rpi: raspberry pi
         + any
-        + pico: Pico/RP2040
-        + pico2: Pico2/RP2350
-      + tvi: tiny vision
-        + pico2-ice
-      + nxp: nxp semi
-        + frdm-mcxa436
-        + frdm-mcxn947
       + stm: st micro
         + h573-dk
         + u585i-iot
@@ -86,12 +75,7 @@ Versions lib/v1.0, lib/v2.0, lib/2.1, lib/v3.0, lib/v3.1
       + m33: cortex-m33 definitions
       + rpi: raspberry pi
         + any
-        + rp2040: RP2040
         + rp2350: RP2350
-      + nxp: nxp semi
-        + any
-        + mcxa346: MCXA346
-        + mcxn947: MCXN947
       + stm: st micro
         + any
         + stm32h573: STM32H573

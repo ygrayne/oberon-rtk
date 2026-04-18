@@ -10,15 +10,13 @@ MODULE PWR;
     functions such as wake-up and pullup/down
   - the pin-oriented control registers auto-follow the GPIO_SECCFGR settings
   --
-  Type: MCU
-  --
   MCU: STM32U585AI
   --
   Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, CFG := DEV0, RST;
+  IMPORT SYSTEM, SYS := PWR_SYS, RST;
 
   CONST
     Range1* = 3;  (* 1.2 V, 160 MHz *)
@@ -28,12 +26,6 @@ MODULE PWR;
 
     KeepSecure* = 0;
     ReleaseSecure* = 1;
-
-    (* PWR_VOSR bits and values *)
-    PWR_VOSR_BOOSTEN = 18;
-    PWR_VOSR_VOSRDY = 15;
-    PWR_VOSR_BOOSTRDY = 14;
-
 
   TYPE
     ReleaseSecCfg* = RECORD
@@ -49,25 +41,25 @@ MODULE PWR;
   (* is S-restricted if RCC_SECCFGR.SYSCLKSEC = 1 *)
     VAR val: INTEGER;
   BEGIN
-    SYSTEM.GET(CFG.PWR_VOSR, val);
+    SYSTEM.GET(SYS.PWR_VOSR, val);
     BFI(val, 17, 16, range);
-    SYSTEM.PUT(CFG.PWR_VOSR, val);
-    REPEAT UNTIL SYSTEM.BIT(CFG.PWR_VOSR, PWR_VOSR_VOSRDY);
-    SYSTEM.GET(CFG.PWR_VOSR, val);
+    SYSTEM.PUT(SYS.PWR_VOSR, val);
+    REPEAT UNTIL SYSTEM.BIT(SYS.PWR_VOSR, 15);
+    SYSTEM.GET(SYS.PWR_VOSR, val);
     IF range > 1 THEN
-      BFI(val, PWR_VOSR_BOOSTEN, 1);
-      SYSTEM.PUT(CFG.PWR_VOSR, val);
-      REPEAT UNTIL SYSTEM.BIT(CFG.PWR_VOSR, PWR_VOSR_BOOSTRDY)
+      BFI(val, 18, 1);
+      SYSTEM.PUT(SYS.PWR_VOSR, val);
+      REPEAT UNTIL SYSTEM.BIT(SYS.PWR_VOSR, 14)
     ELSE
-      BFI(val, PWR_VOSR_BOOSTEN, 0);
-      SYSTEM.PUT(CFG.PWR_VOSR, val)
+      BFI(val, 18, 0);
+      SYSTEM.PUT(SYS.PWR_VOSR, val)
     END
   END SetVoltageRange;
 
 
   PROCEDURE* SecureAll*;
   BEGIN
-    SYSTEM.PUT(CFG.PWR_SEC, CFG.PWR_SEC_ALL)
+    SYSTEM.PUT(SYS.PWR_SEC, SYS.PWR_SEC_ALL)
   END SecureAll;
 
 
@@ -81,21 +73,21 @@ MODULE PWR;
     VAR val: INTEGER; currentVal: SET;
   BEGIN
     val := 0;
-    BFI(val, CFG.PWR_SEC_APC, cfg.pullCfg);
-    BFI(val, CFG.PWR_SEC_VB, cfg.bkupDom);
-    BFI(val, CFG.PWR_SEC_VDM, cfg.voltDet);
-    BFI(val, CFG.PWR_SEC_LPM, cfg.lpMode);
-    SYSTEM.GET(CFG.PWR_SEC, currentVal);
+    BFI(val, SYS.PWR_SEC_APC, cfg.pullCfg);
+    BFI(val, SYS.PWR_SEC_VB, cfg.bkupDom);
+    BFI(val, SYS.PWR_SEC_VDM, cfg.voltDet);
+    BFI(val, SYS.PWR_SEC_LPM, cfg.lpMode);
+    SYSTEM.GET(SYS.PWR_SEC, currentVal);
     currentVal := (currentVal * (-BITS(val))) * (-cfg.wakeUp);
-    SYSTEM.PUT(CFG.PWR_SEC, currentVal)
+    SYSTEM.PUT(SYS.PWR_SEC, currentVal)
   END ReleaseSec;
 
 
-  PROCEDURE init;
+  PROCEDURE enable;
   BEGIN
-    RST.EnableBusClock(CFG.PWR_BC_reg, CFG.PWR_BC_pos)
-  END init;
+    RST.EnableBusClock(SYS.PWR_BC_reg, SYS.PWR_BC_pos)
+  END enable;
 
 BEGIN
-  init
+  enable
 END PWR.

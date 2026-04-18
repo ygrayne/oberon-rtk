@@ -1,7 +1,7 @@
 MODULE Watchdog;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Watchdog controller
   --
@@ -12,7 +12,7 @@ MODULE Watchdog;
   Counting tick is set and initialised in module Clocks to 1 MHz.
   Note the necessary correction factor of 2 for the RP2040.
   --
-  Copyright (c) 2023-2025 Gray gray@grayraven.org
+  Copyright (c) 2023-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
   --
   Reset behaviour, as read from code.
@@ -55,10 +55,10 @@ MODULE Watchdog;
   be concluded that WATCHDOG_LOAD contains zero out of USB-reset, and consequently
   does not fire, even though it's enabled (WATCHDOG_LOAD is write-only).
 
-  Proc 'init' initialises the watchdog to a common state for all resets.
+  Proc 'Reset' resets the watchdog to a common state for all resets.
 **)
 
-  IMPORT SYSTEM, MCU := MCU2;
+  IMPORT SYSTEM, BASE, DEV := WATCHDOG_DEV;
 
   CONST
     BootMagic0 = 0B007C0D3H;
@@ -87,47 +87,47 @@ MODULE Watchdog;
 
   PROCEDURE* Enable*;
   BEGIN
-    SYSTEM.PUT(MCU.WATCHDOG_CTRL + MCU.ASET, {CTRL_ENABLE})
+    SYSTEM.PUT(DEV.WATCHDOG_CTRL + BASE.ASET, {CTRL_ENABLE})
   END Enable;
 
 
   PROCEDURE* Disable*;
   BEGIN
-    SYSTEM.PUT(MCU.WATCHDOG_CTRL + MCU.ACLR, {CTRL_ENABLE})
+    SYSTEM.PUT(DEV.WATCHDOG_CTRL + BASE.ACLR, {CTRL_ENABLE})
   END Disable;
 
 
   PROCEDURE* SetLoadTime*(time: INTEGER); (* milliseconds *)
     CONST MaxLoad = 0FFFFFFH;
   BEGIN
-    load := MCU.WATCHDOG_XLOADTIME * time * 1000;
+    load := DEV.WATCHDOG_XLOADTIME * time * 1000;
     IF load > MaxLoad THEN load := MaxLoad END;
-    SYSTEM.PUT(MCU.WATCHDOG_LOAD, load)
+    SYSTEM.PUT(DEV.WATCHDOG_LOAD, load)
   END SetLoadTime;
 
 
   PROCEDURE* GetTime*(VAR time: INTEGER);
   BEGIN
-    SYSTEM.GET(MCU.WATCHDOG_CTRL, time);
+    SYSTEM.GET(DEV.WATCHDOG_CTRL, time);
     time := BFX(time, CTRL_TIME_1, CTRL_TIME_0)
   END GetTime;
 
 
   PROCEDURE* Reload*;
   BEGIN
-    SYSTEM.PUT(MCU.WATCHDOG_LOAD, load)
+    SYSTEM.PUT(DEV.WATCHDOG_LOAD, load)
   END Reload;
 
 
   PROCEDURE* Trigger*;
   BEGIN
-    SYSTEM.PUT(MCU.WATCHDOG_CTRL + MCU.ASET, {CTRL_TRIGGER})
+    SYSTEM.PUT(DEV.WATCHDOG_CTRL + BASE.ASET, {CTRL_TRIGGER})
   END Trigger;
 
 
   PROCEDURE* GetResetReason*(VAR reason: INTEGER);
   BEGIN
-    SYSTEM.GET(MCU.WATCHDOG_REASON, reason)
+    SYSTEM.GET(DEV.WATCHDOG_REASON, reason)
   END GetResetReason;
 
 
@@ -135,7 +135,7 @@ MODULE Watchdog;
     VAR addr: INTEGER;
   BEGIN
     ASSERT(regNo IN ScratchRegs);
-    addr := MCU.WATCHDOG_SCRATCH0 + (regNo * MCU.WATCHDOG_SCRATCH_Offset);
+    addr := DEV.WATCHDOG_SCRATCH0 + (regNo * DEV.WATCHDOG_SCRATCH_Offset);
     SYSTEM.PUT(addr, value)
   END SetScratchReg;
 
@@ -144,28 +144,34 @@ MODULE Watchdog;
     VAR addr: INTEGER;
   BEGIN
     ASSERT(regNo IN ScratchRegs);
-    addr := MCU.WATCHDOG_SCRATCH0 + (regNo * MCU.WATCHDOG_SCRATCH_Offset);
+    addr := DEV.WATCHDOG_SCRATCH0 + (regNo * DEV.WATCHDOG_SCRATCH_Offset);
     SYSTEM.GET(addr, value)
   END GetScratchReg;
 
 
   PROCEDURE* SetWatchdogBootVector*(stackPointer, entryPoint: INTEGER);
   BEGIN
-    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH4, BootMagic0);
+    SYSTEM.PUT(DEV.WATCHDOG_SCRATCH4, BootMagic0);
     INCL(SYSTEM.VAL(SET, entryPoint), 0); (* thumb code *)
-    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH5, BITS(entryPoint) / BITS(BootMagic1));
-    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH6, stackPointer);
-    SYSTEM.PUT(MCU.WATCHDOG_SCRATCH7, entryPoint)
+    SYSTEM.PUT(DEV.WATCHDOG_SCRATCH5, BITS(entryPoint) / BITS(BootMagic1));
+    SYSTEM.PUT(DEV.WATCHDOG_SCRATCH6, stackPointer);
+    SYSTEM.PUT(DEV.WATCHDOG_SCRATCH7, entryPoint)
   END SetWatchdogBootVector;
 
 
-  PROCEDURE* init;
+  PROCEDURE* Reset*;
   BEGIN
-    SYSTEM.PUT(MCU.WATCHDOG_CTRL + MCU.ACLR, CTRL_RESET);
-    SYSTEM.PUT(MCU.PSM_WDSEL, 0);
-    SYSTEM.PUT(MCU.RESETS_WDSEL, 0)
-  END init;
+    SYSTEM.PUT(DEV.WATCHDOG_CTRL + BASE.ACLR, CTRL_RESET);
+    SYSTEM.PUT(DEV.WATCHDOG_PSM_WDSEL, 0);
+    SYSTEM.PUT(DEV.WATCHDOG_RESETS_WDSEL, 0)
+  END Reset;
 
-BEGIN
-  init
+
+  (* Secure/Non-secure, RP2350 only *)
+
+  PROCEDURE GetDevSec*(VAR reg: INTEGER);
+  BEGIN
+    reg := DEV.WATCHDOG_SEC_reg
+  END GetDevSec;
+
 END Watchdog.

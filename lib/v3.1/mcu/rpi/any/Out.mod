@@ -1,17 +1,17 @@
 MODULE Out;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Output via two TextIO.Writer.
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2020-2025 Gray gray@grayraven.org
+  Copyright (c) 2020-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT Cores, Errors, TextIO, Texts;
+  IMPORT Cores, TextIO, Texts;
 
   CONST
     NumTerminals = 2;
@@ -20,67 +20,51 @@ MODULE Out;
     W*: ARRAY NumTerminals OF TextIO.Writer; (* module var ok: read only *)
 
 
-  PROCEDURE* Open*(W0, W1: TextIO.Writer);
+  PROCEDURE Open*(Wt: TextIO.Writer);
   BEGIN
-    ASSERT(W0 # NIL, Errors.PreCond);
-    W[0] := W0;
-    W[1] := W1
+    W[Cores.CoreId()] := Wt
   END Open;
 
 
   PROCEDURE Char*(ch: CHAR);
-    VAR cid: INTEGER;
   BEGIN
-    Cores.GetCoreId(cid);
-    Texts.Write(W[cid], ch)
+    Texts.Write(W[Cores.CoreId()], ch)
   END Char;
 
 
   PROCEDURE String*(s: ARRAY OF CHAR);
-    VAR cid: INTEGER;
   BEGIN
-    Cores.GetCoreId(cid);
-    Texts.WriteString(W[cid], s)
+    Texts.WriteString(W[Cores.CoreId()], s)
   END String;
 
 
   PROCEDURE Ln*;
-    VAR cid: INTEGER;
   BEGIN
-    Cores.GetCoreId(cid);
-    Texts.WriteLn(W[cid])
+    Texts.WriteLn(W[Cores.CoreId()])
   END Ln;
 
 
   PROCEDURE Int*(n, width: INTEGER);
-    VAR cid: INTEGER;
   BEGIN
-    Cores.GetCoreId(cid);
-    Texts.WriteInt(W[cid], n, width)
+    Texts.WriteInt(W[Cores.CoreId()], n, width)
   END Int;
 
 
   PROCEDURE Hex*(n, width: INTEGER);
-   VAR cid: INTEGER;
   BEGIN
-    Cores.GetCoreId(cid);
-    Texts.WriteHex(W[cid], n, width)
+    Texts.WriteHex(W[Cores.CoreId()], n, width)
   END Hex;
 
 
   PROCEDURE Bin*(n, width: INTEGER);
-    VAR cid: INTEGER;
   BEGIN
-    Cores.GetCoreId(cid);
-    Texts.WriteBin(W[cid], n, width)
+    Texts.WriteBin(W[Cores.CoreId()], n, width)
   END Bin;
 
 
   PROCEDURE Flush*;
-    VAR cid: INTEGER;
   BEGIN
-    Cores.GetCoreId(cid);
-    Texts.FlushOut(W[cid])
+    Texts.FlushOut(W[Cores.CoreId()])
   END Flush;
 
 BEGIN

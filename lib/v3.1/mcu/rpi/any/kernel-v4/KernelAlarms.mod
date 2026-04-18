@@ -1,19 +1,19 @@
 MODULE KernelAlarms;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Kernel-v4
   Alarms for kernel actors for microseconds timing.
   --
   MCU: RP2350
   --
-  Copyright (c) 2025 Gray gray@grayraven.org
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
   IMPORT
-    SYSTEM, MCU := MCU2, Kernel, Alarms, Errors;
+    SYSTEM, PPB, ASM, Kernel, Alarms, Errors;
 
 
   TYPE
@@ -25,14 +25,14 @@ MODULE KernelAlarms;
     END;
 
   VAR
-    alarms: ARRAY MCU.NumTimers OF ARRAY MCU.NumAlarms OF Alarm;
+    alarms: ARRAY Alarms.NumTimers OF ARRAY Alarms.NumAlarms OF Alarm;
 
 
   PROCEDURE handler[0];
     VAR intNo, tmNo, alNo: INTEGER; al: Alarm;
   BEGIN
-    SYSTEM.EMIT(MCU.MRS_R11_IPSR);
-    intNo := SYSTEM.REG(11) - MCU.IRQ_BASE;
+    SYSTEM.EMIT(ASM.MRS_R11_IPSR);
+    intNo := SYSTEM.REG(11) - PPB.IRQ_BASE;
     tmNo := intNo DIV 4;
     alNo := intNo MOD 4;
     al := alarms[tmNo, alNo];
@@ -80,9 +80,9 @@ MODULE KernelAlarms;
     VAR t, a: INTEGER;
   BEGIN
     t := 0;
-    WHILE t < MCU.NumTimers DO
+    WHILE t < Alarms.NumTimers DO
       a := 0;
-      WHILE a < MCU.NumAlarms DO
+      WHILE a < Alarms.NumAlarms DO
         alarms[t, a] := NIL;
         INC(a)
       END;

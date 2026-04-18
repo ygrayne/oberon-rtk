@@ -14,10 +14,10 @@ MODULE Memory;
   Please refer to the licensing conditions as defined at the end of this file.
 **)
 
-  IMPORT SYSTEM, ASM, MemCfg, MAU, Cores;
+  IMPORT SYSTEM, MemMap, MAU, Cores;
 
   CONST
-    NumCores = MemCfg.NumCoresUsed;
+    NumCores = MemMap.NumCoresUsed;
     NumThreadStacks = 16;
     MainStackSize* = 2048; (* default, see SetMainStackSize below *)
     StackSeal* = 0FEF5EDA5H;
@@ -43,7 +43,7 @@ MODULE Memory;
   VAR
     heaps: ARRAY NumCores OF CoreHeap;
     stacks: ARRAY NumCores OF CoreStacks;
-    Initialised*: BOOLEAN;
+    Done*: BOOLEAN;
 
   (* === heap memory === *)
 
@@ -205,11 +205,10 @@ MODULE Memory;
   PROCEDURE ResetMainStack*;
   (* set MSP to top of stack memory from kernel loopc *)
   (* clear out the top of the main stack to get clean stack traces *)
-    CONST R11 = 11;
     VAR cid, addr: INTEGER;
   BEGIN
     Cores.GetCoreId(cid);
-    addr := MemCfg.StackMem[cid].start;
+    addr := MemMap.StackMem[cid].start;
     (* asm
       addr -> msr msp, r11
     end asm *)
@@ -227,7 +226,7 @@ MODULE Memory;
   BEGIN
     cid := 0;
     WHILE cid < NumCores DO
-      stacks[cid].stacksBottom := MemCfg.StackMem[cid].start - mainStackSize[cid];
+      stacks[cid].stacksBottom := MemMap.StackMem[cid].start - mainStackSize[cid];
       INC(cid)
     END
   END SetMainStackSize;
@@ -239,20 +238,20 @@ MODULE Memory;
     MAU.SetNew(Allocate); MAU.SetDispose(Deallocate);
     cid := 0;
     WHILE cid < NumCores DO
-      heaps[cid].heapTop := MemCfg.HeapMem[cid].start;
-      heaps[cid].heapLimit := MemCfg.HeapMem[cid].limit;
-      stacks[cid].stacksBottom := MemCfg.StackMem[cid].start - MainStackSize;
-      stacks[cid].stacksTop := MemCfg.StackMem[cid].start;
+      heaps[cid].heapTop := MemMap.HeapMem[cid].start;
+      heaps[cid].heapLimit := MemMap.HeapMem[cid].limit;
+      stacks[cid].stacksBottom := MemMap.StackMem[cid].start - MainStackSize;
+      stacks[cid].stacksTop := MemMap.StackMem[cid].start;
       stacks[cid].stackCheckEnabled := FALSE;
-      SYSTEM.PUT(MemCfg.StackMem[cid].start, StackSeal);
+      SYSTEM.PUT(MemMap.StackMem[cid].start, StackSeal);
       INC(cid)
     END
   END init;
 
 BEGIN
-  Initialised := FALSE;
+  Done := FALSE;
   init;
-  Initialised := TRUE
+  Done := TRUE
 END Memory.
 
 (**

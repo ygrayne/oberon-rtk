@@ -12,7 +12,7 @@ MODULE ProgData;
   https://oberon-rtk.org/licences/
   --
   Structure:
-  resource header -- at Config.ResMem.start
+  resource header -- at ResMem.start
   entry
   entry
   ...
@@ -75,7 +75,7 @@ MODULE ProgData;
     .inits code address cannot be identified, namely in the start-up sequence.
 **)
 
-  IMPORT SYSTEM, MemCfg;
+  IMPORT SYSTEM, MemMap;
 
   CONST
     ProgResName = ".ref";
@@ -219,7 +219,7 @@ MODULE ProgData;
     VAR resAddr, resSize, resId, resVersion: INTEGER; found: BOOLEAN; resName: ResName;
   BEGIN
     CLEAR(res);
-    resAddr := MemCfg.ResMem.start;
+    resAddr := MemMap.ResMem.start;
     SYSTEM.GET(resAddr, resId);
     SYSTEM.GET(resAddr + ResVersionOffset, resVersion);
     IF (resId = ResId) & (resVersion = ResVersion) THEN

@@ -1,12 +1,12 @@
 MODULE Semaphores;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Kernel-v4
   Semaphores for exclusive access to resources shared among actors
   --
-  Copyright (c) 2025 Gray gray@grayraven.org
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

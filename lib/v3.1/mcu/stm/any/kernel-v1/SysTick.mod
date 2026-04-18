@@ -11,13 +11,13 @@ MODULE SysTick;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYST, RST, CFG := DEV2, ClockCfg;
+  IMPORT SYST, RST, DEV := SYSTICK_DEV, Clocks;
 
 
   PROCEDURE Config*(msPerTick: INTEGER);
   BEGIN
-    RST.ConfigDevClock(SYST.CLK_HCLK, CFG.SYSTICK_FC_reg, CFG.SYSTICK_FC_pos, CFG.SYSTICK_FC_width);
-    SYST.Configure(ClockCfg.HCLK_FRQ DIV 8, msPerTick)
+    RST.ConfigDevClock(SYST.CLK_HCLK, DEV.SYSTICK_FC_reg, DEV.SYSTICK_FC_pos, DEV.SYSTICK_FC_width);
+    SYST.Configure(Clocks.HCLK_FRQ DIV 8, msPerTick)
   END Config;
 
 

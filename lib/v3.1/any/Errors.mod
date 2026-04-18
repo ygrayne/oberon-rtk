@@ -1,11 +1,11 @@
 MODULE Errors;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Definition of fault and error codes and corresponding message strings.
   --
-  Copyright (c) 2019-2025 Gray, gray@grayraven.org
+  Copyright (c) 2019-2026 Gray, gray@grayraven.org
 **)
 
   IMPORT Error;

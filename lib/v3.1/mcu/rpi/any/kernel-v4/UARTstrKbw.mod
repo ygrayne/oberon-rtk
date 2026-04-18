@@ -1,7 +1,7 @@
 MODULE UARTstrKbw;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   UART string device driver for kernel-v4 use.
   Output only for now (PutString).
@@ -10,12 +10,12 @@ MODULE UARTstrKbw;
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  Copyright (c) 2020-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
   IMPORT
-    SYSTEM, Kernel, UARTdev, TextIO, Errors;
+    SYSTEM, Kernel, UART, TextIO, Errors;
 
   CONST
     MsgStrLen = 24;
@@ -35,7 +35,7 @@ MODULE UARTstrKbw;
 
     UARTctx = POINTER TO UARTctxDesc;
     UARTctxDesc = RECORD
-      dev: UARTdev.Device;
+      dev: UART.Device;
       rdyQ: Kernel.ReadyQ;
       printEvQ: Kernel.EventQ;
       printMsgP: Kernel.MessagePool;
@@ -43,13 +43,13 @@ MODULE UARTstrKbw;
     END;
 
   VAR
-    uartCon: ARRAY UARTdev.NumUART OF UARTctx;
+    uartCon: ARRAY UART.NumUART OF UARTctx;
 
 
   PROCEDURE PutString*(dev: TextIO.Device; s: ARRAY OF CHAR; numChar: INTEGER);
-    VAR dev0: UARTdev.Device; i, nc: INTEGER; m: Kernel.Message; msg: PrintMsg; ux: UARTctx;
+    VAR dev0: UART.Device; i, nc: INTEGER; m: Kernel.Message; msg: PrintMsg; ux: UARTctx;
   BEGIN
-    dev0 := dev(UARTdev.Device);
+    dev0 := dev(UART.Device);
     IF numChar > LEN(s) THEN numChar := LEN(s) END;
     IF numChar > 0 THEN
       ux := uartCon[dev0.uartNo];
@@ -82,7 +82,7 @@ MODULE UARTstrKbw;
     ux := uartCon[a0.uartNo];
     n := 0;
     WHILE n < msg.numChar DO
-      IF ~SYSTEM.BIT(ux.dev.FR, UARTdev.FR_TXFF) THEN
+      IF ~SYSTEM.BIT(ux.dev.FR, UART.FR_TXFF) THEN
         SYSTEM.PUT(ux.dev.TDR, msg.str[n]);
         INC(n)
       END
@@ -120,10 +120,10 @@ MODULE UARTstrKbw;
 
 
   PROCEDURE DeviceStatus*(dev: TextIO.Device): SET;
-    VAR dev0: UARTdev.Device;
+    VAR dev0: UART.Device;
   BEGIN
-    dev0 := dev(UARTdev.Device);
-    RETURN UARTdev.Flags(dev0)
+    dev0 := dev(UART.Device);
+    RETURN UART.Flags(dev0)
   END DeviceStatus;
 
 
@@ -135,7 +135,7 @@ MODULE UARTstrKbw;
   END makePrintMsg;
 
 
-  PROCEDURE Install*(dev: UARTdev.Device; rdyQintNo, intPrio, numMsg: INTEGER);
+  PROCEDURE Install*(dev: UART.Device; rdyQintNo, intPrio, numMsg: INTEGER);
     VAR ux: UARTctx;
   BEGIN
     NEW(uartCon[dev.uartNo]); ASSERT(uartCon[dev.uartNo] # NIL, Errors.HeapOverflow);

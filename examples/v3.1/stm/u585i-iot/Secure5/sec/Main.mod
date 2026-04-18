@@ -3,8 +3,8 @@ MODULE Main;
   Oberon RTK Framework
   Version: v3.1
   --
-  Main module
-  Single image or Secure image
+  Main module, Secure
+  Test program Secure5
   --
   MCU: STM32U585AI
   Board: B-U585I-IOT02A
@@ -14,25 +14,23 @@ MODULE Main;
 **)
 
   IMPORT (* keep first three imports in this order  *)
-    StartupCfg, MemCfg, Memory, DevCfg, ClockCfg, ConsoleCfg, Clocks,
-    RuntimeErrors, RuntimeErrorsOut, SecureCfg, FPUcfg;
+    Startup, MemMap, Memory, Devices, Clocks, Console,
+    RuntimeErrors, RuntimeErrorsOut, Security;
 
-  PROCEDURE init;
+  PROCEDURE run;
   BEGIN
-    ASSERT(StartupCfg.Initialised);
-    ASSERT(MemCfg.Initialised);
-    ASSERT(Memory.Initialised);
-    DevCfg.Init;
-    ClockCfg.Init;
-    ConsoleCfg.Init(Clocks.SYSCLK_FRQ);
+    ASSERT(Startup.Done);
+    ASSERT(MemMap.Done);
+    ASSERT(Memory.Done);
+    Devices.Config;
+    Clocks.Config;
     RuntimeErrors.Install;
-    RuntimeErrorsOut.SetWriter(ConsoleCfg.Werr[0]);
+    Console.Install(Clocks.SYSCLK_FRQ);
     RuntimeErrors.InstallErrorHandler(RuntimeErrorsOut.ErrorHandler);
     RuntimeErrors.EnableFaults;
-    FPUcfg.Init;
-    SecureCfg.Init
-  END init;
+    Security.Config
+  END run;
 
 BEGIN
-  init
+  run
 END Main.

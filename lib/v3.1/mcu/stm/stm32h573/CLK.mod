@@ -1,30 +1,28 @@
 MODULE CLK;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   RCC clocks device driver.
-  Always clocked.
-  --
-  Type: MCU
+  Bus clock is enabled after reset.
   --
   MCU: STM32H573II
   --
-  Copyright (c) 2025 Gray gray@grayraven.org
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2;
+  IMPORT SYSTEM, SYS := RCC_SYS;
 
   CONST
-    PLL1* = 0;
-    PLL2* = 1;
-    PLL3* = 2;
-    PLL = {0 .. 2};
+    (* handles *)
+    (* do  not assume any specific value for these handles *)
+    PLL1* = SYS.PLL1;
+    PLL2* = SYS.PLL2;
+    PLL3* = SYS.PLL3;
 
     MCO1* = 0;
     MCO2* = 1;
-    MCO = {0 .. 1};
 
     (* for 'PLLcfg' *)
     PLLsrc_None* = 0;
@@ -37,7 +35,7 @@ MODULE CLK;
     PLLsrc_Frq_4_8* = 2;  (* 4 to 8 MHz *)
     PLLsrc_Frq_8_16* = 3; (* 8 to 16 MHz *)
 
-    (* for 'SetSysClk' *)
+    (* for 'ConfigSysClk' *)
     SysClk_HSI* = 0;
     SysClk_CSI* = 1;
     SysClk_HSE* = 2;
@@ -61,7 +59,6 @@ MODULE CLK;
     ABPpresc_16* = 7; (* divide by 16 *)
 
     (* MCO clock out *)
-    (* for 'SetClkOut' *)
     MCO1sel_HSI* = 0;
     MCO1sel_LSE* = 1;
     MCO1sel_HSE* = 2;
@@ -80,11 +77,6 @@ MODULE CLK;
     (* actual prescale values *)
     MCOpre_15* = 15;
 
-    (* functional/kernel clock parameters *)
-    (* for 'ConfigDevClock' *)
-    CLK_SYST_REG*  = MCU.RCC_CCIPR4;
-    CLK_SYST_POS*  = 2;
-
 
   TYPE
     PLLcfg* = RECORD
@@ -93,7 +85,8 @@ MODULE CLK;
       mdiv*: INTEGER;               (* src pre-divider *)
       pdiv*: INTEGER;               (* P output divider, pdiv must be an odd value on PLL1 *)
       qdiv*, rdiv*: INTEGER;        (* Q, R output dividers *)
-      ndiv*: INTEGER                (* feeback devider = multiplier *)
+      ndiv*: INTEGER;               (* feeback devider = multiplier *)
+      vcoSel*: INTEGER
     END;
 
     BusPrescCfg* = RECORD
@@ -114,20 +107,23 @@ MODULE CLK;
     END;
 
 
+  (* -- PLL -- *)
+
   PROCEDURE* ConfigPLL*(pllId: INTEGER; cfg: PLLcfg);
     VAR addr, val: INTEGER;
   BEGIN
-    ASSERT(pllId IN PLL);
-    addr := MCU.RCC_PLL1CFGR + (pllId * 4);
+    ASSERT(pllId IN SYS.PLL_all);
+    addr := SYS.RCC_PLL1CFGR + (pllId * 4);
     SYSTEM.GET(addr, val);
     BFI(val, 18, cfg.ren);
     BFI(val, 17, cfg.qen);
     BFI(val, 16, cfg.pen);
     BFI(val, 13, 8, cfg.mdiv);
+    BFI(val, 5, cfg.vcoSel);
     BFI(val, 3, 2, cfg.range);
     BFI(val, 1, 0, cfg.src);
     SYSTEM.PUT(addr, val);
-    addr := MCU.RCC_PLL1DIVR + (pllId * 8);
+    addr := SYS.RCC_PLL1DIVR + (pllId * 8);
     SYSTEM.GET(addr, val);
     BFI(val, 30, 24, cfg.rdiv);
     BFI(val, 22, 16, cfg.qdiv);
@@ -140,8 +136,8 @@ MODULE CLK;
   PROCEDURE* GetPLLcfg*(pllId: INTEGER; VAR cfg: PLLcfg);
     VAR addr, val: INTEGER;
   BEGIN
-    ASSERT(pllId IN PLL);
-    addr := MCU.RCC_PLL1CFGR + (pllId * 4);
+    ASSERT(pllId IN SYS.PLL_all);
+    addr := SYS.RCC_PLL1CFGR + (pllId * 4);
     SYSTEM.GET(addr, val);
     cfg.ren := BFX(val, 18);
     cfg.qen := BFX(val, 17);
@@ -149,7 +145,7 @@ MODULE CLK;
     cfg.mdiv := BFX(val, 11, 8);
     cfg.range := BFX(val, 3, 2);
     cfg.src := BFX(val, 1, 0);
-    addr := MCU.RCC_PLL1DIVR + (pllId * 8);
+    addr := SYS.RCC_PLL1DIVR + (pllId * 8);
     SYSTEM.GET(addr, val);
     cfg.rdiv := BFX(val, 30, 24);
     cfg.qdiv := BFX(val, 22, 16);
@@ -161,132 +157,101 @@ MODULE CLK;
   PROCEDURE* StartPLL*(pllId: INTEGER);
     VAR val: SET; en, lk: INTEGER;
   BEGIN
-    ASSERT(pllId IN PLL);
+    ASSERT(pllId IN SYS.PLL_all);
     en := 24 + pllId * 2;
     lk := 25 + pllId * 2;
-    SYSTEM.GET(MCU.RCC_CR, val);
-    SYSTEM.PUT(MCU.RCC_CR, val + {en});
+    SYSTEM.GET(SYS.RCC_CR, val);
+    SYSTEM.PUT(SYS.RCC_CR, val + {en});
     REPEAT
-      SYSTEM.GET(MCU.RCC_CR, val)
+      SYSTEM.GET(SYS.RCC_CR, val)
     UNTIL lk IN val
   END StartPLL;
 
+  (* -- system clock -- *)
 
-  PROCEDURE* SetSysClk*(sysClk: INTEGER);
+  PROCEDURE* ConfigSysClk*(sysClk: INTEGER);
     VAR val: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.RCC_CFGR1, val);
+    SYSTEM.GET(SYS.RCC_CFGR1, val);
     BFI(val, 1, 0, sysClk);
-    SYSTEM.PUT(MCU.RCC_CFGR1, val);
+    SYSTEM.PUT(SYS.RCC_CFGR1, val);
     REPEAT
-      SYSTEM.GET(MCU.RCC_CFGR1, val)
+      SYSTEM.GET(SYS.RCC_CFGR1, val)
     UNTIL BFX(val, 4, 3) = sysClk
-  END SetSysClk;
+  END ConfigSysClk;
 
+  (* -- bus prescalers -- *)
 
-  PROCEDURE SetBusPresc*(cfg: BusPrescCfg);
-    VAR val: INTEGER;
+  PROCEDURE ConfigBusPresc*(cfg: BusPrescCfg);
+    VAR val, RCC_CFGR2: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.RCC_CFGR2, val);
+    RCC_CFGR2 := SYS.RCC_CFGR2;
+    SYSTEM.GET(RCC_CFGR2, val);
     BFI(val, 14, 12, cfg.apb3Presc);
     BFI(val, 10, 8, cfg.apb2Presc);
     BFI(val, 6, 4, cfg.apb1Presc);
     BFI(val, 3, 0, cfg.ahbPresc);
-    SYSTEM.PUT(MCU.RCC_CFGR2, val)
-  END SetBusPresc;
+    SYSTEM.PUT(RCC_CFGR2, val)
+  END ConfigBusPresc;
 
 
   PROCEDURE* GetBusPresc*(VAR cfg: BusPrescCfg);
     VAR val: INTEGER;
   BEGIN
-    SYSTEM.GET(MCU.RCC_CFGR2, val);
+    SYSTEM.GET(SYS.RCC_CFGR2, val);
     cfg.apb3Presc := BFX(val, 14, 12);
     cfg.apb2Presc := BFX(val, 10, 8);
     cfg.apb1Presc := BFX(val, 6, 4);
     cfg.ahbPresc := BFX(val, 3, 0)
   END GetBusPresc;
 
+  (* -- oscillators -- *)
 
   PROCEDURE* ConfigOsc*(cfg: OscCfg);
     CONST
       MaskEn = {0, 8, 12, 16}; MaskRdy = {1, 9, 13, 17};
-    VAR oscMask: INTEGER; val, rdyMask: SET;
+    VAR oscMask, RCC_CR: INTEGER; val, rdyMask: SET;
   BEGIN
+    RCC_CR := SYS.RCC_CR;
     oscMask := 0;
     BFI(oscMask, 0, cfg.hsiEn);
     BFI(oscMask, 8, cfg.csiEn);
     BFI(oscMask, 12, cfg.hsi48En);
     BFI(oscMask, 16, cfg.hseEn);
-    SYSTEM.GET(MCU.RCC_CR, val);
-    SYSTEM.PUT(MCU.RCC_CR, val - MaskEn + BITS(oscMask));
+    SYSTEM.GET(RCC_CR, val);
+    SYSTEM.PUT(RCC_CR, val - MaskEn + BITS(oscMask));
     rdyMask := BITS(LSL(oscMask, 1));
     REPEAT
-      SYSTEM.GET(MCU.RCC_CR, val)
+      SYSTEM.GET(RCC_CR, val)
     UNTIL val * MaskRdy = rdyMask
   END ConfigOsc;
 
+  (* -- LS oscillators -- *)
 
   PROCEDURE* ConfigLsOsc*(cfg: LsOscCfg);
   (* requires PWR to be clocked *)
     CONST LsMaskEn = {0, 26}; LsMaskRdy = {1, 27};
-    VAR oscMask: INTEGER; val, rdyMask: SET;
+    VAR oscMask, RCC_BDCR, PWR_DBPCR: INTEGER; val, rdyMask: SET;
   BEGIN
+    RCC_BDCR := SYS.RCC_BDCR;
+    PWR_DBPCR := SYS.RCC_PWR_DBPCR;
     oscMask := 0;
     BFI(oscMask, 0, cfg.lseEn);
     BFI(oscMask, 26, cfg.lsiEn);
     IF oscMask # 0 THEN
-      SYSTEM.PUT(MCU.PWR_DBPCR, {0}); (* write enable RCC_BDCR *)
-      SYSTEM.GET(MCU.RCC_BDCR, val);
-      SYSTEM.PUT(MCU.RCC_BDCR, val - LsMaskEn + BITS(oscMask));
-      SYSTEM.PUT(MCU.PWR_DBPCR, {}); (* write disable RCC_BDCR *)
+      SYSTEM.PUT(PWR_DBPCR, {0}); (* write enable RCC_BDCR *)
+      SYSTEM.GET(RCC_BDCR, val);
+      SYSTEM.PUT(RCC_BDCR, val - LsMaskEn + BITS(oscMask));
+      SYSTEM.PUT(PWR_DBPCR, {}); (* write disable RCC_BDCR *)
       rdyMask := BITS(LSL(oscMask, 1));
       REPEAT
-        SYSTEM.GET(MCU.RCC_BDCR, val)
+        SYSTEM.GET(RCC_BDCR, val)
       UNTIL val * LsMaskRdy = rdyMask
     END
   END ConfigLsOsc;
 
-
-  PROCEDURE* EnableBusClock*(device: INTEGER);
-  (* MCU.DEV_* device values *)
-    VAR reg, devNo: INTEGER; val: SET;
-  BEGIN
-    reg := device DIV 32;
-    reg := MCU.RCC_AHB1ENR + (reg * 4);
-    devNo := device MOD 32;
-    SYSTEM.GET(reg, val);
-    INCL(val, devNo);
-    SYSTEM.PUT(reg, val)
-  END EnableBusClock;
-
-
-  PROCEDURE* DisableBusClock*(device: INTEGER);
-  (* MCU.DEV_* device values *)
-    VAR reg, devNo: INTEGER; val: SET;
-  BEGIN
-    reg := device DIV 32;
-    reg := MCU.RCC_AHB1ENR + (reg * 4);
-    devNo := device MOD 32;
-    SYSTEM.GET(reg, val);
-    EXCL(val, devNo);
-    SYSTEM.PUT(reg, val)
-  END DisableBusClock;
-
-
-  PROCEDURE* ConfigDevClock*(clkSelVal, clkSelReg, posSel, numBits: INTEGER);
-  (* set functional/kernel clock *)
-  (* use with clock disabled *)
-    VAR mask, val, sel: SET;
-  BEGIN
-    clkSelVal := LSR(LSL(clkSelVal, 32 - numBits), 32 - numBits);
-    mask := {posSel, posSel + numBits - 1};
-    sel := BITS(LSL(clkSelVal, posSel));
-    SYSTEM.GET(clkSelReg, val);
-    val := val - mask + sel;
-    SYSTEM.PUT(clkSelReg, val)
-  END ConfigDevClock;
-
-
+  (* #todo *)
+  (*
   PROCEDURE* SetClkOut*(mcoId, mcoSel, mcoPre: INTEGER);
   (* modify only after reset, before enabling external oscillators and PLLs *)
     VAR val: INTEGER;
@@ -302,6 +267,7 @@ MODULE CLK;
     END;
     SYSTEM.PUT(MCU.RCC_CFGR1, val)
   END SetClkOut;
+  *)
 
 END CLK.
 

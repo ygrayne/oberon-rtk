@@ -29,4 +29,10 @@ More info: [https://oberon-rtk.org/docs/examples/](https://oberon-rtk.org/docs/e
   + stm
     + h573-dk: STM32H573I-DK board
     + u585i-iot: B-U585I-IOT02A board
++ v3.1: based on lib/v3.1
+  + rpi
+    + pico2: Pico2/RP2350 boards
+  + stm
+    + h573-dk: STM32H573I-DK board
+    + u585i-iot: B-U585I-IOT02A board
 ```

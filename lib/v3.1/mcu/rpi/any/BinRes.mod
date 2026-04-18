@@ -1,13 +1,13 @@
 MODULE BinRes;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Access binary resource data.
   --
   MCU: RP2040, RP2350A/B
   --
-  Copyright (c) 2025 Gray, gray@grayraven.org
+  Copyright (c) 2025-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
   --
   Structure:
@@ -37,7 +37,7 @@ MODULE BinRes;
     in the first 4 byte resource data.
 **)
 
-  IMPORT SYSTEM, Config;
+  IMPORT SYSTEM, MemMap;
 
   CONST
     ResId = 05237424FH; (* "OB7R" little endian *)
@@ -82,7 +82,7 @@ MODULE BinRes;
     VAR resAddr, resSize, resId, resVersion: INTEGER; found: BOOLEAN; resName0: ResName;
   BEGIN
     CLEAR(res);
-    resAddr := Config.ResMem.start;
+    resAddr := MemMap.ResMem.start;
     SYSTEM.GET(resAddr, resId);
     SYSTEM.GET(resAddr + ResVersionOffset, resVersion);
     IF (resId = ResId) & (resVersion = ResVersion) THEN

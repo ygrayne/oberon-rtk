@@ -1,7 +1,7 @@
 MODULE UARTstrKint;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   UART string device driver for kernel-v4 use
   Output only for now (PutString).
@@ -10,12 +10,12 @@ MODULE UARTstrKint;
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  Copyright (c) 2020-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
   IMPORT
-    SYSTEM, MCU := MCU2, Kernel, UARTdev, TextIO, Exceptions, Errors;
+    SYSTEM, BASE, Kernel, UART, TextIO, Exceptions, Errors;
 
   CONST
     MsgStrLen = 24;
@@ -23,8 +23,8 @@ MODULE UARTstrKint;
     StateWriteUART = 0;
     StateAwaitDevInt = 1;
 
-    TxFifoLvl = UARTdev.TXIFLSEL_val_18;  (* 1/8 = 4 entries *)
-    RxFifoLvl = UARTdev.RXIFLSEL_val_48;  (* unused, no rx implemented yet *)
+    TxFifoLvl = UART.TXIFLSEL_val_18;  (* 1/8 = 4 entries *)
+    RxFifoLvl = UART.RXIFLSEL_val_48;  (* unused, no rx implemented yet *)
 
 
   TYPE
@@ -42,7 +42,7 @@ MODULE UARTstrKint;
 
     UARTctx = POINTER TO UARTctxDesc;
     UARTctxDesc = RECORD
-      dev: UARTdev.Device;
+      dev: UART.Device;
       rdyQ: Kernel.ReadyQ;
       printEvQ: Kernel.EventQ;
       printMsgP: Kernel.MessagePool;
@@ -54,13 +54,13 @@ MODULE UARTstrKint;
     END;
 
   VAR
-    uartCon: ARRAY UARTdev.NumUART OF UARTctx;
+    uartCon: ARRAY UART.NumUART OF UARTctx;
 
 
   PROCEDURE PutString*(dev: TextIO.Device; s: ARRAY OF CHAR; numChar: INTEGER);
-    VAR dev0: UARTdev.Device; i, nc: INTEGER; m: Kernel.Message; msg: PrintMsg; ux: UARTctx;
+    VAR dev0: UART.Device; i, nc: INTEGER; m: Kernel.Message; msg: PrintMsg; ux: UARTctx;
   BEGIN
-    dev0 := dev(UARTdev.Device);
+    dev0 := dev(UART.Device);
     IF numChar > LEN(s) THEN numChar := LEN(s) END;
     IF numChar > 0 THEN
       ux := uartCon[dev0.uartNo];
@@ -145,12 +145,12 @@ MODULE UARTstrKint;
     uartNo := excNo - UART0excNo;
     ux := uartCon[uartNo];
     SYSTEM.GET(ux.dev.MIS, mis); (* get status *)
-    IF UARTdev.MIS_TXMIS IN mis THEN
+    IF UART.MIS_TXMIS IN mis THEN
       IF ux.ix < ux.msg.numChar THEN
         SYSTEM.PUT(ux.dev.TDR, ux.msg.str[ux.ix]);
         INC(ux.ix)
       ELSE
-        SYSTEM.PUT(ux.dev.ICR + MCU.ASET, {UARTdev.ICR_TXIC}); (* clear/deassert int *)
+        SYSTEM.PUT(ux.dev.ICR + MCU.ASET, {UART.ICR_TXIC}); (* clear/deassert int *)
         Kernel.PutMsgAwaited(ux.devEvQ, ux.devMsg);
       END
     END;
@@ -162,12 +162,12 @@ MODULE UARTstrKint;
     VAR mis: SET;
   BEGIN
     SYSTEM.GET(ux.dev.MIS, mis); (* get status *)
-    IF UARTdev.MIS_TXMIS IN mis THEN
+    IF UART.MIS_TXMIS IN mis THEN
       IF ux.ix < ux.msg.numChar THEN
         SYSTEM.PUT(ux.dev.TDR, ux.msg.str[ux.ix]);
         INC(ux.ix)
       ELSE
-        SYSTEM.PUT(ux.dev.ICR + MCU.ASET, {UARTdev.ICR_TXIC}); (* clear/deassert int *)
+        SYSTEM.PUT(ux.dev.ICR + BASE.ASET, {UART.ICR_TXIC}); (* clear/deassert int *)
         Kernel.PutMsgAwaited(ux.devEvQ, ux.devMsg);
       END
     END
@@ -198,10 +198,10 @@ MODULE UARTstrKint;
 
 
   PROCEDURE DeviceStatus*(dev: TextIO.Device): SET;
-    VAR dev0: UARTdev.Device;
+    VAR dev0: UART.Device;
   BEGIN
-    dev0 := dev(UARTdev.Device);
-    RETURN UARTdev.Flags(dev0)
+    dev0 := dev(UART.Device);
+    RETURN UART.Flags(dev0)
   END DeviceStatus;
 
 
@@ -213,7 +213,7 @@ MODULE UARTstrKint;
   END makePrintMsg;
 
 
-  PROCEDURE Install*(dev: UARTdev.Device; rdyQintNo, intPrio, numMsg: INTEGER);
+  PROCEDURE Install*(dev: UART.Device; rdyQintNo, intPrio, numMsg: INTEGER);
     VAR ux: UARTctx;
   BEGIN
     NEW(uartCon[dev.uartNo]); ASSERT(uartCon[dev.uartNo] # NIL, Errors.HeapOverflow);
@@ -240,15 +240,15 @@ MODULE UARTstrKint;
     Kernel.InitAct(ux.act, init, 0); initActor(ux.act, ux.dev.uartNo);
     (* uart interrupt *)
     IF ux.dev.uartNo = 0 THEN
-      Exceptions.InstallIntHandler(dev.intNo, devHandler0)
+      Exceptions.InstallIntHandler(dev.irqNo, devHandler0)
     ELSE
-      Exceptions.InstallIntHandler(dev.intNo, devHandler1)
+      Exceptions.InstallIntHandler(dev.irqNo, devHandler1)
     END;
-    Exceptions.SetIntPrio(dev.intNo, intPrio);
-    Exceptions.ClearPendingInt(dev.intNo);
-    Exceptions.EnableInt(dev.intNo);
-    UARTdev.SetFifoLvl(dev, TxFifoLvl, RxFifoLvl);
-    UARTdev.EnableInt(dev, {UARTdev.IMSC_TXIM});
+    Exceptions.SetIntPrio(dev.irqNo, intPrio);
+    Exceptions.ClearPendingInt(dev.irqNo);
+    Exceptions.EnableInt(dev.irqNo);
+    UART.SetFifoLvl(dev, TxFifoLvl, RxFifoLvl);
+    UART.EnableInt(dev, {UART.IMSC_TXIM});
     (* get started *)
     Kernel.RunAct(ux.act, ux.rdyQ)
   END Install;

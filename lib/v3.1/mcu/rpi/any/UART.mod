@@ -1,27 +1,27 @@
 MODULE UART;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   UART device driver
-  --
-  Type: MCU
   --
   The GPIO pins and pads used must be configured by the client module or program.
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2020-2025 Gray gray@grayraven.org
+  Copyright (c) 2020-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Errors, MCU := MCU2, RST, Clocks, TextIO;
+  IMPORT SYSTEM, BASE, Errors, DEV := UART_DEV, RST, Clocks, TextIO;
 
   CONST
-    UART0* = 0;
-    UART1* = 1;
-    NumUART* = MCU.NumUART;
-    UARTs = {UART0 .. NumUART - 1};
+    (* handles *)
+    (* do not assume any specific value for these handles *)
+    UART0* = DEV.UART0;
+    UART1* = DEV.UART1;
+
+    NumUART* = DEV.NumUART;
 
     (* generic values *)
     Enabled* = 1;
@@ -109,8 +109,8 @@ MODULE UART;
     Device* = POINTER TO DeviceDesc;
     DeviceDesc* = RECORD(TextIO.DeviceDesc)
       uartNo*: INTEGER;
-      devNo: INTEGER;
-      intNo*: INTEGER;
+      rstReg, rstPos: INTEGER; (* reset *)
+      irqNo*: INTEGER;
       CR, IBRD, FBRD, LCR_H: INTEGER;
       TDR*, RDR*, FR*, RSR*: INTEGER;
       DMACR, IFLS, IMSC*, MIS*, ICR*: INTEGER
@@ -129,37 +129,32 @@ MODULE UART;
 
 
   PROCEDURE* Init*(dev: Device; uartNo: INTEGER);
-  (**
-    Init device data.
-  **)
     VAR base: INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
-    ASSERT(uartNo IN UARTs);
+    ASSERT(uartNo IN DEV.UART_all);
     dev.uartNo := uartNo;
-    dev.devNo := MCU.RESETS_UART0 + uartNo;
-    dev.intNo := MCU.IRQ_UART0 + uartNo;
-    base      := MCU.UART0_BASE + (uartNo * MCU.UART_Offset);
-    dev.CR    := base + MCU.UART_CR_Offset;
-    dev.IBRD  := base + MCU.UART_IBRD_Offset;
-    dev.FBRD  := base + MCU.UART_FBRD_Offset;
-    dev.LCR_H := base + MCU.UART_LCR_H_Offset;
-    dev.TDR   := base + MCU.UART_DR_Offset;
-    dev.RDR   := base + MCU.UART_DR_Offset;
-    dev.FR    := base + MCU.UART_FR_Offset;
-    dev.RSR   := base + MCU.UART_RSR_Offset;
-    dev.DMACR := base + MCU.UART_DMACR_Offset;
-    dev.IFLS  := base + MCU.UART_IFLS_Offset;
-    dev.IMSC  := base + MCU.UART_IMSC_Offset;
-    dev.MIS   := base + MCU.UART_MIS_Offset;
-    dev.ICR   := base + MCU.UART_ICR_Offset
+    dev.rstReg := DEV.UART_RST_reg;
+    dev.rstPos := DEV.UART0_RST_pos + uartNo;
+    dev.irqNo := DEV.UART0_IRQ_no + uartNo;
+    base := DEV.UART0_BASE + (uartNo * DEV.UART_Offset);
+    dev.CR    := base + DEV.UART_CR_Offset;
+    dev.IBRD  := base + DEV.UART_IBRD_Offset;
+    dev.FBRD  := base + DEV.UART_FBRD_Offset;
+    dev.LCR_H := base + DEV.UART_LCR_H_Offset;
+    dev.TDR   := base + DEV.UART_DR_Offset;
+    dev.RDR   := base + DEV.UART_DR_Offset;
+    dev.FR    := base + DEV.UART_FR_Offset;
+    dev.RSR   := base + DEV.UART_RSR_Offset;
+    dev.DMACR := base + DEV.UART_DMACR_Offset;
+    dev.IFLS  := base + DEV.UART_IFLS_Offset;
+    dev.IMSC  := base + DEV.UART_IMSC_Offset;
+    dev.MIS   := base + DEV.UART_MIS_Offset;
+    dev.ICR   := base + DEV.UART_ICR_Offset
   END Init;
 
 
   PROCEDURE Configure*(dev: Device; cfg: DeviceCfg; baudrate: INTEGER);
-  (**
-    Configure UART hardware, after 'Init'.
-  **)
     VAR x, intDiv, fracDiv: INTEGER;
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
@@ -172,7 +167,7 @@ MODULE UART;
     ASSERT(cfg.sendBreak IN {Disabled, Enabled}, Errors.PreCond);
 
     (* release reset on UART device *)
-    RST.ReleaseReset(dev.devNo);
+    RST.ReleaseReset(dev.rstReg, dev.rstPos);
 
     (* disable *)
     SYSTEM.PUT(dev.CR, {});
@@ -206,14 +201,14 @@ MODULE UART;
   PROCEDURE* Enable*(dev: Device);
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
-    SYSTEM.PUT(dev.CR + MCU.ASET, {CR_UARTEN, CR_RXE, CR_TXE})
+    SYSTEM.PUT(dev.CR + BASE.ASET, {CR_UARTEN, CR_RXE, CR_TXE})
   END Enable;
 
 
   PROCEDURE* Disable*(dev: Device);
   BEGIN
     ASSERT(dev # NIL, Errors.PreCond);
-    SYSTEM.PUT(dev.CR + MCU.ACLR, {CR_UARTEN, CR_RXE, CR_TXE})
+    SYSTEM.PUT(dev.CR + BASE.ACLR, {CR_UARTEN, CR_RXE, CR_TXE})
   END Disable;
 
 
@@ -272,13 +267,13 @@ MODULE UART;
 
   PROCEDURE* EnableInt*(dev: Device; intMask: SET);
   BEGIN
-    SYSTEM.PUT(dev.IMSC + MCU.ASET, intMask)
+    SYSTEM.PUT(dev.IMSC + BASE.ASET, intMask)
   END EnableInt;
 
 
   PROCEDURE* DisableInt*(dev: Device; intMask: SET);
   BEGIN
-    SYSTEM.PUT(dev.IMSC + MCU.ACLR, intMask)
+    SYSTEM.PUT(dev.IMSC + BASE.ACLR, intMask)
   END DisableInt;
 
 
@@ -296,7 +291,16 @@ MODULE UART;
 
   PROCEDURE* ClearInt*(dev: Device; intMask: SET);
   BEGIN
-    SYSTEM.PUT(dev.ICR + MCU.ASET, intMask)
+    SYSTEM.PUT(dev.ICR + BASE.ASET, intMask)
   END ClearInt;
+
+
+  (* Secure/Non-secure, RP2350 only *)
+
+  PROCEDURE GetDevSec*(uartNo: INTEGER; VAR reg: INTEGER);
+  BEGIN
+    ASSERT(uartNo IN DEV.UART_all);
+    reg := DEV.UART0_SEC_reg + (uartNo * 4)
+  END GetDevSec;
 
 END UART.

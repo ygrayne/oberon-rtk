@@ -1,6 +1,6 @@
 MODULE Stacktr0;
 (**
-  Oberon RTK Framework v3.0
+  Oberon RTK Framework v3.1
   --
   Example/test program
   https://oberon-rtk.org/docs/examples/v2/stacktrace
@@ -8,7 +8,7 @@ MODULE Stacktr0;
   MCU: STM32U585AI
   Board: B-U585I-IOT02A
   --
-  Copyright (c) 2025 Gray gray@grayraven.org
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
@@ -47,7 +47,12 @@ MODULE Stacktr0;
   END p2;
 
   PROCEDURE p1;
+    VAR a: ARRAY 512 OF INTEGER; r: REAL;
   BEGIN
+
+    r := 1.0;
+    r := r / r;
+
     p2
   END p1;
 

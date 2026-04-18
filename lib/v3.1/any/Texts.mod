@@ -1,7 +1,7 @@
 MODULE Texts;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Formatted output to a "channel", using a 'TextIO.Writer'
   Formatted input from a "channel", using a 'TextIO.Reader'
@@ -11,7 +11,7 @@ MODULE Texts;
   * blocking
   * non-blocking (kernel, interrupts)
   --
-  Copyright (c) 2020-2025 Gray gray@grayraven.org
+  Copyright (c) 2020-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

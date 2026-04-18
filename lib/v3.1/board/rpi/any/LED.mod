@@ -1,7 +1,7 @@
 MODULE LED;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Green LED on Pico and Pico2
   --
@@ -10,51 +10,51 @@ MODULE LED;
   --
   Usage:
   * Via procedures:
-    LED.Set({LED.Pico}),
-    LED.Clear({LED.Pico},
-    LED.Toggle({LED.Pico})
+    LED.Set,
+    LED.Clear,
+    LED.Toggle
   * Direct, avoiding procedure calls, eg. for leaf procedures:
     SYSTEM.PUT(LED.LSET, {LED.Pico}),
     SYSTEM.PUT(LED.LCLR, {LED.Pico}),
     SYSTEM.PUT(LED.LXOR, {LED.Pico})
   --
-  Copyright (c) 2023-2025 Gray gray@grayraven.org
+  Copyright (c) 2023-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, GPIO;
+  IMPORT SYSTEM, GPIO, SIO := SIOgpio, SIO_DEV;
 
   CONST
     LEDpinNo = 25;
+
     Green* = LEDpinNo;
     Pico* = LEDpinNo;
 
-    LSET* = MCU.SIO_GPIO_OUT_SET;
-    LCLR* = MCU.SIO_GPIO_OUT_CLR;
-    LXOR* = MCU.SIO_GPIO_OUT_XOR;
+    LSET* = SIO_DEV.SIO_GPIO_OUT_SET;
+    LCLR* = SIO_DEV.SIO_GPIO_OUT_CLR;
+    LXOR* = SIO_DEV.SIO_GPIO_OUT_XOR;
 
-  PROCEDURE* Set*(leds: SET);
+  PROCEDURE* Set*;
   BEGIN
-    SYSTEM.PUT(LSET, leds)
+    SYSTEM.PUT(LSET, {LEDpinNo})
   END Set;
 
-  PROCEDURE* Clear*(leds: SET);
+  PROCEDURE* Clear*;
   BEGIN
-    SYSTEM.PUT(LCLR, leds)
+    SYSTEM.PUT(LCLR, {LEDpinNo})
   END Clear;
 
-  PROCEDURE* Toggle*(leds: SET);
+  PROCEDURE* Toggle*;
   BEGIN
-    SYSTEM.PUT(LXOR, leds)
+    SYSTEM.PUT(LXOR, {LEDpinNo})
   END Toggle;
 
-  PROCEDURE init;
+
+  PROCEDURE Config*;
   BEGIN
     GPIO.SetFunction(LEDpinNo, GPIO.Fsio);
-    GPIO.EnableOutput(MCU.GPIO0, {LEDpinNo});
-    GPIO.Clear(MCU.GPIO0, {LEDpinNo})
-  END init;
+    SIO.EnableOutput(SIO.GPIOA, {LEDpinNo});
+    Clear
+  END Config;
 
-BEGIN
-  init
 END LED.

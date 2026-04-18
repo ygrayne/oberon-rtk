@@ -538,9 +538,7 @@ def resolve_mcu(config_str, mcu_override, attr_sections):
                 # It's a core section (has Tag_* lines)
                 return token, token
 
-    # No cfg or no match -- use second token as MCU name
-    if len(tokens) >= 2:
-        return tokens[1], None
+    # No match in attr_sections -- cannot identify MCU
     return None, None
 
 

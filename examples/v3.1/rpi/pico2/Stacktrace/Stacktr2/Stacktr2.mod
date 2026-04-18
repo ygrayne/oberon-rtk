@@ -1,0 +1,71 @@
+MODULE Stacktr2;
+(**
+  Oberon RTK Framework v3.1
+  --
+  Example/test program
+  https://oberon-rtk.org/docs/examples/v2/stacktrace
+  --
+  MCU: RP2350
+  Board: Pico2
+  --
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT
+    SYSTEM, PPB, EXC, ASM, Exceptions, Main, Cores;
+
+
+  CONST
+    (* otherwise unused interrupts *)
+    IntNo0 = EXC.IRQ_SW_0;
+    IntNo1 = EXC.IRQ_SW_1;
+
+  VAR
+    p: PROCEDURE;
+
+  PROCEDURE* i0[0];
+    VAR x: INTEGER;
+  BEGIN
+    x := 0; x := x DIV x
+  END i0;
+
+  PROCEDURE* h0[0];
+    VAR x: INTEGER;
+  BEGIN
+    x := 13;
+    (* set int for i0 pending *)
+    SYSTEM.PUT(PPB.NVIC_ISPR0 + ((IntNo1 DIV 32) * 4), {IntNo1 MOD 32});
+    SYSTEM.EMIT(ASM.DSB); SYSTEM.EMIT(ASM.ISB)
+  END h0;
+
+  PROCEDURE* p1;
+  BEGIN
+    (* set int for h0 pending *)
+    SYSTEM.PUT(PPB.NVIC_ISPR0 + ((IntNo0 DIV 32) * 4), {IntNo0 MOD 32});
+    SYSTEM.EMIT(ASM.DSB); SYSTEM.EMIT(ASM.ISB)
+  END p1;
+
+  PROCEDURE p0;
+  BEGIN
+    SYSTEM.LDREG(12, 0A0B0C0DH); (* marker *)
+    p1
+  END p0;
+
+  PROCEDURE run;
+  BEGIN
+    Exceptions.InstallIntHandler(IntNo0, h0);
+    Exceptions.SetIntPrio(IntNo0, EXC.ExcPrio4);
+    (*Exceptions.SetIntPrio(IntNo0, MCU.PPB_ExcPrio2) *) (* for tail-chaining *)
+    Exceptions.EnableInt(IntNo0);
+    Exceptions.InstallIntHandler(IntNo1, i0);
+    Exceptions.SetIntPrio(IntNo1, EXC.ExcPrio2);
+    Exceptions.EnableInt(IntNo1);
+    p
+  END run;
+
+BEGIN
+  p := p0;
+  Cores.StartCoreOne(run, Main.ConfigC1);
+  run
+END Stacktr2.

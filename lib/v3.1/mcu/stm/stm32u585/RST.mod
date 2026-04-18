@@ -6,8 +6,6 @@ MODULE RST;
   Resets and clock control via RCC
   Always clocked
   --
-  Type: MCU
-  --
   MCU: STM32U585AI
   --
   MCU starts with all resets off.
@@ -17,7 +15,6 @@ MODULE RST;
 **)
 
   IMPORT SYSTEM;
-
 
   PROCEDURE* EnableBusClock*(bcEnReg, bcEnPos: INTEGER);
     VAR val: SET;
@@ -37,7 +34,7 @@ MODULE RST;
 
   PROCEDURE* ConfigDevClock*(clkSelVal, clkSelReg, posSel, numBits: INTEGER);
   (* set functional/kernel clock *)
-  (* use with clock disabled *)
+  (* use with bus clock disabled *)
     VAR mask, val, sel: SET;
   BEGIN
     clkSelVal := LSR(LSL(clkSelVal, 32 - numBits), 32 - numBits);
@@ -63,7 +60,6 @@ MODULE RST;
     SYSTEM.GET(rstEnReg, val);
     SYSTEM.PUT(rstEnReg, val - {rstEnPos})
   END ReleaseReset;
-
 
 END RST.
 

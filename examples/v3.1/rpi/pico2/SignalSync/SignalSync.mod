@@ -5,8 +5,8 @@ MODULE SignalSync;
   Example program, multi-threaded, single-core
   Description: https://oberon-rtk.org/docs/examples/v2/signalsync/
   --
-  MCU: RP2040, RP2350
-  Board: Pico, Pico2
+  MCU: RP2350
+  Board: Pico2
   --
   Kernel-v1
   --
@@ -38,10 +38,10 @@ MODULE SignalSync;
 
   PROCEDURE t0c;
   BEGIN
-    LED.Set({LED.Pico});
+    LED.Set;
     Kernel.SetPeriod(T0period, 0);
     REPEAT
-      LED.Toggle({LED.Pico});
+      LED.Toggle;
       Kernel.Next
     UNTIL FALSE
   END t0c;

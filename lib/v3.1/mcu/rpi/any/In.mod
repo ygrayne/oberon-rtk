@@ -1,17 +1,17 @@
 MODULE In;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Input via two TextIO.Reader.
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2020-2025 Gray gray@grayraven.org
+  Copyright (c) 2020-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT Cores, Errors, TextIO, Texts;
+  IMPORT Cores, TextIO, Texts;
 
   CONST
     NumTerminals = 2;
@@ -28,27 +28,22 @@ MODULE In;
   VAR
     R: ARRAY NumTerminals OF TextIO.Reader;
 
-  PROCEDURE Open*(R0, R1: TextIO.Reader);
+
+  PROCEDURE Open*(Rt: TextIO.Reader);
   BEGIN
-    ASSERT(R0 # NIL, Errors.PreCond);
-    R[0] := R0;
-    R[1] := R1
+    R[Cores.CoreId()] := Rt
   END Open;
 
 
   PROCEDURE String*(VAR str: ARRAY OF CHAR; VAR res: INTEGER);
-    VAR cid: INTEGER;
   BEGIN
-    Cores.GetCoreId(cid);
-    Texts.ReadString(R[cid], str, res)
+    Texts.ReadString(R[Cores.CoreId()], str, res)
   END String;
 
 
   PROCEDURE Int*(VAR int, res: INTEGER);
-    VAR cid: INTEGER;
   BEGIN
-    Cores.GetCoreId(cid);
-    Texts.ReadInt(R[cid], int, res)
+    Texts.ReadInt(R[Cores.CoreId()], int, res)
   END Int;
 
 BEGIN

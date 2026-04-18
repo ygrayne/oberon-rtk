@@ -15,10 +15,10 @@ MODULE RuntimeErrors;
 **)
 
   IMPORT
-    SYSTEM, PPB, MCU, EXC, LED, MemCfg;
+    SYSTEM, PPB, EXC, LED, MemMap;
 
   CONST
-    NumCores = MemCfg.NumCoresUsed;
+    NumCores = MemMap.NumCoresUsed;
 
     (* register offsets from stacked r0 *)
     PCoffset = 24;

@@ -1,13 +1,13 @@
 MODULE SysTick;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   System tick for kernel-v4.
   --
   MCU: RP2040, RP2350
   --
-  Copyright (c) 2020-2025 Gray, gray@grayraven.org
+  Copyright (c) 2020-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 

@@ -1,7 +1,7 @@
 MODULE LEDext;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Eight additional LEDs, connected via GPIO pins.
   Include also the green one on the Pico for convenience.
@@ -20,10 +20,10 @@ MODULE LEDext;
     SYSTEM.PUT(LEDext.LXOR, {LEDext.LED0})
   * A set of LEDs can be set on or off with one call.
   --
-  Copyright (c) 2023-2025 Gray gray@grayraven.org
+  Copyright (c) 2023-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
-  IMPORT MCU := MCU2, GPIO;
+  IMPORT GPIO, SIO := SIOgpio, SIO_DEV;
 
   CONST
     (* LED on the board *)
@@ -51,13 +51,13 @@ MODULE LEDext;
 
     LEDx* = {LED0, LED1, LED2, LED3, LED4, LED5, LED6, LED7};
 
-    LSET* = MCU.SIO_GPIO_OUT_SET;
-    LCLR* = MCU.SIO_GPIO_OUT_CLR;
-    LXOR* = MCU.SIO_GPIO_OUT_XOR;
+    LSET* = SIO_DEV.SIO_GPIO_OUT_SET;
+    LCLR* = SIO_DEV.SIO_GPIO_OUT_CLR;
+    LXOR* = SIO_DEV.SIO_GPIO_OUT_XOR;
 
     NumLeds = 8;
 
-  VAR LED*: ARRAY 8 OF INTEGER;
+  VAR LED*: ARRAY NumLeds OF INTEGER;
 
 
   PROCEDURE SetLedBits*(v, highBit, lowBit: INTEGER);
@@ -73,8 +73,8 @@ MODULE LEDext;
       END;
       INC(i)
     END;
-    GPIO.ClearL(BITS(clearMask));
-    GPIO.SetL(BITS(setMask))
+    SIO.Clear(SIO.GPIOA, BITS(clearMask));
+    SIO.Set(SIO.GPIOA, BITS(setMask))
   END SetLedBits;
 
 
@@ -84,7 +84,7 @@ MODULE LEDext;
   END SetValue;
 
 
-  PROCEDURE init;
+  PROCEDURE Config*;
     VAR i: INTEGER;
   BEGIN
     LED[0] := LEDpinNo0;
@@ -95,16 +95,14 @@ MODULE LEDext;
     LED[5] := LEDpinNo5;
     LED[6] := LEDpinNo6;
     LED[7] := LEDpinNo7;
-    GPIO.SetFunction(LEDpinNoPico, MCU.IO_BANK0_Fsio);
-    GPIO.EnableOutputL({LEDpinNoPico});
+    GPIO.SetFunction(LEDpinNoPico, GPIO.Fsio);
+    SIO.EnableOutput(SIO.GPIOA, {LEDpinNoPico});
     i := 0;
     WHILE i < NumLeds DO
-      GPIO.SetFunction(LED[i], MCU.IO_BANK0_Fsio);
-      GPIO.EnableOutputL(BITS(ORD({LED[i]})));
+      GPIO.SetFunction(LED[i], GPIO.Fsio);
+      SIO.EnableOutput(SIO.GPIOA, BITS(ORD({LED[i]})));
       INC(i)
     END
-  END init;
+  END Config;
 
-BEGIN
-  init
 END LEDext.

@@ -5,29 +5,34 @@ MODULE FPU;
   --
   FPU control/mgmt
   --
-  Type: Cortex-M33
+  - Single-image Main: FPU.Enable
+  - S-image Main: FPU.Enable; FPU.EnableNSaccess; FPU.SetSecure
+  - NS-image Main: FPU.Enable (NSACR already set by S)
   --
-  - Single-image Main: FPU.Init
-  - S-image Main: FPU.Init; FPU.EnableNSaccess; FPU.SetSecure
-  - NS-image Main: FPU.Init (NSACR already set by S)
-  --
-  MCU: RP2350A
+  MCU: RP2350
   --
   Copyright (c) 2024-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2;
+  IMPORT SYSTEM, PPB;
 
-  PROCEDURE* Init*;
+  PROCEDURE* Enable*;
   (* Enable FPU: full access. Called from every image (S, NS, single). Per-core. *)
     CONST CP10 = {20, 21}; CP11 = {22, 23};
     VAR val: SET;
   BEGIN
-    SYSTEM.GET(MCU.PPB_CPACR, val);
-    SYSTEM.PUT(MCU.PPB_CPACR, val + CP10 + CP11);
-    SYSTEM.EMIT(MCU.DSB); SYSTEM.EMIT(MCU.ISB)
-  END Init;
+    SYSTEM.GET(PPB.CPACR, val);
+    SYSTEM.PUT(PPB.CPACR, val + CP10 + CP11);
+    (* asm
+      dsb
+      isb
+    end asm *)
+    (* +asm *)
+    SYSTEM.EMIT(0F3BF8F4FH);  (* dsb *)
+    SYSTEM.EMIT(0F3BF8F6FH);  (* isb *)
+    (* -asm *)
+  END Enable;
 
 
   PROCEDURE* EnableNSaccess*;
@@ -35,8 +40,8 @@ MODULE FPU;
     CONST CP10 = 10; CP11 = 11;
     VAR val: SET;
   BEGIN
-    SYSTEM.GET(MCU.PPB_NSACR, val);
-    SYSTEM.PUT(MCU.PPB_NSACR, val + {CP10, CP11})
+    SYSTEM.GET(PPB.NSACR, val);
+    SYSTEM.PUT(PPB.NSACR, val + {CP10, CP11})
   END EnableNSaccess;
 
 
@@ -45,8 +50,8 @@ MODULE FPU;
     CONST TS = 26; CLRONRETS = 27; CLRONRET = 28; LSPENS = 29;
     VAR val: SET;
   BEGIN
-    SYSTEM.GET(MCU.PPB_FPCCR, val);
-    SYSTEM.PUT(MCU.PPB_FPCCR, val + {TS, CLRONRETS, CLRONRET, LSPENS})
+    SYSTEM.GET(PPB.FPCCR, val);
+    SYSTEM.PUT(PPB.FPCCR, val + {TS, CLRONRETS, CLRONRET, LSPENS})
   END SetSecure;
 
 END FPU.

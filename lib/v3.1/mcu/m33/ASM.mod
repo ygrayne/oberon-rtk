@@ -4,9 +4,9 @@ MODULE ASM;
   Version: v3.1
   --
   ARM instruction encodings for SYSTEM.EMIT/EMITH for ARMv8-M Mainline (Cortex-M33).
-  Can/will be replaced by (* ASM .. END ASM *) in-line assembly code.
+  Can/will be replaced by (* asm .. end asm *) in-line assembly code.
   --
-  Copyright (c) 2026 Gray gray@grayraven.org
+  Copyright (c) 2024-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
   CONST

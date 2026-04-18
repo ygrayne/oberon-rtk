@@ -1,7 +1,7 @@
 MODULE RTCds3234;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   SPI driver for Maxim DS3234 real-time clock
   --
@@ -11,11 +11,11 @@ MODULE RTCds3234;
   MCU: RP2040, RP2350
   Board: Pico, Pico2
   --
-  Copyright (c) 2024-2025 Gray gray@grayraven.org
+  Copyright (c) 2024-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SPIdev, SPI := SPIdata, GPIO, Errors;
+  IMPORT SPI, SPIdata, SIO := SIOgpio, Errors;
 
   CONST
     (* peripheral register addresses *)
@@ -26,12 +26,12 @@ MODULE RTCds3234;
     CPOL* = 0;
     CPHA* = 1;
     SclkRate* = 1000000;
-    DataSize* = SPIdev.DataSize8;
+    DataSize* = SPI.DataSize8;
     TxShift* = 0F0H;
 
   VAR
-    cs: INTEGER;
-    spi: SPIdev.Device;
+    cs, port: INTEGER; (* not good: global state *)
+    spi: SPI.Device;
 
 
   PROCEDURE decodeBCD(bcd: BYTE): BYTE;
@@ -46,20 +46,20 @@ MODULE RTCds3234;
 
   PROCEDURE ReadRegisters*(addr: BYTE; VAR regValues: ARRAY OF BYTE; n: INTEGER);
   BEGIN
-    GPIO.ClearL({cs});
-    SPI.PutByte(spi, addr);
-    SPI.GetBytes(spi, regValues, n);
-    GPIO.SetL({cs})
+    SIO.Clear(port, {cs});
+    SPIdata.PutByte(spi, addr);
+    SPIdata.GetBytes(spi, regValues, n);
+    SIO.Set(port, {cs})
   END ReadRegisters;
 
 
   PROCEDURE WriteRegisters*(addr: BYTE; regValues: ARRAY OF BYTE; n: INTEGER);
     CONST WriteEnable = 80H;
   BEGIN
-    GPIO.ClearL({cs});
-    SPI.PutByte(spi, addr + WriteEnable);
-    SPI.PutBytes(spi, regValues, n);
-    GPIO.SetL({cs})
+    SIO.Clear(port, {cs});
+    SPIdata.PutByte(spi, addr + WriteEnable);
+    SPIdata.PutBytes(spi, regValues, n);
+    SIO.Set(port, {cs})
   END WriteRegisters;
 
 
@@ -141,10 +141,11 @@ MODULE RTCds3234;
   END Timestamp;
 
 
-  PROCEDURE Install*(spiDev: SPIdev.Device; csPinNo: INTEGER);
+  PROCEDURE Install*(spiDev: SPI.Device; csPort, csPinNo: INTEGER);
   BEGIN
     ASSERT(spiDev # NIL, Errors.PreCond);
     spi := spiDev;
+    port := csPort;
     cs := csPinNo
   END Install;
 

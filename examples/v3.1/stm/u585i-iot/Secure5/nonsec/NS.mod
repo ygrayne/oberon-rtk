@@ -1,9 +1,8 @@
 MODULE NS;
 (**
-  Oberon RTK Framework v3.0
+  Oberon RTK Framework v3.1
   --
-  Experimental program Secure5
-  https://oberon-rtk.org/docs/examples/v3/secure1/
+  Test program Secure5
   Non-secure program, uses Secure module S0
   --
   MCU: STM32U585
@@ -13,13 +12,13 @@ MODULE NS;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, Main, DEV2, S0 := NS_S0, Out;
+  IMPORT SYSTEM, Main, DEV := GPIO_DEV, S0 := NS_S0, Out;
 
   CONST
     (* Non-secure GPIOH registers, due to correct (NS) MCU.mod picked via lib search path *)
-    GPIOH_BSSR = DEV2.GPIOH_BASE + DEV2.GPIO_BSRR_Offset;
-    GPIOH_MODER = DEV2.GPIOH_BASE + DEV2.GPIO_MODER_Offset;
-    GPIOH_OSPEEDR = DEV2.GPIOH_BASE + DEV2.GPIO_OSPEEDR_Offset;
+    GPIOH_BSSR = DEV.GPIOH_BASE + DEV.GPIO_BSRR_Offset;
+    GPIOH_MODER = DEV.GPIOH_BASE + DEV.GPIO_MODER_Offset;
+    GPIOH_OSPEEDR = DEV.GPIOH_BASE + DEV.GPIO_OSPEEDR_Offset;
 
     LEDgreen = 7; (* GPIOH *)
     LEDred   = 6;
@@ -51,12 +50,11 @@ MODULE NS;
   PROCEDURE toggleLED(VAR led: SET; cnt: INTEGER);
     CONST Mask = {LEDgreen, LEDgreen + 16};
   BEGIN
-    (*
-    ASSERT(FALSE);
-    *)
+    (*ASSERT(FALSE);*)
     SYSTEM.PUT(GPIOH_BSSR, led);
     led := led / Mask;
-    Out.String("local NS LEDgreen toggle "); Out.Int(cnt, 10); Out.Ln
+    Out.String("local NS LEDgreen toggle "); Out.Int(cnt, 10); Out.Ln;
+
   END toggleLED;
 
   PROCEDURE toggleLED3(VAR led: SET; cnt: INTEGER);
@@ -76,6 +74,7 @@ MODULE NS;
 
   PROCEDURE toggleLED0(VAR led: SET; cnt: INTEGER);
   BEGIN
+    SYSTEM.LDREG(12, 0ABABABABH);
     toggleLED1(led, cnt)
   END toggleLED0;
 

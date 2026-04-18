@@ -1,58 +1,61 @@
 MODULE TIM;
 (**
   Oberon RTK Framework
-  Version: v3.0
+  Version: v3.1
   --
   Basic device driver for:
   TIM1, TIM8: advanced
   TIM2, TIM3, TIM4, TIM5: general purpose, 32 bits
   TIM6, TIM7: basic
   TIM12: general purpose
-  TIM13, TIM4: general purpose
+  TIM13, TIM14: general purpose
   TIM15: general purpose
   TIM16, TIM17: general purpose
   --
-  Note: Advanced functionality for more capable timers is not yet implemented.
-  --
-  Type: MCU
+  Note: advanced functionality for more capable timers is not yet implemented.
   --
   MCU: STM32H573II
   --
-  Copyright (c) 2025 Gray gray@grayraven.org
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYSTEM, MCU := MCU2, CLK, Errors;
+  IMPORT SYSTEM, DEV := TIM_DEV, RST, Errors;
 
   CONST
-    TIM1* = 0;
-    TIM2* = 1;
-    TIM3* = 2;
-    TIM4* = 3;
-    TIM5* = 4;
-    TIM6* = 5;
-    TIM7* = 6;
-    TIM8* = 7;
-    TIM12* = 8;
-    TIM13* = 9;
-    TIM14* = 10;
-    TIM15* = 11;
-    TIM16* = 12;
-    TIM17* = 13;
-    TIMs* = {TIM1 .. TIM17};
-
-    CR1_CEN = 0;
-    EGR_UG = 0;
+    (* handles *)
+    (* do  not assume any specific values for these handles *)
+    (* advanced *)
+    TIM1* = DEV.TIM1;
+    TIM8* = DEV.TIM8;
+    (* general purpose 32 bit *)
+    TIM2* = DEV.TIM2;
+    TIM3* = DEV.TIM3;
+    TIM4* = DEV.TIM4;
+    TIM5* = DEV.TIM5;
+    (* basic *)
+    TIM6* = DEV.TIM6;
+    TIM7* = DEV.TIM7;
+    (* general purpose 16 bit *)
+    TIM12* = DEV.TIM12;
+    TIM13* = DEV.TIM13;
+    TIM14* = DEV.TIM14;
+    (* general purpose 16 bit *)
+    TIM15* = DEV.TIM15;
+    TIM16* = DEV.TIM16;
+    TIM17* = DEV.TIM17;
 
 
   TYPE
     Device* = POINTER TO DeviceDesc;
     DeviceDesc* = RECORD
       timId*: INTEGER;
-      devNo: INTEGER;
+      bcEnReg, bcEnPos: INTEGER; (* bus clock enable *)
+      rstReg, rstPos: INTEGER; (* reset *)
+      smReg, smPos: INTEGER; (* clock sleep mode *)
       CR1, CR2: INTEGER;
       DIER, SR, EGR: INTEGER;
-      CNT*, PSC, ARR: INTEGER
+      CNT, PSC, ARR: INTEGER
     END;
 
     DeviceCfg* = RECORD
@@ -64,60 +67,128 @@ MODULE TIM;
   PROCEDURE* Init*(dev: Device; timId: INTEGER);
     VAR base: INTEGER;
   BEGIN
-    ASSERT(dev # NIL, Errors.ProgError);
-    ASSERT(timId IN TIMs, Errors.ProgError);
+    ASSERT(dev # NIL, Errors.PreCond);
+    ASSERT(timId IN DEV.TIM_all, Errors.PreCond);
     dev.timId := timId;
-    CASE timId OF
-      TIM1: base := MCU.TIM1_BASE; dev.devNo := MCU.DEV_TIM1
-    | TIM2: base := MCU.TIM2_BASE; dev.devNo := MCU.DEV_TIM2
-    | TIM3: base := MCU.TIM3_BASE; dev.devNo := MCU.DEV_TIM3
-    | TIM4: base := MCU.TIM4_BASE; dev.devNo := MCU.DEV_TIM4
-    | TIM5: base := MCU.TIM5_BASE; dev.devNo := MCU.DEV_TIM5
-    | TIM6: base := MCU.TIM6_BASE; dev.devNo := MCU.DEV_TIM6
-    | TIM7: base := MCU.TIM7_BASE; dev.devNo := MCU.DEV_TIM7
-    | TIM8: base := MCU.TIM8_BASE; dev.devNo := MCU.DEV_TIM8
-    | TIM12: base := MCU.TIM12_BASE; dev.devNo := MCU.DEV_TIM12
-    | TIM13: base := MCU.TIM12_BASE; dev.devNo := MCU.DEV_TIM13
-    | TIM14: base := MCU.TIM14_BASE; dev.devNo := MCU.DEV_TIM14
-    | TIM15: base := MCU.TIM15_BASE; dev.devNo := MCU.DEV_TIM15
-    | TIM16: base := MCU.TIM16_BASE; dev.devNo := MCU.DEV_TIM16
-    | TIM17: base := MCU.TIM17_BASE; dev.devNo := MCU.DEV_TIM17
+    IF timId IN DEV.TIM_adv THEN
+      CASE timId OF
+        DEV.TIM1:
+          base := DEV.TIM1_BASE;
+          dev.bcEnReg := DEV.TIM1_BC_reg; dev.bcEnPos := DEV.TIM1_BC_pos;
+          dev.rstReg := DEV.TIM1_RST_reg; dev.rstPos := DEV.TIM1_RST_pos;
+          dev.smReg := DEV.TIM1_SM_reg; dev.smPos := DEV.TIM1_SM_pos
+      | DEV.TIM8:
+          base := DEV.TIM8_BASE;
+          dev.bcEnReg := DEV.TIM8_BC_reg; dev.bcEnPos := DEV.TIM8_BC_pos;
+          dev.rstReg := DEV.TIM8_RST_reg; dev.rstPos := DEV.TIM8_RST_pos;
+          dev.smReg := DEV.TIM8_SM_reg; dev.smPos := DEV.TIM8_SM_pos
+      END
+    ELSIF timId IN DEV.TIM_gp0 THEN
+      CASE timId OF
+        DEV.TIM2:
+          base := DEV.TIM2_BASE;
+          dev.bcEnReg := DEV.TIM2_BC_reg; dev.bcEnPos := DEV.TIM2_BC_pos;
+          dev.rstReg := DEV.TIM2_RST_reg; dev.rstPos := DEV.TIM2_RST_pos;
+          dev.smReg := DEV.TIM2_SM_reg; dev.smPos := DEV.TIM2_SM_pos
+      | DEV.TIM3:
+          base := DEV.TIM3_BASE;
+          dev.bcEnReg := DEV.TIM3_BC_reg; dev.bcEnPos := DEV.TIM3_BC_pos;
+          dev.rstReg := DEV.TIM3_RST_reg; dev.rstPos := DEV.TIM3_RST_pos;
+          dev.smReg := DEV.TIM3_SM_reg; dev.smPos := DEV.TIM3_SM_pos
+      | DEV.TIM4:
+          base := DEV.TIM4_BASE;
+          dev.bcEnReg := DEV.TIM4_BC_reg; dev.bcEnPos := DEV.TIM4_BC_pos;
+          dev.rstReg := DEV.TIM4_RST_reg; dev.rstPos := DEV.TIM4_RST_pos;
+          dev.smReg := DEV.TIM4_SM_reg; dev.smPos := DEV.TIM4_SM_pos
+      | DEV.TIM5:
+          base := DEV.TIM5_BASE;
+          dev.bcEnReg := DEV.TIM5_BC_reg; dev.bcEnPos := DEV.TIM5_BC_pos;
+          dev.rstReg := DEV.TIM5_RST_reg; dev.rstPos := DEV.TIM5_RST_pos;
+          dev.smReg := DEV.TIM5_SM_reg; dev.smPos := DEV.TIM5_SM_pos
+      END
+    ELSIF timId IN DEV.TIM_basic THEN
+      CASE timId OF
+        DEV.TIM6:
+          base := DEV.TIM6_BASE;
+          dev.bcEnReg := DEV.TIM6_BC_reg; dev.bcEnPos := DEV.TIM6_BC_pos;
+          dev.rstReg := DEV.TIM6_RST_reg; dev.rstPos := DEV.TIM6_RST_pos;
+          dev.smReg := DEV.TIM6_SM_reg; dev.smPos := DEV.TIM6_SM_pos
+      | DEV.TIM7:
+          base := DEV.TIM7_BASE;
+          dev.bcEnReg := DEV.TIM7_BC_reg; dev.bcEnPos := DEV.TIM7_BC_pos;
+          dev.rstReg := DEV.TIM7_RST_reg; dev.rstPos := DEV.TIM7_RST_pos;
+          dev.smReg := DEV.TIM7_SM_reg; dev.smPos := DEV.TIM7_SM_pos
+      END
+    ELSIF timId IN DEV.TIM_gp2 THEN
+      CASE timId OF
+        DEV.TIM12:
+          base := DEV.TIM12_BASE;
+          dev.bcEnReg := DEV.TIM12_BC_reg; dev.bcEnPos := DEV.TIM12_BC_pos;
+          dev.rstReg := DEV.TIM12_RST_reg; dev.rstPos := DEV.TIM12_RST_pos;
+          dev.smReg := DEV.TIM12_SM_reg; dev.smPos := DEV.TIM12_SM_pos
+      | DEV.TIM13:
+          base := DEV.TIM13_BASE;
+          dev.bcEnReg := DEV.TIM13_BC_reg; dev.bcEnPos := DEV.TIM13_BC_pos;
+          dev.rstReg := DEV.TIM13_RST_reg; dev.rstPos := DEV.TIM13_RST_pos;
+          dev.smReg := DEV.TIM13_SM_reg; dev.smPos := DEV.TIM13_SM_pos
+      | DEV.TIM14:
+          base := DEV.TIM14_BASE;
+          dev.bcEnReg := DEV.TIM14_BC_reg; dev.bcEnPos := DEV.TIM14_BC_pos;
+          dev.rstReg := DEV.TIM14_RST_reg; dev.rstPos := DEV.TIM14_RST_pos;
+          dev.smReg := DEV.TIM14_SM_reg; dev.smPos := DEV.TIM14_SM_pos
+      END
+    ELSE (* DEV.TIM_gp1 *)
+      CASE timId OF
+        DEV.TIM15:
+          base := DEV.TIM15_BASE;
+          dev.bcEnReg := DEV.TIM15_BC_reg; dev.bcEnPos := DEV.TIM15_BC_pos;
+          dev.rstReg := DEV.TIM15_RST_reg; dev.rstPos := DEV.TIM15_RST_pos;
+          dev.smReg := DEV.TIM15_SM_reg; dev.smPos := DEV.TIM15_SM_pos
+      | DEV.TIM16:
+          base := DEV.TIM16_BASE;
+          dev.bcEnReg := DEV.TIM16_BC_reg; dev.bcEnPos := DEV.TIM16_BC_pos;
+          dev.rstReg := DEV.TIM16_RST_reg; dev.rstPos := DEV.TIM16_RST_pos;
+          dev.smReg := DEV.TIM16_SM_reg; dev.smPos := DEV.TIM16_SM_pos
+      | DEV.TIM17:
+          base := DEV.TIM17_BASE;
+          dev.bcEnReg := DEV.TIM17_BC_reg; dev.bcEnPos := DEV.TIM17_BC_pos;
+          dev.rstReg := DEV.TIM17_RST_reg; dev.rstPos := DEV.TIM17_RST_pos;
+          dev.smReg := DEV.TIM17_SM_reg; dev.smPos := DEV.TIM17_SM_pos
+      END
     END;
-    dev.CR1 := base + MCU.TIM_CR1_Offset;
-    dev.CR2 := base + MCU.TIM_CR2_Offset;
-    dev.DIER := base + MCU.TIM_DIER_Offset;
-    dev.SR := base + MCU.TIM_SR_Offset;
-    dev.EGR := base + MCU.TIM_EGR_Offset;
-    dev.CNT := base + MCU.TIM_CNT_Offset;
-    dev.PSC := base + MCU.TIM_PSC_Offset;
-    dev.ARR := base + MCU.TIM_ARR_Offset
+    dev.CR1 := base + DEV.TIM_CR1_Offset;
+    dev.CR2 := base + DEV.TIM_CR2_Offset;
+    dev.DIER := base + DEV.TIM_DIER_Offset;
+    dev.SR := base + DEV.TIM_SR_Offset;
+    dev.EGR := base + DEV.TIM_EGR_Offset;
+    dev.CNT := base + DEV.TIM_CNT_Offset;
+    dev.PSC := base + DEV.TIM_PSC_Offset;
+    dev.ARR := base + DEV.TIM_ARR_Offset
   END Init;
 
 
   PROCEDURE Configure*(dev: Device; cfg: DeviceCfg);
   BEGIN
-    ASSERT(dev # NIL, Errors.ProgError);
-    CLK.EnableBusClock(dev.devNo);
+    RST.EnableBusClock(dev.bcEnReg, dev.bcEnPos);
     SYSTEM.PUT(dev.PSC, cfg.presc);
     SYSTEM.PUT(dev.ARR, cfg.reload);
     (* clear counter and prescale counter/issue update event *)
     (* prescaler value in dev.PSC is untouched *)
-    SYSTEM.PUT(dev.EGR, {EGR_UG})
+    SYSTEM.PUT(dev.EGR, {0})
   END Configure;
 
 
   PROCEDURE* Enable*(dev: Device);
     VAR val: SET;
   BEGIN
-    ASSERT(dev # NIL, Errors.ProgError);
     SYSTEM.GET(dev.CR1, val);
-    SYSTEM.PUT(dev.CR1, val + {CR1_CEN})
+    SYSTEM.PUT(dev.CR1, val + {0})
   END Enable;
 
 
   PROCEDURE* Clear*(dev: Device);
   BEGIN
-    SYSTEM.PUT(dev.EGR, {EGR_UG})
+    SYSTEM.PUT(dev.EGR, {0})
   END Clear;
 
 
@@ -125,7 +196,7 @@ MODULE TIM;
     VAR val: SET;
   BEGIN
     SYSTEM.GET(dev.CR1, val);
-    SYSTEM.PUT(dev.CR1, val - {CR1_CEN})
+    SYSTEM.PUT(dev.CR1, val - {0})
   END Disable;
 
 
@@ -133,5 +204,41 @@ MODULE TIM;
   BEGIN
     SYSTEM.GET(dev.CNT, cnt)
   END GetCount;
+
+
+  PROCEDURE GetDevSec*(timId: INTEGER; VAR reg, pos: INTEGER);
+  BEGIN
+    ASSERT(timId IN DEV.TIM_all, Errors.PreCond);
+    IF timId IN DEV.TIM_adv THEN
+      CASE timId OF
+        DEV.TIM1: reg := DEV.TIM1_SEC_reg; pos := DEV.TIM1_SEC_pos
+      | DEV.TIM8: reg := DEV.TIM8_SEC_reg; pos := DEV.TIM8_SEC_pos
+      END
+    ELSIF timId IN DEV.TIM_gp0 THEN
+      CASE timId OF
+        DEV.TIM2: reg := DEV.TIM2_SEC_reg; pos := DEV.TIM2_SEC_pos
+      | DEV.TIM3: reg := DEV.TIM3_SEC_reg; pos := DEV.TIM3_SEC_pos
+      | DEV.TIM4: reg := DEV.TIM4_SEC_reg; pos := DEV.TIM4_SEC_pos
+      | DEV.TIM5: reg := DEV.TIM5_SEC_reg; pos := DEV.TIM5_SEC_pos
+      END
+    ELSIF timId IN DEV.TIM_basic THEN
+      CASE timId OF
+        DEV.TIM6: reg := DEV.TIM6_SEC_reg; pos := DEV.TIM6_SEC_pos
+      | DEV.TIM7: reg := DEV.TIM7_SEC_reg; pos := DEV.TIM7_SEC_pos
+      END
+    ELSIF timId IN DEV.TIM_gp2 THEN
+      CASE timId OF
+        DEV.TIM12: reg := DEV.TIM12_SEC_reg; pos := DEV.TIM12_SEC_pos
+      | DEV.TIM13: reg := DEV.TIM13_SEC_reg; pos := DEV.TIM13_SEC_pos
+      | DEV.TIM14: reg := DEV.TIM14_SEC_reg; pos := DEV.TIM14_SEC_pos
+      END
+    ELSE
+      CASE timId OF
+        DEV.TIM15: reg := DEV.TIM15_SEC_reg; pos := DEV.TIM15_SEC_pos
+      | DEV.TIM16: reg := DEV.TIM16_SEC_reg; pos := DEV.TIM16_SEC_pos
+      | DEV.TIM17: reg := DEV.TIM17_SEC_reg; pos := DEV.TIM17_SEC_pos
+      END
+    END
+  END GetDevSec;
 
 END TIM.
