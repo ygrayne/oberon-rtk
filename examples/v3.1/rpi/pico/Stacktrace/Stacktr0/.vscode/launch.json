@@ -6,9 +6,9 @@
             "type": "cortex-debug",
             "request": "launch",
             "cwd": "${workspaceFolder}",
-            "executable": "WatchdogC0.elf",
+            "executable": "Stacktr0.elf",
             "servertype": "openocd",
-            "device": "RP2350",
+            "device": "RP2040",
             "gdbPath": "${env:RTK_GDB}",
             "objdumpPath": "${env:RTK_OBJDUMP}",
             "openOCDLaunchCommands": [
@@ -16,7 +16,7 @@
             ],
             "configFiles": [
                 "interface/cmsis-dap.cfg",
-                "target/rp2350.cfg"
+                "target/rp2040.cfg"
             ],
             "searchDir": [
                 "${env:RTK_OPENOCD_RPI_SCRIPTS}"
@@ -34,9 +34,9 @@
             "type": "cortex-debug",
             "request": "attach",
             "cwd": "${workspaceFolder}",
-            "executable": "WatchdogC0.elf",
+            "executable": "Stacktr0.elf",
             "servertype": "openocd",
-            "device": "RP2350",
+            "device": "RP2040",
             "gdbPath": "${env:RTK_GDB}",
             "objdumpPath": "${env:RTK_OBJDUMP}",
             "openOCDLaunchCommands": [
@@ -44,7 +44,7 @@
             ],
             "configFiles": [
                 "interface/cmsis-dap.cfg",
-                "target/rp2350.cfg"
+                "target/rp2040.cfg"
             ],
             "searchDir": [
                 "${env:RTK_OPENOCD_RPI_SCRIPTS}"

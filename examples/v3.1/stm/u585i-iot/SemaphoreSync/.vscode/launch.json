@@ -6,26 +6,20 @@
             "type": "cortex-debug",
             "request": "launch",
             "cwd": "${workspaceFolder}",
-            "executable": "K4base.elf",
+            "executable": "SemaphoreSync.elf",
             "servertype": "openocd",
-            "device": "STM32H573II",
+            "device": "STM32U585AI",
             "gdbPath": "${env:RTK_GDB}",
             "objdumpPath": "${env:RTK_OBJDUMP}",
             "configFiles": [
-                "interface/stlink-dap.cfg",
-                "target/stm32h5x.cfg"
-            ],
-            "openOCDPreConfigLaunchCommands": [
-                "set CONNECT_UNDER_RESET 1"
+                "${env:RTK_OPENOCD_CFG_STLINK}",
+                "target/stm32u5x.cfg"
             ],
             "openOCDLaunchCommands": [
                 "adapter speed 3300"
             ],
-            "serverpath": "${env:RTK_OPENOCD_STM}",
-            "searchDir": [
-                "${env:RTK_OPENOCD_STM_SCRIPTS}"
-            ],
-            "svdFile": "${env:RTK_SVD_STM32H573}",
+            "serverpath": "${env:RTK_OPENOCD_XPACK}",
+            "svdFile": "${env:RTK_SVD_STM32U585}",
             "postLaunchCommands": [
                 "stepi",
                 "monitor reset halt",
@@ -38,26 +32,20 @@
             "type": "cortex-debug",
             "request": "attach",
             "cwd": "${workspaceFolder}",
-            "executable": "K4base.elf",
+            "executable": "SemaphoreSync.elf",
             "servertype": "openocd",
-            "device": "STM32H573II",
+            "device": "STM32U585AI",
             "gdbPath": "${env:RTK_GDB}",
             "objdumpPath": "${env:RTK_OBJDUMP}",
             "configFiles": [
-                "interface/stlink-dap.cfg",
-                "target/stm32h5x.cfg"
-            ],
-            "openOCDPreConfigLaunchCommands": [
-                "set CONNECT_UNDER_RESET 1"
+                "${env:RTK_OPENOCD_CFG_STLINK}",
+                "target/stm32u5x.cfg"
             ],
             "openOCDLaunchCommands": [
                 "adapter speed 3300"
             ],
-            "serverpath": "${env:RTK_OPENOCD_STM}",
-            "searchDir": [
-                "${env:RTK_OPENOCD_STM_SCRIPTS}"
-            ],
-            "svdFile": "${env:RTK_SVD_STM32H573}",
+            "serverpath": "${env:RTK_OPENOCD_XPACK}",
+            "svdFile": "${env:RTK_SVD_STM32U585}",
             "postAttachCommands": [
                 "stepi",
                 "monitor reset halt",
