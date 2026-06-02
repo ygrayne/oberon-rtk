@@ -4,11 +4,10 @@ MODULE LED;
   Version: v3.1
   --
   Green and red user LEDs
+  Two LEDs, active low.
   --
   MCU: STM32U585AI
   Board: B-U585I-IOT02A
-  --
-  * Two LEDs, active low.
   --
   Usage:
   * Via procedures:
@@ -33,6 +32,8 @@ MODULE LED;
     Pico* = LEDgreenPinNo;
     Green* = LEDgreenPinNo;
     Red* = LEDredPinNo;
+
+    Port* = GPIO.PORTH;
 
     LEDx* = {LEDredPinNo, LEDgreenPinNo};
 
@@ -65,6 +66,7 @@ MODULE LED;
   PROCEDURE Config*;
     VAR cfg: GPIO.PinCfg;
   BEGIN
+    GPIO.Attach(GPIO.PORTH);
     GPIO.GetPinBaseCfg(cfg);
     cfg.mode := GPIO.ModeOut;
     GPIO.ConfigurePin(GPIO.PORTH, LEDredPinNo, cfg);

@@ -4,11 +4,10 @@ MODULE LED;
   Version: v3.1
   --
   Red, blue, orange and green user LEDs
+  Four LEDs, active low
   --
   MCU: STM32H573II
-  Board: STM32H573I-DK
-  --
-  * Four LEDs, active low.
+  Board: STM32H573I-DK.
   --
   Usage:
   * Via procedures:
@@ -37,6 +36,9 @@ MODULE LED;
     Blue* = LEDbluePinNo;
     Orange* = LEDorangePinNo;
     Green* = LEDgreenPinNo;
+
+    Port0* = GPIO.PORTF;
+    Port1* = GPIO.PORTI;
 
     LEDx = {LEDredPinNo, LEDbluePinNo, LEDorangePinNo, LEDgreenPinNo};
 
@@ -89,6 +91,8 @@ MODULE LED;
   PROCEDURE Config*;
     VAR cfg: GPIO.PinCfg;
   BEGIN
+    GPIO.Attach(GPIO.PORTF);
+    GPIO.Attach(GPIO.PORTI);
     GPIO.GetPinBaseCfg(cfg);
     cfg.mode := GPIO.ModeOut;
     GPIO.ConfigurePin(GPIO.PORTF, LEDredPinNo, cfg);

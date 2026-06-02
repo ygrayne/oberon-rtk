@@ -4,6 +4,7 @@ MODULE Coroutines;
   Version: v3.1
   --
   Simple coroutines
+  Kernel v1
   --
   MCU: STM32U585AI, STM32H573II
   --
@@ -81,7 +82,7 @@ MODULE Coroutines;
     (* note: meaning of 'f' and 't' as per the procedure call when transferring AWAY from 't' *)
     (* ie. 'f' is the coroutine on the stack here that we transfer to *)
     SYSTEM.LDREG(R12, f.id);
-    SYSTEM.LDREG(LR, 0); (* get clean stack trace -- overkill? :) *)
+    SYSTEM.LDREG(LR, 0); (* stack trace terminator *)
     (* epilogue: adjust stack by +8, pop 'lr' from stack into 'pc' *)
     (* continue "as" t with 'lr' as 'pc' value *)
     (* Voila. *)

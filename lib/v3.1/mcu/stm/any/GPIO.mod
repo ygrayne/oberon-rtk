@@ -63,16 +63,21 @@ MODULE GPIO;
     END;
 
 
+  PROCEDURE Attach*(port: INTEGER);
+    VAR rstPos: INTEGER;
+  BEGIN
+    rstPos := (port - DEV.GPIOA_BASE) DIV DEV.GPIO_Offset;
+    RST.EnableBusClock(DEV.GPIO_BC_reg, rstPos);
+  END Attach;
+
+
   PROCEDURE ConfigurePin*(port, pin: INTEGER; cfg: PinCfg);
-    VAR addr, rstPos: INTEGER; val, mask: SET;
+    VAR addr: INTEGER; val, mask: SET;
   BEGIN
     ASSERT(cfg.mode IN Modes, Errors.PreCond);
     ASSERT(cfg.type IN Types, Errors.PreCond);
     ASSERT(cfg.speed IN Speeds, Errors.PreCond);
     ASSERT(cfg.pulls IN Pulls, Errors.PreCond);
-
-    rstPos := (port - DEV.GPIOA_BASE) DIV DEV.GPIO_Offset;
-    RST.EnableBusClock(DEV.GPIO_BC_reg, rstPos);
 
     mask := BITS(pin);
 
@@ -122,13 +127,13 @@ MODULE GPIO;
   END GetPinBaseCfg;
 
 
-  PROCEDURE* SetNonSecPins*(port: INTEGER; nonSecPins: SET);
+  PROCEDURE* SetNonsecPins*(port: INTEGER; nonSecPins: SET);
   (* all pins of all ports are Secure on reset *)
     VAR reg: INTEGER;
   BEGIN
     reg := port + DEV.GPIO_SECCFGR_Offset;
     SYSTEM.PUT(reg, (-nonSecPins * ValidBits))
-  END SetNonSecPins;
+  END SetNonsecPins;
 
 
   (* GPIO direct pin control *)

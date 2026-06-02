@@ -31,7 +31,7 @@ MODULE WATCHDOG_DEV;
     WATCHDOG_SCRATCH7*  = WATCHDOG_BASE + 028H;
       WATCHDOG_SCRATCH_Offset* = 4;
 
-    WATCHDOG_XLOADTIME* = 1;
+    WATCHDOG_XLOADTIME* = 1; (* hw error correction factor, RP2040 code compatibility *)
 
     (* WATCHDOG_REASON values *)
     WATCHDOG_REASON_FORCE* = 2;

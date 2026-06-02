@@ -5,30 +5,30 @@ MODULE SysTick;
   --
   System tick for kernel-v4.
   --
-  MCU: RP2040, RP2350
+  MCU: RP2350
   --
   Copyright (c) 2020-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYST, Clocks;
+  IMPORT SYSTK, Clocks;
 
 
   PROCEDURE Config*(msPerTick: INTEGER; handler: PROCEDURE; prio: INTEGER);
   BEGIN
-    SYST.InstallExcHandler(handler, prio);
-    SYST.Configure(Clocks.SYSTICK_FREQ, msPerTick)
+    SYSTK.InstallExcHandler(handler, prio);
+    SYSTK.Configure(Clocks.SYSTICK_FREQ, msPerTick)
   END Config;
 
 
   PROCEDURE Tick*(): BOOLEAN;
-    RETURN SYST.Tick()
+    RETURN SYSTK.Tick()
   END Tick;
 
 
   PROCEDURE Enable*;
   BEGIN
-    SYST.EnableExc
+    SYSTK.EnableExc
   END Enable;
 
 END SysTick.

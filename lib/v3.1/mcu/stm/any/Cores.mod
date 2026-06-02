@@ -5,6 +5,10 @@ MODULE Cores;
   --
   Core handling
   --
+  STM32 MCUs don't have dedicated register to determine the current core.
+  For code compatibility, module Startup writes zero at address 0 of the
+  vector table => core ID = 0 can be read from there.
+  --
   MCU: STM32U585AI, STM32H573II
   --
   Copyright (c) 2023-2026 Gray gray@grayraven.org
@@ -15,7 +19,6 @@ MODULE Cores;
 
 
   PROCEDURE* GetCoreId*(VAR cid: INTEGER);
-  (* set in Startup *)
   BEGIN
     SYSTEM.GET(PPB.VTOR, cid);
     SYSTEM.GET(cid, cid)

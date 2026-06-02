@@ -27,25 +27,27 @@ MODULE RST;
     POWMAN_PASSCODE = 05AFE0000H;
 *)
 
-  PROCEDURE ReleaseReset*(reg, pos: INTEGER);
-    CONST DoneOffset = 4;
+  PROCEDURE* ReleaseReset*(reg, pos: INTEGER);
+    CONST DoneOffset = 8;
     VAR val: SET;
   BEGIN
-    SYSTEM.PUT(reg + BASE.ACLR, {pos});
-    REPEAT
+    SYSTEM.GET(reg + DoneOffset, val);
+    WHILE ~(pos IN val) DO
+      SYSTEM.PUT(reg + BASE.ACLR, {pos});
       SYSTEM.GET(reg + DoneOffset, val)
-    UNTIL ~(pos IN val)
+    END
   END ReleaseReset;
 
 
-  PROCEDURE ApplyReset*(reg, pos: INTEGER);
-    CONST DoneOffset = 4;
+  PROCEDURE* ApplyReset*(reg, pos: INTEGER);
+    CONST DoneOffset = 8;
     VAR val: SET;
   BEGIN
-    SYSTEM.PUT(reg + BASE.ASET, {pos});
-    REPEAT
+    SYSTEM.GET(reg + DoneOffset, val);
+    WHILE pos IN val DO
+      SYSTEM.PUT(reg + BASE.ASET, {pos});
       SYSTEM.GET(reg + DoneOffset, val)
-    UNTIL pos IN val
+    END
   END ApplyReset;
 
 

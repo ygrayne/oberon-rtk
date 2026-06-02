@@ -18,6 +18,8 @@ MODULE CLK_SYS;
     PLLsys* = 0;
     PLLusb* = 1;
 
+    PLL_all* = {0, 1};
+
     (* -- CLK -- *)
     CLOCKS_BASE* = BASE.CLOCKS_BASE;
 
@@ -239,7 +241,7 @@ MODULE CLK_SYS;
     XOSC_STARTUP* = XOSC_BASE + 00CH;
     XOSC_COUNT*   = XOSC_BASE + 010H;
 
-    (* reset PSM *)
+    (* psm done *)
     XOSC_PSM_reg* = RESETS_SYS.PSM_DONE;
     XOSC_PSM_pos* = RESETS_SYS.PSM_XOSC;
 

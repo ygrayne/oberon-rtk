@@ -11,23 +11,23 @@ MODULE SysTick;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT SYST, Clocks;
+  IMPORT SYSTK, Clocks;
 
 
   PROCEDURE Config*(msPerTick: INTEGER);
   BEGIN
-    SYST.Configure(Clocks.SYSTICK_FREQ, msPerTick)
+    SYSTK.Configure(Clocks.SYSTICK_FREQ, msPerTick)
   END Config;
 
 
   PROCEDURE Tick*(): BOOLEAN;
-    RETURN SYST.Tick()
+    RETURN SYSTK.Tick()
   END Tick;
 
 
   PROCEDURE Enable*;
   BEGIN
-    SYST.Enable
+    SYSTK.Enable
   END Enable;
 
 END SysTick.

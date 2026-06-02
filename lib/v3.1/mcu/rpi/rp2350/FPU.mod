@@ -5,9 +5,9 @@ MODULE FPU;
   --
   FPU control/mgmt
   --
-  - Single-image Main: FPU.Enable
-  - S-image Main: FPU.Enable; FPU.EnableNSaccess; FPU.SetSecure
-  - NS-image Main: FPU.Enable (NSACR already set by S)
+  * Single-image Main: FPU.Enable
+  * S-image Main: FPU.Enable; FPU.EnableNSaccess; FPU.SetSecure
+  * NS-image Main: FPU.Enable (NSACR already set by S)
   --
   MCU: RP2350
   --
@@ -18,7 +18,7 @@ MODULE FPU;
   IMPORT SYSTEM, PPB;
 
   PROCEDURE* Enable*;
-  (* Enable FPU: full access. Called from every image (S, NS, single). Per-core. *)
+  (* enable FPU: full access. Called from every image (S, NS, single). Per-core. *)
     CONST CP10 = {20, 21}; CP11 = {22, 23};
     VAR val: SET;
   BEGIN
@@ -36,7 +36,7 @@ MODULE FPU;
 
 
   PROCEDURE* EnableNSaccess*;
-  (* Allow Non-secure FPU access. Called from S only, before starting NS. Per-core. *)
+  (* allow Non-secure FPU access. Called from S only, before starting NS. Per-core. *)
     CONST CP10 = 10; CP11 = 11;
     VAR val: SET;
   BEGIN
@@ -46,7 +46,7 @@ MODULE FPU;
 
 
   PROCEDURE* SetSecure*;
-  (* Full FP security hardening. Called from S only. Per-core. *)
+  (* full FP security hardening. Called from S only. Per-core. *)
     CONST TS = 26; CLRONRETS = 27; CLRONRET = 28; LSPENS = 29;
     VAR val: SET;
   BEGIN

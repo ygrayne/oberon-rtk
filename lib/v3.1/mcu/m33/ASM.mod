@@ -72,8 +72,8 @@ MODULE ASM;
     CPSID_I* = 0B672H; (* disable: 1011 0110 0111 0010 *)
     (* interrupt enable/disable via FAULTMASK *)
     (* raises execution priority to -1 = HardFault, clears on handler exit *)
-    CPSIE_F* = 0B662H; (* enable:  1011 0110 0110 0001 *)
-    CPSID_F* = 0B672H; (* disable: 1011 0110 0111 0001 *)
+    CPSIE_F* = 0B661H; (* enable:  1011 0110 0110 0001 *)
+    CPSID_F* = 0B671H; (* disable: 1011 0110 0111 0001 *)
 
     (* wait for event/interrupt *)
     WFE* = 0BF20H;

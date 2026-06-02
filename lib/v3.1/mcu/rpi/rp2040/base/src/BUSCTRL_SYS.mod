@@ -1,0 +1,62 @@
+MODULE BUSCTRL_SYS;
+(**
+  Oberon RTK Framework
+  Version: v3.1
+  --
+  BUSCTRL
+  datasheet 2.1.5, p19
+  --
+  MCU: RP2040
+  --
+  Copyright (c) 2023-2026 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT BASE, RESETS_SYS;
+
+  CONST
+    BUSCTRL_BASE* = BASE.BUSCTRL_BASE;
+
+    BUSCTRL_BUS_PRIORITY*     = BUSCTRL_BASE;
+    BUSCTRL_BUS_PRIORITY_ACK* = BUSCTRL_BASE + 004H;
+    BUSCTRL_PERFCTR0*         = BUSCTRL_BASE + 008H;
+    BUSCTRL_PERFSEL0*         = BUSCTRL_BASE + 00CH;
+    BUSCTRL_PERFCTR1*         = BUSCTRL_BASE + 010H;
+    BUSCTRL_PERFSEL1*         = BUSCTRL_BASE + 014H;
+    BUSCTRL_PERFCTR2*         = BUSCTRL_BASE + 018H;
+    BUSCTRL_PERFSEL2*         = BUSCTRL_BASE + 01CH;
+    BUSCTRL_PERFCTR3*         = BUSCTRL_BASE + 020H;
+    BUSCTRL_PERFSEL3*         = BUSCTRL_BASE + 024H;
+
+    (* PERFSEL events *)
+    PERFSEL_APB_ACC_CONT*       = 000H; (* contested *)
+    PERFSEL_APB_ACC*            = 001H;
+    PERFSEL_FASTPERI_ACC_CONT*  = 002H;
+    PERFSEL_FASTPERI_ACC*       = 003H;
+
+    PERFSEL_SRAM5_ACC_CONT*     = 004H;
+    PERFSEL_SRAM5_ACC*          = 005H;
+    PERFSEL_SRAM4_ACC_CONT*     = 006H;
+    PERFSEL_SRAM4_ACC*          = 007H;
+    PERFSEL_SRAM3_ACC_CONT*     = 008H;
+    PERFSEL_SRAM3_ACC*          = 009H;
+    PERFSEL_SRAM2_ACC_CONT*     = 00AH;
+    PERFSEL_SRAM2_ACC*          = 00BH;
+    PERFSEL_SRAM1_ACC_CONT*     = 00CH;
+    PERFSEL_SRAM1_ACC*          = 00DH;
+    PERFSEL_SRAM0_ACC_CONT*     = 00EH;
+    PERFSEL_SRAM0_ACC*          = 00FH;
+
+    PERFSEL_XIP_MAIN0_ACC_CONT* = 010H;
+    PERFSEL_XIP_MAIN0_ACC*      = 011H;
+    PERFSEL_ROM_ACC_CONT*       = 012H;
+    PERFSEL_ROM_ACC*            = 013H;
+
+    PERFSEL_SRAM_EXT1_ACC*      = PERFSEL_SRAM5_ACC;
+    PERFSEL_SRAM_EXT0_ACC*      = PERFSEL_SRAM4_ACC;
+
+    (* reset *)
+    BUSCTRL_RST_reg* = RESETS_SYS.RESETS_RESET;
+    BUSCTRL_RST_pos* = RESETS_SYS.RESETS_BUSCTRL;
+
+END BUSCTRL_SYS.

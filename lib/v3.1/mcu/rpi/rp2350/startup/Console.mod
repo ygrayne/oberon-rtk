@@ -3,18 +3,18 @@ MODULE Console;
   Oberon RTK Framework
   Version: v3.1
   --
-  Program-wide text IO consoles, one per core.
+  Program-wide text IO consoles, one per core (via Out/In).
   --
   For different configurations, copy to the project directory and adapt accordingly.
   --
-  MCU: RP2350A
+  MCU: RP2350
   Board: Pico2
   --
   Copyright (c) 2024-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT Cores, GPIO, UART, UARTstr, TextIO, Out, In, RuntimeErrorsOut, Errors;
+  IMPORT GPIO, UART, UARTstr, TextIO, Out, In, RuntimeErrorsOut, Errors;
 
   CONST
     SYSTERM0* = 0;
@@ -24,6 +24,8 @@ MODULE Console;
     Baudrate1 = 38400;
     UART0 = UART.UART0;
     UART1 = UART.UART1;
+    SYSTERM0_UART = UART0;
+    SYSTERM1_UART = UART1;
     UART0_TxPinNo = 0;
     UART0_RxPinNo = 1;
     UART1_TxPinNo = 4;
@@ -44,6 +46,7 @@ MODULE Console;
     GPIO.GetPinBaseCfg(pinCfg);
     pinCfg.pullupEn := GPIO.Enabled;
     pinCfg.pulldownEn := GPIO.Disabled;
+    GPIO.Attach;
     GPIO.ConfigurePin(txPin, pinCfg);
     GPIO.ConfigurePin(rxPin, pinCfg);
     GPIO.ConnectInput(rxPin);
@@ -71,51 +74,37 @@ MODULE Console;
   END installTerm;
 
 
-  PROCEDURE Install*;
-    CONST Core0 = 0;
-    VAR uartDev: UART.Device; uartCfg: UART.DeviceCfg; cid: INTEGER;
+  PROCEDURE Install*(sysTerm: INTEGER);
+    VAR uartDev: UART.Device; uartCfg: UART.DeviceCfg; uartNo, baudrate: INTEGER;
   BEGIN
-    Cores.GetCoreId(cid);
-    ASSERT(cid IN {0, 1}, Errors.ProgError);
-    IF cid = Core0 THEN
-      (* cfg pins *)
+    ASSERT(sysTerm IN {SYSTERM0, SYSTERM1}, Errors.ProgError);
+
+    (* cfg pins, uartNo, baudrate *)
+    IF sysTerm = SYSTERM0 THEN
       cfgPins(UART0_TxPinNo, UART0_RxPinNo);
-
-      (* cfg UART *)
-      UART.GetBaseCfg(uartCfg);
-      uartCfg.fifoEn := UART.Enabled;
-      NEW(uartDev); ASSERT(uartDev # NIL, Errors.HeapOverflow);
-      initUART(uartDev, UART0, uartCfg, Baudrate0);
-
-      (* install system terminal *)
-      installTerm(SYSTERM0, uartDev, UARTstr.PutString, UARTstr.PutString, UARTstr.GetString);
-
-      (* Out/In wrappers *)
-      Out.Open(Wsys[SYSTERM0]);
-      In.Open(Rsys[SYSTERM0]);
-
-      (* run-time errors console output *)
-      RuntimeErrorsOut.SetWriter(Werr[SYSTERM0])
+      uartNo := SYSTERM0_UART;
+      baudrate := Baudrate0
     ELSE
-      (* cfg pins *)
       cfgPins(UART1_TxPinNo, UART1_RxPinNo);
+      uartNo := SYSTERM1_UART;
+      baudrate := Baudrate1
+    END;
 
-      (* cfg UART *)
-      UART.GetBaseCfg(uartCfg);
-      uartCfg.fifoEn := UART.Enabled;
-      NEW(uartDev); ASSERT(uartDev # NIL, Errors.HeapOverflow);
-      initUART(uartDev, UART1, uartCfg, Baudrate1);
+    (* cfg UART *)
+    UART.GetBaseCfg(uartCfg);
+    uartCfg.fifoEn := UART.Enabled;
+    NEW(uartDev); ASSERT(uartDev # NIL, Errors.HeapOverflow);
+    initUART(uartDev, uartNo, uartCfg, baudrate);
 
-      (* install system terminal *)
-      installTerm(SYSTERM1, uartDev, UARTstr.PutString, UARTstr.PutString, UARTstr.GetString);
+    (* install system terminal *)
+    installTerm(sysTerm, uartDev, UARTstr.PutString, UARTstr.PutString, UARTstr.GetString);
 
-      (* Out/In wrappers *)
-      Out.Open(Wsys[SYSTERM1]);
-      In.Open(Rsys[SYSTERM1]);
+    (* Out/In wrappers *)
+    Out.Open(Wsys[sysTerm]);
+    In.Open(Rsys[sysTerm]);
 
-      (* run-time errors console output *)
-      RuntimeErrorsOut.SetWriter(Werr[SYSTERM1])
-    END
+    (* run-time errors console output *)
+    RuntimeErrorsOut.SetWriter(Werr[sysTerm])
   END Install;
 
 BEGIN

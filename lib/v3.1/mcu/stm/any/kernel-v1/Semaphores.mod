@@ -4,6 +4,7 @@ MODULE Semaphores;
   Version: v3.1
   --
   Semaphores for exclusive access to resources shared among threads
+  Kernel v1
   --
   Based on signals
   --

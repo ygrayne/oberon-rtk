@@ -17,20 +17,14 @@ MODULE Console;
   IMPORT GPIO, UART, UARTstr, TextIO, Out, In, Errors, RuntimeErrorsOut;
 
   CONST
-    SYSTERM0* = 0;
-    NumSysTerms* = 1;
-    Baudrate0 = 115200;
+    Baudrate0 = 38400;
     UART0 = UART.USART1;
     UART0_TxPinNo = 9; (* GPIOA *)
     UART0_RxPinNo = 10;
 
-  TYPE
-    Ws* = ARRAY NumSysTerms OF TextIO.Writer;
-    Rs* = ARRAY NumSysTerms OF TextIO.Reader;
-
   VAR
-    Wsys*, Werr*: Ws;
-    Rsys*: Rs;
+    Wsys*, Werr*: TextIO.Writer;
+    Rsys*: TextIO.Reader;
 
   (* UART *)
   PROCEDURE cfgPins(txPin, rxPin: INTEGER);
@@ -41,6 +35,7 @@ MODULE Console;
     pinCfg.type := GPIO.TypePushPull;
     pinCfg.speed := GPIO.SpeedHigh;
     pinCfg.pulls := GPIO.PullUp;
+    GPIO.Attach(GPIO.PORTA);
     GPIO.ConfigurePin(GPIO.PORTA, txPin, pinCfg);
     GPIO.ConfigurePin(GPIO.PORTA, rxPin, pinCfg);
     GPIO.SetFunction(GPIO.PORTA, txPin, AF);
@@ -56,14 +51,14 @@ MODULE Console;
 
 
   (* terminal *)
-  PROCEDURE installTerm(termNo: INTEGER; dev: TextIO.Device; pspStd, pspErr: TextIO.PutStringProc; gspStd: TextIO.GetStringProc);
+  PROCEDURE installTerm(dev: TextIO.Device; pspStd, pspErr: TextIO.PutStringProc; gspStd: TextIO.GetStringProc);
   BEGIN
-    NEW(Wsys[termNo]); ASSERT(Wsys[termNo] # NIL, Errors.HeapOverflow);
-    NEW(Rsys[termNo]); ASSERT(Rsys[termNo] # NIL, Errors.HeapOverflow);
-    NEW(Werr[termNo]); ASSERT(Werr[termNo] # NIL, Errors.HeapOverflow);
-    TextIO.OpenWriter(Wsys[termNo], dev, pspStd);
-    TextIO.OpenReader(Rsys[termNo], dev, gspStd);
-    TextIO.OpenWriter(Werr[termNo], Wsys[termNo].dev, pspErr)
+    NEW(Wsys); ASSERT(Wsys # NIL, Errors.HeapOverflow);
+    NEW(Rsys); ASSERT(Rsys # NIL, Errors.HeapOverflow);
+    NEW(Werr); ASSERT(Werr # NIL, Errors.HeapOverflow);
+    TextIO.OpenWriter(Wsys, dev, pspStd);
+    TextIO.OpenReader(Rsys, dev, gspStd);
+    TextIO.OpenWriter(Werr, Wsys.dev, pspErr)
   END installTerm;
 
 
@@ -84,16 +79,16 @@ MODULE Console;
     initUART(uartDev, UART0, uartCfg, Baudrate0);
 
     (* install one system terminal *)
-    installTerm(SYSTERM0, uartDev, UARTstr.PutString, UARTstr.PutString, UARTstr.GetString);
+    installTerm(uartDev, UARTstr.PutString, UARTstr.PutString, UARTstr.GetString);
 
     (* Out/In wrappers *)
-    Out.Open(Wsys[SYSTERM0]);
-    In.Open(Rsys[SYSTERM0]);
+    Out.Open(Wsys);
+    In.Open(Rsys);
 
     (* run-time errors console output *)
-    RuntimeErrorsOut.SetWriter(Werr[SYSTERM0])
+    RuntimeErrorsOut.SetWriter(Werr)
   END Install;
 
 BEGIN
-  Wsys[0] := NIL; Rsys[0] := NIL; Werr[0] := NIL
+  Wsys := NIL; Rsys := NIL; Werr := NIL
 END Console.

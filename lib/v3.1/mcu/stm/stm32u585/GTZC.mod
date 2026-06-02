@@ -98,12 +98,10 @@ MODULE GTZC;
   END SetDevNonsec;
 
 
-  PROCEDURE enable;
+  PROCEDURE Attach*;
   BEGIN
     RST.EnableBusClock(SYS.GTZC1_BC_reg, SYS.GTZC1_BC_pos);
     RST.EnableBusClock(SYS.GTZC2_BC_reg, SYS.GTZC2_BC_pos)
-  END enable;
+  END Attach;
 
-BEGIN
-  enable
 END GTZC.

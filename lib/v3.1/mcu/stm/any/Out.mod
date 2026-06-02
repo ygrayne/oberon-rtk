@@ -13,8 +13,7 @@ MODULE Out;
 
   IMPORT Errors, TextIO, Texts;
 
-  VAR
-    W*: TextIO.Writer; (* module var ok: read only *)
+  VAR W*: TextIO.Writer; (* module var ok: read only *)
 
 
   PROCEDURE* Open*(W0: TextIO.Writer);

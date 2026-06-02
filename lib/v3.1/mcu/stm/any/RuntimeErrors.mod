@@ -8,6 +8,9 @@ MODULE RuntimeErrors;
   * Error: run-time errors, including ASSERT, triggered by SVC calls in software
   * Fault: hardware faults, triggered by MCU hardware
   --
+  This is a  multi-core implemention for compatibility with RPx.
+  May be replaced by a simpler variant for one core only.
+  --
   MCU: STM32U585AI, STM32H573II
   --
   Copyright (c) 2020-2026 Gray, gray@grayraven.org
@@ -217,7 +220,8 @@ MODULE RuntimeErrors;
     addr := vectorTableBase + PPB.EXC_IRQ0_Offset;
     WHILE addr < vectorTableTop DO
       install(addr, excHandler); INC(addr, 4)
-    END
+    END;
+    LED.Config
   END Install;
 
 END RuntimeErrors.

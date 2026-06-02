@@ -387,14 +387,12 @@ MODULE Bootrom;
   END GetPartitionSectors;
 
 
-  PROCEDURE init;
+  PROCEDURE* Enable*;
     VAR val: SET;
   BEGIN
     (* enable RCP *)
     SYSTEM.GET(PPB.CPACR, val);
     SYSTEM.PUT(PPB.CPACR, val + {14, 15})
-  END init;
+  END Enable;
 
-BEGIN
-  init
 END Bootrom.

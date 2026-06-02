@@ -1,4 +1,4 @@
-MODULE AccessCtrl;
+MODULE ACCESSCTRL;
 (**
   Oberon RTK Framework
   Version: v3.1
@@ -54,4 +54,4 @@ MODULE AccessCtrl;
   END SetGPIOnonsec;
 
 
-END AccessCtrl.
+END ACCESSCTRL.

@@ -3,7 +3,7 @@ MODULE GPIO_DEV;
   Oberon RTK Framework
   Version: v3.1
   --
-  GPIO: IO_BANK0, PADS_BANK0
+  GPIO: PADS_BANK0, IO_BANK0
   datasheet 12.1.8, p958
   --
   MCU: RP2350

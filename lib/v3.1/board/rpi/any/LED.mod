@@ -4,6 +4,7 @@ MODULE LED;
   Version: v3.1
   --
   Green LED on Pico and Pico2
+  One LED, active high
   --
   MCU: RP2040, RP2350
   Board: Pico, Pico2
@@ -52,6 +53,7 @@ MODULE LED;
 
   PROCEDURE Config*;
   BEGIN
+    GPIO.Attach;
     GPIO.SetFunction(LEDpinNo, GPIO.Fsio);
     SIO.EnableOutput(SIO.GPIOA, {LEDpinNo});
     Clear

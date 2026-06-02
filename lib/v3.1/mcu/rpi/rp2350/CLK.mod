@@ -14,7 +14,7 @@ MODULE CLK;
 **)
 
   IMPORT
-    SYSTEM, BASE, RST, SYS := CLK_SYS;
+    SYSTEM, BASE, RST, SYS := CLK_SYS, Errors;
 
   CONST
     PLLsys* = SYS.PLLsys;
@@ -93,6 +93,7 @@ MODULE CLK;
       PLL_PWR_PD = 0;
     VAR addr, val: INTEGER;
   BEGIN
+    ASSERT(pll IN SYS.PLL_all, Errors.PreCond);
     addr := SYS.PLL_SYS_BASE + (pll * SYS.PLL_Offset);
     (* set multiplier *)
     SYSTEM.PUT(addr + SYS.PLL_FBDIV_INT_Offset, cfg.fbDiv);
@@ -123,6 +124,7 @@ MODULE CLK;
 
   PROCEDURE EnablePLL*(pll: INTEGER);
   BEGIN
+    ASSERT(pll IN SYS.PLL_all, Errors.PreCond);
     IF pll = PLLsys THEN
       RST.ReleaseReset(SYS.PLL_SYS_RST_reg, SYS.PLL_SYS_RST_pos)
     ELSE
@@ -213,8 +215,6 @@ MODULE CLK;
     SYSTEM.GET(SYS.TICKS_WATCHDOG_CYCLES, cfg.watchdogDiv);
   END GetTicksCfg;
 
-
-  (* Secure/Non-secure, RP2350 only *)
 
   PROCEDURE GetDevSec*(VAR clk, pllSys, pllUSB, ticks, xosc, rosc: INTEGER);
   BEGIN

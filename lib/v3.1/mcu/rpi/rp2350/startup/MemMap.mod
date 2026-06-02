@@ -16,7 +16,7 @@ MODULE MemMap;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT LinkOptions, BASE, EXC; (* LinkOptions must be first in list *)
+  IMPORT SYSTEM, LinkOptions, BASE, EXC;
 
   CONST
     NumCoresUsed* = BASE.NumCores;
@@ -63,6 +63,7 @@ MODULE MemMap;
     ModMem*: ModDesc;
     CodeMem*: CodeDesc;
     ResMem*: ResDesc;
+    Entry*: INTEGER; (* program entry address *)
     Done*: BOOLEAN;
 
 
@@ -86,10 +87,12 @@ MODULE MemMap;
     ResMem.start := LinkOptions.ResourceStart;
     ModMem.start := StackMem[Core0].start + 04H;
     ModMem.end := DataMem[Core0].end;
+    SYSTEM.GET(CodeMem.start + 04H, Entry);
+
 
     (* core 1 *)
     DataMem[Core1].start := DataMem[Core0].end;
-    DataMem[Core1].end := BASE.SRAM0_BASE + BASE.SRAM0_Size + BASE.SRAM4_Size;
+    DataMem[Core1].end := BASE.SRAM0_BASE + BASE.SRAM0_Size + BASE.SRAM4_Size; (* top of 512k *)
     HeapMem[Core1].start := DataMem[Core1].start + (HeapMem[Core0].start - DataMem[Core0].start);
     IF LinkOptions.HeapLimit = 0 THEN
       HeapMem[Core1].limit := 0

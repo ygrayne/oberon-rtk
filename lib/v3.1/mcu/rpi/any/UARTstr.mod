@@ -8,8 +8,6 @@ MODULE UARTstr;
   * string IO procedures
   * hw-buffered (fifo)
   --
-  Type: MCU
-  --
   MCU: RP2040, RP2350
   --
   Copyright (c) 2020-2026 Gray, gray@grayraven.org

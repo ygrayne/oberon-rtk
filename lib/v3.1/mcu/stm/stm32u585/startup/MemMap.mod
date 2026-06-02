@@ -15,7 +15,7 @@ MODULE MemMap;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT LinkOptions, BASE, EXC;
+  IMPORT SYSTEM, LinkOptions, BASE, EXC;
 
   CONST
     NumCoresUsed* = BASE.NumCores;
@@ -68,6 +68,7 @@ MODULE MemMap;
     ModMem*: ModDesc;
     CodeMem*: CodeDesc;
     ResMem*: ResDesc;
+    Entry*: INTEGER; (* program entry address *)
     Done*: BOOLEAN;
 
 
@@ -92,7 +93,8 @@ MODULE MemMap;
     CodeMem.end := LinkOptions.CodeEnd;
     ResMem.start := LinkOptions.ResourceStart;
     ModMem.start := StackMem[Core0].start + 04H;
-    ModMem.end := DataMem[Core0].end
+    ModMem.end := DataMem[Core0].end;
+    SYSTEM.GET(CodeMem.start + 04H, Entry)
   END init;
 
 BEGIN

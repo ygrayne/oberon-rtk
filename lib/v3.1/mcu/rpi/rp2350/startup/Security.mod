@@ -6,6 +6,7 @@ MODULE SecureCfg;
   Program-specific Secure/Non-secure configuration.
   --
   For Secure programs, copy to the project directory and program accordingly.
+  See example 'Secure'
   --
   MCU: RP2350A
   Board: Pico2

@@ -28,8 +28,6 @@ MODULE PWR;
   END SetPowmanBootVector;
 
 
-  (* Secure/Non-secure, RP2350 only *)
-
   PROCEDURE GetDevSec*(VAR reg: INTEGER);
   BEGIN
     reg := SYS.POWMAN_SEC_reg

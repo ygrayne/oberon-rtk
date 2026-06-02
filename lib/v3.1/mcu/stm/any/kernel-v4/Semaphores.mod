@@ -3,8 +3,8 @@ MODULE Semaphores;
   Oberon RTK Framework
   Version: v3.1
   --
-  Kernel-v4
   Semaphores for exclusive access to resources shared among actors
+  Kernel-v4
   --
   Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/

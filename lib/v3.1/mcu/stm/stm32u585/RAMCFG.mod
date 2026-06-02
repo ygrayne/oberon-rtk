@@ -42,12 +42,10 @@ MODULE RAMCFG;
   END GetDevSec;
 
 
-  PROCEDURE enable;
+  PROCEDURE Attach*;
   (* enable bus clock *)
   BEGIN
     RST.EnableBusClock(SYS.RAMCFG_BC_reg, SYS.RAMCFG_BC_pos)
-  END enable;
+  END Attach;
 
-BEGIN
-  enable
 END RAMCFG.

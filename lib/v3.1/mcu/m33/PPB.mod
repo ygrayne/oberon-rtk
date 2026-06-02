@@ -92,8 +92,7 @@ MODULE PPB;
 
     SysExc*  = {3, 4, 5, 6, 7, 11, 14, 15};
 
-    IRQ_BASE*         = 16; (* exc no = IRQ_BASE + IRQ number *)
-
+    IRQ_BASE* = 16; (* exc no = IRQ_BASE + IRQ number *)
 
     (* == vector table offsets == *)
     EXC_Reset_Offset*         = 004H;

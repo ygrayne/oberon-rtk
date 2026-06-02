@@ -81,7 +81,6 @@ MODULE GPIO;
     EventBits = 4;    (* width of event field *)
     EventMask = 0FH;  (* mask corresponding to event field width *)
 
-
     (* value ranges *)
     DriveRange = {DRIVE_val_2mA .. DRIVE_val_12mA};
     SlewRange = {SLEWFAST_val_slow, SLEWFAST_val_fast};
@@ -108,7 +107,7 @@ MODULE GPIO;
 
 
   TYPE
-    PinCfg* = RECORD (* see ASSERTs in 'ConfigurePad' for valid values *)
+    PinCfg* = RECORD (* see ASSERTs in 'ConfigurePin' for valid values *)
       outputDe*: INTEGER;       (* reset: Disabled, ie. output enabled *)
       inputEn*: INTEGER;        (* reset: Enabled (RP2040), Disabled (RP2350) *)
       driveStrength*: INTEGER;  (* reset: Drive4mA *)
@@ -119,7 +118,12 @@ MODULE GPIO;
     END;
 
 
-  (* --- GPIO devices --- *)
+  PROCEDURE Attach*;
+  BEGIN
+    RST.ReleaseReset(DEV.PADS_BANK0_RST_reg, DEV.PADS_BANK0_RST_pos);
+    RST.ReleaseReset(DEV.IO_BANK0_RST_reg, DEV.IO_BANK0_RST_pos)
+  END Attach;
+
 
   PROCEDURE* SetFunction*(pin, functionNo: INTEGER);
     VAR addr, x: INTEGER;
@@ -156,8 +160,6 @@ MODULE GPIO;
   END SetOverrides;
 
 
-  (* --- pads --- *)
-
   PROCEDURE ConfigurePin*(pin: INTEGER; cfg: PinCfg);
     VAR addr, x: INTEGER;
   BEGIN
@@ -168,9 +170,6 @@ MODULE GPIO;
     ASSERT(cfg.pulldownEn IN {Disabled, Enabled}, Errors.PreCond);
     ASSERT(cfg.schmittTrigEn IN {Disabled, Enabled}, Errors.PreCond);
     ASSERT(cfg.slewRate IN SlewRange, Errors.PreCond);
-
-    RST.ReleaseReset(DEV.PADS_BANK0_RST_reg, DEV.PADS_BANK0_RST_pos);
-    RST.ReleaseReset(DEV.IO_BANK0_RST_reg, DEV.IO_BANK0_RST_pos);
 
     addr := DEV.PADS_BANK0_GPIO0 + (pin * DEV.PADS_BANK0_GPIO_Offset);
     SYSTEM.GET(addr, x);
@@ -238,8 +237,6 @@ MODULE GPIO;
     SYSTEM.PUT(addr, {PADS_IE})
   END DisconnectInput;
 
-
-  (* --- GPIO devices and pads --- *)
 
   PROCEDURE ResetPin*(pin: INTEGER);
     VAR padCfg: PinCfg;
@@ -309,8 +306,6 @@ MODULE GPIO;
     SYSTEM.PUT(addr, LSL(ClearMask, (pin MOD PinsPerReg) * EventBits))
   END ClearAllIntEvents;
 
-
-  (* Secure/Non-secure, RP2350 only *)
 
   PROCEDURE GetDevSec*(VAR pads, ioBank: INTEGER);
   BEGIN

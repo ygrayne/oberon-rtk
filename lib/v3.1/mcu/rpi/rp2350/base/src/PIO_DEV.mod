@@ -24,7 +24,7 @@ MODULE PIO_DEV;
     SM2* = 2;
     SM3* = 3;
 
-    PIO_all* = {0 .. 3};
+    PIO_all* = {0 .. 2};
     PIO_NumStateMachines* = 4;
     PIO_MaxNumInstr* = 32;
 

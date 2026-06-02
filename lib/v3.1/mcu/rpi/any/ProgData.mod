@@ -39,7 +39,7 @@ MODULE ProgData;
 
   Resource entry, example LinkOptions.CodeStartAddress:
   offset    value         meaning                         CONST
-   0        000000000H    entry type: proc = 1, 2, ...
+   0        000000001H    entry type: proc = 1, 2, ...
    4        065646F43H    "Code" as int                   EntryStringOffset
    8        072617453H    "Star" as int
   12        064644174H    "tAdd" as int
@@ -199,6 +199,11 @@ MODULE ProgData;
       modName := "Unknown"
     END
   END GetNames;
+
+
+  PROCEDURE* Available*(): BOOLEAN;
+    RETURN progDataRes.resAddr # 0
+  END Available;
 
   (* -- init -- *)
 

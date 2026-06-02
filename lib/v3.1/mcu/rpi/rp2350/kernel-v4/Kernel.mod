@@ -7,7 +7,7 @@ MODULE Kernel;
   Interrupt-driven asynchronous tasks and synchronous background tasks.
   General ticker service.
   --
-  MCU: RP2040, RP2350
+  MCU: RP2350
   --
   Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -437,7 +437,7 @@ MODULE Kernel;
   PROCEDURE tickHandler[0];
     VAR cid: INTEGER; ctx: CoreContext; act: Actor;
   BEGIN
-    LED.Toggle({LED.Green});
+    LED.Toggle;
     Cores.GetCoreId(cid);
     ctx := coreCon[cid];
     GetFromActQ(ctx.tickActQ, act);
@@ -490,6 +490,7 @@ MODULE Kernel;
   PROCEDURE Install*(millisecsPerTick, tickPrio: INTEGER);
     VAR cid: INTEGER; ctx: CoreContext;
   BEGIN
+    LED.Config;
     Cores.GetCoreId(cid);
     NEW(coreCon[cid]); ASSERT(coreCon[cid] # NIL, Errors.HeapOverflow);
     ctx := coreCon[cid];

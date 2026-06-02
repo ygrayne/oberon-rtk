@@ -3,7 +3,7 @@ MODULE SIOgpio;
   Oberon RTK Framework
   Version: v3.1
   --
-  SIO
+  SIO access to GPIO
   --
   MCU:
     RP2350A (30 GPIO: 0 .. 29)

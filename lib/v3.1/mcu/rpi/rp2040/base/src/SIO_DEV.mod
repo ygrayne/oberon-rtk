@@ -1,0 +1,114 @@
+MODULE SIO_DEV;
+(**
+  Oberon RTK Framework
+  Version: v3.1
+  --
+  SIO
+  --
+  MCU: RP2040
+  --
+  Copyright (c) 2023-2026 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT BASE;
+
+  CONST
+    SIO_BASE*     = BASE.SIO_BASE;
+
+    GPIOA* = SIO_BASE + 010H; (* SIO_GPIO_OUT *)
+    GPIOB* = SIO_BASE + 030H; (* SIO_GPIO_HI_OUT *)
+    PORTA* = GPIOA;
+    PORTB* = GPIOB;
+
+    SIO_CPUID*            = SIO_BASE;
+
+    SIO_GPIO_IN*          = SIO_BASE + 004H;
+    SIO_GPIO_HI_IN*       = SIO_BASE + 008H;
+
+    SIO_GPIO_OUT*         = SIO_BASE + 010H;
+    SIO_GPIO_OUT_SET*     = SIO_BASE + 014H;
+    SIO_GPIO_OUT_CLR*     = SIO_BASE + 018H;
+    SIO_GPIO_OUT_XOR*     = SIO_BASE + 01CH;
+
+    SIO_GPIO_OE*          = SIO_BASE + 020H;
+    SIO_GPIO_OE_SET*      = SIO_BASE + 024H;
+    SIO_GPIO_OE_CLR*      = SIO_BASE + 028H;
+    SIO_GPIO_OE_XOR*      = SIO_BASE + 02CH;
+
+    SIO_GPIO_HI_OUT*      = SIO_BASE + 030H;
+    SIO_GPIO_HI_OUT_SET*  = SIO_BASE + 034H;
+    SIO_GPIO_HI_OUT_CLR*  = SIO_BASE + 038H;
+    SIO_GPIO_HI_OUT_XOR*  = SIO_BASE + 03CH;
+
+    SIO_GPIO_HI_OE*       = SIO_BASE + 040H;
+    SIO_GPIO_HI_OE_SET*   = SIO_BASE + 044H;
+    SIO_GPIO_HI_OE_CLR*   = SIO_BASE + 048H;
+    SIO_GPIO_HI_OE_XOR*   = SIO_BASE + 04CH;
+
+
+    SIO_GPIO_OUT_Offset*      = 000H;
+    SIO_GPIO_OUT_SET_Offset*  = 004H;
+    SIO_GPIO_OUT_CLR_Offset*  = 008H;
+    SIO_GPIO_OUT_XOR_Offset*  = 00CH;
+    SIO_GPIO_OE_Offset*       = 010H;
+    SIO_GPIO_OE_SET_Offset*   = 014H;
+    SIO_GPIO_OE_CLR_Offset*   = 018H;
+    SIO_GPIO_OE_XOR_Offset*   = 01CH;
+
+    SIO_FIFO_ST*          = SIO_BASE + 050H;
+    SIO_FIFO_WR*          = SIO_BASE + 054H;
+    SIO_FIFO_RD*          = SIO_BASE + 058H;
+    SIO_SPINLOCK_ST*      = SIO_BASE + 05CH;
+
+    SIO_DIV_UDIVIDEND*    = SIO_BASE + 060H;
+    SIO_DIV_UDIVISOR*     = SIO_BASE + 064H;
+    SIO_DIV_SDIVIDEND*    = SIO_BASE + 068H;
+    SIO_DIV_SDIVISOR*     = SIO_BASE + 06CH;
+    SIO_DIV_QUOTIENT*     = SIO_BASE + 070H;
+    SIO_DIV_REMAINDER*    = SIO_BASE + 074H;
+    SIO_DIV_CSR*          = SIO_BASE + 078H;
+
+    SIO_INTERP0_ACCUM0*     = SIO_BASE + 00080H;
+    SIO_INTERP0_ACCUM1*     = SIO_BASE + 00084H;
+    SIO_INTERP0_BASE0*      = SIO_BASE + 00088H;
+    SIO_INTERP0_BASE1*      = SIO_BASE + 0008CH;
+    SIO_INTERP0_BASE2*      = SIO_BASE + 00090H;
+    SIO_INTERP0_POP_LANE0*  = SIO_BASE + 00094H;
+    SIO_INTERP0_POP_LANE1*  = SIO_BASE + 00098H;
+    SIO_INTERP0_POP_FULL*   = SIO_BASE + 0009CH;
+    SIO_INTERP0_PEEK_LANE0* = SIO_BASE + 000A0H;
+    SIO_INTERP0_PEEK_LANE1* = SIO_BASE + 000A4H;
+    SIO_INTERP0_PEEK_FULL*  = SIO_BASE + 000A8H;
+    SIO_INTERP0_CTRL_LANE0* = SIO_BASE + 000ACH;
+    SIO_INTERP0_CTRL_LANE1* = SIO_BASE + 000B0H;
+    SIO_INTERP0_ACCUM0_ADD* = SIO_BASE + 000B4H;
+    SIO_INTERP0_ACCUM1_ADD* = SIO_BASE + 000B8H;
+    SIO_INTERP0_BASE_1AND0* = SIO_BASE + 000BCH;
+      (* INTERP0 .. INTERP1 *)
+      (* block offset *)
+      SIO_INTERP_Offset* = 040H;
+      (* block register offsets *)
+      SIO_INTERP_ACCUM0_Offset*     = 000H;
+      SIO_INTERP_ACCUM1_Offset*     = 004H;
+      SIO_INTERP_BASE0_Offset*      = 008H;
+      SIO_INTERP_BASE1_Offset*      = 00CH;
+      SIO_INTERP_BASE2_Offset*      = 010H;
+      SIO_INTERP_POP_LANE0_Offset*  = 014H;
+      SIO_INTERP_POP_LANE1_Offset*  = 018H;
+      SIO_INTERP_POP_FULL_Offset*   = 01CH;
+      SIO_INTERP_PEEK_LANE0_Offset* = 020H;
+      SIO_INTERP_PEEK_LANE1_Offset* = 024H;
+      SIO_INTERP_PEEK_FULL_Offset*  = 028H;
+      SIO_INTERP_CTRL_LANE0_Offset* = 02CH;
+      SIO_INTERP_CTRL_LANE1_Offset* = 030H;
+      SIO_INTERP_ACCUM0_ADD_Offset* = 034H;
+      SIO_INTERP_ACCUM1_ADD_Offset* = 038H;
+      SIO_INTERP_BASE_1AND0_Offset* = 03CH;
+
+    SIO_SPINLOCK0*  = SIO_BASE + 00100H;
+      (* SPINLOCK0 to SPINLOCK 31 *)
+      (* block offset *)
+      SIO_SPINLOCK_Offset* = 4;
+
+END SIO_DEV.

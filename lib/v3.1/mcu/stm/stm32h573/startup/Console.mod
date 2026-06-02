@@ -17,7 +17,7 @@ MODULE Console;
   IMPORT GPIO, UART, UARTstr, TextIO, Out, In, Errors, RuntimeErrorsOut;
 
   CONST
-    Baudrate0 = 115200;
+    Baudrate0 = 38400;
     UART0 = UART.USART1;
     UART0_TxPinNo = 9; (* GPIOA *)
     UART0_RxPinNo = 10;
@@ -35,6 +35,7 @@ MODULE Console;
     padCfg.type := GPIO.TypePushPull;
     padCfg.speed := GPIO.SpeedHigh;
     padCfg.pulls := GPIO.PullUp;
+    GPIO.Attach(GPIO.PORTA);
     GPIO.ConfigurePin(GPIO.PORTA, txPin, padCfg);
     GPIO.ConfigurePin(GPIO.PORTA, rxPin, padCfg);
     GPIO.SetFunction(GPIO.PORTA, txPin, AF);

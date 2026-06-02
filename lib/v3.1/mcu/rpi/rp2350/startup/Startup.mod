@@ -51,7 +51,6 @@ MODULE Startup;
     SYSTEM.EMIT(0F3BF8F6FH);  (* isb *)
     (* -asm *)
 
-    (* UsageFault and friends are not enabled yet and escalate to HardFault *)
     install(vtor + PPB.EXC_NMI_Offset, errorHandler);
     install(vtor + PPB.EXC_HardFault_Offset, errorHandler);
     install(vtor + PPB.EXC_SVC_Offset, errorHandler)

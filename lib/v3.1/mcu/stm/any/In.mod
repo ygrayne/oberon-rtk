@@ -14,8 +14,6 @@ MODULE In;
   IMPORT Errors, TextIO, Texts;
 
   CONST
-    NumTerminals = 1;
-
     (* error codes, from TextIO *)
     NoError* = TextIO.NoError;
     BufferOverflow* = TextIO.BufferOverflow;
@@ -25,27 +23,26 @@ MODULE In;
     FifoOverrun* = TextIO.FifoOverrun;
 
 
-  VAR
-    R: ARRAY NumTerminals OF TextIO.Reader;
+  VAR R: TextIO.Reader;
 
   PROCEDURE Open*(R0: TextIO.Reader);
   BEGIN
     ASSERT(R0 # NIL, Errors.PreCond);
-    R[0] := R0
+    R := R0
   END Open;
 
 
   PROCEDURE String*(VAR str: ARRAY OF CHAR; VAR res: INTEGER);
   BEGIN
-    Texts.ReadString(R[0], str, res)
+    Texts.ReadString(R, str, res)
   END String;
 
 
   PROCEDURE Int*(VAR int, res: INTEGER);
   BEGIN
-    Texts.ReadInt(R[0], int, res)
+    Texts.ReadInt(R, int, res)
   END Int;
 
 BEGIN
-  R[0] := NIL
+  R := NIL
 END In.

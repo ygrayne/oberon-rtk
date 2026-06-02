@@ -6,9 +6,7 @@ MODULE UARTstrKint;
   UART string device driver for kernel-v4 use
   Output only for now (PutString).
   --
-  See https://oberon-rtk.org/docs/examples/v2/k4print/
-  --
-  MCU: RP2040, RP2350
+  MCU: RP2350
   --
   Copyright (c) 2020-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/

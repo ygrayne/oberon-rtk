@@ -83,11 +83,9 @@ MODULE PWR;
   END ReleaseSec;
 
 
-  PROCEDURE enable;
+  PROCEDURE Attach*;
   BEGIN
     RST.EnableBusClock(SYS.PWR_BC_reg, SYS.PWR_BC_pos)
-  END enable;
+  END Attach;
 
-BEGIN
-  enable
 END PWR.

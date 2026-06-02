@@ -10,7 +10,7 @@ _*
 # no project-local framework lib dirs
 /**/rtk-lib-rp2040
 /**/rtk-lib-rp2350
-/**/rtk-lib
+#/**/rtk-lib
 
 # add dirs
 !/**/v*.*
@@ -29,13 +29,16 @@ _*
 !/tools/*.elf
 !/tools/pylib/
 !/tools/pylib/*.py
-!/tools/scripts/
-!/tools/scripts/*.cmd
-!/tools/scripts/*.sh
-!/tools/config/
-!/tools/config/OpenOCD/
-!/tools/config/OpenOCD/*.cfg
+!/tools/server-scripts/
+!/tools/server-scripts/*.cmd
+!/tools/server-scripts/*.sh
+!/tools/server-scripts/openocd
+!/tools/server-scripts/openocd/*.cfg
+# !/tools/setup/
+# !/tools/setup/*.cmd
+!/tools/setup/*.sh
 !/changes/
+!.vscode/
 
 !/examples/v3.0/nxp/any/SignalSync/rdb/*.elst
 
@@ -61,5 +64,30 @@ _*
 !*.res
 !*.pio
 !*.json
+!*.spec
+!*.cfg
+!*.cmd
+!*.sh
+!*.py
 
 _*
+
+# program artefacts
+arm-attr.cfg
+
+# dev tool versions (NNN-suffixed)
+tools/*-c[0-9][0-9][0-9].py
+tools/pylib/*_c[0-9][0-9][0-9].py
+
+# internal tools
+tools/gen-elf-test*.py
+tools/publish-tools.py
+
+# test infrastructure
+**/rdb-gdb-tests/reports/
+
+# test infrastructure
+**/rdb-elf-tests/
+
+.claude/
+CLAUDE.md

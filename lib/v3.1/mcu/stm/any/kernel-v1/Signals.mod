@@ -4,6 +4,7 @@ MODULE Signals;
   Version: v3.1
   --
   Signals for thread synchronisation
+  Kernel v1
   --
   Based on Programming in Modula-2, N. Wirth, 3rd edition, 1985
   --

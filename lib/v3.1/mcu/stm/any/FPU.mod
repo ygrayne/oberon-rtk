@@ -5,9 +5,9 @@ MODULE FPU;
   --
   FPU control/mgmt
   --
-  - Single-image Main: FPU.Enable
-  - S-image Main: FPU.Enable; FPU.EnableNSaccess; FPU.SetSecure
-  - NS-image Main: FPU.Enable (NSACR already set by S)
+  * Single-image Main: FPU.Enable
+  * S-image Main: FPU.Enable; FPU.EnableNSaccess; FPU.SetSecure
+  * NS-image Main: FPU.Enable (NSACR already set by S)
   --
   MCU: STM32U585AI, STM32H573II
   --

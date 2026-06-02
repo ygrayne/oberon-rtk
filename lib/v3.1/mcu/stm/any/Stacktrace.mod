@@ -8,21 +8,24 @@ MODULE Stacktrace;
   --
   MCU: STM32U585AI, STM32H573II
   --
+  Note: adds LDR-literal + ADD-SP detection (M0+ large-frame pattern); dead code
+  on M33 but kept for cross-MCU getFrameSize parity.
+  --
   Copyright (c) 2020-2026 Gray, gray@grayraven.org
   Portions copyright (c) 2008-2024 CFB Software, https://www.astrobe.com
   Used with permission.
   Please refer to the licensing conditions as defined at the end of this file.
 **)
 
-  IMPORT SYSTEM, PPB, ProgData, RuntimeErrors;
+  IMPORT SYSTEM, PPB, ProgData, RuntimeErrors, MemMap;
 
   CONST
     TraceDepth* = 16;
 
     (* procedure prolog handling *)
     (* push (PUSH T1) identification *)
-    PushT2mask  = 0FE00H;
-    PushT2val   = 0B400H;
+    PushT1mask  = 0FE00H;
+    PushT1val   = 0B400H;
 
     (* push.w (STMDB T1) identification *)
     PushWstmdb  = 0E92DH;
@@ -49,11 +52,20 @@ MODULE Stacktrace;
     SubRegRdMask = 0FF00H;
     SubRegRdVal  = 00D00H;
 
+    (* LDR (literal) T1: 0100 1RRR IIIIIIII — M0+ large-frame pattern *)
+    LdrLitT1mask    = 0F800H;
+    LdrLitT1val     = 04800H;
+
+    (* ADD SP, Rm (T2): 0100 0100 1xxx x101  (Rd=SP=1101 ⇒ DM=1, Rd[2:0]=101) *)
+    AddSPregT2mask  = 0FF87H;
+    AddSPregT2val   = 04485H;
+
 
     (* trace capturing *)
     ExcRetPattern = 01FFFFFFH; (* [31:7] *)
     LineNoBranch = 0E000H; (* B,0 instruction before line number *)
-    StackSeal = 0FEF5EDA5H;
+
+    MaxFrameSize = 65536;  (* well above any plausible Oberon frame *)
 
     AnnNone* = 0;
     AnnStackframe* = -1;
@@ -65,6 +77,7 @@ MODULE Stacktrace;
     FPadditionalSize = 16 * 4;
     (*EXC_RET_DCRS  = 5;*)  (* = 0: all CPU regs stacked by hardware, extended state context *)
     EXC_RET_FType = 4;      (* = 0: caller FPU regs stacked by hardware *)
+    EXC_RET_SPSEL = 2;      (* = 1: PSP used for stacking *)
 
     (* register offsets from stacked r0 *)
     PSRoffset = 28;
@@ -166,14 +179,14 @@ MODULE Stacktrace;
 
 
   PROCEDURE getFrameSize(addr: INTEGER; VAR frameSize: INTEGER);
-  (* addr: procedure entry address (from ProgData)
-     frameSize: total frame size in bytes (push + sub)
-     saved LR is always at sp + frameSize - 4 *)
-    VAR hw1, hw2, nPush, nSub, subAddr: INTEGER;
+  (* addr: procedure entry address (from ProgData) *)
+  (* frameSize: total frame size in bytes (push + sub) *)
+  (* saved LR is always at sp + frameSize - 4 *)
+    VAR hw1, hw2, nPush, nSub, subAddr, ldrRt, imm8, litAddr, litVal: INTEGER;
   BEGIN
     nPush := 0; nSub := 0; subAddr := 0;
     getHalfWord(addr, hw1);
-    IF BITS(hw1) * BITS(PushT2mask) = BITS(PushT2val) THEN
+    IF BITS(hw1) * BITS(PushT1mask) = BITS(PushT1val) THEN
       (* push(PUSH T2): 16-bit, bits [8:0] = register list *)
       nPush := bitCount(hw1, 9);
       subAddr := addr + 2
@@ -212,6 +225,23 @@ MODULE Stacktrace;
             getHalfWord(subAddr, hw1);
             getHalfWord(subAddr + 2, hw2);
             nSub := decodeMovwImm(hw1, hw2) DIV 4
+          END
+        END
+      ELSIF BITS(hw1) * BITS(LdrLitT1mask) = BITS(LdrLitT1val) THEN
+        (* M0+ pattern: ldr Rt, [pc, #imm8*4] ; add sp, Rt *)
+        (* Astrobe uses this for frames > 508 bytes on M0+ (no SUB.W). *)
+        (* The literal pool entry holds the SP adjustment as a negative *)
+        (* integer, e.g. -2052. *)
+        ldrRt   := BFX(hw1, 10, 8);
+        imm8    := BFX(hw1, 7, 0);
+        (* literal addr = align(PC,4) + imm8*4; PC = subAddr + 4 in Thumb *)
+        litAddr := ((subAddr + 4) DIV 4) * 4 + imm8 * 4;
+        getHalfWord(subAddr + 2, hw2);
+        IF (BITS(hw2) * BITS(AddSPregT2mask) = BITS(AddSPregT2val)) &
+           (BFX(hw2, 6, 3) = ldrRt) THEN
+          SYSTEM.GET(litAddr, litVal);
+          IF (litVal < 0) & (-litVal <= MaxFrameSize) THEN  (* negative = subtract from SP *)
+            nSub := -litVal DIV 4
           END
         END
       END
@@ -272,16 +302,22 @@ MODULE Stacktrace;
   END traceStart;
 
 
-  PROCEDURE trace(frameBaseAddr, frameSize: INTEGER; VAR trace: Trace);
+  PROCEDURE trace(frameBaseAddr, frameSize: INTEGER; VAR tr: Trace);
+  (* note: ProgData availability checked in CreateTrace *)
     VAR
       savedLR, excFrameBase, codeAddr, lineNo: INTEGER;
-      procEntry, aboveWord: INTEGER;
+      procEntry, codeStart, entryPoint: INTEGER;
       done: BOOLEAN;
   BEGIN
+    (* for LR range check *)
+    codeStart := MemMap.CodeMem.start;
+    entryPoint := MemMap.Entry;
+    DEC(entryPoint);
+
     done := FALSE;
-    WHILE ~done & (trace.count < TraceDepth) DO
-      (* each iteration starts with sp = base addr of a procedure stack frame *)
-      (* and frameSize = size of that stack frame *)
+    WHILE ~done & (tr.count < TraceDepth) DO
+      (* each iteration starts with frameBaseAddr = base addr of a stack frame *)
+      (*   and frameSize = size of that stack frame *)
 
       (* read saved LR from current frame *)
       (* LR is always at top of the frame *)
@@ -291,9 +327,8 @@ MODULE Stacktrace;
         (* savedLR is EXC_RETURN: hw exception frame above current proc frame *)
         excFrameBase := frameBaseAddr + frameSize;
 
-        (* check for MSP to PSP transition *)
-        SYSTEM.GET(excFrameBase, aboveWord);
-        IF aboveWord = StackSeal THEN (* MSP exhausted, exception frame is on PSP *)
+        (* check for MSP to PSP transition via savedLR = EXC_RETURN *)
+        IF EXC_RET_SPSEL IN BITS(savedLR) THEN (* exception frame is on PSP *)
           (* asm
             mrs r11, psp -> excFrameBase
           end asm *)
@@ -303,16 +338,12 @@ MODULE Stacktrace;
           (* -asm *)
         END;
         (* look up interrupted procedure via codeAddr *)
-        (* to calculate frameSize to prep the next iteration *)
         SYSTEM.GET(excFrameBase + PCoffset, codeAddr);
         ProgData.FindEntry(codeAddr, procEntry);
-        done := procEntry = 0;
-        IF ~done THEN
-          ProgData.GetCodeAddr(procEntry, codeAddr);
-          frameBaseAddr := traceStart(excFrameBase, savedLR); (* base SP of interrupted proc *)
-          getFrameSize(codeAddr, frameSize);
-          addTP(trace, codeAddr, 0, frameBaseAddr, frameSize, AnnStackframe)
-        END
+        ProgData.GetCodeAddr(procEntry, codeAddr);
+        frameBaseAddr := traceStart(excFrameBase, savedLR); (* base SP of interrupted proc *)
+        getFrameSize(codeAddr, frameSize);
+        addTP(tr, codeAddr, 0, frameBaseAddr, frameSize, AnnStackframe)
 
       ELSE
         (* saved LR is normal code address *)
@@ -321,25 +352,24 @@ MODULE Stacktrace;
         done := ~ODD(savedLR); (* valid LR must be thumb code, else we have reached end of trace *)
         IF ~done THEN
           DEC(savedLR);
-          (* check for stack seal above - end of call chain *)
-          SYSTEM.GET(frameBaseAddr + frameSize, aboveWord);
-          done := aboveWord = StackSeal;
-          IF ~done THEN (* no stack seal yet, continue *)
+          (* check if LR is within program code range, excl. startup sequence *)
+          (* no kernel: core 0: first LR on stack = return addr in startup sequence *)
+          (*            core 1: first LR on stack = bootrom return address, via Cores.init *)
+          (* with kernel: first LR on stack = 0, set by Coroutines.Transfer *)
+          done := (savedLR < codeStart) OR (savedLR >= entryPoint);
+          IF ~done THEN
             (* look up caller procedure via savedLR *)
             ProgData.FindEntry(savedLR, procEntry);
-            done := procEntry = 0;
-            IF ~done THEN (* still in address range of procs in .res meta data *)
-              ProgData.GetCodeAddr(procEntry, codeAddr);
-              frameBaseAddr := frameBaseAddr + frameSize;
-              getFrameSize(codeAddr, frameSize);
-              getLineNo(savedLR, lineNo);
-              addTP(trace, savedLR - 4, lineNo, frameBaseAddr, frameSize, AnnNone)
-            END
+            ProgData.GetCodeAddr(procEntry, codeAddr);
+            frameBaseAddr := frameBaseAddr + frameSize;
+            getFrameSize(codeAddr, frameSize);
+            getLineNo(savedLR, lineNo);
+            addTP(tr, savedLR - 4, lineNo, frameBaseAddr, frameSize, AnnNone)
           END
         END
       END
     END;
-    trace.more := ~done
+    tr.more := ~done
   END trace;
 
 
@@ -351,16 +381,17 @@ MODULE Stacktrace;
     tr.more := FALSE;
     addTP(tr, er.errAddr, er.errLineNo, 0, 0, AnnNone);
 
-    (* find faulting procedure and read its prologue *)
-    ProgData.FindEntry(er.errAddr, procEntry);
-    IF procEntry # 0 THEN
-      ProgData.GetCodeAddr(procEntry, codeAddr);
-      getFrameSize(codeAddr, frameSize);
-      IF frameSize > 0 THEN
-        (* skip error exception frame *)
-        sp := traceStart(er.stackframeBase, er.excRetVal);
-        (* walk the stack *)
-        trace(sp, frameSize, tr)
+    IF ProgData.Available() THEN
+      (* find faulting procedure and read its prologue *)
+      ProgData.FindEntry(er.errAddr, procEntry);
+      IF procEntry # 0 THEN
+        ProgData.GetCodeAddr(procEntry, codeAddr);
+        getFrameSize(codeAddr, frameSize);
+        IF frameSize > 0 THEN
+          (* skip error exception frame, then go *)
+          sp := traceStart(er.stackframeBase, er.excRetVal);
+          trace(sp, frameSize, tr)
+        END
       END
     END
   END CreateTrace;

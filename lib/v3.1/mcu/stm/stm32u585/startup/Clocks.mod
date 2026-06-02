@@ -32,6 +32,11 @@ MODULE Clocks;
     CONST Enabled = 1; Disabled = 0;
     VAR pllCfg: CLK.PLLcfg; prescCfg: CLK.BusPrescCfg; oscCfg: CLK.OscCfg; lsOscCfg: CLK.LsOscCfg;
   BEGIN
+    (* bus clocks *)
+    (* note: FLASH is always clocked *)
+    PWR.Attach;
+    RAMCFG.Attach;
+
     (* base oscillators *)
     (* enable as needed, and implemented on the board. eg. crystals *)
     oscCfg.msisEn := Enabled;

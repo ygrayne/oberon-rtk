@@ -6,6 +6,9 @@ MODULE Memory;
   * heap memory allocation
   * stacks allocation
   --
+  This is a  multi-core implemention for compatibility with RPx.
+  May be replaced by a simpler variant for one core only.
+  --
   MCU: STM32U585AI, STM32H573II
   --
   Copyright (c) 2023-2026 Gray, gray@grayraven.org

@@ -53,8 +53,6 @@ MODULE QMI;
   END SetAddrTranslation;
 
 
-  (* Secure/Non-secure, RP2350 only *)
-
   PROCEDURE GetDevSec*(VAR reg: INTEGER);
   BEGIN
     reg := SYS.QMI_SEC_reg

@@ -75,6 +75,7 @@ MODULE Secure;
       bi: Bootrom.BootInfo; res, firstSect, lastSect, numSec: INTEGER;
       ownedParts: ARRAY 2 OF INTEGER;
   BEGIN
+    Bootrom.Enable;
     Bootrom.GetBootInfo(bi, res);
     ASSERT(res >= 0, Errors.BootromError);
     Bootrom.GetOwnedPartitions(bi.bootPart, ownedParts, res);

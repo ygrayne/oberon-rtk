@@ -6,6 +6,9 @@ MODULE MemMap;
   Program-specific memory configuration data.
   Uses LinkOptions and thus the corresponding Astrobe config file data
   --
+  This is a  multi-core implemention for compatibility with RPx.
+  May be replaced by a simpler variant for one core only.
+  --
   For different configurations, copy to the project directory and adapt accordingly.
   --
   MCU: STM32H573II
@@ -15,7 +18,7 @@ MODULE MemMap;
   https://oberon-rtk.org/licences/
 **)
 
-  IMPORT LinkOptions, BASE, EXC;
+  IMPORT SYSTEM, LinkOptions, BASE, EXC;
 
   CONST
     NumCoresUsed* = BASE.NumCores;
@@ -68,6 +71,7 @@ MODULE MemMap;
     ModMem*: ModDesc;
     CodeMem*: CodeDesc;
     ResMem*: ResDesc;
+    Entry*: INTEGER; (* program entry address *)
     Done*: BOOLEAN;
 
 
@@ -92,7 +96,8 @@ MODULE MemMap;
     CodeMem.end := LinkOptions.CodeEnd;
     ResMem.start := LinkOptions.ResourceStart;
     ModMem.start := StackMem[Core0].start + 04H;
-    ModMem.end := DataMem[Core0].end
+    ModMem.end := DataMem[Core0].end;
+    SYSTEM.GET(CodeMem.start + 04H, Entry)
   END init;
 
 BEGIN

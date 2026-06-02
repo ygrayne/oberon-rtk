@@ -23,6 +23,7 @@ MODULE LEDext;
   Copyright (c) 2023-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
 **)
+
   IMPORT GPIO, SIO := SIOgpio, SIO_DEV;
 
   CONST
