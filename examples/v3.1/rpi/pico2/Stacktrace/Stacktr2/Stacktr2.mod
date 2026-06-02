@@ -2,8 +2,7 @@ MODULE Stacktr2;
 (**
   Oberon RTK Framework v3.1
   --
-  Example/test program
-  https://oberon-rtk.org/docs/examples/v2/stacktrace
+  Example/test program, dual-core, no kernel
   --
   MCU: RP2350
   Board: Pico2
@@ -17,7 +16,7 @@ MODULE Stacktr2;
 
 
   CONST
-    (* otherwise unused interrupts *)
+    (* unwired interrupts *)
     IntNo0 = EXC.IRQ_SW_0;
     IntNo1 = EXC.IRQ_SW_1;
 
@@ -48,7 +47,7 @@ MODULE Stacktr2;
 
   PROCEDURE p0;
   BEGIN
-    SYSTEM.LDREG(12, 0A0B0C0DH); (* marker *)
+    SYSTEM.LDREG(12, 0A0B0C0DH); (* marker/sentinel *)
     p1
   END p0;
 

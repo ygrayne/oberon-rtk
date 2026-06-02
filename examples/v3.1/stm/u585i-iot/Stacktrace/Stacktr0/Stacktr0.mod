@@ -2,8 +2,7 @@ MODULE Stacktr0;
 (**
   Oberon RTK Framework v3.1
   --
-  Example/test program
-  https://oberon-rtk.org/docs/examples/v2/stacktrace
+  Example/test program, no kernel
   --
   MCU: STM32U585AI
   Board: B-U585I-IOT02A
@@ -13,12 +12,12 @@ MODULE Stacktr0;
 **)
 
   IMPORT
-    SYSTEM, PPB, Main;
+    SYSTEM, PPB, Main, Out;
 
   CONST
-    CaseError = 0;
-    CaseFault = 1;
-    Case = CaseError;
+    Error = 0;
+    Fault = 1;
+    Case = Error;
 
   VAR p: PROCEDURE;
 
@@ -39,28 +38,28 @@ MODULE Stacktr0;
 
   PROCEDURE p2;
   BEGIN
-    IF Case = 0 THEN
+    IF Case = Error THEN
+      Out.String("error"); Out.Ln;
       error
     ELSE
+      Out.String("fault"); Out.Ln;
       fault
     END
   END p2;
 
   PROCEDURE p1;
+    (* unused large array to check for false trace positives *)
     VAR a: ARRAY 512 OF INTEGER; r: REAL;
   BEGIN
-
+    (* real operation to check FPU stacking *)
     r := 1.0;
     r := r / r;
-
     p2
   END p1;
 
   PROCEDURE p0;
-    CONST R12 = 12;
-    VAR x, y: INTEGER;
   BEGIN
-    SYSTEM.LDREG(R12, 0A0B0C0DH); (* marker *)
+    SYSTEM.LDREG(12, 0A0B0C0DH); (* marker/sentinel *)
     p1
   END p0;
 

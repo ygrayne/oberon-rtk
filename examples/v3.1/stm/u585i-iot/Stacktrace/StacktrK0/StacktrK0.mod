@@ -1,0 +1,95 @@
+MODULE StacktrK0;
+(**
+  Oberon RTK Framework v3.1
+  --
+  Example/test program, kernel v1
+  --
+  MCU: STM32U585AI
+  Board: B-U585I-IOT02A
+  --
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT
+    SYSTEM, PPB, Main, Kernel, Errors;
+
+
+  CONST
+    ThreadStackSize = 1024;
+    MillisecsPerTick = 10;
+
+    Error = 0;
+    Fault = 1;
+    Case = Error;
+
+  VAR
+    p: PROCEDURE;
+
+  PROCEDURE fault;
+  (* trigger MCU fault *)
+    VAR x: INTEGER;
+  BEGIN
+    x := PPB.NVIC_ISER0 + 1;
+    SYSTEM.PUT(x, x)
+  END fault;
+
+  PROCEDURE error;
+  (* trigger runtime error *)
+    VAR x: INTEGER;
+  BEGIN
+    x := 0; x := x DIV x
+  END error;
+
+  PROCEDURE p2;
+  BEGIN
+    IF Case = Error THEN
+      error
+    ELSE
+      fault
+    END
+  END p2;
+
+  PROCEDURE p1;
+  BEGIN
+    p2
+  END p1;
+
+  PROCEDURE p0;
+  BEGIN
+    SYSTEM.LDREG(12, 0A0B0C0DH); (* marker/sentinel *)
+    p1
+  END p0;
+
+  PROCEDURE run;
+  BEGIN
+    p
+  END run;
+
+  PROCEDURE t0c;
+  BEGIN
+    Kernel.SetPeriod(100, 0);
+    REPEAT
+      run;
+      Kernel.Next
+    UNTIL FALSE
+  END t0c;
+
+  PROCEDURE run0;
+    VAR
+      t0: Kernel.Thread;
+      x, tid0: INTEGER;
+  BEGIN
+    (* in main stack *)
+    Kernel.Install(MillisecsPerTick);
+    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, x); ASSERT(x = Kernel.OK, Errors.ProgError);
+    Kernel.Enable(t0);
+    (* threads use their stacks, exceptions use main stack *)
+    Kernel.Run (* resets MSP to top *)
+    (* we'll not return here *)
+  END run0;
+
+BEGIN
+  p := p0;
+  run0
+END StacktrK0.

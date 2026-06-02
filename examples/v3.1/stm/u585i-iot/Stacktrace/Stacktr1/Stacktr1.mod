@@ -2,8 +2,7 @@ MODULE Stacktr1;
 (**
   Oberon RTK Framework v3.1
   --
-  Example/test program
-  https://oberon-rtk.org/docs/examples/v2/stacktrace
+  Example/test program, no kernel
   --
   MCU: STM32U585AI
   Board: B-U585I-IOT02A
@@ -20,9 +19,9 @@ MODULE Stacktr1;
     IntNo0 = EXC.IRQ_I2C4_EV;
     IntNo1 = EXC.IRQ_I2C4_ER;
 
-    CaseError = 0;
-    CaseFault = 1;
-    Case = CaseError;
+    Error = 0;
+    Fault = 1;
+    Case = Error;
 
   VAR
     p: PROCEDURE;
@@ -44,7 +43,7 @@ MODULE Stacktr1;
 
   PROCEDURE i2;
   BEGIN
-    IF Case = CaseError THEN
+    IF Case = Error THEN
       error
     ELSE
       fault
@@ -69,9 +68,9 @@ MODULE Stacktr1;
   END h2;
 
   PROCEDURE h1;
-  (* FPU operation to test correct stack trace *)
     VAR r: REAL;
   BEGIN
+    (* real operation to check FPU stacking *)
     r := 1.0;
     r := r / r;
     h2
@@ -89,7 +88,6 @@ MODULE Stacktr1;
   END p1a;
 
   PROCEDURE p1;
-    VAR y: INTEGER;
   BEGIN
     (* set int for h0 pending *)
     SYSTEM.PUT(PPB.NVIC_ISPR0 + ((IntNo0 DIV 32) * 4), {IntNo0 MOD 32});
@@ -98,9 +96,10 @@ MODULE Stacktr1;
   END p1;
 
   PROCEDURE p0;
+    (* unused large array to test for false trace positives *)
     VAR a: ARRAY 1024 OF INTEGER;
   BEGIN
-    SYSTEM.LDREG(12, 0A0B0C0DH); (* marker *)
+    SYSTEM.LDREG(12, 0A0B0C0DH); (* marker/sentinel *)
     p1
   END p0;
 

@@ -2,11 +2,10 @@ MODULE Stacktr0;
 (**
   Oberon RTK Framework v3.1
   --
-  Example/test program
-  https://oberon-rtk.org/docs/examples/v2/stacktrace
+  Example/test program, dual-core, no kernel
   --
   MCU: RP2350
-  Board: Pico 2
+  Board: Pico2
   --
   Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -46,20 +45,18 @@ MODULE Stacktr0;
   END p2;
 
   PROCEDURE p1;
+    (* unused large array to check for false trace positives *)
     VAR a: ARRAY 512 OF INTEGER; r: REAL;
   BEGIN
-
+    (* real operation to check FPU stacking *)
     r := 1.0;
     r := r / r;
-
     p2
   END p1;
 
   PROCEDURE p0;
-    CONST R12 = 12;
-    (*VAR x, y: INTEGER;*)
   BEGIN
-    SYSTEM.LDREG(R12, 0A0B0C0DH); (* marker *)
+    SYSTEM.LDREG(12, 0A0B0C0DH); (* marker/sentinel *)
     p1
   END p0;
 

@@ -2,66 +2,58 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Load (ST-LINK)",
+            "name": "Load (CMSIS-DAP)",
             "type": "cortex-debug",
             "request": "launch",
             "cwd": "${workspaceFolder}",
             "executable": "K4sema.elf",
             "servertype": "openocd",
-            "device": "STM32H573II",
+            "device": "RP2350",
             "gdbPath": "${env:RTK_GDB}",
             "objdumpPath": "${env:RTK_OBJDUMP}",
-            "configFiles": [
-                "interface/stlink-dap.cfg",
-                "target/stm32h5x.cfg"
-            ],
-            "openOCDPreConfigLaunchCommands": [
-                "set CONNECT_UNDER_RESET 1"
-            ],
             "openOCDLaunchCommands": [
-                "adapter speed 3300"
+                "adapter speed 5000"
             ],
-            "serverpath": "${env:RTK_OPENOCD_STM}",
+            "configFiles": [
+                "interface/cmsis-dap.cfg",
+                "target/rp2350.cfg"
+            ],
             "searchDir": [
-                "${env:RTK_OPENOCD_STM_SCRIPTS}"
+                "${env:RTK_OPENOCD_RPI_SCRIPTS}"
             ],
-            "svdFile": "${env:RTK_SVD_STM32H573}",
+            "serverpath": "${env:RTK_OPENOCD_RPI}",
+            "svdFile": "${env:RTK_SVD_RP2350}",
             "postLaunchCommands": [
                 "stepi",
-                "monitor reset halt",
-                "monitor adapter speed 3300"
+                "monitor reset halt"
             ],
             "runToEntryPoint": "main"
         },
         {
-            "name": "Attach (ST-LINK)",
+            "name": "Attach (CMSIS-DAP)",
             "type": "cortex-debug",
             "request": "attach",
             "cwd": "${workspaceFolder}",
             "executable": "K4sema.elf",
             "servertype": "openocd",
-            "device": "STM32H573II",
+            "device": "RP2350",
             "gdbPath": "${env:RTK_GDB}",
             "objdumpPath": "${env:RTK_OBJDUMP}",
-            "configFiles": [
-                "interface/stlink-dap.cfg",
-                "target/stm32h5x.cfg"
-            ],
-            "openOCDPreConfigLaunchCommands": [
-                "set CONNECT_UNDER_RESET 1"
-            ],
             "openOCDLaunchCommands": [
-                "adapter speed 3300"
+                "adapter speed 5000"
             ],
-            "serverpath": "${env:RTK_OPENOCD_STM}",
+            "configFiles": [
+                "interface/cmsis-dap.cfg",
+                "target/rp2350.cfg"
+            ],
             "searchDir": [
-                "${env:RTK_OPENOCD_STM_SCRIPTS}"
+                "${env:RTK_OPENOCD_RPI_SCRIPTS}"
             ],
-            "svdFile": "${env:RTK_SVD_STM32H573}",
+            "serverpath": "${env:RTK_OPENOCD_RPI}",
+            "svdFile": "${env:RTK_SVD_RP2350}",
             "postAttachCommands": [
                 "stepi",
-                "monitor reset halt",
-                "monitor adapter speed 3300"
+                "monitor reset halt"
             ],
             "runToEntryPoint": "main"
         }

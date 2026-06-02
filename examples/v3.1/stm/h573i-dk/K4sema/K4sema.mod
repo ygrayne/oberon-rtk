@@ -3,12 +3,9 @@ MODULE K4sema;
   Oberon RTK Framework v3.1
   --
   Example/test program for kernel-v4: semaphores.
-  https://oberon-rtk.org/docs/examples/v2/k4tests/
   --
   MCU: STM32H573II
   Board: STM32H573I-DK
-  --
-  Kernel-v4
   --
   Copyright (c) 2025-2026 Gray gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -51,36 +48,39 @@ MODULE K4sema;
   PROCEDURE aiPrint1(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
-    Out.String("=> print message part 2 actor: "); Out.Int(act.id, 0); Out.Ln;
-    Out.String("=> release"); Out.Int(act.id, 2); Out.Ln;
+    Out.String("print message part 2 -- actor: "); Out.Int(act.id, 0); Out.Ln;
+    Out.String("<= release semaphore -- actor: "); Out.Int(act.id, 2); Out.Ln;
     a := act(A0);
     a.run := a.states[StateClaim];
     Semaphores.Release(term);
     Kernel.GetTick(act)
   END aiPrint1;
 
+
   PROCEDURE aiPrint0(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
-    Out.String("=> print message part 1 actor: "); Out.Int(act.id, 0); Out.Ln;
+    Out.String("print message part 1 -- actor: "); Out.Int(act.id, 0); Out.Ln;
     a := act(A0);
     a.run := a.states[StatePrint1];
     Kernel.GetTick(act)
   END aiPrint0;
 
+
   PROCEDURE aiClaim(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
-    Out.String("=> claim"); Out.Int(act.id, 2); Out.Ln;
+    Out.String("=> claim semaphore -- actor: "); Out.Int(act.id, 2); Out.Ln;
     a := act(A0);
     a.run := a.states[StatePrint0];
     Semaphores.Claim(term, act)
   END aiClaim;
 
+
   PROCEDURE aiInit(act: Kernel.Actor);
     VAR a: A0;
   BEGIN
-    Out.String("=> init"); Out.Int(act.id, 2); Out.Ln;
+    Out.String("** init actor: "); Out.Int(act.id, 2); Out.Ln;
     a := act(A0);
     a.states[StateClaim] := aiClaim;
     a.states[StatePrint0] := aiPrint0;
@@ -92,7 +92,7 @@ MODULE K4sema;
 
   PROCEDURE run;
   BEGIN
-    Out.String("begin init"); Out.Ln;
+    Out.String("set up kernel and actors"); Out.Ln;
     Kernel.Install(MillisecsPerTick, SysTickPrio);
     Kernel.NewRdyQ(rdyQ, 0, 0);
     Kernel.InstallRdyQ(rdyQ, rdyRun, RunIntNo, RunPrio);
@@ -105,7 +105,7 @@ MODULE K4sema;
     Kernel.InitAct(ai1, aiInit, 1);
     Kernel.RunAct(ai0, rdyQ);
     Kernel.RunAct(ai1, rdyQ);
-    Out.String("end init => start"); Out.Ln;
+    Out.String("end setup => start"); Out.Ln;
     Kernel.Run
     (* we'll not return here *)
   END run;

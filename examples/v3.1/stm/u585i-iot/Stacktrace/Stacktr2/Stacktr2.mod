@@ -2,8 +2,7 @@ MODULE Stacktr2;
 (**
   Oberon RTK Framework v3.1
   --
-  Example/test program
-  https://oberon-rtk.org/docs/examples/v2/stacktrace
+  Example/test program, no kernel
   --
   MCU: STM32U585AI
   Board: B-U585I-IOT02A
@@ -48,7 +47,7 @@ MODULE Stacktr2;
 
   PROCEDURE p0;
   BEGIN
-    SYSTEM.LDREG(12, 0A0B0C0DH); (* marker *)
+    SYSTEM.LDREG(12, 0A0B0C0DH); (* marker/sentinel *)
     p1
   END p0;
 

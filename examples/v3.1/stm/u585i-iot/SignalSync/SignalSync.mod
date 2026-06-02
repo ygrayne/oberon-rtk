@@ -2,13 +2,10 @@ MODULE SignalSync;
 (**
   Oberon RTK Framework v3.1
   --
-  Example program, multi-threaded, single-core
-  Description: https://oberon-rtk.org/docs/examples/v2/signalsync/
+  Example/test program, multi-threaded, kernel-v1
   --
-  MCU: STM32U585
+  MCU: STM32U585AI
   Board: B-U585I-IOT02A
-  --
-  Kernel-v1
   --
   Copyright (c) 2024-2026 Gray, gray@grayraven.org
   https://oberon-rtk.org/licences/
@@ -20,8 +17,8 @@ MODULE SignalSync;
     MillisecsPerTick  = 10;
     ThreadStackSize = 1024;
 
-    T0period = 50;
-    T3period = 100;
+    HeartbeatPeriod = 500 DIV MillisecsPerTick; (* 500 ms *)
+    SenderPeriod = 1000 DIV MillisecsPerTick; (* 1000 ms *)
 
   VAR
     t0, t1, t2, t3: Kernel.Thread;
@@ -36,18 +33,18 @@ MODULE SignalSync;
   END writeThreadInfo;
 
 
-  PROCEDURE t0c;
+  PROCEDURE heartbeat;
   BEGIN
     LED.Set({LED.Pico});
-    Kernel.SetPeriod(T0period, 0);
+    Kernel.SetPeriod(HeartbeatPeriod, 0);
     REPEAT
       LED.Toggle({LED.Pico});
       Kernel.Next
     UNTIL FALSE
-  END t0c;
+  END heartbeat;
 
 
-  PROCEDURE t1c;
+  PROCEDURE receiver;
     VAR tid, cid: INTEGER;
   BEGIN
     cid := Cores.CoreId();
@@ -57,15 +54,15 @@ MODULE SignalSync;
       Out.String(" await sig"); Out.Ln;
       Signals.Await(sig);
       writeThreadInfo(tid, cid);
-      Out.String(" ==> sig"); Out.Ln
+      Out.String(" --> rec"); Out.Ln
     UNTIL FALSE
-  END t1c;
+  END receiver;
 
 
-  PROCEDURE t3c;
+  PROCEDURE sender;
     VAR tid, cid, cnt: INTEGER;
   BEGIN
-    Kernel.SetPeriod(T3period, T3period);
+    Kernel.SetPeriod(SenderPeriod, SenderPeriod);
     cid := Cores.CoreId();
     tid := Kernel.Tid();
     cnt := 0;
@@ -73,10 +70,10 @@ MODULE SignalSync;
       writeThreadInfo(tid, cid);
       Signals.Send(sig);
       INC(cnt);
-      Out.String(" <== sig "); Out.Int(cnt, 0); Out.Ln;
+      Out.String(" <== send "); Out.Int(cnt, 0); Out.Ln;
       Kernel.Next
     UNTIL FALSE
-  END t3c;
+  END sender;
 
 
   PROCEDURE run;
@@ -86,15 +83,15 @@ MODULE SignalSync;
     Signals.Init(sig);
     Kernel.Install(MillisecsPerTick);
     (* heartbeat blinker *)
-    Kernel.Allocate(t0c, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.ProgError);
+    Kernel.Allocate(heartbeat, ThreadStackSize, t0, tid0, res); ASSERT(res = Kernel.OK, Errors.ProgError);
     Kernel.Enable(t0);
     (* two receivers, running the same code *)
-    Kernel.Allocate(t1c, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.OK, Errors.ProgError);
-    Kernel.Enable(t1); (* note: no period as triggered by signal *)
-    Kernel.Allocate(t1c, ThreadStackSize, t2, tid2, res); ASSERT(res = Kernel.OK, Errors.ProgError);
-    Kernel.Enable(t2); (* note: no period as triggered by signal *)
+    Kernel.Allocate(receiver, ThreadStackSize, t1, tid1, res); ASSERT(res = Kernel.OK, Errors.ProgError);
+    Kernel.Enable(t1);
+    Kernel.Allocate(receiver, ThreadStackSize, t2, tid2, res); ASSERT(res = Kernel.OK, Errors.ProgError);
+    Kernel.Enable(t2);
     (* one sender *)
-    Kernel.Allocate(t3c, ThreadStackSize, t3, tid3, res); ASSERT(res = Kernel.OK, Errors.ProgError);
+    Kernel.Allocate(sender, ThreadStackSize, t3, tid3, res); ASSERT(res = Kernel.OK, Errors.ProgError);
     Kernel.Enable(t3);
     Out.String("start"); Out.Ln;
     Kernel.Run
@@ -102,5 +99,6 @@ MODULE SignalSync;
   END run;
 
 BEGIN
+  LED.Config;
   run
 END SignalSync.

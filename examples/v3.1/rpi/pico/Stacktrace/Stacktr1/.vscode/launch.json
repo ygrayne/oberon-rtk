@@ -22,7 +22,7 @@
                 "${env:RTK_OPENOCD_RPI_SCRIPTS}"
             ],
             "serverpath": "${env:RTK_OPENOCD_RPI}",
-            "svdFile": "${env:RTK_SVD_RP2350}",
+            "svdFile": "${env:RTK_SVD_RP2040}",
             "postLaunchCommands": [
                 "stepi",
                 "monitor reset halt"
@@ -50,7 +50,7 @@
                 "${env:RTK_OPENOCD_RPI_SCRIPTS}"
             ],
             "serverpath": "${env:RTK_OPENOCD_RPI}",
-            "svdFile": "${env:RTK_SVD_RP2350}",
+            "svdFile": "${env:RTK_SVD_RP2040}",
             "postAttachCommands": [
                 "stepi",
                 "monitor reset halt"
