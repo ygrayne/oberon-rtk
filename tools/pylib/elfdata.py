@@ -74,6 +74,7 @@ class TypeRef:
     pointer_to: object = None
     is_proc_type: bool = False
     scope: str = None
+    deferred_dim: str = None
 @dataclass
 class VarInfo:
     names: list
@@ -106,6 +107,7 @@ class ModuleSource:
     imports: dict = field(default_factory=dict)
     consts: dict = field(default_factory=dict)
     record_decl_lines: dict = field(default_factory=dict)
+    deferred_consts: dict = field(default_factory=dict)
 def type_size_ext(typeref, type_sizes=None):
     if typeref is None:
         return 4
@@ -268,6 +270,7 @@ class OberonParser:
         self.tokens = tokens
         self.pos = 0
         self.const_defs = {}
+        self.deferred_consts = {}
     def _cur(self):
         return self.tokens[self.pos]
     def _peek(self, offset=1):
@@ -368,13 +371,31 @@ class OberonParser:
                     self._consume()
                 continue
             self._consume()
+            captured = False
             if self._cur().kind == TK.INTEGER:
                 val_text = self._consume().text
                 if self._cur().kind == TK.SEMI:
                     try:
                         self.const_defs[name] = int(val_text)
+                        captured = True
                     except ValueError:
                         pass
+            elif self._cur().kind == TK.IDENT:
+                first = self._consume().text
+                if (self._cur().kind == TK.DOT
+                        and self._peek().kind == TK.IDENT):
+                    self._consume()
+                    second = self._consume().text
+                    if self._cur().kind == TK.SEMI:
+                        self.deferred_consts[name] = (first, second)
+                        captured = True
+                else:
+                    if self._cur().kind == TK.SEMI:
+                        if first in self.const_defs:
+                            self.const_defs[name] = self.const_defs[first]
+                        else:
+                            self.deferred_consts[name] = (None, first)
+                        captured = True
             while self._cur().kind not in (TK.SEMI, TK.EOF) and not self._at_section():
                 self._consume()
             if self._cur().kind == TK.SEMI:
@@ -466,9 +487,17 @@ class OberonParser:
     def _try_parse_dim(self):
         if self._cur().kind == TK.INTEGER:
             return int(self._consume().text)
-        if (self._cur().kind == TK.IDENT and
-                self._cur().text in self.const_defs):
-            return self.const_defs[self._consume().text]
+        if self._cur().kind == TK.IDENT:
+            name = self._cur().text
+            if (self._peek().kind == TK.DOT
+                    and self._peek(2).kind == TK.IDENT):
+                self._consume()
+                self._consume()
+                sub = self._consume().text
+                return f'{name}.{sub}'
+            if name in self.const_defs:
+                return self.const_defs[self._consume().text]
+            return self._consume().text
         return None
     def _parse_array_type(self):
         self._consume()
@@ -494,7 +523,11 @@ class OberonParser:
             dims = [0]
         result = elem
         for d in reversed(dims):
-            result = TypeRef(name=result.name, fixed_dim=d, elem=result)
+            if isinstance(d, str):
+                result = TypeRef(name=result.name, fixed_dim=0,
+                                 deferred_dim=d, elem=result)
+            else:
+                result = TypeRef(name=result.name, fixed_dim=d, elem=result)
         return result
     def _parse_record_type(self):
         self._consume()
@@ -924,6 +957,7 @@ def parse_listing(filepath, source_lines=False):
         module_src = parser.parse_module()
         if module_src is not None:
             module_src.consts = dict(parser.const_defs)
+            module_src.deferred_consts = dict(parser.deferred_consts)
     except Exception:
         pass
     if module_name is None:
@@ -1432,6 +1466,77 @@ def _resolve_record_base(typeref, module_src, all_module_srcs):
     inherited = copy.deepcopy(base_tr.fields)
     typeref.fields = inherited + typeref.fields
     typeref.base = None
+def _resolve_deferred_refs(modules, all_module_srcs):
+    def lookup_qualified(home_ms, alias, sub):
+        real_mod = home_ms.imports.get(alias, alias)
+        target = all_module_srcs.get(real_mod)
+        if target is None:
+            return None
+        return target.consts.get(sub)
+    def lookup_local(home_ms, name):
+        return home_ms.consts.get(name)
+    MAX_ITERS = 64
+    for _ in range(MAX_ITERS):
+        progress = False
+        for module in modules:
+            ms = module.module_src
+            if ms is None:
+                continue
+            if not ms.deferred_consts:
+                continue
+            resolved_now = []
+            for name, (alias, sub) in ms.deferred_consts.items():
+                if alias is None:
+                    val = lookup_local(ms, sub)
+                else:
+                    val = lookup_qualified(ms, alias, sub)
+                if val is not None:
+                    ms.consts[name] = val
+                    resolved_now.append(name)
+            for name in resolved_now:
+                del ms.deferred_consts[name]
+                progress = True
+        if not progress:
+            break
+    visited = set()
+    def fix(tr, home_ms):
+        if tr is None:
+            return
+        oid = id(tr)
+        if oid in visited:
+            return
+        visited.add(oid)
+        if tr.deferred_dim is not None:
+            text = tr.deferred_dim
+            val = None
+            if '.' in text:
+                alias, sub = text.split('.', 1)
+                val = lookup_qualified(home_ms, alias, sub)
+            else:
+                val = lookup_local(home_ms, text)
+            if val is not None:
+                tr.fixed_dim = val
+                tr.deferred_dim = None
+        if tr.elem is not None:
+            fix(tr.elem, home_ms)
+        if tr.fields is not None:
+            for var in tr.fields:
+                fix(var.typeref, home_ms)
+        if tr.pointer_to is not None:
+            fix(tr.pointer_to, home_ms)
+    for module in modules:
+        ms = module.module_src
+        if ms is None:
+            continue
+        for var in ms.global_vars:
+            fix(var.typeref, ms)
+        for tr in ms.type_defs.values():
+            fix(tr, ms)
+        for proc in ms.procedures:
+            for var in getattr(proc, 'local_vars', []) or []:
+                fix(var.typeref, ms)
+            for param in getattr(proc, 'params', []) or []:
+                fix(param.typeref, ms)
 def _resolve_module_typerefs(module_src, all_module_srcs):
     def resolve(tr):
         return _resolve_typeref(tr, module_src, all_module_srcs)
@@ -1667,6 +1772,30 @@ def build_debug_info_unit(module, abbrev_offset, stmt_list_offset, src_subdir,
                     content += uleb128(14)
                     content.append(4)
                     content += struct.pack('<I', type_offsets[target_key])
+            for akey in list(array_types_needed.keys()):
+                atyperef = array_types_needed[akey]
+                if akey in type_offsets:
+                    continue
+                if not atyperef.elem:
+                    continue
+                elem_key = typeref_key(atyperef.elem)
+                if elem_key != rec_key:
+                    continue
+                if atyperef.fixed_dim <= 0:
+                    continue
+                byte_size = type_size_ext(atyperef, type_sizes)
+                type_offsets[akey] = len(content)
+                disp_name = _array_display_name(atyperef)
+                content += uleb128(13)
+                content += struct.pack('<I', str_table.intern(disp_name))
+                content += struct.pack('<I', type_offsets[elem_key])
+                content += struct.pack('<I', byte_size)
+                int_off = type_offsets.get('INTEGER', type_offsets[elem_key])
+                content += uleb128(7)
+                content += struct.pack('<I', int_off)
+                content += struct.pack('<I', 0)
+                content += struct.pack('<I', atyperef.fixed_dim - 1)
+                content.append(0)
         for key, typeref in pointer_types_needed.items():
             if key in type_offsets:
                 continue
@@ -1680,6 +1809,8 @@ def build_debug_info_unit(module, abbrev_offset, stmt_list_offset, src_subdir,
             content.append(4)
             content += struct.pack('<I', target_off)
         for key, typeref in array_types_needed.items():
+            if key in type_offsets:
+                continue
             if typeref.elem:
                 elem_key = typeref_key(typeref.elem)
                 elem_off = type_offsets.get(elem_key)
@@ -1977,6 +2108,7 @@ def generate_dwarf(modules, src_subdir, module_data_tops=None, comp_dir='.', sym
     for module in modules:
         if module.module_src is not None:
             all_module_srcs[module.module_src.name] = module.module_src
+    _resolve_deferred_refs(modules, all_module_srcs)
     for module in modules:
         if module.module_src is not None:
             _resolve_module_typerefs(module.module_src, all_module_srcs)

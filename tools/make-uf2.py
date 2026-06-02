@@ -129,7 +129,7 @@ class RP2040(RPcmd):
             },
             'boot2_file': {
                 'flags': ['-b'],
-                'help': f'bootstage 2 file, default: {BOOT2_FILE_NAME} in installation directory'
+                'help': f'bootstage 2 file, default: boot2/{BOOT2_FILE_NAME} in installation directory'
             }
         }
     }
@@ -142,7 +142,7 @@ class RP2040(RPcmd):
         if args.boot2_file:
             boot2_file = Path(args.boot2_file_name).resolve()
         else:
-            boot2_file = Path(sys.argv[0]).resolve().parent.joinpath(BOOT2_FILE_NAME)
+            boot2_file = Path(sys.argv[0]).resolve().parent.joinpath('boot2', BOOT2_FILE_NAME)
         self._boot2_file = InFile(boot2_file)
 
         self._bin_file.read()

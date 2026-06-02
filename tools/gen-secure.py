@@ -25,7 +25,18 @@ Usage:
 Example:
     python gen-secure.py s/S.map
     python gen-secure.py s/S.map S0
+    python gen-secure.py s/S.map S0.mod sec/S1.mod
     python gen-secure.py s/S.map --nsc-addr C0FE000 S0 --const-leaf MCU2 --ns-dir ns
+
+Module argument forms accepted (all equivalent for gen-secure):
+    S0
+    S0.mod
+    path/to/S0
+    path/to/S0.mod
+The path part (if any) is advisory and ignored — only the basename
+is used. This allows a single build-script variable to specify
+modules for both sec-epilogue (which needs a file path) and
+gen-secure (which finds the file via the .map).
 --
 Copyright (c) 2025-2026 Gray, gray@grayraven.org
 https://oberon-rtk.org/licences/
@@ -764,8 +775,17 @@ def main():
     if not ns_dir.is_dir():
         error(f'NS output directory not found: {ns_dir}')
 
-    # accept module names as S0 or S0.mod (strip .mod suffix)
-    exposed_names = [m[:-4] if m.endswith('.mod') else m for m in module_names]
+    # accept module names in any of: S0, S0.mod, path/S0, path/S0.mod.
+    # The path part (if any) is advisory and ignored — only the basename
+    # is used as the lookup key in the .map file. This lets a single
+    # variable serve double duty in build scripts: as a path for
+    # sec-epilogue (which physically opens the file before the build
+    # runs and the .map exists) and as a name for gen-secure (which
+    # finds the actual module location via the .map).
+    exposed_names = [
+        Path(m).stem if m.endswith('.mod') else Path(m).name
+        for m in module_names
+    ]
 
     # validate exposed modules
     for name in exposed_names:

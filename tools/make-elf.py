@@ -7,6 +7,7 @@ embedded DWARF debug sections generated from listing files (.alst)
 in the rdb directory. Supports:
   - Full DWARF 4 debug info (types, variables, line mapping, frames)
   - RP2350 IMAGE_DEF picobin metadata block (--image-def)
+  - RP2040 stage-2 boot loader prepended (--boot2)
   - Auto-detection of code base and BSS range from .map file
   - ARM ELF attributes (.ARM.attributes section)
 --
@@ -17,6 +18,7 @@ Usage:
     --symbols           Include procedure/variable symbols (requires rdb/)
     --sym-prefix P      Prefix all symbols with P_ (e.g. S for Secure)
     --image-def         Prepend RP2350 IMAGE_DEF block
+    --boot2             Prepend RP2040 boot2.bin (path from RTK_BOOT2 env var)
     --rdb-dir DIR       Listing directory (default: rdb)
     --bss START:END     BSS memory range (auto-detected from .map if omitted)
     --map FILE          Map file (default: auto-detect)
@@ -31,13 +33,14 @@ Example:
     python make-elf.py SignalSync.bin
     python make-elf.py SignalSync.bin --debug
     python make-elf.py SignalSync.bin:10000100 --debug --image-def
+    python make-elf.py BlinkPlus.bin --debug --boot2
     python make-elf.py S.bin:C000000 NSC.bin:C0FE000 --debug --sym-prefix S
 --
 Copyright (c) 2024-2026 Gray, gray@grayraven.org
 https://oberon-rtk.org/licences/
 """
 
-import struct, sys, json
+import struct, sys, json, os
 
 PROG_NAME = 'make-elf'
 
@@ -921,6 +924,11 @@ def main():
                         help="prepend a 256-byte RP2350 IMAGE_DEF metadata block "
                              "at code_base - 0x100 (enables standalone boot after "
                              "GDB/OpenOCD flash programming)")
+    parser.add_argument('--boot2', action='store_true', dest='boot2',
+                        help="prepend RP2040 stage-2 boot loader (boot2.bin) "
+                             "at code_base - 0x100; reads boot2.bin path from "
+                             "environment variable RTK_BOOT2; mutually exclusive "
+                             "with --image-def")
     parser.add_argument('--rdb-dir', type=str, dest='rdb_dir', default='rdb',
                         help="directory with listing files (default: rdb)")
     parser.add_argument('--bss', type=str, dest='bss_range', default=None,
@@ -1075,6 +1083,36 @@ def main():
                   f'(need code base address for vector table pointer)')
             sys.exit(1)
         image_def = ImageDef(bin_files[0].load_addr)
+
+    # --- validate --boot2 ---
+    if args.boot2:
+        if args.image_def:
+            print(f'{PROG_NAME}: --boot2 and --image-def are mutually exclusive '
+                  f'(--boot2 is for RP2040, --image-def is for RP2350)')
+            sys.exit(1)
+        if not bin_files:
+            print(f'{PROG_NAME}: --boot2 requires at least one binary file '
+                  f'(need code base address for boot2 placement)')
+            sys.exit(1)
+        boot2_path_str = os.environ.get('RTK_BOOT2')
+        if not boot2_path_str:
+            print(f'{PROG_NAME}: --boot2 requires environment variable RTK_BOOT2 '
+                  f'to be set to the path of boot2.bin')
+            sys.exit(1)
+        boot2_path = Path(boot2_path_str)
+        if not boot2_path.is_file():
+            print(f'{PROG_NAME}: RTK_BOOT2 points to non-existent file: {boot2_path}')
+            sys.exit(1)
+        BOOT2_SIZE = 0x100
+        actual_size = boot2_path.stat().st_size
+        if actual_size != BOOT2_SIZE:
+            print(f'{PROG_NAME}: boot2.bin must be exactly {BOOT2_SIZE} bytes '
+                  f'(got {actual_size} bytes from {boot2_path})')
+            sys.exit(1)
+        boot2_load_addr = bin_files[0].load_addr - BOOT2_SIZE
+        boot2_bin = BinFile(boot2_path, boot2_load_addr)
+        boot2_bin._name = 'boot2'  # force section name to .boot2 regardless of source filename
+        bin_files.append(boot2_bin)
 
     create_main = not args.no_main
 
