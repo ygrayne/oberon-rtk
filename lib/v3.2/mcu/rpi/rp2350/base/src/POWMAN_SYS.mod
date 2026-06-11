@@ -1,0 +1,55 @@
+MODULE POWMAN_SYS;
+(**
+  Oberon RTK Framework
+  Version: v3.1
+  --
+  POWMAN
+  datasheet 6.4, p446
+  --
+  passcode [31:16] required: 05AFE
+  --
+  MCU: RP2350
+  --
+  Copyright (c) 2024-2026 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT BASE, ACCESSCTRL_SYS;
+
+  CONST
+    POWMAN_BASE* = BASE.POWMAN_BASE;
+
+    POWMAN_BADPASSWD* = POWMAN_BASE;
+    POWMAN_WDSEL*     = POWMAN_BASE + 030H;
+    (* .. *)
+    POWMAN_CHIP_RESET* = POWMAN_BASE + 02CH;
+
+    CHIP_RESET* = POWMAN_CHIP_RESET;
+
+    (* no passcode required *)
+    POWMAN_SCRATCH0*  = POWMAN_BASE + 0B0H;
+    POWMAN_SCRATCH1*  = POWMAN_BASE + 0B4H;
+    POWMAN_SCRATCH2*  = POWMAN_BASE + 0B8H;
+    POWMAN_SCRATCH3*  = POWMAN_BASE + 0BCH;
+    POWMAN_SCRATCH4*  = POWMAN_BASE + 0C0H;
+    POWMAN_SCRATCH5*  = POWMAN_BASE + 0C4H;
+    POWMAN_SCRATCH6*  = POWMAN_BASE + 0C8H;
+    POWMAN_SCRATCH7*  = POWMAN_BASE + 0CCH;
+      POWMAN_SCRATCH_Offset* = 4;
+
+    POWMAN_BOOT0*     = POWMAN_BASE + 0D0H;
+    POWMAN_BOOT1*     = POWMAN_BASE + 0D4H;
+    POWMAN_BOOT2*     = POWMAN_BASE + 0D8H;
+    POWMAN_BOOT3*     = POWMAN_BASE + 0DCH;
+      POWMAN_BOOT_Offset* = 4;
+
+    POWMAN_INTR*      = POWMAN_BASE + 0E0H;
+    POWMAN_INTE*      = POWMAN_BASE + 0E4H;
+    POWMAN_INTF*      = POWMAN_BASE + 0E8H;
+    POWMAN_INTS*      = POWMAN_BASE + 0ECH;
+
+    (* secure *)
+    POWMAN_SEC_reg* = ACCESSCTRL_SYS.ACCESSCTRL_POWMAN;
+
+
+END POWMAN_SYS.

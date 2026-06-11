@@ -1,0 +1,101 @@
+MODULE RCC_SYS;
+(**
+  MCU: STM32H573II
+  --
+  Copyright (c) 2025-2026 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT BASE, PWR_SYS;
+
+  CONST
+    PLL1* = 0;
+    PLL2* = 1;
+    PLL3* = 2;
+
+    PLL_all* = {0 .. 2};
+
+    RCC_BASE* = BASE.RCC_BASE;
+
+    RCC_CR*             = RCC_BASE + 0000H;
+    RCC_HSICFGR*        = RCC_BASE + 0010H;
+    RCC_CRRCR*          = RCC_BASE + 0014H;
+    RCC_CSICFGR*        = RCC_BASE + 0018H;
+    RCC_CFGR1*          = RCC_BASE + 001CH;
+    RCC_CFGR2*          = RCC_BASE + 0020H;
+    RCC_PLL1CFGR*       = RCC_BASE + 0028H;
+    RCC_PLL2CFGR*       = RCC_BASE + 002CH;
+    RCC_PLL3CFGR*       = RCC_BASE + 0030H;
+    RCC_PLL1DIVR*       = RCC_BASE + 0034H;
+    RCC_PLL1FRACR*      = RCC_BASE + 0038H;
+    RCC_PLL2DIVR*       = RCC_BASE + 003CH;
+    RCC_PLL2FRACR*      = RCC_BASE + 0040H;
+    RCC_PLL3DIVR*       = RCC_BASE + 0044H;
+    RCC_PLL3FRACR*      = RCC_BASE + 0048H;
+    RCC_CIER*           = RCC_BASE + 0050H;
+    RCC_CIFR*           = RCC_BASE + 0054H;
+    RCC_CICR*           = RCC_BASE + 0058H;
+
+    RCC_AHB1RSTR*       = RCC_BASE + 0060H;
+    RCC_AHB2RSTR*       = RCC_BASE + 0064H;
+    RCC_AHB4RSTR*       = RCC_BASE + 006CH;
+    RCC_APB1LRSTR*      = RCC_BASE + 0074H;
+    RCC_APB1HRSTR*      = RCC_BASE + 0078H;
+    RCC_APB2RSTR*       = RCC_BASE + 007CH;
+    RCC_APB3RSTR*       = RCC_BASE + 0080H;
+
+    RCC_AHB1ENR*        = RCC_BASE + 0088H;
+    RCC_AHB2ENR*        = RCC_BASE + 008CH;
+    RCC_AHB4ENR*        = RCC_BASE + 0094H;
+    RCC_APB1LENR*       = RCC_BASE + 009CH;
+    RCC_APB1HENR*       = RCC_BASE + 00A0H;
+    RCC_APB2ENR*        = RCC_BASE + 00A4H;
+    RCC_APB3ENR*        = RCC_BASE + 00A8H;
+
+    RCC_AHB1LPENR*      = RCC_BASE + 00B0H;
+    RCC_AHB2LPENR*      = RCC_BASE + 00B4H;
+    RCC_AHB4LPENR*      = RCC_BASE + 00BCH;
+    RCC_APB1LLPENR*     = RCC_BASE + 00C4H;
+    RCC_APB1HLPENR*     = RCC_BASE + 00C8H;
+    RCC_APB2LPENR*      = RCC_BASE + 00CCH;
+    RCC_APB3LPENR*      = RCC_BASE + 00D0H;
+    RCC_CCIPR1*         = RCC_BASE + 00D8H;
+    RCC_CCIPR2*         = RCC_BASE + 00DCH;
+    RCC_CCIPR3*         = RCC_BASE + 00E0H;
+    RCC_CCIPR4*         = RCC_BASE + 00E4H;
+    RCC_CCIPR5*         = RCC_BASE + 00E8H;
+    RCC_BDCR*           = RCC_BASE + 00F0H;
+    RCC_RSR*            = RCC_BASE + 00F4H;
+    RCC_SECCFGR*        = RCC_BASE + 0110H;
+    RCC_PRIVCFGR*       = RCC_BASE + 0114H;
+
+    (* bus clock *)
+    (* enabled after reset -- duh! *)
+
+    (* Secure *)
+    (* S/NS state of devices auto-follows their GTZC Secure state (non-TZ-aware) *)
+    (* or the Secure state as determined by the device's own Secure config register (TZ-aware) *)
+
+    RCC_SEC* = RCC_SECCFGR;
+
+    RCC_SEC_CKPERSEL* = 13;
+    RCC_SEC_RMVF*   = 12;
+    RCC_SEC_HSI48*  = 11;
+    (* bit 10 reserved *)
+    RCC_SEC_PLL3*   = 9;
+    RCC_SEC_PLL2*   = 8;
+    RCC_SEC_PLL1*   = 7;
+    RCC_SEC_PRESC*  = 6;
+    RCC_SEC_SYSCLK* = 5;
+    RCC_SEC_LSE*    = 4;
+    RCC_SEC_LSI*    = 3;
+    RCC_SEC_CSI*    = 2;
+    RCC_SEC_HSE*    = 1;
+    RCC_SEC_HSI*    = 0;
+
+    RCC_SEC_ALL* = {0 .. 9, 11 .. 13};
+
+    (* cross *)
+    RCC_PWR_DBPCR* = PWR_SYS.PWR_DBPCR;
+    
+END RCC_SYS.

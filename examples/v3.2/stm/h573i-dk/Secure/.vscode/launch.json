@@ -1,0 +1,81 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Load S+NS (ST-LINK)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "executable": "sec/S.elf",
+            "servertype": "openocd",
+            "device": "STM32H573II",
+            "gdbPath": "${env:RTK_GDB}",
+            "objdumpPath": "${env:RTK_OBJDUMP}",
+            "configFiles": [
+                "interface/stlink-dap.cfg",
+                "target/stm32h5x.cfg"
+            ],
+            "openOCDPreConfigLaunchCommands": [
+                "set CONNECT_UNDER_RESET 1"
+            ],
+            "openOCDLaunchCommands": [
+                "adapter speed 3300"
+            ],
+            "serverpath": "${env:RTK_OPENOCD_STM}",
+            "searchDir": [
+                "${env:RTK_OPENOCD_STM_SCRIPTS}"
+            ],
+            "svdFile": "${env:RTK_SVD_STM32H573}",
+            "loadFiles": [
+                "${workspaceFolder}/sec/S.elf",
+                "${workspaceFolder}/nonsec/NS.elf"
+            ],
+            "symbolFiles": [
+                { "file": "${workspaceFolder}/sec/S.elf" },
+                { "file": "${workspaceFolder}/nonsec/NS.elf" }
+            ],
+            "postLaunchCommands": [
+                "stepi",
+                "monitor reset halt",
+                "monitor adapter speed 3300"
+            ],
+            "runToEntryPoint": "S_startup"
+        },
+        {
+            "name": "Attach S+NS (ST-LINK)",
+            "type": "cortex-debug",
+            "request": "attach",
+            "cwd": "${workspaceFolder}",
+            "executable": "sec/S.elf",
+            "servertype": "openocd",
+            "device": "STM32H573II",
+            "gdbPath": "${env:RTK_GDB}",
+            "objdumpPath": "${env:RTK_OBJDUMP}",
+            "configFiles": [
+                "interface/stlink-dap.cfg",
+                "target/stm32h5x.cfg"
+            ],
+            "openOCDPreConfigLaunchCommands": [
+                "set CONNECT_UNDER_RESET 1"
+            ],
+            "openOCDLaunchCommands": [
+                "adapter speed 3300"
+            ],
+            "serverpath": "${env:RTK_OPENOCD_STM}",
+            "searchDir": [
+                "${env:RTK_OPENOCD_STM_SCRIPTS}"
+            ],
+            "svdFile": "${env:RTK_SVD_STM32H573}",
+            "symbolFiles": [
+                { "file": "${workspaceFolder}/sec/S.elf" },
+                { "file": "${workspaceFolder}/nonsec/NS.elf" }
+            ],
+            "postAttachCommands": [
+                "stepi",
+                "monitor reset halt",
+                "monitor adapter speed 3300"
+            ],
+            "runToEntryPoint": "S_startup"
+        }
+    ]
+}
