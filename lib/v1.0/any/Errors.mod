@@ -104,6 +104,8 @@ MODULE Errors;
           msg := "storage error"
       | UsageError:
           msg := "usage error"
+      | DeviceError:
+          msg := "device error"
       | ResourceMissing:
           msg := "resource missing or faulty"
       | NotSupported:

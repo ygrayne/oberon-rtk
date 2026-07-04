@@ -122,6 +122,8 @@ MODULE Errors;
           msg := "storage error"
       | UsageError:
           msg := "usage error"
+      | DeviceError:
+          msg := "device error"
       | BadResourceData:
           msg := "program resource data inconsistent"
       | NotSupported:

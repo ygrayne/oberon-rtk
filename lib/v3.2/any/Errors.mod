@@ -1,7 +1,7 @@
 MODULE Errors;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Definition of fault and error codes and corresponding message strings.
   --
@@ -122,6 +122,8 @@ MODULE Errors;
           msg := "storage error"
       | UsageError:
           msg := "usage error"
+      | DeviceError:
+          msg := "device error"
       | BadResourceData:
           msg := "program resource data inconsistent"
       | NotSupported:

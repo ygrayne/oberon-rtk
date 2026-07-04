@@ -39,7 +39,7 @@ MODULE Errors;
     LastAstrobeCode  = 25;
 
     (* RTK error/assert codes *)
-    FirstRTKcode = 32;
+    FirstRTKcode = 33;
     Trace* = 33;
     PreCond* = 34;
     PostCond* = 35;
@@ -118,6 +118,8 @@ MODULE Errors;
           msg := "storage error"
       | UsageError:
           msg := "usage error"
+      | DeviceError:
+          msg := "device error"
       | BadResourceData:
           msg := "program resource data inconsistent"
       | NotSupported:
