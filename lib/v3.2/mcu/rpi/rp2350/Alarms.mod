@@ -1,7 +1,7 @@
 MODULE Alarms;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Schedule handler procedures for the timers' alarms
   --

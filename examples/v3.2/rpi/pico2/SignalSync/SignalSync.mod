@@ -1,6 +1,6 @@
 MODULE SignalSync;
 (**
-  Oberon RTK Framework v3.1
+  Oberon RTK Framework v3.2
   --
   Example/test program, multi-threaded, single-core, kernel-v1
   --

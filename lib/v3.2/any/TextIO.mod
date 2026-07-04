@@ -1,7 +1,7 @@
 MODULE TextIO;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Text IO channels using writers and readers
   --

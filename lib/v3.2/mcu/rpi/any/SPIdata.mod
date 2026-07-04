@@ -1,7 +1,7 @@
 MODULE SPIdata;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   SPI data device driver
   * put and get data (only 8 bits data size (BYTE) transfers implemented as of now)

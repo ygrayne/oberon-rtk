@@ -1,7 +1,7 @@
 MODULE RCC;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Reset and clock controller
   Security functionality

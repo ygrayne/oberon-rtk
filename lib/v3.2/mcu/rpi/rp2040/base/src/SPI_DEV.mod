@@ -1,7 +1,7 @@
 MODULE SPI_DEV;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   SPI
   datasheet 4.4.4, p516

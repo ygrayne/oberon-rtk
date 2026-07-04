@@ -1,7 +1,7 @@
 MODULE Main;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Test program SecurePart
   Main module, Non-secure

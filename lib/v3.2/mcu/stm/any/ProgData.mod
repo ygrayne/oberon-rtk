@@ -1,7 +1,7 @@
 MODULE ProgData;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Get data about the program from the '.ref' resource data block
   at the end of the program.

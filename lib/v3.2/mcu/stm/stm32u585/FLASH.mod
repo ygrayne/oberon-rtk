@@ -1,7 +1,7 @@
 MODULE FLASH;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Embedded flash memory controller
   Bus clock is enabled after reset

@@ -1,7 +1,7 @@
 MODULE CLK_SYS;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   CLK
   datasheet 2.15.7, p195

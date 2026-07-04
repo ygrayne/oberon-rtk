@@ -1,6 +1,6 @@
 MODULE K4sema;
 (**
-  Oberon RTK Framework v3.1
+  Oberon RTK Framework v3.2
   --
   Example/test program for kernel-v4: semaphores.
   --

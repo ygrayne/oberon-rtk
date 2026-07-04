@@ -1,7 +1,7 @@
 MODULE BUSCTRL_SYS;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   BUSCTRL
   datasheet 12.15.4, p1240

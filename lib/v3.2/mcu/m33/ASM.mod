@@ -1,7 +1,7 @@
 MODULE ASM;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   ARM instruction encodings for SYSTEM.EMIT/EMITH for ARMv8-M Mainline (Cortex-M33).
   Can/will be replaced by (* asm .. end asm *) in-line assembly code.

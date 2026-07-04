@@ -1,7 +1,7 @@
 MODULE Cores;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Multi-core handling
   --

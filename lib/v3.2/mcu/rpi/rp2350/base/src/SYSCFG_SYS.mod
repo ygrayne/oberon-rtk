@@ -1,7 +1,7 @@
 MODULE SYSCFG_SYS;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   SYSCFG
   datasheet 12.15.2, p1236

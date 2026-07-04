@@ -1,7 +1,7 @@
 MODULE Semaphores;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Kernel-v4
   Semaphores for exclusive access to resources shared among actors

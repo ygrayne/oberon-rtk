@@ -1,7 +1,7 @@
 MODULE POWMAN_SYS;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   POWMAN
   datasheet 6.4, p446

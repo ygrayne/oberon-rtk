@@ -1,7 +1,7 @@
 MODULE Texts;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Formatted output to a "channel", using a 'TextIO.Writer'
   Formatted input from a "channel", using a 'TextIO.Reader'
@@ -276,10 +276,6 @@ MODULE Texts;
 
 
   PROCEDURE FlushOut*(W: TextIO.Writer);
-  (**
-    Allow flushing on writers that don't need it to keep
-    program code independent of output channel if needed.
-  **)
   BEGIN
     IF W.flush # NIL THEN
       W.flush(W.dev)

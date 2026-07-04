@@ -1,7 +1,7 @@
 MODULE Startup;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Program-specific start-up code.
   Gets VTOR from LinkOptions and thus the Astrobe config file data.

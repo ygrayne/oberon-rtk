@@ -1,7 +1,7 @@
 MODULE WATCHDOG_DEV;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   WATCHDOG_SYS
   datasheet 12.9.7, p1181

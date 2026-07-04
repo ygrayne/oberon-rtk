@@ -1,7 +1,7 @@
 MODULE RuntimeErrors;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Exception handling: run-time errors and faults
   --

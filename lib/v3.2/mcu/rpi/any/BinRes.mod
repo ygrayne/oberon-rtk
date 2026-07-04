@@ -1,7 +1,7 @@
 MODULE BinRes;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Access binary resource data.
   --

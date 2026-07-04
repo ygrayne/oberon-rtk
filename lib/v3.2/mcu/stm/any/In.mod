@@ -1,7 +1,7 @@
 MODULE In;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Input via TextIO.Reader.
   --

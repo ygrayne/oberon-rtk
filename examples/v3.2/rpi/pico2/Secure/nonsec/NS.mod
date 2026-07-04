@@ -1,6 +1,6 @@
 MODULE NS;
 (**
-  Oberon RTK Framework v3.1
+  Oberon RTK Framework v3.2
   --
   Test program Secure
   Non-secure program, uses Secure module S0

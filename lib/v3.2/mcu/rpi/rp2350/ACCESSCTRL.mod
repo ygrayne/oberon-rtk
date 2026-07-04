@@ -1,7 +1,7 @@
 MODULE ACCESSCTRL;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Access control for devices
   --

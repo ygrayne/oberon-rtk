@@ -1,7 +1,7 @@
 MODULE RST;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Resets and clock control via RCC
   Always clocked

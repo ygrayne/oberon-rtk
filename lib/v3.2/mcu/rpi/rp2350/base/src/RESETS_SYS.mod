@@ -1,7 +1,7 @@
 MODULE RESETS_SYS;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   RESETS
   datasheet 7.5.3, p494

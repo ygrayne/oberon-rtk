@@ -1,7 +1,7 @@
 MODULE CLK;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Oscillator and clocks controller driver
   --

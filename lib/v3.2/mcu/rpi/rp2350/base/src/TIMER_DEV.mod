@@ -1,7 +1,7 @@
 MODULE TIMER_DEV;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   TIMER
   datasheet 12.8.5, p1173

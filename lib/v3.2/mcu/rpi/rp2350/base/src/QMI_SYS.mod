@@ -1,7 +1,7 @@
 MODULE QMI_SYS;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   QMI
   datasheet 12.14.6, p1221

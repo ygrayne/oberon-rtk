@@ -1,6 +1,6 @@
 MODULE SemaphoreSync;
 (**
-  Oberon RTK Framework v3.1
+  Oberon RTK Framework v3.2
   --
   Example program, multi-threaded, single-core, kernel-v1
   --

@@ -1,7 +1,7 @@
 MODULE LED;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Green and red user LEDs
   Two LEDs, active low.

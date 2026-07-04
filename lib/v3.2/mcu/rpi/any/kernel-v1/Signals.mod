@@ -1,7 +1,7 @@
 MODULE Signals;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Signals for thread synchronisation
   --

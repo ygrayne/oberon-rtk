@@ -1,7 +1,7 @@
 MODULE UART_DEV;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   UART
   datasheet 12.1.8, p958

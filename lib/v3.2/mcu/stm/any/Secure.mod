@@ -1,7 +1,7 @@
 MODULE Secure;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Secure/Non-secure support
   --

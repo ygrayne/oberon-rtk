@@ -1,7 +1,7 @@
 MODULE Stacktrace;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Create stack trace and read stack registers based on error data
   collected by run-time error handling RuntimeErrors.

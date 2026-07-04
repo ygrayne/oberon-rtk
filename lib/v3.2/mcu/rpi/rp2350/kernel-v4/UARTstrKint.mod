@@ -1,7 +1,7 @@
 MODULE UARTstrKint;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   UART string device driver for kernel-v4 use
   Output only for now (PutString).

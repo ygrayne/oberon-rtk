@@ -1,7 +1,7 @@
 MODULE LED;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Green LED on Pico and Pico2
   One LED, active high

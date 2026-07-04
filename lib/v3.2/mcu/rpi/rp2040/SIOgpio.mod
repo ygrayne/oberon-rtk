@@ -1,7 +1,7 @@
 MODULE SIOgpio;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   SIO access to GPIO
   --

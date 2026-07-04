@@ -1,7 +1,7 @@
 MODULE PIO;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   PIO devices
   First-cut implementation, to get the test program running.

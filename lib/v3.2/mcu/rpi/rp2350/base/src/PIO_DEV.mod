@@ -1,7 +1,7 @@
 MODULE PIO_DEV;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   PIO Programmable I/O
   PIO0, PIO1, PIO2

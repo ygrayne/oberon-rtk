@@ -1,7 +1,7 @@
 MODULE Clocks;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Program-specific clocks configuration at start-up.
   --

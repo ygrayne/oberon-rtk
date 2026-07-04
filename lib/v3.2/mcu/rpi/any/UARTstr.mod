@@ -1,7 +1,7 @@
 MODULE UARTstr;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   UART string IO, kernel not required (busy waiting)
   --

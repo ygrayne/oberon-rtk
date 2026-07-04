@@ -1,7 +1,7 @@
 MODULE RTCds3234;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   SPI driver for Maxim DS3234 real-time clock
   --

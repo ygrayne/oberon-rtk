@@ -1,7 +1,7 @@
 MODULE SIO_DEV;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   SIO
   datasheet 3.1.11, p54

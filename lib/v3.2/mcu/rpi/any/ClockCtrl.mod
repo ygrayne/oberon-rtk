@@ -1,7 +1,7 @@
 MODULE ClockCtrl;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Clock-gating: enabling and disabling of specific clocks for power-savings.
   --

@@ -1,6 +1,6 @@
 MODULE Stacktr1;
 (**
-  Oberon RTK Framework v3.1
+  Oberon RTK Framework v3.2
   --
   Example/test program, dual-core, no kernel
   --

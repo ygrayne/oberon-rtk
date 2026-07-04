@@ -1,6 +1,6 @@
 MODULE S0;
 (**
-  Oberon RTK Framework v3.1
+  Oberon RTK Framework v3.2
   --
   Test program Secure
   Secure module, used from Non-secure program across NSC veneers

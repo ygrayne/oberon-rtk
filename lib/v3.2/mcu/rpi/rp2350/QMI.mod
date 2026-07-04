@@ -1,7 +1,7 @@
 MODULE QMI;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   QSPI Memory Interface QMI
   --

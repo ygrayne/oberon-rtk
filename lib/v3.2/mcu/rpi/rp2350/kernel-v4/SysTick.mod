@@ -1,7 +1,7 @@
 MODULE SysTick;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   System tick for kernel-v4.
   --

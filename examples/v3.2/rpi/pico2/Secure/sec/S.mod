@@ -1,6 +1,6 @@
 MODULE S;
 (**
-  Oberon RTK Framework v3.1
+  Oberon RTK Framework v3.2
   --
   Test program Secure
   Secure program

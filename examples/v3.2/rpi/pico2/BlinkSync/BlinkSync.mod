@@ -1,6 +1,6 @@
 MODULE BlinkSync;
 (**
-  Oberon RTK Framework v3.1
+  Oberon RTK Framework v3.2
   --
   Example/test program, multi-threaded, dual-core, kernel-v1
   --

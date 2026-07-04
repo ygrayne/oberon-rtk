@@ -1,7 +1,7 @@
 MODULE Kernel;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Multi-threading kernel v1
   --

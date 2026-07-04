@@ -1,7 +1,7 @@
 MODULE PIO_DEV;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   PIO
   datasheet 3.7, p366

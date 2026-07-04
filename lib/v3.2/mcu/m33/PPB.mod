@@ -1,7 +1,7 @@
 MODULE PPB;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   ARMv8-M Mainline (Cortex-M33) architectural constants.
   --

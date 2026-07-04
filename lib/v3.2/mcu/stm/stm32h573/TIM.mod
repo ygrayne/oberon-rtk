@@ -1,7 +1,7 @@
 MODULE TIM;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Basic device driver for:
   TIM1, TIM8: advanced

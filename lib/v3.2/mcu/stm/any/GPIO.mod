@@ -1,7 +1,7 @@
 MODULE GPIO;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Device driver for General Purpose IO (GPIO)
   --
