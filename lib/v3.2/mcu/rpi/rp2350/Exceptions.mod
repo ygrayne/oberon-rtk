@@ -1,7 +1,7 @@
 MODULE Exceptions;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Exception management
   --
@@ -125,7 +125,8 @@ MODULE Exceptions;
     SYSTEM.GET(PPB.VTOR, vtor);
     vectAddr := vtor + IRQ0_VectOffset + (intNo * 4);
     INCL(SYSTEM.VAL(SET, handler), 0); (* thumb code *)
-    SYSTEM.PUT(vectAddr, handler)
+    SYSTEM.PUT(vectAddr, handler);
+    SYSTEM.EMIT(ASM.DSB)
   END InstallIntHandler;
 
 
@@ -168,7 +169,8 @@ MODULE Exceptions;
     SYSTEM.GET(PPB.VTOR, vtor);
     vectAddr := vtor + (excNo * 4);
     INCL(SYSTEM.VAL(SET, handler), 0); (* thumb code *)
-    SYSTEM.PUT(vectAddr, handler)
+    SYSTEM.PUT(vectAddr, handler);
+    SYSTEM.EMIT(ASM.DSB)
   END InstallSysExcHandler;
 
 END Exceptions.
