@@ -1,19 +1,19 @@
 MODULE LEDext;
 (**
   Oberon RTK Framework
-  Version: v3.1
+  Version: v3.2
   --
   Eight additional LEDs, connected via GPIO pins.
-  Include also the green one on the Pico for convenience.
+  Include also the LED on the Pico board for convenience.
   --
   MCU: RP2040, RP2350
   Board: Pico, Pico2
   --
   Usage:
-  * Via SIO:
-    GPIO.Set({LEDext.LED0}),
-    GPIO.Clear({LEDext.LED0}),
-    GPIO.Toggle({LEDext.LED0})
+  * Via SIOgpio:
+    SIOgpio.Set(SIOgpio.GPIOA, {LEDext.LED0}),
+    SIOgpio.Clear(SIOgpio.GPIOA, {LEDext.LED0}),
+    SIOgpio.Toggle(SIOgpio.GPIOA, {LEDext.LED0})
   * Direct, avoiding procedure calls, eg. for leaf procedures:
     SYSTEM.PUT(LEDext.LSET, {LEDext.LED0}),
     SYSTEM.PUT(LEDext.LCLR, {LEDext.LED0}),
@@ -96,12 +96,15 @@ MODULE LEDext;
     LED[5] := LEDpinNo5;
     LED[6] := LEDpinNo6;
     LED[7] := LEDpinNo7;
+    GPIO.Attach;
     GPIO.SetFunction(LEDpinNoPico, GPIO.Fsio);
     SIO.EnableOutput(SIO.GPIOA, {LEDpinNoPico});
+    SIO.Clear(SIO.GPIOA, {LEDpinNoPico});
     i := 0;
     WHILE i < NumLeds DO
       GPIO.SetFunction(LED[i], GPIO.Fsio);
       SIO.EnableOutput(SIO.GPIOA, BITS(ORD({LED[i]})));
+      SIO.Clear(SIO.GPIOA, BITS(ORD({LED[i]})));
       INC(i)
     END
   END Config;
