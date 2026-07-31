@@ -15,6 +15,8 @@ Public API:
     extract(src_dir, src_subdir, src_ext, source_lines, map_file) -> DebugData
     parse_listing(filepath, source_lines) -> ModuleSource
 --
+Change date: 2026-07-31 (see changes/make-elf.md)
+--
 Copyright (c) 2026 Gray, gray@grayraven.org
 https://oberon-rtk.org/licences/
 """
@@ -1582,6 +1584,8 @@ def _collect_base_types(module_src, resolve_fn=None):
         if tr.is_proc_type:
             used.add('PROCEDURE')
             return
+        if tr.fixed_dim > 0:
+            used.add('INTEGER')
         if tr.name in OBERON_BASE_TYPES:
             used.add(tr.name)
         if tr.pointer_to is not None:
@@ -1601,15 +1605,8 @@ def _collect_base_types(module_src, resolve_fn=None):
             add(param.typeref)
         for var in proc.local_vars:
             add(var.typeref)
-    def has_fixed_array(var_list):
-        return any(v.typeref.fixed_dim > 0 for v in var_list)
-    if has_fixed_array(module_src.global_vars):
-        used.add('INTEGER')
-    else:
-        for proc in module_src.procedures:
-            if has_fixed_array(proc.local_vars):
-                used.add('INTEGER')
-                break
+    for tr in module_src.type_defs.values():
+        add(tr)
     return used
 def _emit_exprloc(content, loc_expr):
     content += uleb128(len(loc_expr))
@@ -1701,6 +1698,7 @@ def build_debug_info_unit(module, abbrev_offset, stmt_list_offset, src_subdir,
                 key = typeref_key(tr)
                 if key not in type_offsets and key not in pointer_types_needed:
                     pointer_types_needed[key] = tr
+                register_typeref(tr.pointer_to)
             if tr.fields is not None:
                 for fvar in tr.fields:
                     register_typeref(fvar.typeref)
@@ -1711,6 +1709,8 @@ def build_debug_info_unit(module, abbrev_offset, stmt_list_offset, src_subdir,
                 register_typeref(param.typeref)
             for var in proc.local_vars:
                 register_typeref(var.typeref)
+        for tref in module_src.type_defs.values():
+            register_typeref(tref)
         def _array_display_name(tr):
             if tr.elem and tr.elem.fixed_dim > 0:
                 return f'ARRAY {tr.fixed_dim} OF {_array_display_name(tr.elem)}'
@@ -1745,6 +1745,25 @@ def build_debug_info_unit(module, abbrev_offset, stmt_list_offset, src_subdir,
                 collect_record_types(var.typeref)
         for tname, tref in module_src.type_defs.items():
             collect_record_types(tref)
+        member_patches = []
+        def _emittable(typeref, _seen=None):
+            if typeref is None:
+                return False
+            if _seen is None:
+                _seen = set()
+            tr = resolve_fn(typeref) if resolve_fn else typeref
+            if id(tr) in _seen:
+                return True
+            _seen.add(id(tr))
+            if tr.is_proc_type:
+                return True
+            if tr.pointer_to is not None:
+                return _emittable(tr.pointer_to, _seen)
+            if tr.fixed_dim > 0 or tr.open_array:
+                return _emittable(tr.elem, _seen)
+            if tr.name in OBERON_BASE_TYPES:
+                return True
+            return tr.fields is not None
         for rec_key, typeref in record_types_needed.items():
             byte_size = type_size_ext(typeref, type_sizes)
             type_offsets[rec_key] = len(content)
@@ -1753,91 +1772,75 @@ def build_debug_info_unit(module, abbrev_offset, stmt_list_offset, src_subdir,
             content += struct.pack('<I', byte_size)
             field_offsets, _ = compute_local_addresses(typeref.fields, type_sizes)
             for fvar in typeref.fields:
+                if not _emittable(fvar.typeref):
+                    continue
+                fkey = rkey(fvar.typeref)
                 for fname in fvar.names:
                     foffset = field_offsets.get(fname, 0)
-                    fkey = rkey(fvar.typeref)
-                    ftype_off = type_offsets.get(fkey)
-                    if ftype_off is None:
-                        continue
                     content += uleb128(12)
                     content += struct.pack('<I', str_table.intern(fname))
+                    ftype_off = type_offsets.get(fkey)
+                    if ftype_off is None:
+                        member_patches.append((len(content), fkey))
+                        ftype_off = 0
                     content += struct.pack('<I', ftype_off)
                     content += struct.pack('<I', foffset)
             content.append(0)
-            for pkey, ptyperef in list(pointer_types_needed.items()):
-                target = ptyperef.pointer_to
+        progress = True
+        while progress:
+            progress = False
+            for key, typeref in pointer_types_needed.items():
+                if key in type_offsets:
+                    continue
+                target = typeref.pointer_to
                 target_key = rkey(target) if target else None
-                if target_key == rec_key and target_key in type_offsets:
-                    type_offsets[pkey] = len(content)
-                    content += uleb128(14)
-                    content.append(4)
-                    content += struct.pack('<I', type_offsets[target_key])
-            for akey in list(array_types_needed.keys()):
-                atyperef = array_types_needed[akey]
-                if akey in type_offsets:
+                target_off = type_offsets.get(target_key) if target_key else None
+                if target_off is None:
                     continue
-                if not atyperef.elem:
+                type_offsets[key] = len(content)
+                content += uleb128(14)
+                content.append(4)
+                content += struct.pack('<I', target_off)
+                progress = True
+            for key, typeref in array_types_needed.items():
+                if key in type_offsets:
                     continue
-                elem_key = typeref_key(atyperef.elem)
-                if elem_key != rec_key:
-                    continue
-                if atyperef.fixed_dim <= 0:
-                    continue
-                byte_size = type_size_ext(atyperef, type_sizes)
-                type_offsets[akey] = len(content)
-                disp_name = _array_display_name(atyperef)
-                content += uleb128(13)
-                content += struct.pack('<I', str_table.intern(disp_name))
-                content += struct.pack('<I', type_offsets[elem_key])
-                content += struct.pack('<I', byte_size)
-                int_off = type_offsets.get('INTEGER', type_offsets[elem_key])
-                content += uleb128(7)
-                content += struct.pack('<I', int_off)
-                content += struct.pack('<I', 0)
-                content += struct.pack('<I', atyperef.fixed_dim - 1)
-                content.append(0)
-        for key, typeref in pointer_types_needed.items():
-            if key in type_offsets:
-                continue
-            target = typeref.pointer_to
-            target_key = rkey(target) if target else None
-            target_off = type_offsets.get(target_key) if target_key else None
-            if target_off is None:
-                continue
-            type_offsets[key] = len(content)
-            content += uleb128(14)
-            content.append(4)
-            content += struct.pack('<I', target_off)
-        for key, typeref in array_types_needed.items():
-            if key in type_offsets:
-                continue
-            if typeref.elem:
-                elem_key = typeref_key(typeref.elem)
-                elem_off = type_offsets.get(elem_key)
+                if typeref.elem:
+                    elem_key = typeref_key(typeref.elem)
+                    elem_off = type_offsets.get(elem_key)
+                    if elem_off is None:
+                        elem_off = type_offsets.get(typeref.elem.name)
+                else:
+                    elem_off = type_offsets.get(typeref.name)
                 if elem_off is None:
-                    elem_off = type_offsets.get(typeref.elem.name)
+                    continue
+                if typeref.fixed_dim > 0:
+                    byte_size = type_size_ext(typeref, type_sizes)
+                    type_offsets[key] = len(content)
+                    disp_name = _array_display_name(typeref)
+                    content += uleb128(13)
+                    content += struct.pack('<I', str_table.intern(disp_name))
+                    content += struct.pack('<I', elem_off)
+                    content += struct.pack('<I', byte_size)
+                    int_off = type_offsets.get('INTEGER', elem_off)
+                    content += uleb128(7)
+                    content += struct.pack('<I', int_off)
+                    content += struct.pack('<I', 0)
+                    content += struct.pack('<I', typeref.fixed_dim - 1)
+                    content.append(0)
+                else:
+                    type_offsets[key] = len(content)
+                    content += uleb128(8)
+                    content += struct.pack('<I', elem_off)
+                progress = True
+        # DW_FORM_ref4 permits forward references: a member whose array or
+        # pointer type DIE is emitted after its record carries a placeholder
+        for patch_pos, fkey in member_patches:
+            ftype_off = type_offsets.get(fkey)
+            if ftype_off is not None:
+                struct.pack_into('<I', content, patch_pos, ftype_off)
             else:
-                elem_off = type_offsets.get(typeref.name)
-            if elem_off is None:
-                continue
-            if typeref.fixed_dim > 0:
-                byte_size = type_size_ext(typeref, type_sizes)
-                type_offsets[key] = len(content)
-                disp_name = _array_display_name(typeref)
-                content += uleb128(13)
-                content += struct.pack('<I', str_table.intern(disp_name))
-                content += struct.pack('<I', elem_off)
-                content += struct.pack('<I', byte_size)
-                int_off = type_offsets.get('INTEGER', elem_off)
-                content += uleb128(7)
-                content += struct.pack('<I', int_off)
-                content += struct.pack('<I', 0)
-                content += struct.pack('<I', typeref.fixed_dim - 1)
-                content.append(0)
-            else:
-                type_offsets[key] = len(content)
-                content += uleb128(8)
-                content += struct.pack('<I', elem_off)
+                print(f'warning: {module.name}: unresolved member type {fkey}')
         if data_addr_top is not None:
             global_addrs = compute_global_addresses(
                 module_src.global_vars, data_addr_top, type_sizes
