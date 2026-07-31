@@ -86,7 +86,7 @@ MODULE QueueingPort;
     RingBuffer.Init(p.queue);
     RingBuffer.Init(p.pool);
     WHILE ~RingBuffer.Full(p.pool) DO
-      RingBuffer.Put(p.pool, make())
+      RingBuffer.Put(p.pool,  make())
     END
   END Init;
 

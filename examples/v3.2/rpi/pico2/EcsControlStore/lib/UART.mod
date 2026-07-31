@@ -1,0 +1,358 @@
+MODULE UART;
+(**
+  Oberon RTK Framework
+  Version: v4.0
+  --
+  UART device
+  * device record
+  * basic operations
+  * device handles management
+  --
+  The GPIO pins used must be configured by the client module or program.
+  --
+  MCU: RP2350
+  --
+  Copyright (c) 2020-2026 Gray gray@grayraven.org
+  https://oberon-rtk.org/licences/
+**)
+
+  IMPORT SYSTEM, BASE, Errors, DEV := UART_DEV, RST, Clocks;
+
+  CONST
+    (* unit numbers as on chip *)
+    UART0* = DEV.UART0;
+    UART1* = DEV.UART1;
+
+    NumUART* = DEV.NumUART;
+
+    (* generic values *)
+    Enabled* = 1;
+    Disabled* = 0;
+    None* = 0;
+
+    (* CR bits *)
+    CR_RXE = 9;
+    CR_TXE = 8;
+    CR_UARTEN = 0;
+
+    (* LCR_H bits/values *)
+    LCR_H_SPS*      = 7;
+    LCR_H_WLEN1*    = 6; (* [6:5] transmit/receive word length *)
+    LCR_H_WLEN0*    = 5;
+      WLEN_val_8* = 3;
+      WLEN_val_7* = 2;
+      WLEN_val_6* = 1;
+      WLEN_val_5* = 0;    (* reset value *)
+    LCR_H_FEN*      = 4;  (* fifo enable, reset = disabled *)
+    LCR_H_STP2*     = 3;  (* two stop bits select, reset = disabled, ie. one stop bit *)
+    LCR_H_EPS*      = 2;  (* even parity select, reset = disabled, ie. odd parity *)
+    LCR_H_PEN*      = 1;  (* parity enable, reset = disabled *)
+    LCR_H_BRK*      = 0;
+
+    (* value aliases *)
+    DataBits8* = WLEN_val_8;
+    DataBits7* = WLEN_val_7;
+    DataBits6* = WLEN_val_6;
+    DataBits5* = WLEN_val_5;
+
+    (* FR bits *)
+    FR_TXFE* = 7;  (* transmit FIFO empty *)
+    FR_RXFF* = 6;  (* receive FIFO full *)
+    FR_TXFF* = 5;  (* transmit FIFO full *)
+    FR_RXFE* = 4;  (* receive FIFO empty *)
+
+    (* RSR bits *)
+    RSR_OR*  = 3;  (* receive fifo overrun *)
+
+    (* DMACR bits *)
+    DMACR_DMAONERR* = 2;
+    DMACR_TXDMAE*   = 1; (* transmit via DMA enabled *)
+    DMACR_RXDMAE*   = 0; (* receive via DMA enabled *)
+
+    (* IFLS bits and values: FIFO levels *)
+    IFLS_RXIFLSEL1*     = 5;
+    IFLS_RXIFLSEL0*     = 3;
+      RXIFLSEL_val_18* = 000H; (* 1/8 full:        4 items in fifo *)
+      RXIFLSEL_val_28* = 001H; (* 2/8 = 1/4 full:  8 *)
+      RXIFLSEL_val_48* = 002H; (* 4/8 = 1/2 full: 16 *)
+      RXIFLSEL_val_68* = 003H; (* 6/8 = 3/4 full: 24 *)
+      RXIFLSEL_val_78* = 004H; (* 7/8 full:       28 *)
+    IFLS_TXIFLSEL1*     = 2;
+    IFLS_TXIFLSEL0*     = 0;
+      TXIFLSEL_val_18* = 000H; (* 1/8 full:        4 items in fifo *)
+      TXIFLSEL_val_28* = 001H; (* 2/8 = 1/4 full:  8 *)
+      TXIFLSEL_val_48* = 002H; (* 4/8 = 1/2 full: 16 *)
+      TXIFLSEL_val_68* = 003H; (* 6/8 = 3/4 full: 24 *)
+      TXIFLSEL_val_78* = 004H; (* 7/8 full:       28 *)
+
+    (* IMSC bits: int mask set/clr *)
+    IMSC_OEIM* = 10;  (* FIFO overrrun *)
+    IMSC_RTIM* = 6;   (* receive timeout *)
+    IMSC_TXIM* = 5;   (* transmit *)
+    IMSC_RXIM* = 4;   (* receive *)
+
+    IMSC_ALL* = {IMSC_RXIM, IMSC_TXIM, IMSC_RTIM, IMSC_OEIM};
+
+    (* MIS bits: int status *)
+    MIS_OEMIS* = IMSC_OEIM;
+    MIS_RTMIS* = IMSC_RTIM;
+    MIS_TXMIS* = IMSC_TXIM;
+    MIS_RXMIS* = IMSC_RXIM;
+
+    (* ICR bits: interrupt clear *)
+    ICR_OEIC* = IMSC_OEIM;
+    ICR_RTIC* = IMSC_RTIM;
+    ICR_TXIC* = IMSC_TXIM;
+    ICR_RXIC* = IMSC_RXIM;
+
+    ICR_ALL* = IMSC_ALL;
+
+
+  TYPE
+    Device* = POINTER TO DeviceDesc;
+    DeviceDesc* = RECORD
+      unitNo*, handle*: INTEGER;
+      rstReg, rstPos: INTEGER; (* reset *)
+      irqNo*: INTEGER;
+      CR, IBRD, FBRD, LCR_H: INTEGER;
+      TDR*, RDR*, FR*, RSR*: INTEGER;
+      DMACR, IFLS, IMSC*, MIS*, ICR*: INTEGER
+    END;
+
+    DeviceCfg* = RECORD (* see ASSERTs in 'Configure' for valid values *)
+      (* reg LCR_H *)
+      stickyParityEn*: INTEGER;
+      dataBits*: INTEGER;
+      fifoEn*: INTEGER;
+      twoStopBitsEn*: INTEGER;
+      evenParityEn*: INTEGER;
+      parityEn*: INTEGER;
+      sendBreak*: INTEGER
+    END;
+
+
+  VAR
+    Devices*: ARRAY NumUART OF Device;
+
+
+  PROCEDURE* IsValid*(dev: Device; uartHandle, uartNo: INTEGER): BOOLEAN;
+    RETURN (uartNo IN DEV.UART_all) & (dev # NIL) &
+           (uartHandle >= 0) & (uartHandle < NumUART) &
+           (Devices[uartHandle] = dev) &
+           (Devices[uartHandle].unitNo = uartNo)
+  END IsValid;
+
+
+  PROCEDURE* Bound*(uartHandle: INTEGER): BOOLEAN;
+    RETURN (uartHandle >= 0) & (uartHandle < NumUART) &
+           (Devices[uartHandle] # NIL) &
+           (Devices[uartHandle].handle = uartHandle)
+  END Bound;
+
+
+  PROCEDURE* Init*(dev: Device; uartHandle, uartNo: INTEGER);
+    VAR base: INTEGER;
+  BEGIN
+    ASSERT(uartNo IN DEV.UART_all, Errors.PreCond);
+    ASSERT((uartHandle >= 0) & (uartHandle < NumUART), Errors.PreCond);
+    ASSERT((Devices[uartHandle] = NIL) OR (Devices[uartHandle] = dev), Errors.ConsCheck);
+    dev.unitNo := uartNo;
+    dev.handle := uartHandle;
+    dev.rstReg := DEV.UART_RST_reg;
+    dev.rstPos := DEV.UART0_RST_pos + uartNo;
+    dev.irqNo := DEV.UART0_IRQ_no + uartNo;
+    base := DEV.UART0_BASE + (uartNo * DEV.UART_Offset);
+    dev.CR    := base + DEV.UART_CR_Offset;
+    dev.IBRD  := base + DEV.UART_IBRD_Offset;
+    dev.FBRD  := base + DEV.UART_FBRD_Offset;
+    dev.LCR_H := base + DEV.UART_LCR_H_Offset;
+    dev.TDR   := base + DEV.UART_DR_Offset;
+    dev.RDR   := base + DEV.UART_DR_Offset;
+    dev.FR    := base + DEV.UART_FR_Offset;
+    dev.RSR   := base + DEV.UART_RSR_Offset;
+    dev.DMACR := base + DEV.UART_DMACR_Offset;
+    dev.IFLS  := base + DEV.UART_IFLS_Offset;
+    dev.IMSC  := base + DEV.UART_IMSC_Offset;
+    dev.MIS   := base + DEV.UART_MIS_Offset;
+    dev.ICR   := base + DEV.UART_ICR_Offset;
+    Devices[uartHandle] := dev
+  END Init;
+
+
+  PROCEDURE Configure*(uartHandle: INTEGER; cfg: DeviceCfg; baudrate: INTEGER);
+    VAR x, intDiv, fracDiv: INTEGER; dev: Device;
+  BEGIN
+    ASSERT(cfg.stickyParityEn IN {Disabled, Enabled}, Errors.PreCond);
+    ASSERT(cfg.dataBits IN {DataBits5 .. DataBits8}, Errors.PreCond);
+    ASSERT(cfg.fifoEn IN {Disabled, Enabled}, Errors.PreCond);
+    ASSERT(cfg.twoStopBitsEn IN {Disabled, Enabled}, Errors.PreCond);
+    ASSERT(cfg.evenParityEn IN {Disabled, Enabled}, Errors.PreCond);
+    ASSERT(cfg.parityEn IN {Disabled, Enabled}, Errors.PreCond);
+    ASSERT(cfg.sendBreak IN {Disabled, Enabled}, Errors.PreCond);
+
+    dev := Devices[uartHandle];
+
+    (* release reset on UART device *)
+    RST.ReleaseReset(dev.rstReg, dev.rstPos);
+
+    (* disable *)
+    SYSTEM.PUT(dev.CR, {});
+
+    (* baudrate *)
+    x := (Clocks.PERICLK_FREQ * 8) DIV baudrate;
+    intDiv := LSR(x, 7);
+    IF intDiv = 0 THEN
+      intDiv := 1; fracDiv := 0
+    ELSIF intDiv >= 65535 THEN
+      intDiv := 65535; fracDiv := 0
+    ELSE
+      fracDiv := ((intDiv MOD 0100H) + 1) DIV 2
+    END;
+    SYSTEM.PUT(dev.IBRD, intDiv);
+    SYSTEM.PUT(dev.FBRD, fracDiv);
+
+    (* note: LCR_H cfg MUST appear after baudrate cfg, cf. RP2040 datasheet 4.2.7.1, p426 *)
+    x := 0;
+    BFI(x, LCR_H_SPS, cfg.stickyParityEn);
+    BFI(x, LCR_H_WLEN1, LCR_H_WLEN0, cfg.dataBits);
+    BFI(x, LCR_H_FEN, cfg.fifoEn);
+    BFI(x, LCR_H_STP2, cfg.twoStopBitsEn);
+    BFI(x, LCR_H_EPS, cfg.evenParityEn);
+    BFI(x, LCR_H_PEN, cfg.parityEn);
+    BFI(x, LCR_H_BRK, cfg.sendBreak);
+    SYSTEM.PUT(dev.LCR_H, x)
+  END Configure;
+
+
+  PROCEDURE* Enable*(uartHandle: INTEGER);
+    VAR dev: Device;
+  BEGIN
+    dev := Devices[uartHandle];
+    SYSTEM.PUT(dev.CR + BASE.ASET, {CR_UARTEN, CR_RXE, CR_TXE})
+  END Enable;
+
+
+  PROCEDURE* Disable*(uartHandle: INTEGER);
+    VAR dev: Device;
+  BEGIN
+    dev := Devices[uartHandle];
+    SYSTEM.PUT(dev.CR + BASE.ACLR, {CR_UARTEN, CR_RXE, CR_TXE})
+  END Disable;
+
+
+  PROCEDURE* Flags*(uartHandle: INTEGER): SET;
+    VAR flags: SET; dev: Device;
+  BEGIN
+    dev := Devices[uartHandle];
+    SYSTEM.GET(dev.FR, flags)
+    RETURN flags
+  END Flags;
+
+  (* configuration data *)
+
+  PROCEDURE* GetBaseCfg*(VAR cfg: DeviceCfg);
+  (**
+    stickyParityEn = Disabled,   hardware reset value
+    dataBits       = WLENval_8,  hardware reset override
+    fifoEn         = Disabled,   hardware reset value
+    twoStopBitsEn  = Disabled,   hardware reset value
+    evenParityEn   = Disabled,   hardware reset value
+    parityEn       = Disabled,   hardware reset value
+    sendBreak      = Disabled,   hardware reset value
+    --
+    See ASSERTs in 'Configure' for valid values.
+  **)
+  BEGIN
+    CLEAR(cfg);
+    cfg.dataBits := WLEN_val_8
+  END GetBaseCfg;
+
+
+  PROCEDURE* GetCurrentCfg*(uartHandle: INTEGER; VAR cfg: DeviceCfg);
+    VAR x: INTEGER; dev: Device;
+  BEGIN
+    dev := Devices[uartHandle];
+    SYSTEM.GET(dev.LCR_H, x);
+    cfg.stickyParityEn := BFX(x, LCR_H_SPS);
+    cfg.dataBits := BFX(x, LCR_H_WLEN1, LCR_H_WLEN0);
+    cfg.fifoEn := BFX(x, LCR_H_FEN);
+    cfg.twoStopBitsEn := BFX(x, LCR_H_STP2);
+    cfg.evenParityEn := BFX(x, LCR_H_EPS);
+    cfg.parityEn := BFX(x, LCR_H_PEN);
+    cfg.sendBreak := BFX(x, LCR_H_BRK)
+  END GetCurrentCfg;
+
+  (* interrupts *)
+
+  PROCEDURE* SetFifoLvl*(uartHandle: INTEGER; txFifoLvl, rxFifoLvl: INTEGER);
+    VAR x: INTEGER; dev: Device;
+  BEGIN
+    ASSERT(txFifoLvl IN {TXIFLSEL_val_18 .. TXIFLSEL_val_78});
+    ASSERT(rxFifoLvl IN {RXIFLSEL_val_18 .. RXIFLSEL_val_78});
+    dev := Devices[uartHandle];
+    x := txFifoLvl;
+    x := x + LSL(rxFifoLvl, IFLS_RXIFLSEL0);
+    SYSTEM.PUT(dev.IFLS, x)
+  END SetFifoLvl;
+
+
+  PROCEDURE* EnableInt*(uartHandle: INTEGER; intMask: SET);
+    VAR dev: Device;
+  BEGIN
+    dev := Devices[uartHandle];
+    SYSTEM.PUT(dev.IMSC + BASE.ASET, intMask)
+  END EnableInt;
+
+
+  PROCEDURE* DisableInt*(uartHandle: INTEGER; intMask: SET);
+    VAR dev: Device;
+  BEGIN
+    dev := Devices[uartHandle];
+    SYSTEM.PUT(dev.IMSC + BASE.ACLR, intMask)
+  END DisableInt;
+
+
+  PROCEDURE* GetEnabledInt*(uartHandle: INTEGER; VAR enabled: SET);
+    VAR dev: Device;
+  BEGIN
+    dev := Devices[uartHandle];
+    SYSTEM.GET(dev.IMSC, enabled)
+  END GetEnabledInt;
+
+
+  PROCEDURE* GetIntStatus*(uartHandle: INTEGER; VAR status: SET);
+    VAR dev: Device;
+  BEGIN
+    dev := Devices[uartHandle];
+    SYSTEM.GET(dev.MIS, status)
+  END GetIntStatus;
+
+
+  PROCEDURE* ClearInt*(uartHandle: INTEGER; intMask: SET);
+    VAR dev: Device;
+  BEGIN
+    dev := Devices[uartHandle];
+    SYSTEM.PUT(dev.ICR + BASE.ASET, intMask)
+  END ClearInt;
+
+
+  PROCEDURE GetDevSec*(uartNo: INTEGER; VAR reg: INTEGER);
+  BEGIN
+    ASSERT(uartNo IN DEV.UART_all);
+    reg := DEV.UART0_SEC_reg + (uartNo * 4)
+  END GetDevSec;
+
+
+  PROCEDURE init;
+    VAR uartHandle: INTEGER;
+  BEGIN
+    uartHandle := 0;
+    WHILE uartHandle < NumUART DO
+      Devices[uartHandle] := NIL;
+      INC(uartHandle)
+    END
+  END init;
+
+BEGIN
+  init
+END UART.

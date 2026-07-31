@@ -13,10 +13,12 @@ _*
 #/**/rtk-lib
 
 # add dirs
-!/**/v*.*
+#!/**/v*.*
 !/lib/
+!/lib/v*.*
 !/libv2/
 !/examples/
+!/examples/v*.*
 !/config/
 !/targets/
 !/targets/arm/
